@@ -11,3 +11,5 @@ RUN pip install -r requirements.txt
 COPY . .
 
 CMD ["python", "-m", "src.bot_telegram"]
+CMD ["python", "-m", "src.bot_whatsapp"]
+CMD ["python", "-m", "src.bot_messenger"]
