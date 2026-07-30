@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  janavani:
+    build: .
+    volumes:
+      - ./database:/app/database
+    environment:
+      - DEMO_MODE=true
