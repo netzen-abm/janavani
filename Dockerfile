@@ -6,9 +6,15 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Minimal system deps for packages that may need compilation
+# Minimal system deps and native libraries needed by weasyprint
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      libcairo2 \
+      libpango-1.0-0 \
+      libgdk-pixbuf2.0-0 \
+      libffi-dev \
+      shared-mime-info && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python deps first for better caching
