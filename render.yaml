@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: janavani
+    env: python
+    runtime: python-3.11
