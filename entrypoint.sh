@@ -5,6 +5,12 @@ set -e
 # Default PORT
 export PORT="${PORT:-8080}"
 
+# Ensure Python deps are installed at container start (helps if build step was skipped or cached)
+if [ -f /app/requirements.txt ]; then
+  echo "Installing Python dependencies from /app/requirements.txt..."
+  pip install --no-cache-dir -r /app/requirements.txt || true
+fi
+
 # Start the telegram bot in background
 python -m src.bot_telegram &
 BOT_PID=$!
