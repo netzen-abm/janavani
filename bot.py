@@ -31,8 +31,8 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Contact us: janavani@netzen.org")
 
-if __name__ == '__main__':
-from telegram.ext import Application
+if name == 'main':
+    from telegram.ext import Application
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("rate", rate))
