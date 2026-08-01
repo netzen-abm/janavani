@@ -32,13 +32,13 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Contact us: janavani@netzen.org")
 
 if __name__ == '__main__':
-        from telegram.ext import Application
-        app = Application.builder().token(TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("rate", rate))
-        app.add_handler(CommandHandler("petition", petition))
-        app.add_handler(CommandHandler("scorecard", scorecard))
-        app.add_handler(CommandHandler("about", about))
-        app.add_handler(CommandHandler("contact", contact))
-        print("Bot is running...")
-        app.run_polling()
+    # Build the application with ApplicationBuilder (PTB v20+ style)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("rate", rate))
+    app.add_handler(CommandHandler("petition", petition))
+    app.add_handler(CommandHandler("scorecard", scorecard))
+    app.add_handler(CommandHandler("about", about))
+    app.add_handler(CommandHandler("contact", contact))
+    print("Bot is running...")
+    app.run_polling()
