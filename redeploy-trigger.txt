@@ -1,0 +1,5 @@
+Redeploy trigger
+
+This file was created automatically to trigger a rebuild on Railway. If you see this commit, please wait a few moments for the deployment to start and then paste the build logs here so I can monitor and diagnose any errors.
+
+Timestamp: 2026-08-01T16:12:00Z
