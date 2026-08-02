@@ -1,44 +1,32 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import os
+import logging
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+from dotenv import load_dotenv
 
-TOKEN = os.getenv("TELEGRAM_TOKEN") # we will set this in Render
+load_dotenv()
+TOKEN = os.getenv("TOKEN")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Welcome to Janavani Citizen Bot 🙏\n\n"
-        "Voice of the People\n"
-        "Use the menu below:\n"
-        "/rate - Rate your government visit\n"
-        "/petition - Submit a petition\n"
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Welcome to Janavani Citizen Bot!\n\n"
+        "I help you file civic complaints in Kerala.\n"
+        "Commands:\n"
+        "/rate - Rate a govt office\n"
+        "/petition - File a petition\n"
         "/scorecard - View scorecard\n"
-        "/about - About Janavani\n"
-        "/contact - Contact us"
+        "/about - About us\n"
+        "/contact - Contact"
     )
 
-async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Got it! Let's rate your govt visit. Reply with 1-5 stars")
-
-async def petition(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Please type your petition and send it to us.")
-
-async def scorecard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Coming soon: Your govt office scorecard")
-
-async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Janavani: Free tool to hold govt offices accountable")
-
-async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Contact us: janavani@netzen.org")
+def main():
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
-    # Build the application with ApplicationBuilder (PTB v20+ style)
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("rate", rate))
-    app.add_handler(CommandHandler("petition", petition))
-    app.add_handler(CommandHandler("scorecard", scorecard))
-    app.add_handler(CommandHandler("about", about))
-    app.add_handler(CommandHandler("contact", contact))
-    print("Bot is running...")
-    app.run_polling()
+    main()
