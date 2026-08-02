@@ -15,3 +15,9 @@ torch
 
 # Dev / utils (optional)
 # langchain  # not required for the minimal scaffold
+
+# Decentralized integrations (optional)
+web3
+python-nostr
+requests[socks]
+ipfshttpclient
