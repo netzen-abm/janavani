@@ -1,5 +1,10 @@
 services:
   - type: web
-    name: janavani
+    name: janavani-bot
     env: python
-    runtime: python-3.11
+
+    plan: free
+
+    buildCommand: pip install -r requirements.txt
+
+    startCommand: python3 -m src.bot_telegram
