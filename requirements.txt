@@ -1,6 +1,6 @@
 # ============================================
 # Janavani Requirements
-# AI + RAG + API + Telegram + Nostr
+# AI + RAG + API + Telegram
 # ============================================
 
 # -----------------------
@@ -21,6 +21,12 @@ python-dotenv
 # -----------------------
 transformers
 torch
+
+# -----------------------
+# Data Processing
+# -----------------------
+pandas>=2.2.2
+numpy>=1.26.4
 
 # -----------------------
 # HTTP
@@ -44,8 +50,9 @@ web3
 ipfshttpclient
 
 # -----------------------
-# Optional Future
+# Future (Disabled)
 # -----------------------
+# pynostr
 # langchain
 # langchain-community
 # chromadb
