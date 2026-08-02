@@ -1,22 +1,58 @@
-# Requirements for the SLM + RAG POC
+# ============================================
+# Janavani Requirements
+# AI + RAG + API + Telegram + Nostr
+# ============================================
 
-# Core retrieval
-sentence-transformers
+# -----------------------
+# Core AI / RAG
+# -----------------------
+sentence-transformers>=5.0.0
 faiss-cpu
 
+# -----------------------
 # API
+# -----------------------
 fastapi
 uvicorn
 python-dotenv
 
-# Optional local generation (large models may be slow on CPU)
+# -----------------------
+# Local LLM
+# -----------------------
 transformers
 torch
 
-# Dev / utils (optional)
-# langchain  # not required for the minimal scaffold
-
-# Decentralized integrations (optional)
-web3
+# -----------------------
+# HTTP
+# -----------------------
+requests
 requests[socks]
+
+# -----------------------
+# Telegram Bot
+# -----------------------
+python-telegram-bot>=21.0
+
+# -----------------------
+# Blockchain
+# -----------------------
+web3
+
+# -----------------------
+# IPFS
+# -----------------------
 ipfshttpclient
+
+# -----------------------
+# Nostr
+# -----------------------
+pynostr
+
+# -----------------------
+# Optional Future
+# -----------------------
+# langchain
+# langchain-community
+# chromadb
+# qdrant-client
+# redis
