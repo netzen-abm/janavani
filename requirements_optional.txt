@@ -1,0 +1,4 @@
+# Add BLE / Noise / binary libs to optional requirements
+bleak
+noiseprotocol
+pynacl
