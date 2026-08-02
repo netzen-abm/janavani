@@ -1,6 +1,5 @@
 # ============================================
 # Janavani Requirements
-# AI + RAG + API + Telegram
 # ============================================
 
 # -----------------------
@@ -29,13 +28,18 @@ pandas>=2.2.2
 numpy>=1.26.4
 
 # -----------------------
+# PDF Generation
+# -----------------------
+weasyprint
+
+# -----------------------
 # HTTP
 # -----------------------
 requests
 requests[socks]
 
 # -----------------------
-# Telegram Bot
+# Telegram
 # -----------------------
 python-telegram-bot>=21.0
 
@@ -50,11 +54,10 @@ web3
 ipfshttpclient
 
 # -----------------------
-# Future (Disabled)
+# Future Modules
 # -----------------------
 # pynostr
 # langchain
-# langchain-community
 # chromadb
 # qdrant-client
 # redis
