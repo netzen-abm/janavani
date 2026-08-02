@@ -18,6 +18,5 @@ torch
 
 # Decentralized integrations (optional)
 web3
-python-nostr
 requests[socks]
 ipfshttpclient
