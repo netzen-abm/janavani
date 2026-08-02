@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js / npm
+node_modules/
+.npm/
+.node_repl_history
