@@ -1,2 +1,17 @@
-python-telegram-bot>=20.0
-python-dotenv>=0.21.0
+# Requirements for the SLM + RAG POC
+
+# Core retrieval
+sentence-transformers
+faiss-cpu
+
+# API
+fastapi
+uvicorn
+python-dotenv
+
+# Optional local generation (large models may be slow on CPU)
+transformers
+torch
+
+# Dev / utils (optional)
+# langchain  # not required for the minimal scaffold
