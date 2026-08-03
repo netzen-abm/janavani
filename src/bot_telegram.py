@@ -1,11 +1,11 @@
-import os
-
 from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
 )
+
+from core.config import Config
 
 from tools.search_directory import search_office
 from tools.rate_office import save_rating
@@ -48,15 +48,20 @@ Examples
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
+
         await update.message.reply_text(
             "Usage:\n/search ration Kochi"
         )
+
         return
 
     department = context.args[0]
     location = " ".join(context.args[1:])
 
-    result = search_office(department, location)
+    result = search_office(
+        department,
+        location
+    )
 
     await update.message.reply_text(result)
 
@@ -67,9 +72,11 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 3:
+
         await update.message.reply_text(
             "Usage:\n/rate 3 1 Aadhar failed"
         )
+
         return
 
     office_id = context.args[0]
@@ -79,7 +86,7 @@ async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = save_rating(
         office_id,
         rating,
-        issue,
+        issue
     )
 
     await update.message.reply_text(result)
@@ -105,7 +112,7 @@ async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Citizen",
         "Kochi, Kerala",
         office_id,
-        issue,
+        issue
     )
 
     await update.message.reply_text(
@@ -118,10 +125,8 @@ async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --------------------------------------------------
 def main():
 
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-
-    if not token:
-        raise Exception("TELEGRAM_BOT_TOKEN not found")
+    if not Config.TELEGRAM_BOT_TOKEN:
+        raise Exception("TELEGRAM_BOT_TOKEN not configured")
 
     print("=" * 60)
     print("🇮🇳 JANAVANI TELEGRAM BOT")
@@ -132,7 +137,7 @@ def main():
     application = (
         Application
         .builder()
-        .token(token)
+        .token(Config.TELEGRAM_BOT_TOKEN)
         .build()
     )
 
