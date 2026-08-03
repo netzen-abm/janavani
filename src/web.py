@@ -27,7 +27,7 @@ if SUPABASE_URL and SUPABASE_KEY:
 # Telegram Bot
 # ----------------------------
 def start_telegram_bot():
-    from src.bot_telegram import main
+    from bot_telegram import main
     main()
 
 # ----------------------------
