@@ -3,26 +3,23 @@
 # ============================================
 
 # -----------------------
-# Core AI / RAG
+# Web Framework
 # -----------------------
-sentence-transformers>=5.0.0
-faiss-cpu
-
-# -----------------------
-# API
-# -----------------------
+flask
 fastapi
 uvicorn
 python-dotenv
 
 # -----------------------
-# Local LLM
+# AI / RAG
 # -----------------------
+sentence-transformers>=5.0.0
+faiss-cpu
 transformers
 torch
 
 # -----------------------
-# Data Processing
+# Data
 # -----------------------
 pandas>=2.2.2
 numpy>=1.26.4
@@ -41,7 +38,7 @@ requests[socks]
 # -----------------------
 # Telegram
 # -----------------------
-python-telegram-bot>=21.0
+python-telegram-bot>=22.8
 
 # -----------------------
 # Blockchain
@@ -58,6 +55,7 @@ ipfshttpclient
 # -----------------------
 # pynostr
 # langchain
+# langchain-community
 # chromadb
 # qdrant-client
 # redis
