@@ -4,7 +4,7 @@
 from weasyprint import HTML
 import datetime
 import pandas as pd
-from src.legal_brain import get_legal_advice
+from legal_brain import get_legal_advice
 
 def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
     """
