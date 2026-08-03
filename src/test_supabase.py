@@ -1,32 +1,22 @@
 import os
 from supabase import create_client
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # Read environment variables
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
 
-print("====================================")
-print(" Janavani Supabase Connection Test ")
-print("====================================")
+print("Connecting to Supabase...")
 
-# Check environment variables
-if not SUPABASE_URL:
-    raise Exception("❌ SUPABASE_URL environment variable not found.")
+supabase = create_client(url, key)
 
-if not SUPABASE_KEY:
-    raise Exception("❌ SUPABASE_ANON_KEY environment variable not found.")
+# Test query
+response = supabase.table("offices").select("*").limit(1).execute()
 
-print("✅ Environment variables loaded")
-
-try:
-    # Create Supabase client
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    # Simple query to verify connection
-    response = supabase.table("pg_tables").select("*").limit(1).execute()
-
-    print("✅ Successfully connected to Supabase!")
-
-except Exception as e:
-    print("❌ Connection failed")
-    print(e)
+print("=================================")
+print("✅ Connection Successful")
+print("=================================")
+print(response.data)
