@@ -1,80 +1,44 @@
-import os
-
 from flask import Flask
-from dotenv import load_dotenv
-from supabase import create_client
 
-# ==========================================
-# Load Environment Variables
-# ==========================================
-
-load_dotenv()
+from core.config import Config
+from database.supabase import supabase
 
 app = Flask(__name__)
 
-# ==========================================
-# Supabase Configuration
-# ==========================================
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
-
-supabase = None
-
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# ==========================================
+# ---------------------------------
 # Home
-# ==========================================
-
+# ---------------------------------
 @app.route("/")
 def home():
-
     return """
-    <html>
+    <h1>🇮🇳 Janavani</h1>
+    <h2>Citizen Governance Platform</h2>
 
-    <head>
-        <title>Janavani</title>
-    </head>
+    <p>✅ Flask Running</p>
 
-    <body>
-
-        <h1>🇮🇳 Janavani</h1>
-
-        <h2>Citizen Governance Platform</h2>
-
-        <hr>
-
-        <p>✅ Web Server Running</p>
-
-        <ul>
-            <li><a href="/health">Health Check</a></li>
-            <li><a href="/supabase">Supabase Test</a></li>
-        </ul>
-
-    </body>
-
-    </html>
+    <ul>
+        <li><a href="/health">Health Check</a></li>
+        <li><a href="/supabase">Supabase Test</a></li>
+    </ul>
     """
 
-# ==========================================
-# Health Check
-# ==========================================
 
+# ---------------------------------
+# Health Check
+# ---------------------------------
 @app.route("/health")
 def health():
 
     return {
         "status": "healthy",
-        "service": "Janavani Web",
         "database": "connected" if supabase else "not configured"
     }
 
-# ==========================================
-# Supabase Test
-# ==========================================
 
+# ---------------------------------
+# Supabase Test
+# ---------------------------------
 @app.route("/supabase")
 def supabase_test():
 
@@ -82,7 +46,7 @@ def supabase_test():
 
         return {
             "status": "error",
-            "message": "Supabase environment variables not configured."
+            "message": "Supabase is not configured."
         }, 500
 
     try:
@@ -97,6 +61,7 @@ def supabase_test():
 
         return {
             "status": "connected",
+            "count": len(response.data),
             "rows": response.data
         }
 
@@ -107,19 +72,18 @@ def supabase_test():
             "error": str(e)
         }, 500
 
-# ==========================================
-# Main
-# ==========================================
 
+# ---------------------------------
+# Run Flask
+# ---------------------------------
 if __name__ == "__main__":
 
     print("=" * 50)
-    print("Starting Janavani Web Server...")
+    print("Starting Janavani Web Server")
     print("=" * 50)
-
-    port = int(os.environ.get("PORT", 10000))
 
     app.run(
         host="0.0.0.0",
-        port=port
+        port=Config.PORT,
+        debug=False
     )
