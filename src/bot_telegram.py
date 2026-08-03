@@ -38,12 +38,23 @@ async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{pdf}\n\nSend this PDF to the office.")
 
 def main():
-    app = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("search", search))
-    app.add_handler(CommandHandler("rate", rate))
-    app.add_handler(CommandHandler("complaint", complaint))
-    app.run_polling()
+    
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+
+    if not token:
+        raise Exception("TELEGRAM_BOT_TOKEN not found")
+
+    application = Application.builder().token(token).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("search", search))
+    application.add_handler(CommandHandler("rate", rate))
+    application.add_handler(CommandHandler("complaint", complaint))
+
+    print("✅ Telegram Bot Running...")
+
+    application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
+
