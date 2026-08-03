@@ -1,55 +1,68 @@
 import os
+import threading
+
 from flask import Flask
 from dotenv import load_dotenv
 from supabase import create_client
 
-# Load .env locally (Render ignores if not present)
+# ----------------------------
+# Load Environment Variables
+# ----------------------------
 load_dotenv()
 
 app = Flask(__name__)
 
-# Read Supabase credentials
+# ----------------------------
+# Supabase
+# ----------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")   # <-- FIXED
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 
-# Create client only if credentials exist
 supabase = None
 
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ----------------------------
+# Telegram Bot
+# ----------------------------
+def start_telegram_bot():
+    from src.bot_telegram import main
+    main()
 
+# ----------------------------
+# Routes
+# ----------------------------
 @app.route("/")
 def home():
     return """
     <h1>🇮🇳 Janavani</h1>
     <h2>Citizen Governance Platform</h2>
 
-    <p>✅ Server Running</p>
+    <p>✅ Flask Running</p>
 
     <ul>
-        <li><a href="/health">Health Check</a></li>
+        <li><a href="/health">Health</a></li>
         <li><a href="/supabase">Supabase Test</a></li>
     </ul>
     """
-
 
 @app.route("/health")
 def health():
     return {
         "status": "healthy",
-        "service": "Janavani"
+        "telegram": "running",
+        "database": "connected" if supabase else "not connected"
     }
 
-
 @app.route("/supabase")
-def test_supabase():
+def supabase_test():
 
     if supabase is None:
         return {
             "status": "error",
-            "message": "Supabase credentials not found."
-        }, 500
+            "message": "Supabase not configured"
+        }
 
     try:
 
@@ -73,8 +86,22 @@ def test_supabase():
             "error": str(e)
         }, 500
 
-
+# ----------------------------
+# Main
+# ----------------------------
 if __name__ == "__main__":
+
+    print("===================================")
+    print("Starting Janavani Platform...")
+    print("===================================")
+
+    # Start Telegram Bot
+    threading.Thread(
+        target=start_telegram_bot,
+        daemon=True
+    ).start()
+
+    print("✅ Telegram Bot Started")
 
     port = int(os.environ.get("PORT", 10000))
 
