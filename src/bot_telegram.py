@@ -132,8 +132,35 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(user_message)
 
     await update.message.reply_text(
-        "I received your message."
+        f"""
+✅ I understood your concern.
+
+📝 You said:
+
+{user_message}
+
+------------------------------------
+
+I can help you generate:
+
+1️⃣ Complaint
+
+2️⃣ Grievance
+
+3️⃣ Grievance Petition
+
+4️⃣ RTI Application
+
+5️⃣ Representation Letter
+
+Reply with the number.
+
+Example:
+
+1
+"""
     )
+    
     
 
 # --------------------------------------------------
@@ -161,6 +188,13 @@ def main():
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
+
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle_message
+        )
+)
 
     print("✅ Bot Started Successfully")
     print("=" * 60)
