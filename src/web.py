@@ -1,3 +1,6 @@
+import os
+import subprocess
+
 from flask import Flask
 
 from core.config import Config
@@ -81,6 +84,14 @@ if __name__ == "__main__":
     print("=" * 50)
     print("Starting Janavani Web Server")
     print("=" * 50)
+
+    print("Starting Telegram Bot...")
+
+    subprocess.Popen(
+        ["python3", "src/bot_telegram.py"]
+    )
+
+    print("Telegram Bot Started")
 
     app.run(
         host="0.0.0.0",
