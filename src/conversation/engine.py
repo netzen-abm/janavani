@@ -1,19 +1,37 @@
-from conversation.workflow import WORKFLOWS
+"""
+Conversation Engine
+
+The Conversation Engine controls every citizen workflow.
+
+Current Version:
+    Router
+        ↓
+    Engine
+        ↓
+    Handler
+
+Future Version:
+    Router
+        ↓
+    Engine
+        ↓
+    Steps
+        ↓
+    Services
+"""
+
 from conversation.handler import handle_message
 
 
 async def run_step(update, context):
-
     """
-    Workflow Engine
+    Main entry point for the Conversation Engine.
 
-    Version 2
+    Right now the engine delegates
+    to handler.py.
 
-    For now,
-    conversation logic still lives in handler.py.
-
-    Soon,
-    this engine will execute workflow steps directly.
+    Later every workflow step
+    will execute directly from here.
     """
 
     await handle_message(update, context)
