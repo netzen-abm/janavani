@@ -1,3 +1,4 @@
+from conversation.workflow import WORKFLOWS
 from conversation.handler import handle_message
 
 
@@ -6,11 +7,13 @@ async def run_step(update, context):
     """
     Workflow Engine
 
-    Right now it simply delegates
-    everything to handler.py.
+    Version 2
 
-    Later this engine will decide
-    which workflow step to execute.
+    For now,
+    conversation logic still lives in handler.py.
+
+    Soon,
+    this engine will execute workflow steps directly.
     """
 
     await handle_message(update, context)
