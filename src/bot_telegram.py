@@ -121,6 +121,25 @@ async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{pdf}\n\nComplaint generated successfully."
     )
 
+# --------------------------------------------------
+# Handle Normal Messages
+# --------------------------------------------------
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    user_message = update.message.text
+
+    print(f"Citizen: {user_message}")
+
+    await update.message.reply_text(
+        "✅ I understood your concern.\n\n"
+        "Please tell me your district.\n\n"
+        "Example:\n"
+        "Ernakulam\n"
+        "Kozhikode\n"
+        "Kannur"
+    )
+    
 
 # --------------------------------------------------
 # MAIN
