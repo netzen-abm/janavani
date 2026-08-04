@@ -15,7 +15,7 @@ from commands.start import start
 from commands.search import search
 from commands.rate import rate
 
-# from commands.complaint import complaint
+from commands.complaint import complaint
 
 # ----------------------------
 # Conversation Router
