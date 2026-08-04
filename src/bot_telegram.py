@@ -7,22 +7,36 @@ from telegram.ext import (
 
 from core.config import Config
 
-from conversation.handler import (
-    start,
-    search,
-    rate,
-    complaint,
-    handle_message,
+# ----------------------------
+# Commands
+# ----------------------------
 
-)
+from commands.start import start
+from commands.search import search
+from commands.rate import rate
+from commands.complaint import complaint
+
+# ----------------------------
+# Conversation Router
+# ----------------------------
 
 from conversation.router import route
 
+
+# ==========================================================
+# MAIN
+# ==========================================================
+
 def main():
 
+    # ----------------------------
+    # Validate Configuration
+    # ----------------------------
+
     if not Config.TELEGRAM_BOT_TOKEN:
+
         raise Exception(
-            "TELEGRAM_BOT_TOKEN not configured"
+            "TELEGRAM_BOT_TOKEN is not configured."
         )
 
     print("=" * 60)
@@ -31,6 +45,10 @@ def main():
     print("Starting Bot...")
     print("=" * 60)
 
+    # ----------------------------
+    # Telegram Application
+    # ----------------------------
+
     application = (
         Application
         .builder()
@@ -38,9 +56,9 @@ def main():
         .build()
     )
 
-    # ------------------------
-    # Commands
-    # ------------------------
+    # ----------------------------
+    # Slash Commands
+    # ----------------------------
 
     application.add_handler(
         CommandHandler("start", start)
@@ -58,25 +76,40 @@ def main():
         CommandHandler("complaint", complaint)
     )
 
-    # ------------------------
-    # Conversation
-    # ------------------------
+    # ----------------------------
+    # Normal Conversation
+    # ----------------------------
 
     application.add_handler(
+
         MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    route
+
+            filters.TEXT & ~filters.COMMAND,
+
+            route
 
         )
+
     )
 
     print("✅ Bot Started Successfully")
     print("=" * 60)
 
+    # ----------------------------
+    # Run Bot
+    # ----------------------------
+
     application.run_polling(
+
         drop_pending_updates=True
+
     )
 
 
+# ==========================================================
+# ENTRY POINT
+# ==========================================================
+
 if __name__ == "__main__":
+
     main()
