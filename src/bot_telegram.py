@@ -20,6 +20,11 @@ from conversation.state import (
     clear_state,
 )
 
+from conversation.session import (
+    get_session,
+    clear_session,
+)
+
 
 # --------------------------------------------------
 # /start
