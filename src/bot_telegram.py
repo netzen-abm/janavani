@@ -129,15 +129,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_message = update.message.text
 
-    print(f"Citizen: {user_message}")
+    print(user_message)
 
     await update.message.reply_text(
-        "✅ I understood your concern.\n\n"
-        "Please tell me your district.\n\n"
-        "Example:\n"
-        "Ernakulam\n"
-        "Kozhikode\n"
-        "Kannur"
+        "I received your message."
     )
     
 
