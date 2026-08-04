@@ -88,7 +88,8 @@ if __name__ == "__main__":
     print("Starting Telegram Bot...")
 
     subprocess.Popen(
-        ["python3", "src/bot_telegram.py"]
+    ["python3", "-u", "src/bot_telegram.py"]
+    
     )
 
     print("Telegram Bot Started")
