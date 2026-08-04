@@ -1,8 +1,6 @@
-"""
-Workflow Router
+from conversation.engine import run_step
 
-Will dispatch each conversation step
-to the correct handler.
 
-Implementation coming next.
-"""
+async def route(update, context):
+
+    await run_step(update, context)
