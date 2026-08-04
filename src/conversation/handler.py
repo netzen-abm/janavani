@@ -3,7 +3,9 @@ from telegram.ext import ContextTypes
 
 from tools.search_directory import search_office
 from tools.rate_office import save_rating
-from tools.generate_pdf import generate_complaint_pdf
+
+# Temporary disable PDF generation
+# from tools.generate_pdf import generate_complaint_pdf
 
 from services.office_service import find_offices
 
