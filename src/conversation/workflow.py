@@ -1,43 +1,29 @@
+"""
+Conversation Workflow
+
+Defines the order of every conversation step.
+"""
+
 from conversation.steps import *
 
-WORKFLOWS = {
+WORKFLOW = {
 
-    "Complaint": [
+    START: DOCUMENT,
 
-        ASK_ISSUE,
+    DOCUMENT: DISTRICT,
 
-        ASK_DOCUMENT,
+    DISTRICT: OFFICE,
 
-        ASK_DISTRICT,
+    OFFICE: CITIZEN_NAME,
 
-        ASK_OFFICE,
+    CITIZEN_NAME: CITIZEN_ADDRESS,
 
-        ASK_LANGUAGE,
+    CITIZEN_ADDRESS: CITIZEN_PHONE,
 
-        ASK_PHOTO,
+    CITIZEN_PHONE: CITIZEN_EMAIL,
 
-        PREVIEW,
+    CITIZEN_EMAIL: GENERATE_DOCUMENT,
 
-        GENERATE,
-
-        FINISHED,
-    ],
-
-    "RTI": [
-
-        ASK_ISSUE,
-
-        ASK_DOCUMENT,
-
-        ASK_DISTRICT,
-
-        ASK_LANGUAGE,
-
-        PREVIEW,
-
-        GENERATE,
-
-        FINISHED,
-    ],
+    GENERATE_DOCUMENT: FINISHED,
 
 }
