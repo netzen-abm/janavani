@@ -9,24 +9,49 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Citizen Governance Platform
 
-Available Commands
+I can help you:
+
+✅ Generate Complaint
+
+✅ Generate Grievance
+
+✅ Generate Grievance Petition
+
+✅ Generate RTI Application
+
+✅ Generate Representation Letter
+
+------------------------------------
+
+You can either use commands
 
 /start
+
 /search
+
 /rate
+
 /complaint
+
+------------------------------------
 
 Or simply type your problem.
 
-Examples
+Example:
 
-Broken Road
+• My road has been broken for 3 months
 
-Water Pipe Leakage
+• Water pipe leakage near my house
 
-Ration Card Delay
+• My ration card is delayed
 
-Aadhaar not updated
+• Pension not received
+
+• Aadhar update pending
+
+------------------------------------
+
+Janavani will guide you step by step.
 """
 
     await update.message.reply_text(message)
