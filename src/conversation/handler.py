@@ -217,25 +217,55 @@ Kannur
 
         return
 
-    # ----------------------------------
+        # ----------------------------------
 
     if state == WAITING_FOR_DISTRICT:
 
+        session = get_session(user_id)
+
         session["district"] = user_message
 
-        await update.message.reply_text(
-f"""
-District Recorded
+        from services.office_service import find_offices
 
-✅ {session["district"]}
-
-Conversation saved.
-
-More steps coming next.
-"""
+        offices = find_offices(
+            session["issue"],
+            session["district"]
         )
 
-        print(session)
+        if len(offices) == 0:
+
+            await update.message.reply_text(
+                f"""
+District recorded:
+
+{session['district']}
+
+⚠️ No matching office found.
+
+(Office search will become smarter soon.)
+"""
+            )
+
+        else:
+
+            office_list = ""
+
+            for index, office in enumerate(offices, start=1):
+
+                office_list += (
+                    f"{index}. "
+                    f"{office['office_name']}\n"
+                )
+
+            await update.message.reply_text(
+                f"""
+I found these offices.
+
+{office_list}
+
+Reply with the office number.
+"""
+            )
 
         clear_state(user_id)
 
