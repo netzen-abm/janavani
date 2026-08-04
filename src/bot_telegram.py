@@ -14,6 +14,12 @@ from tools.rate_office import save_rating
 from tools.generate_pdf import generate_complaint_pdf
 from legal_brain import get_legal_advice
 
+from conversation.state import (
+    get_state,
+    set_state,
+    clear_state,
+)
+
 
 # --------------------------------------------------
 # /start
@@ -127,12 +133,27 @@ async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    user_message = update.message.text
+    user_id = update.effective_user.id
+    user_message = update.message.text.strip()
 
-    print(user_message)
+    state = get_state(user_id)
 
-    await update.message.reply_text(
-        f"""
+    print("--------------------------------")
+    print("User:", user_id)
+    print("State:", state)
+    print("Message:", user_message)
+    print("--------------------------------")
+
+    # ----------------------------------
+    # First Message
+    # ----------------------------------
+
+    if state == "NEW":
+
+        set_state(user_id, "WAITING_FOR_DOCUMENT")
+
+        await update.message.reply_text(
+            f"""
 ✅ I understood your concern.
 
 📝 You said:
@@ -159,7 +180,55 @@ Example:
 
 1
 """
-    )
+        )
+
+        return
+
+    # ----------------------------------
+    # Waiting for document type
+    # ----------------------------------
+
+    if state == "WAITING_FOR_DOCUMENT":
+
+        await update.message.reply_text(
+            f"""
+✅ You selected:
+
+{user_message}
+
+Now tell me your District.
+
+Example:
+
+Ernakulam
+Kozhikode
+Kannur
+"""
+        )
+
+        set_state(user_id, "WAITING_FOR_DISTRICT")
+
+        return
+
+    # ----------------------------------
+    # Waiting for district
+    # ----------------------------------
+
+    if state == "WAITING_FOR_DISTRICT":
+
+        await update.message.reply_text(
+            f"""
+District recorded:
+
+{user_message}
+
+✅ Next step coming soon...
+"""
+        )
+
+        clear_state(user_id)
+
+        return
     
     
 
