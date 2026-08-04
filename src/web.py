@@ -1,4 +1,3 @@
-import os
 import subprocess
 
 from flask import Flask
@@ -9,9 +8,9 @@ from database.supabase import supabase
 app = Flask(__name__)
 
 
-# ---------------------------------
+# ---------------------------------------------------
 # Home
-# ---------------------------------
+# ---------------------------------------------------
 @app.route("/")
 def home():
     return """
@@ -27,9 +26,9 @@ def home():
     """
 
 
-# ---------------------------------
-# Health Check
-# ---------------------------------
+# ---------------------------------------------------
+# Health
+# ---------------------------------------------------
 @app.route("/health")
 def health():
 
@@ -39,9 +38,9 @@ def health():
     }
 
 
-# ---------------------------------
+# ---------------------------------------------------
 # Supabase Test
-# ---------------------------------
+# ---------------------------------------------------
 @app.route("/supabase")
 def supabase_test():
 
@@ -76,9 +75,9 @@ def supabase_test():
         }, 500
 
 
-# ---------------------------------
-# Run Flask
-# ---------------------------------
+# ---------------------------------------------------
+# Main
+# ---------------------------------------------------
 if __name__ == "__main__":
 
     print("=" * 50)
@@ -87,11 +86,14 @@ if __name__ == "__main__":
 
     print("Starting Telegram Bot...")
 
-    subprocess.Popen(
-    ["python3", "-u", "src/bot_telegram.py"]
-    
+    bot_process = subprocess.Popen(
+        ["python3", "-u", "src/bot_telegram.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
 
+    print(f"Telegram Bot PID: {bot_process.pid}")
     print("Telegram Bot Started")
 
     app.run(
