@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from services.office_service import find_offices
 from tools.search_directory import search_office
 from tools.rate_office import save_rating
 from tools.generate_pdf import generate_complaint_pdf
@@ -13,7 +14,7 @@ from conversation.state import (
 
 from conversation.session import (
     get_session,
-    clear_session,
+    
 )
 
 from conversation.constants import (
@@ -225,7 +226,7 @@ Kannur
 
         session["district"] = user_message
 
-        from services.office_service import find_offices
+        
 
         offices = find_offices(
             session["issue"],
