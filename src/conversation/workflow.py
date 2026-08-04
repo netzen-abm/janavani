@@ -6,24 +6,28 @@ Defines the order of every conversation step.
 
 from conversation.steps import *
 
-WORKFLOW = {
+WORKFLOWS = {
 
-    START: DOCUMENT,
+    "Complaint": [
+        ASK_ISSUE,
+        ASK_DOCUMENT,
+        ASK_DISTRICT,
+        ASK_OFFICE,
+        ASK_LANGUAGE,
+        ASK_PHOTO,
+        PREVIEW,
+        GENERATE,
+        FINISHED,
+    ],
 
-    DOCUMENT: DISTRICT,
-
-    DISTRICT: OFFICE,
-
-    OFFICE: CITIZEN_NAME,
-
-    CITIZEN_NAME: CITIZEN_ADDRESS,
-
-    CITIZEN_ADDRESS: CITIZEN_PHONE,
-
-    CITIZEN_PHONE: CITIZEN_EMAIL,
-
-    CITIZEN_EMAIL: GENERATE_DOCUMENT,
-
-    GENERATE_DOCUMENT: FINISHED,
+    "RTI": [
+        ASK_ISSUE,
+        ASK_DOCUMENT,
+        ASK_DISTRICT,
+        ASK_LANGUAGE,
+        PREVIEW,
+        GENERATE,
+        FINISHED,
+    ],
 
 }
