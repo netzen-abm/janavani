@@ -13,8 +13,10 @@ from conversation.handler import (
     rate,
     complaint,
     handle_message,
+
 )
 
+from conversation.router import route
 
 def main():
 
@@ -62,8 +64,9 @@ def main():
 
     application.add_handler(
         MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle_message,
+    filters.TEXT & ~filters.COMMAND,
+    route
+
         )
     )
 
