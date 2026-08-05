@@ -11,6 +11,7 @@ from conversation.constants import (
     NEW,
     WAITING_FOR_DOCUMENT,
     WAITING_FOR_DISTRICT,
+    WAITING_FOR_OFFICE,
 )
 
 from conversation.handler import handle_message
@@ -18,7 +19,12 @@ from conversation.handler import handle_message
 from conversation.steps.issue import handle_issue
 from conversation.steps.document import handle_document
 from conversation.steps.district import handle_district
+from conversation.steps.office import handle_office
 
+
+# =====================================================
+# Conversation Engine
+# =====================================================
 
 async def run_step(update, context):
 
@@ -26,23 +32,53 @@ async def run_step(update, context):
 
     state = get_state(user_id)
 
-    # New conversation
+    # -------------------------------------------------
+    # STEP 1
+    # Capture Issue
+    # -------------------------------------------------
+
     if state == NEW:
 
         await handle_issue(update, context)
+
         return
 
-    # Document selection
+    # -------------------------------------------------
+    # STEP 2
+    # Select Document
+    # -------------------------------------------------
+
     if state == WAITING_FOR_DOCUMENT:
 
         await handle_document(update, context)
+
         return
 
-    # District selection
+    # -------------------------------------------------
+    # STEP 3
+    # Select District
+    # -------------------------------------------------
+
     if state == WAITING_FOR_DISTRICT:
 
         await handle_district(update, context)
+
         return
 
-    # Remaining workflow
+    # -------------------------------------------------
+    # STEP 4
+    # Select Office
+    # -------------------------------------------------
+
+    if state == WAITING_FOR_OFFICE:
+
+        await handle_office(update, context)
+
+        return
+
+    # -------------------------------------------------
+    # Remaining Workflow
+    # (Still handled by the legacy handler)
+    # -------------------------------------------------
+
     await handle_message(update, context)
