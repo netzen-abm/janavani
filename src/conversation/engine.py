@@ -1,18 +1,19 @@
 """
 Conversation Engine
 
-The engine controls every conversation workflow.
-
-Responsibilities
-
-1. Read current state
-2. Execute current step
-3. Advance workflow
+Routes every conversation state
+to the correct workflow step.
 """
 
-from conversation.handler import handle_message
 from conversation.state import get_state
-from conversation.session import get_session
+
+from conversation.constants import (
+    NEW,
+)
+
+from conversation.handler import handle_message
+
+from conversation.steps.issue import handle_issue
 
 
 async def run_step(update, context):
@@ -21,13 +22,19 @@ async def run_step(update, context):
 
     state = get_state(user_id)
 
-    session = get_session(user_id)
+    # ----------------------------------
+    # New Conversation
+    # ----------------------------------
 
-    print("=" * 60)
-    print("ENGINE")
-    print("User :", user_id)
-    print("State:", state)
-    print("Session:", session)
-    print("=" * 60)
+    if state == NEW:
+
+        await handle_issue(update, context)
+
+        return
+
+    # ----------------------------------
+    # Remaining workflow
+    # (still handled by the old handler)
+    # ----------------------------------
 
     await handle_message(update, context)
