@@ -280,3 +280,43 @@ Reply with the office number.
         )
 
         return
+    # ----------------------------------
+
+if state == WAITING_FOR_OFFICE:
+
+    offices = session.get("offices", [])
+
+    try:
+        choice = int(user_message)
+
+    except ValueError:
+
+        await update.message.reply_text(
+            "Please enter a valid office number."
+        )
+
+        return
+
+    if choice < 1 or choice > len(offices):
+
+        await update.message.reply_text(
+            "Invalid office number."
+        )
+
+        return
+
+    office = offices[choice - 1]
+
+    session["office"] = office
+
+    await update.message.reply_text(
+f"""
+✅ Office Selected
+
+{office['office_name']}
+
+Please enter your full name.
+"""
+    )
+
+    return
