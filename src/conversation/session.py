@@ -16,16 +16,33 @@ def get_session(user_id):
     if user_id not in user_sessions:
 
         user_sessions[user_id] = {
-            
-            "workflow": "Complaint",
-            "issue": "",
-            "document": "",
-            "district": "",
-            "department": "",
-            "office": "",
-            "address": "",
-            "photo": None,
-        }
+
+    # Workflow
+    "workflow": "Complaint",
+
+    # Citizen Issue
+    "issue": "",
+
+    # Selected Document
+    "document": "",
+
+    # Location
+    "district": "",
+    "department": "",
+
+    # Office
+    "office": "",
+    "office_id": "",
+
+    # Citizen Details
+    "name": "",
+    "address": "",
+    "phone": "",
+    "email": "",
+
+    # Attachment
+    "photo": None,
+}
 
     return user_sessions[user_id]
 
