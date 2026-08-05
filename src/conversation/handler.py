@@ -249,7 +249,7 @@ District recorded:
 """
             )
 
-        else:
+                else:
 
             office_list = ""
 
@@ -270,12 +270,13 @@ Reply with the office number.
 """
             )
 
-        clear_state(user_id)
+        # Save office list
         session["offices"] = offices
 
-set_state(
-    user_id,
-    WAITING_FOR_OFFICE
-)
+        # Move to next state
+        set_state(
+            user_id,
+            WAITING_FOR_OFFICE
+        )
 
         return
