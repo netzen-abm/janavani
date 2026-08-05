@@ -6,7 +6,14 @@ from conversation.state import set_state
 from conversation.constants import WAITING_FOR_IDENTITY
 
 
-async def handle_preview(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_preview(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    """
+    Shows a summary of the complaint
+    before asking for identity.
+    """
 
     user_id = update.effective_user.id
 
@@ -14,25 +21,32 @@ async def handle_preview(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     office = session.get("office", {})
 
-    office_name = office.get("office_name", "Not Selected")
+    office_name = office.get(
+        "office_name",
+        "Not Selected"
+    )
 
     await update.message.reply_text(
 f"""
 📄 Complaint Preview
 
-Issue:
-{session["issue"]}
+Issue
+------
+{session.get("issue", "")}
 
-Document:
-{session["document"]}
+Document
+---------
+{session.get("document", "")}
 
-District:
-{session["district"]}
+District
+---------
+{session.get("district", "")}
 
-Office:
+Office
+------
 {office_name}
 
--------------------------
+--------------------------------
 
 Choose Identity
 
@@ -41,6 +55,16 @@ Choose Identity
 2️⃣ Name Only
 
 3️⃣ Full Identity
+
+Reply with:
+
+1
+
+2
+
+or
+
+3
 """
     )
 
