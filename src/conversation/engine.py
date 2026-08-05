@@ -21,6 +21,16 @@ from conversation.steps.document import handle_document
 from conversation.steps.district import handle_district
 from conversation.steps.office import handle_office
 
+from conversation.steps.preview import handle_preview
+
+...
+
+if state == WAITING_FOR_PREVIEW:
+
+    await handle_preview(update, context)
+
+    return
+
 
 # =====================================================
 # Conversation Engine
