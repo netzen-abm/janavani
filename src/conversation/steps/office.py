@@ -55,3 +55,8 @@ f"""
 Please enter your full name.
 """
     )
+
+set_state(
+    user_id,
+    WAITING_FOR_PREVIEW
+)
