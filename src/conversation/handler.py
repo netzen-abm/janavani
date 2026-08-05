@@ -23,6 +23,7 @@ from conversation.constants import (
     NEW,
     WAITING_FOR_DOCUMENT,
     WAITING_FOR_DISTRICT,
+    WAITING_FOR_OFFICE,
 )
 
 # --------------------------------------------------
@@ -270,5 +271,11 @@ Reply with the office number.
             )
 
         clear_state(user_id)
+        session["offices"] = offices
+
+set_state(
+    user_id,
+    WAITING_FOR_OFFICE
+)
 
         return
