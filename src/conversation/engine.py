@@ -26,15 +26,20 @@ from conversation.steps.preview import handle_preview
 from conversation.steps.identity import handle_identity
 
 
+# ======================================================
+# Conversation Engine
+# ======================================================
+
 async def run_step(update, context):
 
     user_id = update.effective_user.id
 
     state = get_state(user_id)
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 1
     # Issue
-    # -------------------------
+    # ------------------------------------------
 
     if state == NEW:
 
@@ -42,9 +47,10 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 2
     # Document
-    # -------------------------
+    # ------------------------------------------
 
     if state == WAITING_FOR_DOCUMENT:
 
@@ -52,9 +58,10 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 3
     # District
-    # -------------------------
+    # ------------------------------------------
 
     if state == WAITING_FOR_DISTRICT:
 
@@ -62,9 +69,10 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 4
     # Office
-    # -------------------------
+    # ------------------------------------------
 
     if state == WAITING_FOR_OFFICE:
 
@@ -72,9 +80,10 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 5
     # Preview
-    # -------------------------
+    # ------------------------------------------
 
     if state == WAITING_FOR_PREVIEW:
 
@@ -82,9 +91,10 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
+    # STEP 6
     # Identity
-    # -------------------------
+    # ------------------------------------------
 
     if state == WAITING_FOR_IDENTITY:
 
@@ -92,8 +102,8 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------
+    # ------------------------------------------
     # Legacy Handler
-    # -------------------------
+    # ------------------------------------------
 
     await handle_message(update, context)
