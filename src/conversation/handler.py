@@ -249,7 +249,7 @@ District recorded:
 """
             )
 
-                else:
+        else:
 
             office_list = ""
 
