@@ -12,6 +12,8 @@ from conversation.constants import (
     WAITING_FOR_DOCUMENT,
     WAITING_FOR_DISTRICT,
     WAITING_FOR_OFFICE,
+    WAITING_FOR_PREVIEW,
+    WAITING_FOR_IDENTITY,
 )
 
 from conversation.handler import handle_message
@@ -20,21 +22,9 @@ from conversation.steps.issue import handle_issue
 from conversation.steps.document import handle_document
 from conversation.steps.district import handle_district
 from conversation.steps.office import handle_office
-
 from conversation.steps.preview import handle_preview
+from conversation.steps.identity import handle_identity
 
-...
-
-if state == WAITING_FOR_PREVIEW:
-
-    await handle_preview(update, context)
-
-    return
-
-
-# =====================================================
-# Conversation Engine
-# =====================================================
 
 async def run_step(update, context):
 
@@ -42,10 +32,9 @@ async def run_step(update, context):
 
     state = get_state(user_id)
 
-    # -------------------------------------------------
-    # STEP 1
-    # Capture Issue
-    # -------------------------------------------------
+    # -------------------------
+    # Issue
+    # -------------------------
 
     if state == NEW:
 
@@ -53,10 +42,9 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------------------------------
-    # STEP 2
-    # Select Document
-    # -------------------------------------------------
+    # -------------------------
+    # Document
+    # -------------------------
 
     if state == WAITING_FOR_DOCUMENT:
 
@@ -64,10 +52,9 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------------------------------
-    # STEP 3
-    # Select District
-    # -------------------------------------------------
+    # -------------------------
+    # District
+    # -------------------------
 
     if state == WAITING_FOR_DISTRICT:
 
@@ -75,10 +62,9 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------------------------------
-    # STEP 4
-    # Select Office
-    # -------------------------------------------------
+    # -------------------------
+    # Office
+    # -------------------------
 
     if state == WAITING_FOR_OFFICE:
 
@@ -86,9 +72,28 @@ async def run_step(update, context):
 
         return
 
-    # -------------------------------------------------
-    # Remaining Workflow
-    # (Still handled by the legacy handler)
-    # -------------------------------------------------
+    # -------------------------
+    # Preview
+    # -------------------------
+
+    if state == WAITING_FOR_PREVIEW:
+
+        await handle_preview(update, context)
+
+        return
+
+    # -------------------------
+    # Identity
+    # -------------------------
+
+    if state == WAITING_FOR_IDENTITY:
+
+        await handle_identity(update, context)
+
+        return
+
+    # -------------------------
+    # Legacy Handler
+    # -------------------------
 
     await handle_message(update, context)
