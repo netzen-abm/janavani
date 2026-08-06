@@ -1,12 +1,14 @@
 """
 Conversation Engine
 
-Executes the current workflow step
-using the State Registry.
+Routes the current conversation state
+to the appropriate workflow step.
+
+This is the single entry point for the
+new conversation architecture.
 """
 
 from conversation.state import get_state
-from conversation.handler import handle_message
 
 from engine.state_registry import get_handler
 
@@ -24,11 +26,16 @@ async def run_step(update, context):
 
     handler = get_handler(state)
 
-    if handler is not None:
+    if handler is None:
 
-        await handler(update, context)
+        await update.message.reply_text(
+            """
+⚠️ Unknown conversation state.
+
+Please type /start to begin a new conversation.
+"""
+        )
 
         return
 
-    # Fallback for legacy states
-    await handle_message(update, context)
+    await handler(update, context)
