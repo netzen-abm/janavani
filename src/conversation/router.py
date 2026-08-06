@@ -1,4 +1,4 @@
-from services.issue_classifier import classify_issue
+from src.services.issue_classifier import classify_issue
 
 from conversation.engine import run_step
 
