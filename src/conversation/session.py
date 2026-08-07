@@ -30,9 +30,20 @@ def get_session(user_id):
     "district": "",
     "department": "",
 
-    # Office
-    "office": "",
-    "office_id": "",
+    # Office Search Results
+    "offices": [],
+
+    # Selected Office
+    "office": {
+        "office_id": "",
+        "office_name": "",
+        "office_address": "",
+        "department": "",
+        "district": "",
+    },
+
+    # Identity
+    "identity_mode": "anonymous",
 
     # Citizen Details
     "name": "",

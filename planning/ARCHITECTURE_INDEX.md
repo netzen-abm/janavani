@@ -1,0 +1,22 @@
+# Janavani Architecture
+
+## Constitution
+
+- MVP_CONSTITUTION.md
+
+## Contracts
+
+- OFFICE_SCHEMA.md
+- SESSION_SCHEMA.md
+- DOCUMENT_CONTRACT.md
+- PRIVACY_CONTRACT.md
+- WORKFLOW_CONTRACT.md
+- SERVICE_CONTRACT.md
+
+## Existing Documents
+
+- DATABASE_DESIGN.md
+- PRODUCT_REQUIREMENTS.md
+- SYSTEM_DOMAIN_MODEL.md
+- PRIVACY_ARCHITECTURE.md
+- WORKFLOWS.md
