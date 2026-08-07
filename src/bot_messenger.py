@@ -2,9 +2,9 @@
 import requests
 import os
 from flask import Flask, request
-from src.tools.search_directory import search_office
-from src.tools.rate_office import save_rating
-from src.tools.generate_pdf import generate_complaint_pdf
+from tools.search_directory import search_office
+from tools.rate_office import save_rating
+from tools.generate_pdf import generate_complaint_pdf
 
 app = Flask(__name__)
 TOKEN = os.getenv("MESSENGER_TOKEN")
