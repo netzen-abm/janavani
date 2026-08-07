@@ -60,8 +60,3 @@ async def handle_generate(
 
     clear_session(user_id)
     clear_state(user_id)
-
-try:
-    ...
-finally:
-    ...
