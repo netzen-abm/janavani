@@ -29,6 +29,10 @@ async def handle_generate(
 
     session = get_session(user_id)
 
+    await update.message.reply_text(
+        "Generating your document..."
+    )
+
     document_engine = DocumentEngine()
 
     pdf_generator = PDFGenerator()
@@ -46,6 +50,18 @@ async def handle_generate(
         output_file=f"complaint_{user_id}.pdf",
     )
 
-    await update.message.reply_text(
-        "Generating your document..."
-    )
+    with open(pdf_file, "rb") as pdf:
+
+        await update.message.reply_document(
+            document=pdf,
+            filename=f"complaint_{user_id}.pdf",
+            caption="✅ Your complaint has been generated successfully."
+        )
+
+    clear_session(user_id)
+    clear_state(user_id)
+
+try:
+    ...
+finally:
+    ...
