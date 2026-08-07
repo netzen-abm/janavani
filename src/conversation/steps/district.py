@@ -6,7 +6,7 @@ from conversation.state import set_state
 
 from conversation.constants import WAITING_FOR_OFFICE
 
-from src.services.office_service import find_offices
+from services.office_service import find_offices
 
 
 async def handle_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
