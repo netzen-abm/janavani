@@ -1,10 +1,10 @@
 # src/main.py
 # Test the whole system
 
-from src.tools.search_directory import search_office
-from src.tools.rate_office import save_rating
-from src.tools.generate_pdf import generate_complaint_pdf
-from src.legal_brain import get_legal_advice
+from tools.search_directory import search_office
+from tools.rate_office import save_rating
+from tools.generate_pdf import generate_complaint_pdf
+from legal_brain import get_legal_advice
 
 print("=== JANAVANI TEST ===")
 print(search_office("ration", "Kochi"))
