@@ -5,7 +5,7 @@ from conversation.session import get_session
 from conversation.state import set_state
 
 from conversation.constants import (
-    WAITING_FOR_CITIZEN_NAME,
+    WAITING_FOR_PREVIEW,
 )
 
 
@@ -42,9 +42,9 @@ async def handle_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["office"] = office
 
     set_state(
-        user_id,
-        WAITING_FOR_CITIZEN_NAME
-    )
+    user_id,
+    WAITING_FOR_PREVIEW
+)
 
     await update.message.reply_text(
 f"""
@@ -55,8 +55,3 @@ f"""
 Please enter your full name.
 """
     )
-
-set_state(
-    user_id,
-    WAITING_FOR_PREVIEW
-)
