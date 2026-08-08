@@ -1,91 +1,115 @@
-"""
-Complaint Builder
-
-Builds a professional complaint letter from
-structured workflow data.
-
-Pure business logic.
-
-No Telegram.
-No PDF.
-No Database.
-"""
-
-from datetime import date
+from datetime import datetime
+from services.escalation_engine import get_escalation_targets
 
 
-class ComplaintBuilder:
-    """
-    Builds complaint letters.
-    """
+# --------------------------------------------------
+# 📜 LEGAL REFERENCE ENGINE
+# --------------------------------------------------
 
-    def build(
-        self,
-        issue: str,
-        office_name: str,
-        office_address: str,
-        identity_mode: str = "anonymous",
-        citizen: dict | None = None,
-    ) -> str:
+def get_legal_reference(category: str):
 
-        citizen = citizen or {}
+    if category == "Sanitation":
+        return "as per Municipal Solid Waste Management Rules, 2016"
 
-        today = date.today().strftime("%d %B %Y")
+    if category == "Infrastructure":
+        return "as per Public Works Department (PWD) standards"
 
-        recipient = f"""To
+    if category == "Water Supply":
+        return "as per public water supply regulations"
 
-The Officer In Charge
-{office_name}
-{office_address}
-"""
+    if category == "Electricity":
+        return "as per Electricity Supply Regulations"
 
-        subject = f"Subject: Complaint regarding {issue}"
+    return "as per applicable public service norms"
 
-        body = f"""
+
+# --------------------------------------------------
+# 🧠 COMPLAINT BUILDER (INTELLIGENCE CORE)
+# --------------------------------------------------
+
+def build_complaint(
+    issue: str,
+    district: str = "",
+    department: str = "",
+    office_name: str = "",
+    citizen_name: str = "Concerned Citizen",
+    category: str = "General",
+    complaint_id: str = None,
+):
+
+    today = datetime.now().strftime("%d %B %Y")
+
+    # --------------------------------------------------
+    # 📌 SUBJECT
+    # --------------------------------------------------
+
+    subject = f"Urgent Attention Required: {issue[:60].capitalize()}"
+
+    if district:
+        subject += f" in {district}"
+
+    # --------------------------------------------------
+    # 🏛 AUTHORITY
+    # --------------------------------------------------
+
+    authority = office_name if office_name else "The Concerned Authority"
+
+    # --------------------------------------------------
+    # ⚖ LEGAL + ESCALATION
+    # --------------------------------------------------
+
+    legal_line = get_legal_reference(category)
+
+    escalation_targets = get_escalation_targets(category)
+    escalation_text = ", ".join(escalation_targets)
+
+    # --------------------------------------------------
+    # 🆔 REFERENCE BLOCK (FIXED — SAFE)
+    # --------------------------------------------------
+
+    reference_block = ""
+    if complaint_id:
+        reference_block = f"Reference ID: {complaint_id}\n\n"
+
+    # --------------------------------------------------
+    # 🧾 BODY
+    # --------------------------------------------------
+
+    body = f"""
+{reference_block}Date: {today}
+
+To,
+{authority}
+{department}
+
+Subject: {subject}
+
 Sir/Madam,
 
-I respectfully submit this complaint regarding the following issue:
+I wish to bring to your attention a matter of public concern that requires immediate intervention.
 
+Issue Description:
 {issue}
 
-I kindly request your office to examine the matter and take appropriate action at the earliest.
+This issue is causing inconvenience and poses potential risks to public safety.
 
-I also request that an acknowledgement/diary/file number be communicated for future correspondence.
+Such matters are expected to be addressed {legal_line}, and it falls under your responsibility to ensure timely resolution.
 
-Thank you.
-"""
+I respectfully request:
 
-        signature = self._signature(identity_mode, citizen)
+1. Immediate inspection
+2. Corrective action
+3. Official acknowledgement
 
-        return f"""{recipient}
+Failure to address this issue may necessitate escalation to the following authorities:
+{escalation_text}
 
-Date: {today}
+I trust appropriate action will be taken at the earliest.
 
-{subject}
-
-{body}
+Thanking you,
 
 Yours faithfully,
-
-{signature}
+{citizen_name}
 """
 
-    def _signature(
-        self,
-        identity_mode: str,
-        citizen: dict,
-    ) -> str:
-
-        if identity_mode == "anonymous":
-            return "Concerned Citizen"
-
-        if identity_mode == "name":
-            return citizen.get("name", "Citizen")
-
-        return f"""{citizen.get("name", "")}
-
-{citizen.get("address", "")}
-
-Phone: {citizen.get("phone", "")}
-
-Email: {citizen.get("email", "")}"""
+    return body.strip()

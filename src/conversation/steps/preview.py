@@ -5,66 +5,46 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_IDENTITY
 
+from documents.complaint_builder import build_complaint
+
 
 async def handle_preview(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Shows a summary of the complaint
-    before asking for identity.
+    Shows FULL complaint preview before identity selection.
     """
 
     user_id = update.effective_user.id
-
     session = get_session(user_id)
 
+    issue = session.get("issue", "")
     office = session.get("office", {})
 
-    office_name = office.get(
-        "office_name",
-        "Not Selected"
+    # Generate complaint WITHOUT identity
+    preview_text = build_complaint(
+        issue=issue,
+        office=office,
+        identity_mode="anonymous"
     )
 
     await update.message.reply_text(
-f"""
+        f"""
 📄 Complaint Preview
 
-Issue
-------
-{session.get("issue", "")}
+{preview_text}
 
-Document
----------
-{session.get("document", "")}
+-------------------------
 
-District
----------
-{session.get("district", "")}
+Choose Identity Mode:
 
-Office
-------
-{office_name}
+1️⃣ Anonymous  
+2️⃣ Name Only  
+3️⃣ Address Only  
+4️⃣ Full Details  
 
---------------------------------
-
-Choose Identity
-
-1️⃣ Anonymous
-
-2️⃣ Name Only
-
-3️⃣ Full Identity
-
-Reply with:
-
-1
-
-2
-
-or
-
-3
+Reply with 1, 2, 3, or 4.
 """
     )
 

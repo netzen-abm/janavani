@@ -2,43 +2,32 @@ from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     filters,
 )
 
 from core.config import Config
 
-# ----------------------------
-# Commands
-# ----------------------------
+from commands.check import check
 
+# Commands
 from commands.start import start
 from commands.search import search
 from commands.rate import rate
-
 from commands.complaint import complaint
 
-# ----------------------------
-# Conversation Router
-# ----------------------------
-
+# Conversation
 from conversation.router import route
 
+# Format buttons
+from conversation.steps.format import handle_format
 
-# ==========================================================
-# MAIN
-# ==========================================================
 
 def main():
 
-    # ----------------------------
-    # Validate Configuration
-    # ----------------------------
-
+    # Validate config
     if not Config.TELEGRAM_BOT_TOKEN:
-
-        raise Exception(
-            "TELEGRAM_BOT_TOKEN is not configured."
-        )
+        raise Exception("TELEGRAM_BOT_TOKEN is not configured.")
 
     print("=" * 60)
     print("🇮🇳 JANAVANI TELEGRAM BOT")
@@ -46,10 +35,7 @@ def main():
     print("Starting Bot...")
     print("=" * 60)
 
-    # ----------------------------
-    # Telegram Application
-    # ----------------------------
-
+    # Build app
     application = (
         Application
         .builder()
@@ -57,60 +43,32 @@ def main():
         .build()
     )
 
-    # ----------------------------
-    # Slash Commands
-    # ----------------------------
+    # Button handler
+    application.add_handler(CallbackQueryHandler(handle_format))
+
+    # Commands
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("search", search))
+    application.add_handler(CommandHandler("rate", rate))
+    application.add_handler(CommandHandler("complaint", complaint))
 
     application.add_handler(
-        CommandHandler("start", start)
-    )
+    CommandHandler("check", check)
+)
 
+    # Messages
     application.add_handler(
-        CommandHandler("search", search)
-    )
-
-    application.add_handler(
-        CommandHandler("rate", rate)
-    )
-
-    application.add_handler(
-        CommandHandler("complaint", complaint)
-    )
-
-    # ----------------------------
-    # Normal Conversation
-    # ----------------------------
-
-    application.add_handler(
-
         MessageHandler(
-
             filters.TEXT & ~filters.COMMAND,
-
             route
-
         )
-
     )
 
     print("✅ Bot Started Successfully")
     print("=" * 60)
 
-    # ----------------------------
-    # Run Bot
-    # ----------------------------
+    application.run_polling(drop_pending_updates=True)
 
-    application.run_polling(
-
-        drop_pending_updates=True
-
-    )
-
-
-# ==========================================================
-# ENTRY POINT
-# ==========================================================
 
 if __name__ == "__main__":
-
     main()

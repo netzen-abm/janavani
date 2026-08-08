@@ -1,107 +1,66 @@
 """
-Issue Classification Engine
+Issue Classifier
 
-This version is rule based.
-
-Later this file will call AI
-only if no rule matches.
+Classifies user issue into category + department
 """
 
+def classify_issue(issue: str):
 
-ISSUE_RULES = [
+    issue_lower = issue.lower()
 
-    {
-        "keywords": [
-            "road",
-            "pothole",
-            "broken road",
-            "street"
-        ],
-        "department": "PWD",
-        "document": "Complaint"
-    },
+    # --------------------------------------------------
+    # 🧹 SANITATION
+    # --------------------------------------------------
 
-    {
-        "keywords": [
-            "water",
-            "pipe",
-            "leak",
-            "drinking water"
-        ],
-        "department": "Kerala Water Authority",
-        "document": "Complaint"
-    },
+    if any(word in issue_lower for word in [
+        "garbage", "waste", "trash", "clean", "drain", "sewage"
+    ]):
+        return {
+            "category": "Sanitation",
+            "department": "Municipality / Panchayat"
+        }
 
-    {
-        "keywords": [
-            "garbage",
-            "waste",
-            "dump",
-            "cleaning"
-        ],
-        "department": "Municipality",
-        "document": "Complaint"
-    },
+    # --------------------------------------------------
+    # 🛣 ROAD / INFRA
+    # --------------------------------------------------
 
-    {
-        "keywords": [
-            "ration",
-            "ration card",
-            "food"
-        ],
-        "department": "Civil Supplies",
-        "document": "Complaint"
-    },
+    if any(word in issue_lower for word in [
+        "road", "pothole", "street", "bridge"
+    ]):
+        return {
+            "category": "Infrastructure",
+            "department": "PWD (Public Works Department)"
+        }
 
-    {
-        "keywords": [
-            "aadhar",
-            "aadhaar",
-            "uidai"
-        ],
-        "department": "UIDAI",
-        "document": "Complaint"
-    },
+    # --------------------------------------------------
+    # 💧 WATER
+    # --------------------------------------------------
 
-    {
-        "keywords": [
-            "information",
-            "records",
-            "details",
-            "copy",
-            "documents"
-        ],
-        "department": "Unknown",
-        "document": "RTI"
-    }
+    if any(word in issue_lower for word in [
+        "water", "pipe", "drinking water", "leak"
+    ]):
+        return {
+            "category": "Water Supply",
+            "department": "Water Authority"
+        }
 
-]
+    # --------------------------------------------------
+    # ⚡ ELECTRICITY
+    # --------------------------------------------------
 
+    if any(word in issue_lower for word in [
+        "electricity", "power", "current", "transformer"
+    ]):
+        return {
+            "category": "Electricity",
+            "department": "Electricity Board"
+        }
 
-def classify_issue(issue):
-
-    issue = issue.lower()
-
-    for rule in ISSUE_RULES:
-
-        for keyword in rule["keywords"]:
-
-            if keyword in issue:
-
-                return {
-
-                    "department": rule["department"],
-
-                    "document": rule["document"],
-
-                    "matched_keyword": keyword
-                }
+    # --------------------------------------------------
+    # 🚨 DEFAULT
+    # --------------------------------------------------
 
     return {
-
-        "department": "Unknown",
-
-        "document": "Complaint",
-
-        "matched_keyword": None
+        "category": "General",
+        "department": "Local Authority"
     }

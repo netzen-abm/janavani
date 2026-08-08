@@ -4,7 +4,10 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 
-from conversation.constants import WAITING_FOR_OFFICE
+from conversation.constants import (
+    WAITING_FOR_OFFICE,
+    WAITING_FOR_OFFICE_MANUAL
+)
 
 from services.office_service import find_offices
 
@@ -12,52 +15,55 @@ from services.office_service import find_offices
 async def handle_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
-
     session = get_session(user_id)
 
-    session["district"] = update.message.text.strip()
+    # Normalize input
+    district = update.message.text.strip()
+    session["district"] = district
 
+    # Find offices
     offices = find_offices(
-
-        session["issue"],
-
-        session["district"]
-
+        session.get("issue", ""),
+        district
     )
 
     session["offices"] = offices
 
-    if len(offices) == 0:
+    # 🔴 FIX 1: correct variable + indentation
+    if not offices:
 
         await update.message.reply_text(
-f"""
-District recorded
+            f"""
+⚠️ No matching office found for:
 
-{session["district"]}
+{district.title()}
 
-⚠️ No matching office found.
+You can enter details manually.
+
+Please type in this format:
+
+Office Name, Address
+
+Example:
+Village Office Kannur, Near Collectorate
 """
         )
 
+        set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
         return
 
+    # Build office list
     office_list = ""
 
     for index, office in enumerate(offices, start=1):
-
         office_list += f"{index}. {office['office_name']}\n"
 
-    set_state(
-
-        user_id,
-
-        WAITING_FOR_OFFICE
-
-    )
+    # Move to next step
+    set_state(user_id, WAITING_FOR_OFFICE)
 
     await update.message.reply_text(
-f"""
-I found these offices.
+        f"""
+🏢 I found these offices:
 
 {office_list}
 

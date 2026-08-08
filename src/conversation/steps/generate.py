@@ -1,62 +1,127 @@
-"""
-Generate Step
-
-Generates the final document
-from the completed conversation.
-"""
-
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from conversation.session import get_session
-from conversation.session import clear_session
+from conversation.state import set_state
+from conversation.constants import COMPLETED
 
-from conversation.state import clear_state
+from documents.complaint_builder import build_complaint
 
-from documents.document_engine import DocumentEngine
-from documents.pdf_generator import PDFGenerator
+from docx import Document
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+from services.id_generator import generate_complaint_id
+from services.storage_service import save_complaint
 
 
-async def handle_generate(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    """
-    Generate the final document.
-    """
+# --------------------------------------------------
+# 📄 DOCX GENERATOR
+# --------------------------------------------------
 
-    user_id = update.effective_user.id
+def generate_docx(file_path: str, text: str):
+    doc = Document()
+    doc.add_heading("Complaint", 0)
+
+    for line in text.split("\n"):
+        doc.add_paragraph(line)
+
+    doc.save(file_path)
+
+
+# --------------------------------------------------
+# 📄 PDF GENERATOR
+# --------------------------------------------------
+
+def generate_pdf(file_path: str, text: str):
+    doc = SimpleDocTemplate(file_path)
+    styles = getSampleStyleSheet()
+
+    content = []
+
+    for line in text.split("\n"):
+        content.append(Paragraph(line, styles["Normal"]))
+        content.append(Spacer(1, 10))
+
+    doc.build(content)
+
+
+# --------------------------------------------------
+# 🚀 MAIN HANDLER
+# --------------------------------------------------
+
+async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    # Safe message handling
+    if update.callback_query:
+        user_id = update.callback_query.from_user.id
+        message = update.callback_query.message
+    else:
+        user_id = update.effective_user.id
+        message = update.message
 
     session = get_session(user_id)
 
-    await update.message.reply_text(
-        "Generating your document..."
-    )
+    # 🔥 Generate ID SAFELY HERE (correct place)
+    if "complaint_id" not in session:
+        session["complaint_id"] = generate_complaint_id()
 
-    document_engine = DocumentEngine()
+    format_type = session.get("format", "pdf")
 
-    pdf_generator = PDFGenerator()
+    await message.reply_text("📄 Generating your complaint document...")
 
-    document_text = document_engine.generate(
-        document_type=session["document"],
-        issue=session["issue"],
-        office_name=session["office"]["office_name"],
-        office_address=session["office"]["office_address"],
-        identity_mode=session.get("identity_mode", "anonymous"),
-    )
+    try:
+        # --------------------------------------------------
+        # 🧠 BUILD COMPLAINT
+        # --------------------------------------------------
 
-    pdf_file = pdf_generator.generate(
-        text=document_text,
-        output_file=f"complaint_{user_id}.pdf",
-    )
-
-    with open(pdf_file, "rb") as pdf:
-
-        await update.message.reply_document(
-            document=pdf,
-            filename=f"complaint_{user_id}.pdf",
-            caption="✅ Your complaint has been generated successfully."
+        complaint_text = build_complaint(
+            issue=session.get("issue", ""),
+            district=session.get("district", ""),
+            department=session.get("department", ""),
+            office_name=session.get("office", {}).get("office_name", ""),
+            citizen_name="Concerned Citizen",
+            category=session.get("category", "General"),
+            complaint_id=session.get("complaint_id"),
         )
 
-    clear_session(user_id)
-    clear_state(user_id)
+        # --------------------------------------------------
+        # 📂 FILE GENERATION
+        # --------------------------------------------------
+
+        if format_type == "docx":
+            file_path = f"/tmp/complaint_{user_id}.docx"
+            filename = "complaint.docx"
+
+            generate_docx(file_path, complaint_text)
+
+        else:
+            file_path = f"/tmp/complaint_{user_id}.pdf"
+            filename = "complaint.pdf"
+
+            generate_pdf(file_path, complaint_text)
+
+        # --------------------------------------------------
+        # 📤 SEND FILE
+        # --------------------------------------------------
+
+        with open(file_path, "rb") as file:
+            await message.reply_document(
+                document=file,
+                filename=filename
+            )
+
+        await message.reply_text("✅ Complaint generated successfully.")
+
+        # Save record
+        save_complaint(session)
+
+        # Complete state
+        set_state(user_id, COMPLETED)
+
+    except Exception as e:
+        print("ERROR in handle_generate:", e)
+
+        await message.reply_text(
+            "❌ Failed to generate document. Please try again."
+        )

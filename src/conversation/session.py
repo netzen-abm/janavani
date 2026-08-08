@@ -10,6 +10,13 @@ Later this will be stored in Supabase.
 
 user_sessions = {}
 
+sessions = {}
+
+def get_session(user_id):
+    if user_id not in sessions:
+        sessions[user_id] = {}
+    return sessions[user_id]
+
 
 def get_session(user_id):
 
