@@ -1,29 +1,27 @@
-from database.supabase import supabase
+# src/services/office_service.py
+
+import pandas as pd
+
+DATA_FILE = "database/offices.csv"
 
 
-def find_offices(department, district):
+def find_offices(department: str, district: str):
     """
-    Search offices by department and district.
+    Find matching offices from CSV
     """
-
-    if supabase is None:
-        return []
 
     try:
+        df = pd.read_csv(DATA_FILE)
 
-        response = (
-            supabase
-            .table("offices")
-            .select("*")
-            .ilike("department", f"%{department}%")
-            .ilike("district", f"%{district}%")
-            .execute()
-        )
+        results = df[
+            (df["type"].str.contains(department, case=False, na=False)) &
+            (df["district"].str.contains(district, case=False, na=False))
+        ]
 
-        return response.data
+        if results.empty:
+            return []
 
-    except Exception as e:
+        return results.to_dict(orient="records")
 
-        print(e)
-
+    except FileNotFoundError:
         return []
