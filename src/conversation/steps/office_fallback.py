@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
+from conversation.constants import WAITING_FOR_OFFICE_MANUAL, WAITING_FOR_PREVIEW
 
 
 async def handle_office_fallback(
@@ -20,14 +21,13 @@ async def handle_office_fallback(
     if text == "1":
 
         await update.message.reply_text(
-            "Please enter office details:\n\n"
-            "Format:\n"
+            "Please enter office details in this format:\n\n"
             "Office Name, City\n\n"
             "Example:\n"
             "Edathala Panchayat, Kochi"
         )
 
-        set_state(user_id, "WAITING_FOR_MANUAL_OFFICE")
+        set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
         return
 
     # --------------------------------------
@@ -42,10 +42,10 @@ async def handle_office_fallback(
         }
 
         await update.message.reply_text(
-            "✅ Continuing without selecting office."
+            "✅ Continuing without specific office."
         )
 
-        set_state(user_id, "SHOWING_PREVIEW")
+        set_state(user_id, WAITING_FOR_PREVIEW)
         return
 
     # --------------------------------------
@@ -54,6 +54,5 @@ async def handle_office_fallback(
     else:
 
         await update.message.reply_text(
-            "❌ Invalid choice.\n"
-            "Reply with 1 or 2."
+            "❌ Invalid choice.\nReply with 1 or 2."
         )
