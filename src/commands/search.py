@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from services.search_service import search_office
+from services.search_directory import search_office
 
 
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
