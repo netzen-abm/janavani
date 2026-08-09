@@ -43,7 +43,12 @@ def list_user_complaints(user_hash: str) -> list:
     try:
         with open(DATA_FILE, "r") as f:
             for line in f:
-                entry = json.loads(line.strip())
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                entry = json.loads(line)
 
                 if entry["user_hash"] == user_hash:
                     results.append({
