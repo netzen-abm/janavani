@@ -9,7 +9,7 @@ from conversation.steps.generate import handle_generate
 
 
 # --------------------------------------------------
-# SHOW BUTTONS
+# SHOW BUTTONS (SAFE FOR BOTH MESSAGE + CALLBACK)
 # --------------------------------------------------
 
 async def show_format_buttons(update: Update):
@@ -23,10 +23,17 @@ async def show_format_buttons(update: Update):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "📄 Choose document format:",
-        reply_markup=reply_markup
-    )
+    # ✅ Handle both message & callback safely
+    if update.message:
+        await update.message.reply_text(
+            "📄 Choose document format:",
+            reply_markup=reply_markup
+        )
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(
+            "📄 Choose document format:",
+            reply_markup=reply_markup
+        )
 
 
 # --------------------------------------------------
@@ -35,40 +42,67 @@ async def show_format_buttons(update: Update):
 
 async def handle_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    # 🔒 Ensure callback exists
-    if not update.callback_query:
+    # --------------------------------------
+    # 🔘 CALLBACK FLOW (BUTTON CLICK)
+    # --------------------------------------
+    if update.callback_query:
+
+        query = update.callback_query
+        await query.answer()
+
+        user_id = query.from_user.id
+
+        # 🔒 Check state
+        current_state = get_state(user_id)
+        if current_state != WAITING_FOR_FORMAT:
+            await query.edit_message_text("⚠️ Invalid step. Please restart.")
+            return
+
+        session = get_session(user_id)
+
+        # 🎯 Process selection
+        if query.data == "pdf":
+            session["format"] = "pdf"
+        elif query.data == "docx":
+            session["format"] = "docx"
+        else:
+            await query.edit_message_text("❌ Invalid selection.")
+            return
+
+        # ✅ Feedback
+        await query.edit_message_text(
+            f"✅ Format selected: {session['format'].upper()}\n\nGenerating document..."
+        )
+
+        # 🔄 Move state
+        set_state(user_id, WAITING_FOR_GENERATE)
+
+        # 🚀 Trigger generation
+        await handle_generate(update, context)
         return
 
-    query = update.callback_query
-    await query.answer()
+    # --------------------------------------
+    # 📝 TEXT FALLBACK (OPTIONAL BUT STRONG UX)
+    # --------------------------------------
+    elif update.message:
 
-    user_id = query.from_user.id
+        user_id = update.effective_user.id
+        text = update.message.text.strip().lower()
 
-    # 🔒 Ensure correct state
-    current_state = get_state(user_id)
+        if text not in ["pdf", "docx"]:
+            await update.message.reply_text(
+                "❌ Invalid format.\nType 'pdf' or 'docx'."
+            )
+            return
 
-    if current_state != WAITING_FOR_FORMAT:
-        await query.edit_message_text("⚠️ Invalid step. Please restart.")
-        return
+        session = get_session(user_id)
+        session["format"] = text
 
-    session = get_session(user_id)
+        await update.message.reply_text(
+            f"✅ Format selected: {text.upper()}\n\nGenerating document..."
+        )
 
-    # 🎯 Process selection
-    if query.data == "pdf":
-        session["format"] = "pdf"
-    elif query.data == "docx":
-        session["format"] = "docx"
-    else:
-        await query.edit_message_text("❌ Invalid selection.")
-        return
+        set_state(user_id, WAITING_FOR_GENERATE)
 
-    # ✅ Feedback
-    await query.edit_message_text(
-        f"✅ Format selected: {session['format'].upper()}\n\nGenerating document..."
-    )
-
-    # 🔄 Move to next state
-    set_state(user_id, WAITING_FOR_GENERATE)
-
-    # 🚀 Trigger generation
-    await handle_generate(update, context)
+        # 🚀 Trigger generation
+        await handle_generate(update, context)
