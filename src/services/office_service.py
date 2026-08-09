@@ -1,5 +1,7 @@
 import pandas as pd
 
+DATA_FILE = "database/offices.csv"
+
 def find_offices(department: str, location: str):
 
     try:
