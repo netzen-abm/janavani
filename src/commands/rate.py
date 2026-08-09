@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from tools.rate_office import save_rating
+from services.rate_office import save_rating
 
 
 async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
