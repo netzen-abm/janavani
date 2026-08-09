@@ -22,12 +22,24 @@ async def handle_preview(
     issue = session.get("issue", "")
     office = session.get("office", {})
 
-    # Generate complaint WITHOUT identity
-    preview_text = build_complaint(
-        issue=issue,
-        office=office,
-        identity_mode="anonymous"
+    # ✅ FIXED CALL (match actual function)
+    complaint = build_complaint(
+        user_name="Anonymous",
+        user_address="Not Provided",
+        office_id=office.get("id", "1"),
+        issue_text=issue
     )
+
+    # Convert dict → readable text
+    preview_text = f"""
+Issue:
+{complaint['issue']}
+
+Legal Ground:
+{complaint['law']['law']} - {complaint['law']['section']}
+
+{complaint['law']['explanation']}
+"""
 
     await update.message.reply_text(
         f"""
@@ -35,14 +47,14 @@ async def handle_preview(
 
 {preview_text}
 
--------------------------
+---
 
 Choose Identity Mode:
 
-1️⃣ Anonymous  
-2️⃣ Name Only  
-3️⃣ Address Only  
-4️⃣ Full Details  
+1️⃣ Anonymous
+2️⃣ Name Only
+3️⃣ Address Only
+4️⃣ Full Details
 
 Reply with 1, 2, 3, or 4.
 """
