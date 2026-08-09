@@ -67,3 +67,39 @@ def list_user_complaints(user_hash: str) -> list:
 
     except FileNotFoundError:
         return []
+def update_complaint_status(complaint_id: str, new_status: str) -> str:
+    """
+    Update complaint status (admin/system use)
+    """
+
+    updated = False
+    entries = []
+
+    try:
+        with open(DATA_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                entry = json.loads(line)
+
+                if entry["complaint_id"] == complaint_id:
+                    entry["status"] = new_status
+                    updated = True
+
+                entries.append(entry)
+
+        # rewrite file
+        with open(DATA_FILE, "w") as f:
+            for e in entries:
+                f.write(json.dumps(e) + "\n")
+
+        if updated:
+            return f"Status updated to {new_status}"
+        else:
+            return "Complaint not found"
+
+    except FileNotFoundError:
+        return "Database not found"
