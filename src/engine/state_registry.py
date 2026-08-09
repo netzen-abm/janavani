@@ -15,6 +15,7 @@ from conversation.steps.format import handle_format
 from conversation.steps.generate import handle_generate
 from conversation.steps.name import handle_name
 from conversation.steps.address import handle_address
+from conversation.steps.office_fallback import handle_office_fallback
 
 
 # --------------------------------------------------
@@ -31,6 +32,7 @@ STATE_HANDLERS = {
     # 🔹 Office Selection
     WAITING_FOR_OFFICE: handle_office,
     WAITING_FOR_OFFICE_MANUAL: handle_office_manual,
+    WAITING_FOR_OFFICE_FALLBACK: handle_office_fallback,
 
     # 🔹 Preview + Identity
     WAITING_FOR_PREVIEW: handle_preview,
