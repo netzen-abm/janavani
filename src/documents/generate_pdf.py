@@ -1,32 +1,33 @@
-# src/tools/generate_pdf.py
-# Makes legal complaint PDF with law citation
+# src/documents/generate_pdf.py
 
 from weasyprint import HTML
-import datetime
 import pandas as pd
-from legal_brain import get_legal_advice
 
-def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
+
+def generate_pdf_from_complaint(complaint: dict) -> str:
     """
-    Generates PDF complaint letter
+    New: Generates PDF from structured complaint
     """
-    # 1. Find office details from CSV
+
+    # 1. Load office
     df = pd.read_csv("database/offices.csv")
-    office = df[df['id'] == int(office_id)].iloc[0]
+    office = df[df['id'] == int(complaint["office_id"])].iloc[0]
 
-    # 2. Get law from Legal Brain
-    law_data = get_legal_advice(issue_text)
+    # 2. Extract data
+    complaint_id = complaint["complaint_id"]
+    today = complaint["date"]
+    user_name = complaint["user"]["name"]
+    user_address = complaint["user"]["address"]
+    issue_text = complaint["issue"]
+    law_data = complaint["law"]
 
-    # 3. Create HTML for PDF
-    today = datetime.date.today().strftime("%d-%m-%Y")
-    complaint_id = f"JV{datetime.datetime.now().strftime('%Y%m%d%H%M')}"
-
+    # 3. HTML
     html_content = f"""
     <html>
     <head><style>
         body {{ font-family: Arial; margin: 40px; }}
         h2 {{ text-align: center; }}
-       .header {{ margin-bottom: 30px; }}
+        .header {{ margin-bottom: 30px; }}
     </style></head>
     <body>
         <h2>FORMAL COMPLAINT</h2>
@@ -75,3 +76,25 @@ def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
     HTML(string=html_content).write_pdf(filename)
 
     return f"PDF Generated: {filename}. Print and send to {office['name']}"
+
+
+# -------------------------------
+# BACKWARD COMPATIBILITY WRAPPER
+# -------------------------------
+
+from src.documents.complaint_builder import build_complaint
+
+
+def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
+    """
+    OLD interface preserved
+    """
+
+    complaint = build_complaint(
+        user_name=user_name,
+        user_address=user_address,
+        office_id=office_id,
+        issue_text=issue_text
+    )
+
+    return generate_pdf_from_complaint(complaint)
