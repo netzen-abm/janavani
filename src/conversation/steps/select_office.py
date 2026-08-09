@@ -4,6 +4,11 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 
+from conversation.constants import (
+    WAITING_FOR_OFFICE_FALLBACK,
+    WAITING_FOR_OFFICE_MANUAL
+)
+
 from services.office_service import find_offices
 
 
@@ -20,7 +25,7 @@ async def handle_select_office(
     offices = find_offices(department, location)
 
     # --------------------------------------
-    # ❌ NO OFFICE FOUND
+    # ❌ NO OFFICE FOUND → FALLBACK
     # --------------------------------------
 
     if not offices:
@@ -35,11 +40,7 @@ async def handle_select_office(
 
         session["office"] = None
 
-        set_state(
-            user_id,
-            "WAITING_FOR_OFFICE_FALLBACK"
-        )
-
+        set_state(user_id, WAITING_FOR_OFFICE_FALLBACK)
         return
 
     # --------------------------------------
@@ -51,10 +52,11 @@ async def handle_select_office(
     msg = "🏢 Found offices:\n\n"
 
     for i, office in enumerate(offices, start=1):
-        msg += f"{i}. {office['name']} ({office['city']})\n"
+        msg += f"{i}. {office['name']} ({office.get('city', '')})\n"
 
     msg += "\nReply with office number."
 
     await update.message.reply_text(msg)
 
-    set_state(user_id, "WAITING_FOR_OFFICE_SELECTION")
+    # 👉 TEMP: route to manual handler until selection step is built
+    set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
