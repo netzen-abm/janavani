@@ -23,9 +23,35 @@ async def handle_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Find offices
     offices = find_offices(
-        session.get("issue", ""),
-        district
+    session["department"],
+    user_input
+)
+
+# --------------------------------------
+# ❌ NO MATCH FOUND
+# --------------------------------------
+
+if offices is None:
+
+    await update.message.reply_text(
+        "❌ No office found for this location.\n\n"
+        "✍️ You can enter manually (Example: Kannur Municipality / Local Office)"
     )
+
+    # Save manual input
+    session["manual_location"] = user_input
+
+    return
+
+# --------------------------------------
+# ✅ MATCH FOUND
+# --------------------------------------
+
+session["offices"] = offices
+
+await update.message.reply_text(
+    f"✅ Found {len(offices)} office(s)"
+)
 
     session["offices"] = offices
 
