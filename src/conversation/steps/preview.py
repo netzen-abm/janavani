@@ -22,24 +22,45 @@ async def handle_preview(
     issue = session.get("issue", "")
     office = session.get("office", {})
 
-    # ✅ FIXED CALL (match actual function)
-    complaint = build_complaint(
-        user_name="Anonymous",
-        user_address="Not Provided",
-        office_id=office.get("id", "1"),
-        issue_text=issue
-    )
+    # --------------------------------------
+    # 🛡️ SAFE DEFAULTS
+    # --------------------------------------
 
-    # Convert dict → readable text
-    preview_text = f"""
+    office_id = office.get("id", "manual")
+
+    try:
+        complaint = build_complaint(
+            user_name="Anonymous",
+            user_address="Not Provided",
+            office_id=office_id,
+            issue_text=issue
+        )
+
+        law = complaint.get("law", {})
+
+        preview_text = f"""
 Issue:
-{complaint['issue']}
+{complaint.get('issue', 'Not provided')}
 
 Legal Ground:
-{complaint['law']['law']} - {complaint['law']['section']}
+{law.get('law', 'Not available')} - {law.get('section', '')}
 
-{complaint['law']['explanation']}
+{law.get('explanation', 'No explanation available')}
 """
+
+    except Exception as e:
+        print("❌ PREVIEW ERROR:", e)
+
+        preview_text = f"""
+Issue:
+{issue}
+
+⚠️ Legal section could not be generated.
+"""
+
+    # --------------------------------------
+    # 📄 SEND PREVIEW
+    # --------------------------------------
 
     await update.message.reply_text(
         f"""
@@ -60,7 +81,4 @@ Reply with 1, 2, 3, or 4.
 """
     )
 
-    set_state(
-        user_id,
-        WAITING_FOR_IDENTITY
-    )
+    set_state(user_id, WAITING_FOR_IDENTITY)
