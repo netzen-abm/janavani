@@ -130,9 +130,14 @@ async def handle_generate(
         # 📄 SHOW FINAL TEXT
         # --------------------------------------
 
+        import asyncio   # add at top of file
+
         await message.reply_text(
             "📄 Final Complaint Text:\n\n" + complaint_text
         )
+
+        # ⏳ VERY IMPORTANT
+        await asyncio.sleep(1)
 
         await message.reply_text(
             "Generating document..."
