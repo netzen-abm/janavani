@@ -7,7 +7,7 @@ from conversation.constants import *
 from conversation.steps.issue import handle_issue
 from conversation.steps.document import handle_document
 from conversation.steps.district import handle_district
-from conversation.steps.office import handle_office
+from conversation.steps.select_office import handle_select_office
 from conversation.steps.office_manual import handle_office_manual
 from conversation.steps.preview import handle_preview
 from conversation.steps.identity import handle_identity
@@ -30,7 +30,7 @@ STATE_HANDLERS = {
     WAITING_FOR_DISTRICT: handle_district,
 
     # 🔹 Office Selection
-    WAITING_FOR_OFFICE: handle_office,
+    WAITING_FOR_OFFICE: handle_select_office,
     WAITING_FOR_OFFICE_MANUAL: handle_office_manual,
     WAITING_FOR_OFFICE_FALLBACK: handle_office_fallback,
 
