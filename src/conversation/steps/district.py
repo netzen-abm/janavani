@@ -15,17 +15,40 @@ from services.office_service import find_offices
 async def handle_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
+    user_input = update.message.text.strip()
+
     session = get_session(user_id)
 
-    # Normalize input
-    district = update.message.text.strip()
-    session["district"] = district
+    # Save district input
+    session["district"] = user_input
 
-    # Find offices
+    # Search offices
     offices = find_offices(
-    session["department"],
-    user_input
-)
+        session["department"],
+        user_input
+    )
+
+    # --------------------------------------
+    # ❌ NO MATCH FOUND
+    # --------------------------------------
+    if offices is None:
+
+        await update.message.reply_text(
+            "❌ No office found for this location.\n\n"
+            "✍️ You can enter manually (Example: Kannur Municipality)"
+        )
+
+        session["manual_location"] = user_input
+        return
+
+    # --------------------------------------
+    # ✅ MATCH FOUND
+    # --------------------------------------
+    session["offices"] = offices
+
+    await update.message.reply_text(
+        f"✅ Found {len(offices)} office(s)"
+    )
 
 # --------------------------------------
 # ❌ NO MATCH FOUND
