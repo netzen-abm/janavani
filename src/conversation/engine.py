@@ -17,7 +17,9 @@ async def run_step(update, context):
     based on current state
     """
 
+    # --------------------------------------
     # 🔐 SAFE USER ID EXTRACTION
+    # --------------------------------------
     if update.callback_query:
         user_id = update.callback_query.from_user.id
     else:
@@ -26,7 +28,7 @@ async def run_step(update, context):
     state = get_state(user_id)
 
     # --------------------------------------------------
-    # 🟢 HANDLE NEW STATE PROPERLY
+    # 🟢 HANDLE NEW STATE
     # --------------------------------------------------
     if state == "NEW":
         if update.message:
@@ -47,12 +49,30 @@ async def run_step(update, context):
     if handler is None:
         if update.message:
             await update.message.reply_text(
-                "⚠️ Something went wrong.\n\n"
+                "⚠️ Unknown state.\n\n"
                 "Please type /start to restart."
             )
+        print(f"❌ No handler for state: {state}")
         return
 
     # --------------------------------------------------
-    # 🟣 EXECUTE HANDLER
+    # 🟣 EXECUTE HANDLER (WITH DEBUG)
     # --------------------------------------------------
-    await handler(update, context)
+    try:
+        await handler(update, context)
+
+    except Exception as e:
+        # 🔥 PRINT FULL ERROR IN TERMINAL
+        print("🔥 ERROR OCCURRED")
+        print("State:", state)
+        print("Error:", str(e))
+
+        # Optional: print full traceback
+        import traceback
+        traceback.print_exc()
+
+        # 👤 SHOW USER FRIENDLY ERROR
+        if update.message:
+            await update.message.reply_text(
+                f"⚠️ Error: {str(e)}\n\nType /start to restart."
+            )
