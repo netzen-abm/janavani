@@ -44,10 +44,35 @@ def generate_pdf(file_path: str, text: str):
     content = []
 
     for line in text.split("\n"):
-        content.append(Paragraph(line, styles["Normal"]))
+        p = Paragraph(line, styles["Normal"])
+        content.append(p)
         content.append(Spacer(1, 10))
 
     doc.build(content)
+
+
+# --------------------------------------------------
+# 🧠 BUILD TEXT HELPER
+# --------------------------------------------------
+
+def build_text(complaint: dict) -> str:
+
+    law = complaint["law"]
+
+    text = []
+    text.append(f"Complaint ID: {complaint['complaint_id']}")
+    text.append("")
+    text.append(f"Date: {complaint['date']}")
+    text.append("")
+    text.append("Issue:")
+    text.append(complaint["issue"])
+    text.append("")
+    text.append("Legal Ground:")
+    text.append(f"{law['law']} - {law['section']}")
+    text.append("")
+    text.append(law["explanation"])
+
+    return "\n".join(text)
 
 
 # --------------------------------------------------
@@ -81,13 +106,9 @@ async def handle_generate(
 
     format_type = session.get("format", "pdf")
 
-    await message.reply_text(
-        "📄 Generating your complaint document..."
-    )
-
     try:
         # --------------------------------------
-        # 🧠 BUILD COMPLAINT (CORRECT)
+        # 🧠 BUILD COMPLAINT
         # --------------------------------------
 
         office = session.get("office", {})
@@ -100,17 +121,21 @@ async def handle_generate(
         )
 
         # --------------------------------------
-        # 📝 CONVERT TO TEXT
+        # 📝 TEXT VERSION
         # --------------------------------------
 
-        complaint_text = (
-            f"Complaint ID: {complaint['complaint_id']}\n\n"
-            f"Date: {complaint['date']}\n\n"
-            f"Issue:\n{complaint['issue']}\n\n"
-            f"Legal Ground:\n"
-            f"{complaint['law']['law']} - "
-            f"{complaint['law']['section']}\n\n"
-            f"{complaint['law']['explanation']}\n"
+        complaint_text = build_text(complaint)
+
+        # --------------------------------------
+        # 📄 SHOW FINAL TEXT
+        # --------------------------------------
+
+        await message.reply_text(
+            "📄 Final Complaint Text:\n\n" + complaint_text
+        )
+
+        await message.reply_text(
+            "Generating document..."
         )
 
         # --------------------------------------
@@ -135,10 +160,10 @@ async def handle_generate(
         # 📤 SEND FILE
         # --------------------------------------
 
-        with open(file_path, "rb") as file:
+        with open(file_path, "rb") as f:
 
             await message.reply_document(
-                document=file,
+                document=f,
                 filename=filename
             )
 
@@ -146,10 +171,11 @@ async def handle_generate(
             "✅ Complaint generated successfully."
         )
 
-        # Save record
-        save_complaint(session)
+        # --------------------------------------
+        # 💾 SAVE + COMPLETE
+        # --------------------------------------
 
-        # Complete state
+        save_complaint(session)
         set_state(user_id, COMPLETED)
 
     except Exception as e:
@@ -157,5 +183,5 @@ async def handle_generate(
         print("ERROR in handle_generate:", e)
 
         await message.reply_text(
-            "❌ Failed to generate document. Please try again."
+            "❌ Failed to generate document."
         )
