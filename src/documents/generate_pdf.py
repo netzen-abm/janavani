@@ -97,4 +97,4 @@ def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
         issue_text=issue_text
     )
 
-    return generate_pdf_from_complaint(complaint)
+    return
