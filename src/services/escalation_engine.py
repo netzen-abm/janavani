@@ -1,41 +1,80 @@
-"""
-Escalation Engine
+# src/services/escalation_engine.py
 
-Determines escalation path based on category
-"""
+import json
+from datetime import datetime, timedelta
+from src.services.escalation_rules import get_escalation_targets
 
-def get_escalation_targets(category: str):
+DATA_FILE = "database/ratings.jsonl"
+ESCALATION_DAYS = 3
 
-    if category == "Sanitation":
-        return [
-            "Health Inspector",
-            "Municipal Secretary",
-            "District Collector"
-        ]
 
-    if category == "Infrastructure":
-        return [
-            "PWD Engineer",
-            "Executive Engineer",
-            "District Collector"
-        ]
+def check_overdue_complaints():
+    """
+    Returns complaints that need escalation
+    """
 
-    if category == "Water Supply":
-        return [
-            "Water Authority Officer",
-            "Assistant Engineer",
-            "District Collector"
-        ]
+    overdue = []
 
-    if category == "Electricity":
-        return [
-            "Section Officer",
-            "Assistant Engineer",
-            "Electricity Board Head"
-        ]
+    try:
+        with open(DATA_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
 
-    return [
-        "Local Officer",
-        "District Authority",
-        "State Authority"
-    ]
+                if not line:
+                    continue
+
+                entry = json.loads(line)
+
+                # Only check submitted complaints
+                if entry["status"] != "submitted":
+                    continue
+
+                created_time = datetime.fromisoformat(entry["timestamp"])
+
+                if datetime.now() - created_time > timedelta(days=ESCALATION_DAYS):
+                    # Attach escalation targets
+                    category = entry.get("category", "General")
+                    entry["escalation_targets"] = get_escalation_targets(category)
+
+                    overdue.append(entry)
+
+        return overdue
+
+    except FileNotFoundError:
+        return []
+
+
+def mark_escalated(complaint_id: str) -> str:
+    """
+    Marks complaint as escalated
+    """
+
+    updated = False
+    entries = []
+
+    try:
+        with open(DATA_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                entry = json.loads(line)
+
+                if entry["complaint_id"] == complaint_id:
+                    entry["status"] = "acknowledged"
+                    updated = True
+
+                entries.append(entry)
+
+        with open(DATA_FILE, "w") as f:
+            for e in entries:
+                f.write(json.dumps(e) + "\n")
+
+        if updated:
+            return "Escalated"
+        return "Not found"
+
+    except FileNotFoundError:
+        return "Database not found"
