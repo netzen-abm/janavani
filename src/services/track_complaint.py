@@ -2,8 +2,15 @@
 
 import json
 
-
 DATA_FILE = "database/ratings.jsonl"
+
+VALID_STATUSES = {
+    "submitted",
+    "acknowledged",
+    "in_progress",
+    "resolved",
+    "rejected"
+}
 
 
 def get_complaint_status(complaint_id: str, user_hash: str) -> dict:
@@ -20,7 +27,6 @@ def get_complaint_status(complaint_id: str, user_hash: str) -> dict:
                     continue
 
                 entry = json.loads(line)
-
 
                 if (
                     entry["complaint_id"] == complaint_id
@@ -67,10 +73,16 @@ def list_user_complaints(user_hash: str) -> list:
 
     except FileNotFoundError:
         return []
+
+
 def update_complaint_status(complaint_id: str, new_status: str) -> str:
     """
     Update complaint status (admin/system use)
     """
+
+    # ✅ VALIDATION (CRITICAL)
+    if new_status not in VALID_STATUSES:
+        return "Invalid status"
 
     updated = False
     entries = []
