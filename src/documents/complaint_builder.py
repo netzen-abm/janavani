@@ -1,115 +1,33 @@
-from datetime import datetime
-from services.escalation_engine import get_escalation_targets
+# src/documents/complaint_builder.py
+
+import datetime
+from legal_brain import get_legal_advice
 
 
-# --------------------------------------------------
-# 📜 LEGAL REFERENCE ENGINE
-# --------------------------------------------------
+def build_complaint(user_name: str, user_address: str, office_id: str, issue_text: str) -> dict:
+    """
+    Builds structured complaint data
+    This does NOT generate PDF
+    """
 
-def get_legal_reference(category: str):
+    # 1. Generate complaint ID (centralized here)
+    complaint_id = f"JV{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-    if category == "Sanitation":
-        return "as per Municipal Solid Waste Management Rules, 2016"
+    # 2. Get legal grounding
+    law_data = get_legal_advice(issue_text)
 
-    if category == "Infrastructure":
-        return "as per Public Works Department (PWD) standards"
+    # 3. Date
+    today = datetime.date.today().strftime("%d-%m-%Y")
 
-    if category == "Water Supply":
-        return "as per public water supply regulations"
-
-    if category == "Electricity":
-        return "as per Electricity Supply Regulations"
-
-    return "as per applicable public service norms"
-
-
-# --------------------------------------------------
-# 🧠 COMPLAINT BUILDER (INTELLIGENCE CORE)
-# --------------------------------------------------
-
-def build_complaint(
-    issue: str,
-    district: str = "",
-    department: str = "",
-    office_name: str = "",
-    citizen_name: str = "Concerned Citizen",
-    category: str = "General",
-    complaint_id: str = None,
-):
-
-    today = datetime.now().strftime("%d %B %Y")
-
-    # --------------------------------------------------
-    # 📌 SUBJECT
-    # --------------------------------------------------
-
-    subject = f"Urgent Attention Required: {issue[:60].capitalize()}"
-
-    if district:
-        subject += f" in {district}"
-
-    # --------------------------------------------------
-    # 🏛 AUTHORITY
-    # --------------------------------------------------
-
-    authority = office_name if office_name else "The Concerned Authority"
-
-    # --------------------------------------------------
-    # ⚖ LEGAL + ESCALATION
-    # --------------------------------------------------
-
-    legal_line = get_legal_reference(category)
-
-    escalation_targets = get_escalation_targets(category)
-    escalation_text = ", ".join(escalation_targets)
-
-    # --------------------------------------------------
-    # 🆔 REFERENCE BLOCK (FIXED — SAFE)
-    # --------------------------------------------------
-
-    reference_block = ""
-    if complaint_id:
-        reference_block = f"Reference ID: {complaint_id}\n\n"
-
-    # --------------------------------------------------
-    # 🧾 BODY
-    # --------------------------------------------------
-
-    body = f"""
-{reference_block}Date: {today}
-
-To,
-{authority}
-{department}
-
-Subject: {subject}
-
-Sir/Madam,
-
-I wish to bring to your attention a matter of public concern that requires immediate intervention.
-
-Issue Description:
-{issue}
-
-This issue is causing inconvenience and poses potential risks to public safety.
-
-Such matters are expected to be addressed {legal_line}, and it falls under your responsibility to ensure timely resolution.
-
-I respectfully request:
-
-1. Immediate inspection
-2. Corrective action
-3. Official acknowledgement
-
-Failure to address this issue may necessitate escalation to the following authorities:
-{escalation_text}
-
-I trust appropriate action will be taken at the earliest.
-
-Thanking you,
-
-Yours faithfully,
-{citizen_name}
-"""
-
-    return body.strip()
+    # 4. Structured output
+    return {
+        "complaint_id": complaint_id,
+        "date": today,
+        "user": {
+            "name": user_name,
+            "address": user_address
+        },
+        "office_id": office_id,
+        "issue": issue_text,
+        "law": law_data
+    }
