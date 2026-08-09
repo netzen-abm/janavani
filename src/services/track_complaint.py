@@ -14,7 +14,13 @@ def get_complaint_status(complaint_id: str, user_hash: str) -> dict:
     try:
         with open(DATA_FILE, "r") as f:
             for line in f:
-                entry = json.loads(line.strip())
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                entry = json.loads(line)
+
 
                 if (
                     entry["complaint_id"] == complaint_id
