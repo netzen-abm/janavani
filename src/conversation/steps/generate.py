@@ -8,7 +8,9 @@ from conversation.constants import COMPLETED
 from documents.complaint_builder import build_complaint
 
 from docx import Document
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+
+from reportlab.platypus import SimpleDocTemplate
+from reportlab.platypus import Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
 from services.id_generator import generate_complaint_id
@@ -20,6 +22,7 @@ from services.storage_service import save_complaint
 # --------------------------------------------------
 
 def generate_docx(file_path: str, text: str):
+
     doc = Document()
     doc.add_heading("Complaint", 0)
 
@@ -34,6 +37,7 @@ def generate_docx(file_path: str, text: str):
 # --------------------------------------------------
 
 def generate_pdf(file_path: str, text: str):
+
     doc = SimpleDocTemplate(file_path)
     styles = getSampleStyleSheet()
 
@@ -50,9 +54,15 @@ def generate_pdf(file_path: str, text: str):
 # 🚀 MAIN HANDLER
 # --------------------------------------------------
 
-async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_generate(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
-    # Safe message handling
+    # --------------------------------------
+    # 🔐 SAFE MESSAGE
+    # --------------------------------------
+
     if update.callback_query:
         user_id = update.callback_query.from_user.id
         message = update.callback_query.message
@@ -62,56 +72,79 @@ async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     session = get_session(user_id)
 
-    # 🔥 Generate ID SAFELY HERE (correct place)
+    # --------------------------------------
+    # 🆔 COMPLAINT ID
+    # --------------------------------------
+
     if "complaint_id" not in session:
         session["complaint_id"] = generate_complaint_id()
 
     format_type = session.get("format", "pdf")
 
-    await message.reply_text("📄 Generating your complaint document...")
+    await message.reply_text(
+        "📄 Generating your complaint document..."
+    )
 
     try:
-        # --------------------------------------------------
-        # 🧠 BUILD COMPLAINT
-        # --------------------------------------------------
+        # --------------------------------------
+        # 🧠 BUILD COMPLAINT (CORRECT)
+        # --------------------------------------
 
-        complaint_text = build_complaint(
-            issue=session.get("issue", ""),
-            district=session.get("district", ""),
-            department=session.get("department", ""),
-            office_name=session.get("office", {}).get("office_name", ""),
-            citizen_name="Concerned Citizen",
-            category=session.get("category", "General"),
-            complaint_id=session.get("complaint_id"),
+        office = session.get("office", {})
+
+        complaint = build_complaint(
+            user_name="Anonymous",
+            user_address="Not Provided",
+            office_id=office.get("id", "1"),
+            issue_text=session.get("issue", "")
         )
 
-        # --------------------------------------------------
+        # --------------------------------------
+        # 📝 CONVERT TO TEXT
+        # --------------------------------------
+
+        complaint_text = (
+            f"Complaint ID: {complaint['complaint_id']}\n\n"
+            f"Date: {complaint['date']}\n\n"
+            f"Issue:\n{complaint['issue']}\n\n"
+            f"Legal Ground:\n"
+            f"{complaint['law']['law']} - "
+            f"{complaint['law']['section']}\n\n"
+            f"{complaint['law']['explanation']}\n"
+        )
+
+        # --------------------------------------
         # 📂 FILE GENERATION
-        # --------------------------------------------------
+        # --------------------------------------
 
         if format_type == "docx":
+
             file_path = f"/tmp/complaint_{user_id}.docx"
             filename = "complaint.docx"
 
             generate_docx(file_path, complaint_text)
 
         else:
+
             file_path = f"/tmp/complaint_{user_id}.pdf"
             filename = "complaint.pdf"
 
             generate_pdf(file_path, complaint_text)
 
-        # --------------------------------------------------
+        # --------------------------------------
         # 📤 SEND FILE
-        # --------------------------------------------------
+        # --------------------------------------
 
         with open(file_path, "rb") as file:
+
             await message.reply_document(
                 document=file,
                 filename=filename
             )
 
-        await message.reply_text("✅ Complaint generated successfully.")
+        await message.reply_text(
+            "✅ Complaint generated successfully."
+        )
 
         # Save record
         save_complaint(session)
@@ -120,6 +153,7 @@ async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         set_state(user_id, COMPLETED)
 
     except Exception as e:
+
         print("ERROR in handle_generate:", e)
 
         await message.reply_text(
