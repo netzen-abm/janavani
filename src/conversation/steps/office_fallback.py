@@ -3,7 +3,13 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
-from conversation.constants import WAITING_FOR_OFFICE_MANUAL, WAITING_FOR_PREVIEW
+
+from conversation.constants import (
+    WAITING_FOR_OFFICE_MANUAL,
+    WAITING_FOR_PREVIEW
+)
+
+from conversation.steps.preview import handle_preview  # 🔥 IMPORTANT
 
 
 async def handle_office_fallback(
@@ -45,7 +51,12 @@ async def handle_office_fallback(
             "✅ Continuing without specific office."
         )
 
+        # ✅ MOVE STATE
         set_state(user_id, WAITING_FOR_PREVIEW)
+
+        # 🔥 CRITICAL FIX → TRIGGER NEXT STEP IMMEDIATELY
+        await handle_preview(update, context)
+
         return
 
     # --------------------------------------
