@@ -11,13 +11,56 @@ from conversation.steps.format import show_format_buttons
 async def handle_identity(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
+    text = update.message.text.strip()
+
     session = get_session(user_id)
 
-    session["identity_mode"] = "anonymous"
+    # --------------------------------------
+    # VALIDATE INPUT
+    # --------------------------------------
+
+    if text not in ["1", "2", "3", "4"]:
+        await update.message.reply_text(
+            "❌ Invalid choice.\n\nReply with 1, 2, 3, or 4."
+        )
+        return
+
+    # --------------------------------------
+    # MAP USER CHOICE
+    # --------------------------------------
+
+    identity_map = {
+        "1": "anonymous",
+        "2": "name_only",
+        "3": "address_only",
+        "4": "full_details"
+    }
+
+    identity_labels = {
+        "1": "Anonymous",
+        "2": "Name Only",
+        "3": "Address Only",
+        "4": "Full Details"
+    }
+
+    selected_mode = identity_map[text]
+    selected_label = identity_labels[text]
+
+    # SAVE
+    session["identity_mode"] = selected_mode
+
+    # --------------------------------------
+    # MOVE TO NEXT STEP
+    # --------------------------------------
 
     set_state(user_id, WAITING_FOR_FORMAT)
 
-    await update.message.reply_text("✅ Identity: Anonymous")
+    await update.message.reply_text(
+        f"✅ Identity: {selected_label}"
+    )
 
-    # 🔥 SHOW BUTTONS
+    # --------------------------------------
+    # SHOW FORMAT OPTIONS (ONLY ONCE)
+    # --------------------------------------
+
     await show_format_buttons(update)
