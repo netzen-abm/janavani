@@ -581,21 +581,3 @@ STABILIZE BEFORE OPTIMIZING.
 DOCUMENT WHAT EXISTS, NOT WHAT WE HOPE EXISTS.
 ________________________________________
 END OF JANAVANI REPOSITORY AUDIT
-
-### What this accomplishes
-
-This version deliberately **does not pretend we have completed a code-level dependency audit**. That's important.
-
-It converts the old:
-
-> `(To be filled during audit)`
-
-into an actual controlled register, while keeping uncertain legacy files at **REVIEW** rather than falsely declaring them dead.
-
-For your current project sequence, this is the correct state:
-
-**North Star → Source of Truth → Product Landscape → Roadmap → Repository Audit → Release Checklist → final cross-document check → one commit.**
-
-Now replace the contents of:
-
-```text
