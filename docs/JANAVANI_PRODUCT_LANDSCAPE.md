@@ -320,7 +320,6 @@ The intended AI role includes:
 Convert natural citizen language into structured information.
 
 Example:
-
 "road bad for 3 months"
 
 into structured information such as:
@@ -336,6 +335,7 @@ Public access / safety
 
 Possible authority:
 Local government / PWD
+
 12.2 Issue Classification
 
 Determine:
@@ -375,17 +375,18 @@ Planned capability includes:
 
 Malayalam
 Manglish
+Hindi
 English
 
 Example:
-
-Malayalam / Manglish
+Malayalam / Manglish / Hindi
         ↓
 Language normalization
         ↓
 Structured issue
         ↓
 Complaint
+
 13. AI — WHAT IT SHOULD NOT BECOME
 
 Janavani AI should not primarily be:
@@ -415,6 +416,7 @@ Location
 Department
         ↓
 Ranked office candidates
+
 Location Intelligence
 
 Potential information:
@@ -440,11 +442,22 @@ Identify likely authority
 Show uncertainty
         ↓
 Allow manual correction
+
 15. DOCUMENT ECOSYSTEM
 
 After the complaint workflow is stable, Janavani can expand document capabilities.
 
 Potential document types:
+
+Complaint
+Grievance
+RTI
+Representation
+Petition
+Appeal
+Notice
+Follow-up Letter
+Escalation Letter
 
 Complaint
 Grievance
@@ -737,6 +750,7 @@ Verification
 Confidence level
         ↓
 Trusted directory
+
 29. MOBILE ECOSYSTEM
 
 Future interfaces:
@@ -996,6 +1010,7 @@ The platform should evolve from a document-generation tool into a citizen-govern
 But it must earn that expansion by making the first citizen journey work exceptionally well.
 
 40. FINAL PRODUCT MAP
+
                          JANAVANI
                             │
              ┌──────────────┴──────────────┐
@@ -1034,6 +1049,7 @@ But it must earn that expansion by making the first citizen journey work excepti
                                                Messenger
                                                     │
                                                    API
+
 41. NORTH STAR
 
 Janavani's long-term objective is not to create the largest collection of features.
