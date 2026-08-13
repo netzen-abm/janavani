@@ -1,0 +1,52 @@
+# Code used to write the workflow configuration to a downloadable file
+import os
+
+os.makedirs('generated', exist_ok=True)
+workflow_content = """name: Freenet Layer CI/CD Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy_to_freenet:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Freenet Binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/freenet
+        key: ${{ runner.os }}-freenet-node
+
+    - name: Install Freenet Node Daemon
+      run: |
+        if ! command -v freenet &> /dev/null; then
+          echo "Installing Freenet node daemon..."
+          cargo install freenet
+        fi
+
+    - name: Start Local Freenet Daemon (Headless Background)
+      run: |
+        freenet local-node run &
+        echo "Waiting for local API WebSocket port 7509 to spin up..."
+        sleep 10
+
+    - name: Execute Independent Freenet Layer
+      env:
+        FREENET_PRIVATE_KEY: ${{ secrets.FREENET_PRIVATE_KEY }}
+      run: |
+        cd freenet-layer
+        echo "Deploying contracts or publishing data via independent layer script..."
+        # Example run commands:
+        # npm run publish-freenet OR cargo run --bin freenet-publisher
+"""
+
+with open('generated/freenet-deploy.yml', 'w') as f:
+    f.write(workflow_content.strip())
