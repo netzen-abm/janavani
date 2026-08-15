@@ -41,3 +41,49 @@ services:
 networks:
   janavani-secure-mesh:
     driver: bridge
+
+    # --------------------
+
+    version: '3.8'
+
+services:
+  # External facing security guard gateway
+  reverse-proxy-gateway:
+    image: nginx:alpine
+    container_name: janavani-nginx-gateway
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Securely map live SSL certificate bundles from production host storage layers
+      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
+      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
+    depends_on:
+      - ai-agent-service
+    networks:
+      - janavani-secure-mesh
+
+  ai-agent-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=transient-memory-grid
+      - REDIS_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HF_TOKEN=${HUGGINGFACE_API_KEY}
+    depends_on:
+      - transient-memory-grid
+    networks:
+      - janavani-secure-mesh
+
+  transient-memory-grid:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    networks:
+      - janavani-secure-mesh
+
+networks:
+  janavani-secure-mesh:
+    driver: bridge
+
