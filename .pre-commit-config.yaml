@@ -1,0 +1,21 @@
+# Local security enforcement matrix. Prevents commits if validation constraints fail.
+repos:
+  - repo: https://github.com
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+        name: Validate YAML Structural Integrity
+      - id: end-of-file-fixer
+        name: Standardize File Termination Vectors
+      - id: trailing-whitespace
+        name: Strip Redundant Trailing Whitespace
+      - id: check-added-large-files
+        name: Block Accidental Binary Blobs Ingestion
+
+  - repo: https://github.com
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+        name: Local High-Speed Token Leak Detection Scan
+        description: Detects API keys, private tokens, and credentials prior to local commit confirmation.
+        entry: gitleaks protect --verbose --staged
