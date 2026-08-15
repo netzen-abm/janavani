@@ -35,6 +35,10 @@ if [ "$HEALTH_CHECK_STATUS" -eq 200 ] || [ "$HEALTH_CHECK_STATUS" -eq 404 ]; the
     echo "=== [5/5] Refreshing Security Reverse Proxy Routing Schemes ==="
     docker compose exec -T reverse-proxy-gateway nginx -s reload
     
+    echo "=== [6/6] Synchronizing Frontend Client Application Environments ==="
+    # Ensure frontend web applications are refreshed cleanly alongside system changes
+    docker compose up -d --no-deps web-mvp-application
+    
     # Prune orphaned image artifacts to reclaim physical server disk storage
     docker image prune -f
     echo "🎉 Janavani Agentic AI Service Platform Upgraded Successfully with Zero Downtime."
