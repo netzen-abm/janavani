@@ -1,0 +1,12 @@
+# Global monitoring automation engine parameters.
+# Captures performance throughput footprints without parsing raw user strings.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'janavani-platform-telemetry'
+    metrics_path: /api/v1/agent/metrics
+    bearer_token: 'web-mvp-token-abc' # Enforces security context validation requirements
+    static_configs:
+      - targets: ['ai-agent-service:8000']
