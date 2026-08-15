@@ -187,3 +187,93 @@ async def fetch_cached_document(tracking_id: str, interface_token: str = Depends
     return LegalDocumentSchema(**document_data)
 
 app.include_router(router)
+
+# -----------------------------
+
+import uuid
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security
+from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel
+from typing import Dict, Any
+from src.services.legal_agent import JanavaniLegalAgent
+from src.utils.validators import PrivacyPreservingTokenizer, LegalDocumentSchema
+from src.storage.cache import TransientStorageEngine
+from src.storage.analytics import PrivacyPreservingAnalytics
+import json
+
+app = FastAPI(title="Janavani Agentic AI Service Gateway")
+router = APIRouter(prefix="/api/v1/agent")
+
+INTERFACE_API_KEY_HEADER = APIKeyHeader(name="X-Janavani-Interface-Token", auto_error=True)
+VALID_INTERFACE_TOKENS = {"telegram-mvp-token-xyz", "web-mvp-token-abc", "android-client-token-123"}
+
+def verify_interface_token(token: str = Security(INTERFACE_API_KEY_HEADER)):
+    if token not in VALID_INTERFACE_TOKENS:
+        raise HTTPException(status_code=403, detail="Unauthorized interface client credential request.")
+    return token
+
+class ProcessIssueRequest(BaseModel):
+    citizen_raw_input: str
+
+@router.post("/draft", response_model=Dict[str, Any])
+async def process_citizen_document_workflow(
+    payload: ProcessIssueRequest,
+    interface_token: str = Depends(verify_interface_token)
+):
+    if not payload.citizen_raw_input.strip():
+        raise HTTPException(status_code=400, detail="Input text cannot be blank.")
+
+    privacy_engine = PrivacyPreservingTokenizer()
+    scrubbed_data = privacy_engine.deidentify_text(payload.citizen_raw_input)
+    
+    agent = JanavaniLegalAgent()
+    ai_raw_response = agent.draft_legal_document(scrubbed_data["sanitized_text"])
+    
+    if "error" in ai_raw_response:
+        # Register a generation failure for monitoring analytics
+        analytics_engine = PrivacyPreservingAnalytics()
+        analytics_engine.increment_generation_counter(document_type="UNKNOWN", status="FAILED")
+        raise HTTPException(status_code=502, detail=ai_raw_response["message"])
+        
+    try:
+        choices = ai_raw_response.get("choices", [{}])
+        content_string = choices.get("message", {}).get("content", "{}")
+        parsed_json = json.loads(content_string)
+        
+        validated_document = LegalDocumentSchema(**parsed_json)
+        tracking_id = str(uuid.uuid4())
+        
+        cache_engine = TransientStorageEngine()
+        success = cache_engine.cache_transient_document(tracking_id, validated_document.model_dump())
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Secured memory pipeline caching error occurred.")
+            
+        # Log successful aggregate telemetry data cleanly and anonymously
+        analytics_engine = PrivacyPreservingAnalytics()
+        analytics_engine.increment_generation_counter(
+            document_type=validated_document.document_type, 
+            status="SUCCESS"
+        )
+            
+        return {
+            "status": "GENERATED_SUCCESSFULLY",
+            "tracking_id": tracking_id,
+            "lifecycle_ttl_seconds": 1800,
+            "document": validated_document.model_dump()
+        }
+        
+    except Exception as parse_error:
+        raise HTTPException(
+            status_code=422, 
+            detail=f"AI framework output parsing error. Trace: {str(parse_error)}"
+        )
+
+@router.get("/metrics", dependencies=[Depends(verify_interface_token)])
+async def fetch_platform_metrics():
+    """Allows administrators to view global aggregate platform usage metrics safely."""
+    analytics_engine = PrivacyPreservingAnalytics()
+    return analytics_engine.retrieve_aggregate_insights()
+
+app.include_router(router)
+
