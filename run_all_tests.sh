@@ -22,18 +22,21 @@ export REDIS_PORT=6379
 export OPENROUTER_API_KEY=mock-verification-token
 export HUGGINGFACE_API_KEY=mock-verification-token
 
-echo -e "\n🔹 [1/4] Running Core System Component Tests..."
+echo -e "\n🔹 [1/5] Running Core System Component Tests..."
 pytest tests/test_ai_agent_components.py -v
 
-echo -e "\n🔹 [2/4] Running Translation Layer & Mock Verification Tests..."
+echo -e "\n🔹 [2/5] Running Translation Layer & Mock Verification Tests..."
 pytest tests/test_iit_madras_mock.py -v
 
-echo -e "\n🔹 [3/4] Running Accountability Feedback Loop Verification Tests..."
+echo -e "\n🔹 [3/5] Running Accountability Feedback Loop Verification Tests..."
 pytest tests/test_accountability_feedback.py -v
 
-echo -e "\n🔹 [4/4] Running Constitutional Enforcement & Document Pipeline Tests..."
+echo -e "\n🔹 [4/5] Running Constitutional Enforcement & Document Pipeline Tests..."
 pytest tests/test_constitutional_compliance.py -v
 pytest tests/test_document_generation.py -v
+
+echo -e "\n🔹 [5/5] Performing Regional Vernacular Translation Code Verifications..."
+pytest tests/test_vernacular_headers.py -v
 
 echo "======================================================================"
 echo "🎉 ALL JANAVANI COMPONENT TEST CYCLES CONCLUDED SUCCESSFULLY."
