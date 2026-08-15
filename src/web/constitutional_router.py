@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import os
 from src.core.legislative_monitor import fetch_active_bill_profile
+from src.core.vernacular_headers import fetch_localized_header_map
 from src.services.document_generator import MultiFormatDocumentEngine
 
 router = APIRouter(prefix="/api/v1/constitutional", tags=["Constitutional Oversight Engine"])
@@ -26,20 +27,23 @@ async def get_bill_compliance_report(bill_code: str):
 
 @router.post("/generate-objection")
 async def generate_and_route_objection(payload: ObjectionDispatchPayload):
-    """Compiles a formal constitutional objection letter and exports it in the user's chosen format."""
     bill_data = fetch_active_bill_profile(payload.bill_code)
     if not bill_data:
         raise HTTPException(status_code=404, detail="Target bill profile data missing.")
         
     evaluation = bill_data["constitutional_evaluation"]
     
+    # Fetch appropriate localized translation headers based on target geography
+    lang_tags = fetch_localized_header_map(bill_data["state"])
+    
+    # Compile a formal petition combining English structures with localized headers
     formal_letter_body = (
         f"FORMAL PETITION OF OBJECTION / MEMORANDUM OF NON-COMPLIANCE\n"
-        f"====================================================================\n"
-        f"To,\n"
+        f"====================================================================\n\n"
+        f"{lang_tags['salutation']}\n"
         f"The Legislative Assembly Secretariat / Standing Committee Board\n"
         f"Government of {bill_data['state']}\n\n"
-        f"SUBJECT: Formal Constitutional Objection Against '{bill_data['title']}'\n\n"
+        f"{lang_tags['subject_prefix']} Formal Constitutional Objection Against '{bill_data['title']}'\n\n"
         f"Respected Authority,\n\n"
         f"I am writing to register my formal objection to the proposed legislative draft titled '{bill_data['title']}'. "
         f"An evaluation of this bill indicates significant conflicts with the Golden Triangle of the Indian Constitution "
@@ -52,7 +56,7 @@ async def generate_and_route_objection(payload: ObjectionDispatchPayload):
         f"{evaluation['overall_constitutional_summary']}\n\n"
         f"CITIZEN REASONING SUBMISSION:\n"
         f"\"{payload.citizen_comments}\"\n\n"
-        f"PRAYER / DEMAND:\n"
+        f"{lang_tags['prayer_prefix']}\n"
         f"The authority is requested to immediately withdraw or amend this bill to bring it into compliance with the "
         f"fundamental liberties guaranteed by the Constitution of India.\n\n"
         f"Submitted Sincerely,\n"
@@ -61,7 +65,6 @@ async def generate_and_route_objection(payload: ObjectionDispatchPayload):
         f"Generated via the Janavani Privacy-First Platform Framework."
     )
 
-    # Handle local download requests based on the user's preferred format
     if payload.target_delivery_channel == "DOWNLOAD":
         if payload.requested_file_format.upper() == "DOCX":
             doc_stream = MultiFormatDocumentEngine.generate_docx_stream(formal_letter_body)
@@ -78,7 +81,6 @@ async def generate_and_route_objection(payload: ObjectionDispatchPayload):
                 headers={"Content-Disposition": f"attachment; filename=objection_{payload.bill_code}.pdf"}
             )
 
-    # Fallback to direct secure email dispatch logic
     smtp_host = os.getenv("SMTP_SERVER_HOST", "smtp.janavani.internal")
     smtp_port = int(os.getenv("SMTP_SERVER_PORT", "587"))
     smtp_user = os.getenv("SMTP_SECURITY_USER", "")
