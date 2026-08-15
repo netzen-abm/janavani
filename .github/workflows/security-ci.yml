@@ -1,0 +1,60 @@
+name: Security & Component Testing CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-scan:
+    name: Secret & Privacy Vulnerability Leak Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository Base
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify Code Base for Secret Leaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  component-testing:
+    name: Isolated Component Validation Testing
+    runs-on: ubuntu-latest
+    needs: security-scan
+    
+    steps:
+      - name: Checkout Code Repository Base
+        uses: actions/checkout@v4
+
+      - name: Deploy Isolated Docker Environment Grid
+        run: |
+          echo "OPENROUTER_API_KEY=mock-verification-token" >> .env
+          echo "HUGGINGFACE_API_KEY=mock-verification-token" >> .env
+          docker compose up -d transient-memory-grid
+          
+      - name: Set up Python Environment Pipeline
+        uses: actions/setup-python@v5
+        with:
+          python-python: '3.11'
+          cache: 'pip'
+
+      - name: Install Testing Tool Stack
+        run: |
+          pip install --upgrade pip
+          pip install pytest fakeredis fastapi httpx pydantic pydantic-settings requests redis
+
+      - name: Execute Component Verification Engine Suite
+        run: |
+          export REDIS_HOST=localhost
+          export REDIS_PORT=6379
+          export OPENROUTER_API_KEY=mock-verification-token
+          export HUGGINGFACE_API_KEY=mock-verification-token
+          pytest tests/ -v
+
+      - name: Tear Down Testing Environments
+        if: always()
+        run: docker compose down
