@@ -99,3 +99,91 @@ def chat():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+# -----------------------------
+
+import uuid
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security
+from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel
+from src.services.legal_agent import JanavaniLegalAgent
+from src.utils.validators import PrivacyPreservingTokenizer, LegalDocumentSchema
+from src.storage.cache import TransientStorageEngine
+import json
+
+app = FastAPI(title="Janavani Agentic AI Service Gateway")
+router = APIRouter(prefix="/api/v1/agent")
+
+INTERFACE_API_KEY_HEADER = APIKeyHeader(name="X-Janavani-Interface-Token", auto_error=True)
+VALID_INTERFACE_TOKENS = {"telegram-mvp-token-xyz", "web-mvp-token-abc", "android-client-token-123"}
+
+def verify_interface_token(token: str = Security(INTERFACE_API_KEY_HEADER)):
+    if token not in VALID_INTERFACE_TOKENS:
+        raise HTTPException(status_code=403, detail="Unauthorized interface client credential request.")
+    return token
+
+class ProcessIssueRequest(BaseModel):
+    citizen_raw_input: str
+
+@router.post("/draft", response_model=Dict[str, Any])
+async def process_citizen_document_workflow(
+    payload: ProcessIssueRequest,
+    interface_token: str = Depends(verify_interface_token)
+):
+    if not payload.citizen_raw_input.strip():
+        raise HTTPException(status_code=400, detail="Input text cannot be blank.")
+
+    # 1. Execute local anonymization layer
+    privacy_engine = PrivacyPreservingTokenizer()
+    scrubbed_data = privacy_engine.deidentify_text(payload.citizen_raw_input)
+    
+    # 2. Run legal extraction workflow
+    agent = JanavaniLegalAgent()
+    ai_raw_response = agent.draft_legal_document(scrubbed_data["sanitized_text"])
+    
+    if "error" in ai_raw_response:
+        raise HTTPException(status_code=502, detail=ai_raw_response["message"])
+        
+    try:
+        choices = ai_raw_response.get("choices", [{}])
+        content_string = choices[0].get("message", {}).get("content", "{}")
+        parsed_json = json.loads(content_string)
+        
+        # Enforce anti-chat constraints via schema mapping validation
+        validated_document = LegalDocumentSchema(**parsed_json)
+        
+        # 3. Create a unique document state tracker ID
+        tracking_id = str(uuid.uuid4())
+        
+        # 4. Offload parsed structure safely into Redis memory grid
+        cache_engine = TransientStorageEngine()
+        success = cache_engine.cache_transient_document(tracking_id, validated_document.model_dump())
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Secured memory pipeline caching error occurred.")
+            
+        return {
+            "status": "GENERATED_SUCCESSFULLY",
+            "tracking_id": tracking_id,
+            "lifecycle_ttl_seconds": 1800,
+            "document": validated_document.model_dump()
+        }
+        
+    except Exception as parse_error:
+        raise HTTPException(
+            status_code=422, 
+            detail=f"AI framework violated strict administrative structuring requirements. Refusing payload parsing. Trace: {str(parse_error)}"
+        )
+
+@router.get("/retrieve/{tracking_id}", response_model=LegalDocumentSchema)
+async def fetch_cached_document(tracking_id: str, interface_token: str = Depends(verify_interface_token)):
+    """Allows decoupled interfaces to securely poll generated structural blocks prior to automatic deletion."""
+    cache_engine = TransientStorageEngine()
+    document_data = cache_engine.retrieve_transient_document(tracking_id)
+    
+    if not document_data:
+        raise HTTPException(status_code=404, detail="Document tracker has expired or does not exist.")
+        
+    return LegalDocumentSchema(**document_data)
+
+app.include_router(router)
