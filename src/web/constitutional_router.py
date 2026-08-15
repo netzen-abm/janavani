@@ -1,36 +1,38 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from typing import Dict, Any
 import smtplib
 from email.mime.text import MIMEText
+from datetime import datetime
 import os
 from src.core.legislative_monitor import fetch_active_bill_profile
+from src.services.document_generator import MultiFormatDocumentEngine
 
 router = APIRouter(prefix="/api/v1/constitutional", tags=["Constitutional Oversight Engine"])
 
 class ObjectionDispatchPayload(BaseModel):
     bill_code: str
     citizen_comments: str
-    target_delivery_channel: str # 'EMAIL' or 'PRINT_POST'
+    target_delivery_channel: str # 'EMAIL' or 'DOWNLOAD'
+    requested_file_format: str = Field("PDF", description="Format choices: 'PDF' or 'DOCX'")
 
 @router.get("/bill/{bill_code}", response_model=Dict[str, Any])
 async def get_bill_compliance_report(bill_code: str):
-    """Exposes constitutional reports directly to independent web and telegram client streams."""
     bill_data = fetch_active_bill_profile(bill_code)
     if not bill_data:
         raise HTTPException(status_code=404, detail="Requested legislative bill index code not found.")
     return bill_data
 
-@router.post("/generate-objection", response_model=Dict[str, Any])
+@router.post("/generate-objection")
 async def generate_and_route_objection(payload: ObjectionDispatchPayload):
-    """Compiles a formal constitutional objection letter based on Golden Triangle criteria."""
+    """Compiles a formal constitutional objection letter and exports it in the user's chosen format."""
     bill_data = fetch_active_bill_profile(payload.bill_code)
     if not bill_data:
         raise HTTPException(status_code=404, detail="Target bill profile data missing.")
         
     evaluation = bill_data["constitutional_evaluation"]
     
-    # Structure the official objection text matching traditional formal post layouts
     formal_letter_body = (
         f"FORMAL PETITION OF OBJECTION / MEMORANDUM OF NON-COMPLIANCE\n"
         f"====================================================================\n"
@@ -59,31 +61,36 @@ async def generate_and_route_objection(payload: ObjectionDispatchPayload):
         f"Generated via the Janavani Privacy-First Platform Framework."
     )
 
-    if payload.target_delivery_channel == "PRINT_POST":
-        # Returns the text block allowing the frontend to generate a printable PDF
-        return {
-            "delivery_mode": "PHYSICAL_POSTAL_DOWNLOAD",
-            "status": "LETTER_COMPILED_FOR_PRINTING",
-            "printable_text_payload": formal_letter_body
-        }
+    # Handle local download requests based on the user's preferred format
+    if payload.target_delivery_channel == "DOWNLOAD":
+        if payload.requested_file_format.upper() == "DOCX":
+            doc_stream = MultiFormatDocumentEngine.generate_docx_stream(formal_letter_body)
+            return StreamingResponse(
+                doc_stream,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f"attachment; filename=objection_{payload.bill_code}.docx"}
+            )
+        else:
+            pdf_stream = MultiFormatDocumentEngine.generate_pdf_stream(formal_letter_body)
+            return StreamingResponse(
+                pdf_stream,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=objection_{payload.bill_code}.pdf"}
+            )
 
-    # If email delivery is requested, dispatch the letter via secure SMTP relays
+    # Fallback to direct secure email dispatch logic
     smtp_host = os.getenv("SMTP_SERVER_HOST", "smtp.janavani.internal")
     smtp_port = int(os.getenv("SMTP_SERVER_PORT", "587"))
     smtp_user = os.getenv("SMTP_SECURITY_USER", "")
     smtp_pass = os.getenv("SMTP_SECURITY_PASSWORD", "")
     
     if not smtp_user:
-        return {
-            "delivery_mode": "EMAIL_FALLBACK",
-            "status": "SMTP_OFFLINE_DRAFT_RETURNED",
-            "printable_text_payload": formal_letter_body
-        }
+        raise HTTPException(status_code=503, detail="Mail server configuration is currently offline.")
 
     msg = MIMEText(formal_letter_body)
     msg["Subject"] = f"[CONSTITUTIONAL OBJECTION] Regarding {bill_data['title']}"
     msg["From"] = f"advocacy@{os.getenv('DOMAIN_NAME', 'janavani.internal')}"
-    msg["To"] = "secretariat-legislation@state.gov.in" # Targeted routing point
+    msg["To"] = "secretariat-legislation@state.gov.in"
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
