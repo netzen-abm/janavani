@@ -768,4 +768,42 @@ app.include_router(feedback_api_router)
 app.include_router(legislative_api_router)
 app.include_router(constitutional_api_router)
 
+# -----------------------
+
+# Path: janavani/src/web_mvp/services/api_client.py
+import requests
+import os
+
+class JanavaniWebAPIClient:
+    """Manages secure communication between the Web UI and the backend AI service."""
+    def __init__(self):
+        # Point to the secure reverse proxy gateway domain
+        self.base_url = os.getenv("JANAVANI_BACKEND_URL", "https://janavani.internal")
+        self.headers = {
+            "X-Janavani-Interface-Token": os.getenv("WEB_INTERFACE_TOKEN", "web-mvp-token-abc"),
+            "Content-Type": "application/json"
+        }
+
+    def submit_complaint_draft(self, raw_input: str) -> dict:
+        """Sends raw text inputs to the AI engine to generate structured document fields."""
+        url = f"{self.base_url}/agent/draft"
+        try:
+            response = requests.post(url, json={"citizen_raw_input": raw_input}, headers=self.headers, timeout=30)
+            return response.json() if response.status_code == 200 else {"error": "Processing failed"}
+        except requests.RequestException:
+            return {"error": "Backend microservice unreachable"}
+
+    def download_constitutional_objection(self, bill_code: str, comment: str, format_type: str) -> bytes:
+        """Streams print-ready PDFs or Word documents directly to the user's browser."""
+        url = f"{self.base_url}/constitutional/generate-objection"
+        payload = {
+            "bill_code": bill_code,
+            "citizen_comments": comment,
+            "target_delivery_channel": "DOWNLOAD",
+            "requested_file_format": format_type
+        }
+        response = requests.post(url, json=payload, headers=self.headers, timeout=20)
+        return response.content if response.status_code == 200 else b""
+
+
 
