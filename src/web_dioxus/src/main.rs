@@ -1,6 +1,102 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
 use crate::api_client::{JanavaniDioxusBridge, DraftResponse};
+use crate::sos_interface::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
+
+mod api_client;
+mod decentralized_drivers;
+mod storage_adapter;
+mod capability_checker;
+mod sos_interface;
+
+fn main() {
+    dioxus::web::launch(App);
+}
+
+#[component]
+fn App() -> Element {
+    let mut user_input = use_signal(|| "".to_string());
+    let mut display_result = use_signal(|| Option::<DraftResponse>::None);
+    let mut sos_notification = use_signal(|| Option::<String>::None);
+    let mut is_loading = use_signal(|| false);
+
+    // Simulated geolocation coordinate variables tracking parameters
+    let current_coordinates = use_signal(|| "12.9716, 77.5946".to_string()); // Default: Bengaluru
+
+    let trigger_all_circumstance_panic = move |danger_type: String| {
+        cx.spawn(async move {
+            let context_payload = LocalEmergencyContext {
+                tracking_id: "SESSION_INTERNAL_ACTIVE_NODE".to_string(),
+                geo_coordinates: current_coordinates.read().clone(),
+                danger_context: danger_type,
+            };
+            
+            match JanavaniWasmSOSTrigger::dispatch_panic_beacon(context_payload).await {
+                Ok(success_msg) => sos_notification.set(Some(success_msg)),
+                Err(err_msg) => sos_notification.set(Some(format!("⚠️ Failure: {}", err_msg))),
+            }
+        });
+    };
+
+    rsx! {
+        link { rel: "stylesheet", href: "https://jsdelivr.net" }
+        main { class: "container", style: "margin-top: 2rem; max-width: 800px;",
+            
+            // --- HIGH PRIORITY UNIVERSAL EMERGENCE CRITICAL PORTAL ---
+            section { class: "card", style: "background: #fff0f0; border: 2px solid #ffcccc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;",
+                h3 { style: "color: #cc0000; margin-bottom: 0.5rem;", "🚨 Emergency Personal Safety Protocol" }
+                p { style: "font-size: 0.85rem; color: #555;", "Triggers immediate device wipe and broadcasts distress beacons out to trusted channels (Works Offline via Mesh Radio)." }
+                
+                div { class: "grid",
+                    button { 
+                        style: "background-color: #cc0000; border: none;",
+                        onclick: move |_| trigger_all_circumstance_panic("Late Night Travel / Unsafe Area".to_string()),
+                        "Late Night Danger"
+                    }
+                    button { 
+                        style: "background-color: #d97706; border: none;",
+                        onclick: move |_| trigger_all_circumstance_panic("Stalker / Being Followed".to_string()),
+                        "Being Followed"
+                    }
+                    button { 
+                        style: "background-color: #4b5563; border: none;",
+                        onclick: move |_| trigger_all_circumstance_panic("Administrative Harassment / Threat".to_string()),
+                        "Official Threat"
+                    }
+                }
+
+                if let Some(msg) = sos_notification.read().as_ref() {
+                    div { style: "margin-top: 1rem; padding: 0.75rem; background: white; border-left: 4px solid green; font-weight: bold; font-size: 0.85rem;",
+                        "{msg}"
+                    }
+                }
+            }
+
+            // --- STANDARD WORKFLOW GENERATOR INTERFACE ---
+            section { class: "card", style: "background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);",
+                h3 { "📝 Enter Public Grievance Details" }
+                textarea { 
+                    placeholder: "Describe the civic issue here...", 
+                    rows: "4", 
+                    value: "{user_input}",
+                    oninput: move |evt| user_input.set(evt.value().clone())
+                }
+                br {}
+                button { 
+                    disabled: *is_loading.read(),
+                    "Process Legal Draft Document" 
+                }
+            }
+        }
+    }
+}
+
+
+# -------------------------
+
+#![allow(non_snake_case)]
+use dioxus::prelude::*;
+use crate::api_client::{JanavaniDioxusBridge, DraftResponse};
 use crate::decentralized_drivers::JanavaniDecentralizedCore;
 use crate::storage_adapter::LocalBrowserStorage;
 
