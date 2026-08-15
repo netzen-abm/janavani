@@ -1,0 +1,7 @@
+# ==============================================================================
+# JANAVANI SYSTEM MANAGEMENT SCHEDULE TEMPLATE (CRONTAB)
+# Installs an automated trigger configuration inside the host system clock scheduler.
+# ==============================================================================
+
+# Triggers the automated backup script every single day at exactly 02:00 AM UTC
+0 2 * * * /bin/bash /workspace/deployments/janavani/backup.sh >> /var/log/janavani_backup.log 2>&1
