@@ -1,0 +1,22 @@
+# ==============================================================================
+# JANAVANI DIOXUS CLI RUNTIME ENGINE CONFIGURATIONS
+# Controls the local compiler build environment and assets processing layers.
+# ==============================================================================
+
+[application]
+name = "janavani"
+default_platform = "web"
+
+[web.app]
+# Defines the title bar parameters matching official platform indexes
+title = "Janavani — Decentralized Citizen Hub"
+
+[web.watcher]
+# Reload strategies for active multi-device local development staging tests
+reload_html = true
+watching_path = ["src", "public"]
+
+[web.assets]
+# Root path directories containing structural icons or standard markdown documents
+base_path = "."
+data_dir = "public"
