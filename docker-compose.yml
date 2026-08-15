@@ -235,3 +235,58 @@ networks:
     driver: bridge
 
 
+# ------------------------------
+
+version: '3.8'
+
+services:
+  # Standard operational network interfaces
+  reverse-proxy-gateway:
+    image: nginx:alpine
+    container_name: janavani-nginx-gateway
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
+      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
+    depends_on:
+      - ai-agent-service
+    networks:
+      - janavani-secure-mesh
+
+  ai-agent-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=transient-memory-grid
+      - REDIS_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    depends_on:
+      - transient-memory-grid
+    networks:
+      - janavani-secure-mesh
+
+  # NEW: Dioxus WebAssembly Dev Compilation Container Toolchain
+  dioxus-frontend-app:
+    image: rust:1.78-slim
+    container_name: janavani-dioxus-compiler
+    command: sh -c "apt-get update && apt-get install -y pkg-config libssl-dev binaryen && cargo install dioxus-cli && cd src/web_dioxus && dx build --platform web"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    networks:
+      - janavani-secure-mesh
+
+  transient-memory-grid:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    networks:
+      - janavani-secure-mesh
+
+networks:
+  janavani-secure-mesh:
+    driver: bridge
+
