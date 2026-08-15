@@ -87,3 +87,67 @@ networks:
   janavani-secure-mesh:
     driver: bridge
 
+
+    # -------------------
+
+    version: '3.8'
+
+services:
+  # External facing security guard gateway
+  reverse-proxy-gateway:
+    image: nginx:alpine
+    container_name: janavani-nginx-gateway
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
+      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
+    depends_on:
+      - ai-agent-service
+    networks:
+      - janavani-secure-mesh
+
+  ai-agent-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=transient-memory-grid
+      - REDIS_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HF_TOKEN=${HUGGINGFACE_API_KEY}
+    depends_on:
+      - transient-memory-grid
+    networks:
+      - janavani-secure-mesh
+
+  # Isolated Internal Admin UI Dashboard Component Instance
+  internal-admin-board:
+    image: python:3.11-slim
+    container_name: janavani-admin-panel
+    command: sh -c "pip install streamlit requests pandas && streamlit run src/web/admin_dashboard.py --server.port=8501 --server.address=0.0.0.0"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - JANAVANI_INTERNAL_API_URL=http://ai-agent-service:8000/api/v1/agent/metrics
+      - ADMIN_INTERFACE_SECRET_TOKEN=web-mvp-token-abc
+    ports:
+      - "8501:8501"
+    depends_on:
+      - ai-agent-service
+    networks:
+      - janavani-secure-mesh
+
+  transient-memory-grid:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    networks:
+      - janavani-secure-mesh
+
+networks:
+  janavani-secure-mesh:
+    driver: bridge
+
+
