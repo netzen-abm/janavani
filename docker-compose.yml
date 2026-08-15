@@ -6,3 +6,38 @@ services:
       - ./database:/app/database
     environment:
       - DEMO_MODE=true
+# --------
+
+version: '3.8'
+
+services:
+  # Isolated Python runtime containing Janavani's AI modules
+  ai-agent-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=transient-memory-grid
+      - REDIS_PORT=6379
+      # These credentials are passing safely from host system runtime parameters
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HF-TOKEN=${HUGGINGFACE_API_KEY}
+    depends_on:
+      - transient-memory-grid
+    networks:
+      - janavani-secure-mesh
+
+  # Non-persistent, zero-disk internal volatile cache structure
+  transient-memory-grid:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    ports:
+      - "6379:6379"
+    networks:
+      - janavani-secure-mesh
+
+networks:
+  janavani-secure-mesh:
+    driver: bridge
