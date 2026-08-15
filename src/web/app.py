@@ -8,6 +8,60 @@ from src.services.legal_agent import JanavaniLegalAgent
 from src.utils.validators import PrivacyPreservingTokenizer, LegalDocumentSchema
 from src.storage.cache import TransientStorageEngine
 from src.storage.analytics import PrivacyPreservingAnalytics
+from src.services.emergency_sos import JanavaniEmergencySOSEngine
+
+app = FastAPI(title="Janavani Agentic AI Service Gateway")
+router = APIRouter(prefix="/api/v1/agent")
+
+INTERFACE_API_KEY_HEADER = APIKeyHeader(name="X-Janavani-Interface-Token", auto_error=True)
+VALID_INTERFACE_TOKENS = {"telegram-mvp-token-xyz", "web-mvp-token-abc", "android-client-token-123"}
+
+def verify_interface_token(token: str = Security(INTERFACE_API_KEY_HEADER)):
+    # Connect directly to the internal memory check array layer
+    import redis, os
+    r = redis.Redis(host=os.getenv("REDIS_HOST", "localhost"), port=6379, db=0, decode_responses=True)
+    if r.exists(f"security:blacklisted_tokens:{token}"):
+        raise HTTPException(status_code=401, detail="This interface token has been revoked due to an active SOS event.")
+    if token not in VALID_INTERFACE_TOKENS:
+        raise HTTPException(status_code=403, detail="Unauthorized interface client credential request.")
+    return token
+
+class SOSRequestPayload(BaseModel):
+    session_tracking_id: str
+    approximate_coordinates: str
+
+@router.post("/trigger-sos", response_model=Dict[str, Any])
+async def trigger_emergency_sos_lockdown(
+    payload: SOSRequestPayload,
+    interface_token: str = Depends(verify_interface_token)
+):
+    """Provides an instant emergency pathway to wipe session data and alert trusted support networks."""
+    engine = JanavaniEmergencySOSEngine()
+    result = engine.trigger_crisis_lockdown(
+        session_tracking_id=payload.session_tracking_id,
+        client_interface_token=interface_token,
+        emergency_coordinates=payload.approximate_coordinates
+    )
+    
+    if result["status"] == "LOCKDOWN_FAILED":
+        raise HTTPException(status_code=500, detail="Fatal system error during emergency wipe execution.")
+    return result
+
+app.include_router(router)
+
+
+# ----------------------
+
+import uuid
+import json
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security
+from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel
+from typing import Dict, Any
+from src.services.legal_agent import JanavaniLegalAgent
+from src.utils.validators import PrivacyPreservingTokenizer, LegalDocumentSchema
+from src.storage.cache import TransientStorageEngine
+from src.storage.analytics import PrivacyPreservingAnalytics
 from src.web.feedback_router import router as feedback_api_router
 from src.web.legislative_router import router as legislative_api_router
 from src.web.constitutional_router import router as constitutional_api_router
