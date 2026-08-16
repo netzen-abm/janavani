@@ -150,3 +150,11 @@ impl SovereignDeviceAuditor {
         report
     }
 }
+
+// Path: janavani_v2/src/web_dioxus/src/privacy_audit.rs
+# [cfg(any(target_os = "android", target_os = "ios"))]
+pub fn run_native_os_integrity_check() -> bool {
+    // Direct syscall execution path to check for unverified binary configurations
+    let check_path = std::ffi::CString::new("/system/xbin/su").unwrap();
+    unsafe { libc::access(check_path.as_ptr(), libc::F_OK) == 0 }
+}
