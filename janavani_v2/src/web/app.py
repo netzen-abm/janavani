@@ -237,3 +237,23 @@ async def process_multimodal_grievance(
         "preamble_header_applied": lang_tags["preamble_anchor"][:60] + "..."
     }
 
+
+from src.core.document_templates import get_all_available_templates, get_template_by_id
+
+# Append these high-utility route handlers to your primary gateway routes matrix
+@router.get("/templates/directory")
+async def fetch_available_templates_directory(token: str = Depends(verify_channel_token)):
+    """Exposes the list of available document templates to independent frontends."""
+    return get_all_available_templates()
+
+@router.get("/templates/render/{template_id}")
+async def fetch_raw_template_body(template_id: str, token: str = Depends(verify_channel_token)):
+    """Returns the exact structured plain-text layout of a target letter template."""
+    template_data = get_template_by_id(template_id)
+    if not template_data:
+        raise HTTPException(status_code=404, detail="Requested legal document layout index not found.")
+    return template_data
+
+
+
+
