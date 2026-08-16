@@ -1,0 +1,19 @@
+[package]
+name = "janavani_v2"
+version = "2.0.0"
+edition = "2021"
+
+[dependencies]
+dioxus = { version = "0.5", features = ["web", "mobile"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+wasm-bindgen = "0.2"
+gloo-utils = "0.2"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
