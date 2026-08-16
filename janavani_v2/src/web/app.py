@@ -141,3 +141,41 @@ async def process_multimodal_grievance(
         "message": "Ingestion complete. Document processing running asynchronously."
     }
 
+import uuid
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security, Form
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from src.web.worker import process_multimodal_grievance_async
+
+router = APIRouter(prefix="/api/v2/core", tags=["Master Platform API"])
+
+@router.post("/process-multimodal-grievance")
+async def process_multimodal_grievance(
+    citizen_text_input: Optional[str] = Form(None),
+    location_code: str = Form("FALLBACK"),
+    export_format: str = Form("PDF"),
+    token: str = Depends(verify_channel_token)
+):
+    """
+    Ingests data instantly and hands over execution loads to background task queues.
+    Protects multi-channel frontends from timeout or freeze errors.
+    """
+    resolved_issue_text = citizen_text_input or ""
+    task_id = str(uuid.uuid4())
+    
+    # Trigger Celery worker thread asynchronously using standard .delay invocation models
+    process_multimodal_grievance_async.delay(
+        task_id=task_id,
+        raw_text=resolved_issue_text,
+        has_voice=False,
+        location_code=location_code,
+        export_format=export_format
+    )
+    
+    return {
+        "status": "QUEUED_FOR_PROCESSING",
+        "tracking_token_id": task_id,
+        "lifecycle_ttl_seconds": 1800,
+        "message": "Ingestion successful. Processing document infrastructure asynchronously."
+    }
+
