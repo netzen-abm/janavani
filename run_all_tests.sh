@@ -1,4 +1,59 @@
 #!/usr/bin/env bash
+
+# ==============================================================================
+# JANAVANI SYSTEM-WIDE TEST ORCHESTRATOR
+# Runs complete validation suites across all decoupled services and models.
+# ==============================================================================
+
+# Exit instantly if any structural component test encounters an uncaught failure
+set -e
+
+echo "======================================================================"
+echo "🇮🇳 STARTING JANAVANI SECURITY, PRIVACY & COMPLIANCE VALIDATION SUITE"
+echo "======================================================================"
+
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export OPENROUTER_API_KEY=mock-verification-token
+export HUGGINGFACE_API_KEY=mock-verification-token
+
+echo -e "\n🔹 [1/15] Running Core Python System Component Tests..."
+pytest tests/test_ai_agent_components.py -v
+pytest tests/test_iit_madras_mock.py -v
+pytest tests/test_accountability_feedback.py -v
+pytest tests/test_constitutional_compliance.py -v
+pytest tests/test_document_generation.py -v
+pytest tests/test_vernacular_headers.py -v
+
+echo -e "\n🔹 [2/15] Auditing Platform Cryptographic Trust Key Anchors..."
+pytest tests/test_security_anchors.py -v
+
+echo -e "\n🔹 [3/15] Running Geodetic Projections & KML Composer Subsystem Tests..."
+pytest tests/test_geodetic_mapping.py -v
+
+echo -e "\n🔹 [4/15] Verifying Browser Context Coordinate Injection Tool Scripts..."
+pytest tests/test_browser_capture_infra.py -v
+
+echo -e "\n🔹 [5/15] Validating Secure Emergency SOS Lockdown Routines..."
+pytest tests/test_emergency_lockdown.py -v
+
+echo -e "\n🔹 [6/15] Auditing Production Environment Configuration Security Standards..."
+pytest tests/test_build_pipeline.py -v
+pytest tests/test_setup_infrastructure.py -v
+pytest tests/test_production_integrity.py -v
+
+echo -e "\n🔹 [7/15] Running Headless Rust Dioxus WebAssembly Engine Component Tests..."
+cd src/web_dioxus && cargo test --lib -- --nocapture
+
+echo "======================================================================"
+echo "🎉 ALL JANAVANI COMPONENT TEST CYCLES CONCLUDED SUCCESSFULLY."
+echo "======================================================================"
+
+
+# ---------------------------------------
+
+
+#!/usr/bin/env bash
 set -e
 
 # Clear bytecode residue arrays cleanly
