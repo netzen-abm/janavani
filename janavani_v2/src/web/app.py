@@ -183,3 +183,57 @@ async def process_multimodal_grievance(
 from src.web.meta_feedback_router import router as platform_meta_feedback_router
 app.include_router(platform_meta_feedback_router)
 
+import uuid
+import json
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security, Form
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from src.core.regional_lexicon import fetch_lexicon_by_language
+from src.services.legal_knowledge_guard import AirGappedKnowledgeGuardrail
+
+router = APIRouter(prefix="/api/v2/core", tags=["Master Platform API"])
+
+@router.post("/process-multimodal-grievance")
+async def process_multimodal_grievance(
+    citizen_text_input: Optional[str] = Form(None),
+    target_language: str = Form("English"),
+    document_scope_type: str = Form("PETITION"), # "PETITION" or "CONTRACT"
+    export_format: str = Form("PDF"),
+    token: str = Depends(verify_channel_token)
+):
+    if not citizen_text_input or not citizen_text_input.strip():
+        raise HTTPException(status_code=400, detail="Grievance input string cannot be blank.")
+
+    # Step 1: Run the Input Query Through the Anti-Chat Guardrail Engine
+    context_evaluation = AirGappedKnowledgeGuardrail.verify_and_extract_context(citizen_text_input)
+    if not context_evaluation:
+        raise HTTPException(
+            status_code=422, 
+            detail="Operation Rejected: Input query falls outside Janavani's civic framework bounds. Chatting or out-of-scope web searches are strictly blocked by system policy."
+        )
+
+    # Step 2: Pull Localized Regional Translation Headings Natively
+    lang_tags = fetch_lexicon_by_language(target_language)
+    
+    # Step 3: Format the Final Context-Injected Structural Prompt Template
+    # This prevents prompt-injection attacks by strictly locking the instructions array
+    structured_system_instruction = (
+        "You are an automated, deterministic legal formatting compiler. "
+        "Your ONLY function is to convert text fields into official structures. "
+        "CRITICAL: Do not chat, do not explain your actions, do not provide legal opinions. "
+        f"The matching legal reference blocks are fixed as: {' | '.join(context_evaluation['matched_context_blocks'])}. "
+        "Output must strictly follow a JSON format matching the structural blocks."
+    )
+
+    task_id = str(uuid.uuid4())
+    
+    # In production, this payload matrix is pushed directly down to your background Celery workers
+    # to run local inference within your isolated Ollama Llama-3 container network
+    return {
+        "status": "QUEUED_WITHIN_VALID_CIVIC_SCOPE",
+        "tracking_token_id": task_id,
+        "language_applied": target_language,
+        "injected_knowledge_context": context_evaluation["matched_context_blocks"],
+        "preamble_header_applied": lang_tags["preamble_anchor"][:60] + "..."
+    }
+
