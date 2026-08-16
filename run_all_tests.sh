@@ -1,4 +1,27 @@
 #!/usr/bin/env bash
+set -e
+
+# Clear bytecode residue arrays cleanly
+find . -type d -name "__pycache__" -exec rm -r {} + 2>/dev/null || true
+
+echo "======================================================================"
+echo "🇮🇳 STARTING JANAVANI SECURITY, PRIVACY & COMPLIANCE VALIDATION SUITE"
+echo "======================================================================"
+
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export OPENROUTER_API_KEY=mock-verification-token
+export HUGGINGFACE_API_KEY=mock-verification-token
+
+# Append your newly deployed security anchor module validation scripts right into the test loop
+pytest tests/ -v
+
+cd src/web_dioxus && cargo test --lib -- --nocapture
+
+
+# -----------------------
+
+#!/usr/bin/env bash
 
 # ==============================================================================
 # JANAVANI SYSTEM-WIDE TEST ORCHESTRATOR
