@@ -254,6 +254,10 @@ async def fetch_raw_template_body(template_id: str, token: str = Depends(verify_
         raise HTTPException(status_code=404, detail="Requested legal document layout index not found.")
     return template_data
 
+# Add this mount line to your existing web/app.py router index block
+from src.web.land_router import router as regional_land_revenue_router
+app.include_router(regional_land_revenue_router)
+
 
 
 
