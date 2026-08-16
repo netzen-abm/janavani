@@ -103,6 +103,14 @@ async def process_multimodal_grievance(
 
 app.include_router(router)
 
+# Insert mount commands directly at the foot of your web/app.py execution matrix
+from src.adapters.telegram_webhook import router as telegram_channel_router
+from src.adapters.whatsapp_webhook import router as whatsapp_channel_router
+
+app.include_router(telegram_channel_router)
+app.include_router(whatsapp_channel_router)
+
+
 
 # Insert mount commands directly at the foot of your web/app.py execution matrix
 from src.web.volunteer_router import router as volunteer_network_router
