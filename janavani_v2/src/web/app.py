@@ -116,3 +116,28 @@ app.include_router(whatsapp_channel_router)
 from src.web.volunteer_router import router as volunteer_network_router
 app.include_router(volunteer_network_router)
 
+# Path: janavani_v2/src/web/app.py
+from fastapi import BackgroundTasks
+
+@router.post("/process-multimodal-grievance")
+async def process_multimodal_grievance(
+    background_tasks: BackgroundTasks,
+    citizen_text_input: Optional[str] = Form(None),
+    voice_note: Optional[UploadFile] = File(None)
+):
+    task_id = str(uuid.uuid4())
+
+    # Offload the heavy multi-modal processing tasks onto background worker threads
+    background_tasks.add_task(
+        async_processing_worker, 
+        task_id, 
+        citizen_text_input, 
+        voice_note
+    )
+
+    return {
+        "status": "QUEUED_FOR_PROCESSING", 
+        "task_id": task_id, 
+        "message": "Ingestion complete. Document processing running asynchronously."
+    }
+
