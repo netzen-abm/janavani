@@ -68,3 +68,14 @@ rsx! {
         }
     }
 }
+
+// Inject the component directly near your footer inside main.rs
+use crate::meta_feedback::PlatformFeedbackPanel;
+
+mod meta_feedback;
+
+// Inside the master rsx! render macro loop:
+rsx! {
+    // Existing blocks...
+    PlatformFeedbackPanel {}
+}
