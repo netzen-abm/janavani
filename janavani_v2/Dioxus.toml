@@ -1,0 +1,17 @@
+[application]
+name = "janavani_v2"
+default_platform = "web"
+
+[web.app]
+title = "Janavani V2: Sovereign Citizen Engine"
+
+[web.assets]
+base_path = "."
+data_dir = "public"
+
+[android]
+package = "org.janavani.v2"
+build_type = "release"
+
+[ios]
+bundle_id = "org.janavani.v2"
