@@ -179,3 +179,7 @@ async def process_multimodal_grievance(
         "message": "Ingestion successful. Processing document infrastructure asynchronously."
     }
 
+# Mount the new suggestion engine at the base boundary layer
+from src.web.meta_feedback_router import router as platform_meta_feedback_router
+app.include_router(platform_meta_feedback_router)
+
