@@ -102,3 +102,9 @@ async def process_multimodal_grievance(
     )
 
 app.include_router(router)
+
+
+# Insert mount commands directly at the foot of your web/app.py execution matrix
+from src.web.volunteer_router import router as volunteer_network_router
+app.include_router(volunteer_network_router)
+
