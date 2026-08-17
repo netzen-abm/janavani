@@ -73,3 +73,8 @@ async def submit_authenticated_rating(payload: HardenedFeedbackSchema, redis_db:
 from src.web.land_router import router as land_revenue_router
 app.include_router(router)
 app.include_router(land_revenue_router)
+
+# Insert mount commands directly at the foot of your web/app.py execution matrix
+from src.web.metrics_collector import router as system_metrics_collection_router
+app.include_router(system_metrics_collection_router)
+
