@@ -259,5 +259,54 @@ from src.web.land_router import router as regional_land_revenue_router
 app.include_router(regional_land_revenue_router)
 
 
+from fastapi import APIRouter, HTTPException, Depends, Form
+from pydantic import BaseModel
+from typing import Dict, Any
+from src.services.reinforcement_loop import SovereignReinforcementEngine
+
+router = APIRouter(prefix="/api/v2/core", tags=["Master Platform API"])
+
+class DocumentCorrectionPayload(BaseModel):
+    tracking_token_id: str
+    original_ai_output_text: str
+    user_modified_output_text: str
+    document_scope_type: str # e.g., "PETITION", "RTI", "CONTRACT"
+
+@router.post("/submit-document-correction")
+async def submit_document_correction(
+    payload: DocumentCorrectionPayload,
+    token: str = Depends(verify_channel_token)
+):
+    """
+    Accepts user-corrected legal drafts to refine local model training profiles.
+    Saves stylistic adjustments anonymously and updates the volatile transient cache.
+    """
+    if not payload.user_modified_output_text.strip():
+        raise HTTPException(status_code=400, detail="Modified document text input cannot be blank.")
+
+    # Step 1: Log the stylistic modifications anonymously into the volatile training pool
+    reinforcement_engine = SovereignReinforcementEngine()
+    logged_successfully = reinforcement_engine.record_anonymized_counter_vector(
+        original_ai_text=payload.original_ai_output_text,
+        user_corrected_text=payload.user_modified_output_text,
+        document_type=payload.document_scope_type
+    )
+
+    # Step 2: Commit the fresh, user-corrected text to the transient cache
+    # This allows the user to download their edited file layout immediately (Valid for 30 minutes)
+    import redis, os
+    r = redis.Redis(host=os.getenv("REDIS_HOST", "localhost"), port=6379, db=0, decode_responses=True)
+    result_key = f"transient_doc:results:{payload.tracking_token_id}"
+    
+    if r.exists(result_key):
+        r.hset(result_key, "document_text", payload.user_modified_output_text)
+
+    return {
+        "status": "CORRECTION_PROCESSED_SUCCESSFULLY",
+        "style_adjustment_vector_logged": logged_successfully,
+        "transient_cache_updated": r.exists(result_key),
+        "message": "Janavani learning data updated anonymously. Your document is ready for download."
+    }
+
 
 
