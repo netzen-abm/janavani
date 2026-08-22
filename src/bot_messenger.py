@@ -1,10 +1,10 @@
 # src/bot_messenger.py
-import requests
 import os
+
+import requests
 from flask import Flask, request
-from tools.search_directory import search_office
-from tools.rate_office import save_rating
-from tools.generate_pdf import generate_complaint_pdf
+
+from services.search_service import search_office
 
 app = Flask(__name__)
 TOKEN = os.getenv("MESSENGER_TOKEN")
@@ -20,17 +20,14 @@ def send_messenger(to, text):
     headers = {"Authorization": f"Bearer {TOKEN}"}
     data = {"messaging_product": "messenger", "to": to, "text": {"body": text}}
     try:
-        # use a timeout so this call won't hang forever (2s connect, 5s read)
         resp = _messenger_session.post(url, headers=headers, json=data, timeout=(2, 5))
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
-        # don't crash the whole request if messenger API is down
-        # log the error (print for now) and return False so caller can handle it
         print("send_messenger failed:", e)
         return False
     return True
 
-@app.route("/webhook", methods=["GET","POST"])
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
         return request.args.get("hub.challenge")
@@ -44,7 +41,7 @@ def webhook():
     else:
         reply = "Send: search ration Kochi"
 
-    send_whatsapp(phone, reply)
+    send_messenger(phone, reply)
     return "ok"
 
 if __name__ == "__main__":

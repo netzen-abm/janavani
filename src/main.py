@@ -1,25 +1,37 @@
 # src/main.py
-# Test the whole system
+# Test the shared Janavani components.
 
-from tools.search_directory import search_office
-from tools.rate_office import save_rating
-from tools.generate_pdf import generate_complaint_pdf
+from documents.pdf_generator import PDFGenerator
 from legal_brain import get_legal_advice
+from services.rate_office import save_rating
+from services.search_service import search_office
 
 print("=== JANAVANI TEST ===")
 print(search_office("ration", "Kochi"))
 
-print("\n" + "="*30 + "\n")
+print("\n" + "=" * 30 + "\n")
 
 print(save_rating(office_id="3", rating=1, issue="Aadhar failed, denied ration"))
 
-print("\n" + "="*30 + "\n")
+print("\n" + "=" * 30 + "\n")
 
-print(generate_complaint_pdf(
-    user_name="Test Citizen",
-    user_address="Edathala, Kochi, Kerala",
-    office_id="3", 
-    issue_text="Aadhar failed, denied ration"
-))
+legal_advice = get_legal_advice("ration denied")
+document_text = "\n".join(
+    [
+        "Complaint — Test Citizen",
+        "Address: Edathala, Kochi, Kerala",
+        "Office ID: 3",
+        "Issue: Aadhar failed, denied ration",
+        f"Law: {legal_advice['law']}",
+        f"Section: {legal_advice['section']}",
+        f"Basis: {legal_advice['explanation']}",
+    ]
+)
 
-print("\nDONE. Check for complaint_xxx.pdf file")
+pdf_file = PDFGenerator().generate(
+    text=document_text,
+    output_file="complaint_test.pdf",
+)
+print(f"Generated PDF: {pdf_file}")
+
+print("\nDONE. Check complaint_test.pdf")

@@ -1,10 +1,10 @@
 # src/bot_whatsapp.py
-import requests
 import os
+
+import requests
 from flask import Flask, request
-from tools.search_directory import search_office
-from tools.rate_office import save_rating
-from tools.generate_pdf import generate_complaint_pdf
+
+from services.search_service import search_office
 
 app = Flask(__name__)
 TOKEN = os.getenv("WHATSAPP_TOKEN")
@@ -14,9 +14,9 @@ def send_whatsapp(to, text):
     url = f"https://graph.facebook.com/v19.0/{PHONE_ID}/messages"
     headers = {"Authorization": f"Bearer {TOKEN}"}
     data = {"messaging_product": "whatsapp", "to": to, "text": {"body": text}}
-    requests.post(url, headers=headers, json=data)
+    requests.post(url, headers=headers, json=data, timeout=(2, 5))
 
-@app.route("/webhook", methods=["GET","POST"])
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
         return request.args.get("hub.challenge")
