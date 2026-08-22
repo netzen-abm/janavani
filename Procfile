@@ -1,1 +1,1 @@
-web: python3 -m src.bot_telegram
+web: PYTHONPATH=src python3 -m src.bot_telegram
