@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This notice resolves terminology drift created by earlier audit documents written during the repository-convergence phase.
+This notice resolves terminology drift created by earlier audit, planning and release documents written during earlier construction phases.
 
 ## 1. PRODUCT SCOPE IS LOCKED
 
@@ -17,23 +17,49 @@ No current document may describe an MVP as the product destination.
 
 ## 2. CONSTRUCTION MILESTONE ≠ PRODUCT SCOPE
 
-A small implementation target may be used to establish a safe foundation. For example, completing one verified citizen workflow on the Web can be an engineering milestone.
+A bounded implementation target may be used to establish a safe, testable foundation. For example, completing one verified citizen workflow on the Web can be an engineering milestone.
 
-It must be described as:
+It must be described as a:
 
 > **construction sequence / foundation milestone**
 
-and not as:
+and not as a:
 
 > **MVP destination / final product scope**
 
-## 3. HISTORICAL AUDIT INTERPRETATION
+## 3. DOCUMENTS CORRECTED ON 23 AUGUST 2026
 
-`docs/DEEP_GITHUB_DOCUMENTATION_ARCHITECTURE_AUDIT_2026-08-23.md` is retained as historical audit evidence. Its references to a “Web MVP” or “MVP” describe an earlier execution framing and are **superseded by this notice** and the current Ecosystem Charter, Source of Truth, Master Architecture and Roadmap.
+The following current documents were reconciled with the locked ecosystem direction:
+
+- `README.md` — full ecosystem identity and documentation authority.
+- `ROADMAP.md` — ecosystem construction roadmap, not MVP completion plan.
+- `docs/JANAVANI_ECOSYSTEM_CHARTER.md` — locked product identity.
+- `docs/JANAVANI_NORTH_STAR.md` — locked strategic destination.
+- `docs/SOURCE_OF_TRUTH.md` — canonical architectural rules.
+- `docs/ARCHITECTURE.md` — current canonical system architecture.
+- `docs/JANAVANI_MASTER_ARCHITECTURE.md` — detailed architecture.
+- `docs/JANAVANI_PRODUCT_LANDSCAPE.md` — current product/capability landscape.
+- `planning/PRODUCT_REQUIREMENTS.md` — full-ecosystem requirements.
+- `docs/PROJECT_MAP.md` — current repository navigation and ownership model.
+- `docs/RELEASE_1_CHECKLIST.md` — converted from an MVP product/release boundary into an ecosystem construction milestone checklist.
+
+## 4. HISTORICAL DOCUMENTS
+
+The former Release 1 MVP checklist is preserved as:
+
+`archive/documentation/legacy/RELEASE_1_CHECKLIST_MVP_2026-08-11.md`
+
+It is historical evidence only.
+
+Earlier MVP-era planning material already archived under `archive/` remains historical and must not be treated as current direction.
+
+## 5. HISTORICAL AUDIT INTERPRETATION
+
+`docs/DEEP_GITHUB_DOCUMENTATION_ARCHITECTURE_AUDIT_2026-08-23.md` and other dated audits are retained as evidence of what was observed at the time. References to “Web MVP”, “MVP”, or narrower historical execution framing describe an earlier planning state and are **superseded for current scope interpretation** by this notice and the canonical hierarchy.
 
 Historical audit records must not be rewritten merely to erase what was previously observed. Corrections are recorded explicitly so the audit trail remains intact.
 
-## 4. CURRENT DOCUMENTATION AUTHORITY
+## 6. CURRENT DOCUMENTATION AUTHORITY
 
 Use this order when resolving scope or identity conflicts:
 
@@ -57,14 +83,28 @@ MASTER TASK CHECKLIST + STATUS REGISTER
 IMPLEMENTATION / TEST / DEPLOYMENT EVIDENCE
 ```
 
-## 5. NO AUTOMATIC FEATURE COMPLETION
+## 7. NO AUTOMATIC FEATURE COMPLETION
 
 The full ecosystem is the destination, but individual capabilities still require independent implementation and verification. Architectural scope must not be confused with implementation status.
 
 A capability is complete only when the applicable evidence supports it.
 
-## 6. OPERATING RULE
+## 8. NO BLIND REPEAT AUDITS
 
-Future audits must first inspect existing dated audit records and the Master Checklist before starting a new inventory. If the question has already been answered, use the existing evidence and audit only the unresolved delta.
+Future audits must first inspect:
 
-**Locked interpretation:** Build the full ecosystem deliberately; use incremental milestones only as construction units inside that ecosystem.
+1. `docs/DOCUMENTATION_INDEX.md`;
+2. `docs/MASTER_TASK_CHECKLIST.md`;
+3. the latest status register;
+4. relevant dated audits;
+5. actual GitHub implementation evidence.
+
+If the question has already been answered, reuse the existing evidence and audit only the unresolved delta.
+
+## 9. GITHUB-FIRST OPERATING RULE
+
+GitHub is the primary engineering source for current repository state. Local editors may be used operationally, but architectural decisions, documentation changes, code changes, tests and evidence must be reconciled against GitHub.
+
+## 10. LOCKED INTERPRETATION
+
+**Build the full Janavani ecosystem deliberately. Use incremental milestones only as construction and verification units inside that ecosystem.**
