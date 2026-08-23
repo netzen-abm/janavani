@@ -37,16 +37,16 @@ printf '%s\n' "[1/2] Running complete Python test suite..."
 python -m pytest tests -v
 
 # --------------------------------------------------------------------------
-# 2. Rust/Dioxus library tests (only when the workspace is present)
+# 2. Rust/Dioxus package tests (only when the package is present)
 # --------------------------------------------------------------------------
 if [[ -f "$ROOT_DIR/src/web_dioxus/Cargo.toml" ]]; then
-    printf '%s\n' "[2/2] Running Rust/Dioxus library tests..."
+    printf '%s\n' "[2/2] Running Rust/Dioxus package tests..."
     (
         cd "$ROOT_DIR/src/web_dioxus"
-        cargo test --lib -- --nocapture
+        cargo test -- --nocapture
     )
 else
-    printf '%s\n' "[2/2] Rust/Dioxus workspace not present; skipping Rust suite."
+    printf '%s\n' "[2/2] Rust/Dioxus package not present; skipping Rust suite."
 fi
 
 printf '\n======================================================================\n'
