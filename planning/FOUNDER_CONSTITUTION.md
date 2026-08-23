@@ -1,214 +1,115 @@
-# 🇮🇳 JANAVANI
-# Founder Constitution
-Version 1.0
+# 🇮🇳 JANAVANI — FOUNDER CONSTITUTION
 
----
+**Version:** 2.0
+**Status:** ACTIVE / STRATEGIC
+**Date:** 23 August 2026
 
-# Our Purpose
+## PURPOSE
 
-Janavani exists to reduce the distance between a citizen and justice.
+Janavani exists to reduce the distance between a citizen's lived reality and informed, lawful, effective government action.
 
-A citizen should never need to understand government procedures,
-bureaucratic hierarchy,
-legal drafting,
-or administrative language.
+Citizens should not be required to master bureaucratic hierarchy, administrative language, document structure, or complex digital interfaces merely to participate in governance.
 
-A citizen should only describe the real problem.
+Janavani should progressively reduce that burden while preserving citizen agency and control.
 
-Janavani should understand everything else.
+## MISSION
 
----
+Transform:
 
-# Mission
+```text
+Citizen Reality
+      ↓
+Understanding
+      ↓
+Evidence / Context
+      ↓
+Correct Authority
+      ↓
+Lawful Civic Action
+      ↓
+Government Response
+      ↓
+Follow-up
+      ↓
+Accountability
+```
 
-Transform
+## VISION
 
-Citizen Problems
+To build a full citizen-governance ecosystem for India: one shared capability platform accessible through dynamic Web, Android, iOS, Telegram Bot, Telegram Mini App, WhatsApp, Messenger, API, DApp/Web3 and resilient/decentralized interfaces where justified.
 
-into
+## NOT THE PRODUCT DEFINITION
 
-Government Action.
+Janavani is not merely:
 
----
+- a Telegram bot;
+- a complaint generator;
+- a PDF generator;
+- a website;
+- a mobile application;
+- an AI chatbot;
+- a blockchain application.
 
-# Vision
+These are interfaces, capabilities, or technologies within the larger ecosystem.
 
-To become India's Citizen Governance Platform.
+## FIRST PRINCIPLE
 
-Not merely a Telegram Bot.
+**Reality comes before paperwork.**
 
-Not merely a Complaint Generator.
+Citizens describe reality. Janavani helps structure understanding, evidence, authority, action and communication without silently changing the citizen's facts.
 
-But a complete Citizen Governance Infrastructure.
+## CITIZEN PROMISE
 
----
+Janavani should progressively make it easier for a citizen to:
 
-# First Principle
+- understand a public problem;
+- identify relevant government information and authority;
+- prepare the appropriate lawful action;
+- organize evidence;
+- communicate with institutions;
+- track responses;
+- pursue follow-up or escalation where appropriate;
+- contribute to accountable public learning.
 
-Reality comes before paperwork.
+## WHAT WE BUILD
 
-Citizens describe reality.
+The ecosystem includes civic documents and workflows such as:
 
-Janavani creates paperwork.
+- Complaint
+- Grievance
+- RTI
+- Representation
+- Petition
+- Objection
+- Appeal
+- Follow-up
+- Escalation
+- Whistleblower workflows where safely and lawfully supported
 
----
+It also includes government information, evidence, accountability, knowledge contribution, emergency/SOS, multilingual, AI and decentralized capabilities as defined by the architecture and capability registry.
 
-# Core Promise
+## CORE BELIEFS
 
-If Janavani only did one thing well,
-it would be enough.
+- Government exists to serve citizens.
+- Technology should reduce unnecessary friction.
+- Legal and administrative information should become more accessible.
+- Citizens deserve meaningful participation and informed agency.
+- Privacy and security are conditions of trust.
+- Evidence and provenance matter.
+- AI must remain bounded and replaceable.
+- Decentralization is valuable where it solves a real problem.
+- Accountability should recognize effective service as well as expose failure.
 
-That promise is:
+## ARCHITECTURAL BELIEF
 
-> Describe your government problem.
+One platform. Many independent interfaces.
 
-Janavani helps you create the correct government document.
+No interface owns the citizen's capabilities.
 
----
+## SUCCESS
 
-# The Citizen Should Never Need To Know
+Janavani succeeds when citizens can use the ecosystem to move from lived reality to informed action, government response, follow-up and accountable outcomes through interfaces appropriate to their context.
 
-Which department
+## FINAL PRINCIPLE
 
-Which officer
-
-Which office
-
-Which form
-
-Which legal language
-
-Which Act
-
-Which Rule
-
-Which procedure
-
-Janavani should know.
-
----
-
-# What We Believe
-
-Government exists to serve citizens.
-
-Technology should reduce friction.
-
-Legal language should become accessible.
-
-Every citizen deserves equal access to governance.
-
-Justice begins with communication.
-
----
-
-# What We Build
-
-Janavani builds systems that help citizens communicate effectively with government.
-
-Examples:
-
-Complaint
-
-Grievance
-
-Grievance Petition
-
-Representation
-
-RTI
-
-Public Consultation Response
-
-Appeal
-
-Notice
-
-Future legal documents.
-
----
-
-# North Star
-
-Every feature must reduce citizen effort.
-
-If a feature increases complexity,
-it does not belong in the MVP.
-
----
-
-# Success
-
-Janavani succeeds when:
-
-A citizen opens Telegram.
-
-Describes a problem.
-
-Answers a few questions.
-
-Receives a professional document.
-
-Submits it.
-
-Government understands the issue.
-
-Action begins.
-
----
-
-# Design Philosophy
-
-Simple.
-
-Clear.
-
-Trustworthy.
-
-Transparent.
-
-Modular.
-
-Scalable.
-
-Citizen First.
-
-Always.
-
----
-
-# Long-Term Vision
-
-Telegram is only the first interface.
-
-Future interfaces:
-
-Website
-
-Android
-
-iPhone
-
-WhatsApp
-
-Voice Assistant
-
-API
-
-Every interface should connect to the same Citizen Governance Engine.
-
----
-
-# Final Principle
-
-Build something useful.
-
-Launch.
-
-Learn from citizens.
-
-Improve continuously.
-
-Perfection is not the goal.
-
-Impact is.
+**Build the ecosystem deliberately, verify every capability, preserve citizen agency, and continuously expand the practical ability of people to participate in governance.**
