@@ -17,7 +17,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - run: pip install -r requirements.txt
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt pytest
 
-      - run: python -m compileall src
+      - name: Python syntax check
+        run: python -m compileall src
+
+      - name: Run canonical test suite
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          OPENROUTER_API_KEY: mock-verification-token
+          HUGGINGFACE_API_KEY: mock-verification-token
+        run: bash ./run_all_tests.sh
