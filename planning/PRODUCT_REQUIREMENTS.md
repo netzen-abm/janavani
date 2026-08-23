@@ -1,365 +1,368 @@
-# 🇮🇳 JANAVANI
-# Product Requirements Document (PRD)
-Version 1.0
+# 🇮🇳 JANAVANI — PRODUCT REQUIREMENTS
+
+**Status:** ACTIVE — FULL ECOSYSTEM REQUIREMENTS
+**Version:** 2.0
+**Date:** 23 August 2026
+**Scope:** Complete Janavani citizen-governance ecosystem
+**Authority:** Subordinate to `docs/JANAVANI_NORTH_STAR.md`, `docs/JANAVANI_ECOSYSTEM_CHARTER.md`, `docs/SOURCE_OF_TRUTH.md`, and `docs/JANAVANI_MASTER_ARCHITECTURE.md`
+
+> **Scope rule:** Janavani is not an MVP. Any milestone, pilot, release, or verified workflow is a construction unit inside the full ecosystem.
 
 ---
 
-# Product Name
+# 1. PRODUCT DEFINITION
 
-Janavani
+Janavani is a **privacy-first citizen-governance ecosystem** that helps citizens move from lived public problems to informed understanding, evidence-backed lawful action, institutional communication, response tracking, follow-up, accountability and public learning.
 
-Citizen Governance Platform
-
----
-
-# MVP Goal
-
-Build the simplest possible system that enables any citizen to transform a government-related problem into a professionally drafted government document.
-
-The citizen should not need legal knowledge.
-
-The citizen should not know government hierarchy.
-
-The citizen should simply describe the problem.
-
-Janavani handles the rest.
+The product is one shared capability platform experienced through independent interfaces.
 
 ---
 
-# Target User
+# 2. NORTH-STAR CITIZEN JOURNEY
 
-Primary User
-
-• Ordinary Citizen
-
-Examples
-
-A farmer
-
-A student
-
-A senior citizen
-
-A homemaker
-
-A worker
-
-A business owner
-
-Anyone interacting with government.
-
----
-
-# Problems We Solve
-
-Government delay
-
-Government inaction
-
-Government negligence
-
-Missing public services
-
-Public infrastructure issues
-
-Service denial
-
-Lack of information
-
-Difficulty writing complaints
-
-Difficulty writing RTI applications
-
-Difficulty identifying the correct department
-
-Difficulty finding the correct office
-
----
-
-# MVP Promise
-
-Citizen writes:
-
-"My road has been broken for six months."
-
-Janavani asks a few simple questions.
-
-Janavani generates the correct document.
-
----
-
-# Supported Input
-
-Text
-
-Voice (Phase 2)
-
-Photo (Phase 2)
-
-Location (Phase 2)
-
----
-
-# Supported Documents
-
-Complaint
-
-Grievance
-
-Grievance Petition
-
-RTI Application
-
-Representation Letter
-
-Suggestion Letter
-
-Public Consultation Response (Future)
-
-Appeal (Future)
-
----
-
-# Citizen Journey
-
-Step 1
-
-Citizen describes issue.
-
+```text
+Citizen Reality
 ↓
-
-Step 2
-
-Janavani understands the issue.
-
+Understanding
 ↓
-
-Step 3
-
-Citizen selects document.
-
+Evidence / Context
 ↓
-
-Step 4
-
-Janavani collects missing information.
-
+Correct Authority
 ↓
-
-Step 5
-
-Janavani identifies department.
-
+Lawful Civic Action
 ↓
-
-Step 6
-
-Janavani finds office.
-
+Submission / Communication
 ↓
-
-Step 7
-
-Janavani generates document.
-
+Government Response
 ↓
-
-Step 8
-
-Citizen downloads PDF.
-
+Tracking
 ↓
+Follow-up / RTI / Appeal / Escalation
+↓
+Outcome
+↓
+Accountability
+↓
+Public Learning
+```
 
-Step 9
-
-Citizen submits document.
-
----
-
-# Information Collected
-
-Issue
-
-Document Type
-
-District
-
-Local Body
-
-Location
-
-Department
-
-Office
-
-Citizen Name
-
-Citizen Address
-
-Contact Number (Optional)
-
-Email (Optional)
-
-Evidence (Future)
-
-Photo (Future)
-
-Voice (Future)
+The platform should progressively support the complete lifecycle rather than stop at document generation.
 
 ---
 
-# Documents Generated
+# 3. PRODUCT SURFACES
 
-Professional
+Janavani must support independent access through:
 
-Printable
+- Dynamic Web application
+- Android application
+- iOS application
+- Telegram Bot
+- Telegram Mini App
+- WhatsApp integration
+- Messenger integration
+- Public/partner APIs
+- DApp / Web3 interfaces
+- Decentralized/resilient transport capabilities where justified
+- Offline/local capabilities where technically appropriate
+- Mesh and satellite-capable pathways where technically and legally supported
 
-Legally structured
-
-Government ready
-
-Citizen friendly
-
----
-
-# Office Identification
-
-Automatically identify
-
-Department
-
-Office
-
-Address
-
-Contact Information
-
-Email
-
-Phone
-
-Officer Name (Future)
+No interface owns core business logic.
 
 ---
 
-# MVP Features
+# 4. CAPABILITY FAMILIES
 
-Conversation Engine
+## Citizen interaction
 
-Issue Classification
+- Guided issue intake
+- Forms and workflows
+- Session/state management
+- Multilingual interaction
+- Accessibility
+- Voice and multimodal interaction where supported
 
-Department Detection
+## Civic action
 
-Office Search
+- Complaint
+- Grievance
+- RTI
+- Representation
+- Petition
+- Objection
+- Appeal
+- Follow-up
+- Escalation
+- Other lawful civic communications
 
-Document Generation
+## Government intelligence
 
-PDF Export
+- Office and authority discovery
+- Department information
+- Officer/public-servant information where appropriate
+- Representative information
+- Government schemes and benefits
+- Laws, rules, bills, notifications and policy information
+- Public services
+- Projects, budgets and expenditure information
 
-Telegram Bot
+## Evidence and provenance
 
-Supabase Database
+- Documents
+- Photos
+- Video
+- Audio where appropriate
+- OCR/document understanding
+- Evidence metadata
+- Source provenance
+- Verification state
+- Citizen corrections
+- Expert/volunteer/institutional review
+
+## Delivery and case lifecycle
+
+- Document composition
+- PDF/DOCX output
+- Submission guidance
+- Delivery integrations
+- Case identifiers
+- Acknowledgements
+- Tracking
+- Follow-up
+- Outcome recording
+
+## Accountability and public learning
+
+- Service feedback
+- Office/service performance signals
+- Representative information
+- Response/resolution intelligence
+- Public dashboards where appropriate
+- Positive governance recognition
+- Evidence-backed public learning
+
+## Participation ecosystem
+
+- Experts
+- Volunteers
+- NGOs
+- Civil-society organisations
+- Institutions
+- Research/academic contributors
+- Permission and verification controls
+
+## Emergency and resilience
+
+- Personal SOS
+- Trusted contacts
+- Government emergency alerts
+- Offline queueing
+- Retry/store-and-forward
+- Internet/local/mesh/satellite-capable transport
+- Explicit delivery states
+
+## AI and intelligence
+
+- Issue structuring
+- Classification
+- Retrieval/RAG
+- Document assistance
+- Legal-information assistance
+- Translation/language assistance
+- OCR/vision assistance
+- Evidence classification
+- Controlled agentic workflows
+
+AI remains optional, replaceable and purpose-bound.
+
+## Decentralized/Web3
+
+Where justified by a concrete citizen benefit:
+
+- DApp access
+- Verifiable credentials
+- Citizen-controlled identity/credentials
+- Evidence provenance
+- Decentralized records
+- Privacy-enhancing technologies
+- Alternative infrastructure
+
+Blockchain, IPFS, Nostr, Nym, Reticulum and similar technologies are tools, not universal dependencies.
 
 ---
 
-# Not Included In MVP
+# 5. USER CONTROL / PRIVACY REQUIREMENTS
 
-Android App
+The product must support:
 
-Website
+- Minimum necessary data collection
+- Explicit consent where required
+- User-controlled identity linking
+- Anonymous/pseudonymous workflows where appropriate
+- Revocation
+- Access control
+- Retention controls
+- Secure evidence handling
+- Provenance visibility
+- Privacy-preserving analytics
+- Auditability
 
-WhatsApp
-
-Online Submission
-
-Citizen Login
-
-Volunteer Portal
-
-Analytics Dashboard
-
-AI Chat
-
-Blockchain
-
-Office Ratings
-
-Gamification
+Citizen-provided information, authoritative information, system-derived information, expert-reviewed information and AI-generated information must remain distinguishable.
 
 ---
 
-# MVP Success Criteria
+# 6. GOVERNMENT-ACTION INTELLIGENCE
 
-Citizen can complete the process in under five minutes.
+Janavani should progressively connect public information across:
 
-Citizen receives a professional PDF.
+```text
+Commitment / Policy
+↓
+Programme / Scheme
+↓
+Budget
+↓
+Allocation / Expenditure
+↓
+Implementation
+↓
+Service / Project Delivery
+↓
+Citizen Experience
+↓
+Outcome
+```
 
-Citizen knows exactly where to submit it.
-
----
-
-# Technical Stack
-
-Python
-
-Telegram Bot API
-
-Supabase
-
-Render
-
-PDF Generator
-
-GitHub
-
----
-
-# Design Principles
-
-Simple
-
-Fast
-
-Reliable
-
-Transparent
-
-Modular
-
-Citizen First
+Claims affecting citizen action require provenance and appropriate verification.
 
 ---
 
-# Future Versions
+# 7. AI REQUIREMENTS
 
-Voice Conversation
+AI must:
 
-Photo Recognition
+- be provider-replaceable;
+- expose source/provenance where relevant;
+- use human approval gates for consequential actions;
+- have non-AI fallback where required;
+- avoid fabricating laws, authorities, evidence, government actions or delivery states;
+- support error reporting and evaluation;
+- preserve privacy and data-minimisation requirements.
 
-Geo Location
-
-AI Issue Detection
-
-Automatic Department Detection
-
-Automatic RTI Generation
-
-Volunteer Office Verification
-
-Government API Integration
-
-Android Application
-
-Web Portal
-
-WhatsApp Integration
-
-Multilingual Support
-
-Analytics
+Janavani is not defined as an AI chatbot.
 
 ---
 
-# One Sentence Definition
+# 8. INDEPENDENCE REQUIREMENTS
 
-Janavani transforms citizen problems into government-ready documents.
+The product must remain operationally independent across interfaces and infrastructure:
+
+- Web must not require Telegram.
+- Telegram must not require Web.
+- WhatsApp/Messenger must not own shared business logic.
+- Android/iOS must be independent product surfaces.
+- AI-provider failure must not break non-AI capabilities.
+- Blockchain/decentralized-network failure must not break ordinary civic workflows or SOS.
+- A failed transport must never be represented as successful delivery.
+- No single storage provider should be a universal architectural dependency.
+
+---
+
+# 9. STATUS MODEL
+
+Every capability is tracked through:
+
+```text
+VISION
+↓
+DESIGNED
+↓
+IMPLEMENTED
+↓
+FUNCTIONAL
+↓
+TESTED
+↓
+SECURITY-VERIFIED
+↓
+PRIVACY-VERIFIED
+↓
+PRODUCTION-READY
+```
+
+A capability cannot be promoted based solely on documentation or source-code existence.
+
+---
+
+# 10. REQUIREMENTS TRACEABILITY
+
+Product requirements must map to:
+
+```text
+Requirement
+↓
+Capability ID
+↓
+Data / Permission / Transport Contract
+↓
+Repository Implementation
+↓
+Tests
+↓
+Deployment
+↓
+Security / Privacy Evidence
+↓
+Master Checklist Status
+```
+
+The canonical capability and task records are:
+
+- `docs/CAPABILITY_REGISTRY.md`
+- `docs/DATA_CONTRACTS.md`
+- `docs/MASTER_TASK_CHECKLIST.md`
+- `docs/MASTER_TASK_CHECKLIST_STATUS_2026-08-23.md`
+
+---
+
+# 11. CURRENT FOUNDATION
+
+The repository already contains foundations for conversation, workflows, workflow orchestration, domain models, services, document generation, storage, Telegram integration, ratings/feedback, legislative/constitutional/land routes, privacy/security components and experimental V2/V3/decentralized paths.
+
+These are **implementation evidence**, not proof that every ecosystem capability is production-ready.
+
+---
+
+# 12. CONSTRUCTION PRINCIPLE
+
+Build the ecosystem through verified capability increments:
+
+```text
+Architecture
+↓
+Capability contract
+↓
+Implementation
+↓
+Test
+↓
+Functional verification
+↓
+Security/privacy verification
+↓
+Deployment verification
+↓
+Evidence
+↓
+Next capability
+```
+
+Never redefine the product boundary to match the current implementation size.
+
+---
+
+# 13. FINAL PRODUCT REQUIREMENT
+
+**Janavani must become one coherent, full citizen-governance ecosystem through which citizens can understand public reality, act lawfully, engage institutions, track outcomes, contribute evidence and participate in accountable governance across independent interfaces.**
+
+**END**
