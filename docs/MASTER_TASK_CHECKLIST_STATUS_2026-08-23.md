@@ -76,6 +76,15 @@
 - Evidence file: `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
 - **Important:** ownership design is complete; runtime migration has NOT started.
 
+### M3-D — Canonical API assembly control
+
+- [x] M3-D.1 pre-refactor freeze completed; baseline `src/web/app.py` SHA recorded.
+- [x] M3-D.2 feedback route facade extracted without changing the existing implementation or public path.
+- [x] M3-D.3 canonical FastAPI candidate isolated as `src.web.canonical_app:app` without modifying legacy `src/web/app.py`.
+- [x] M3-D.4 canonical application verification test artifact created in `tests/test_canonical_app.py`.
+- **Important:** M3-D.4 test execution is NOT yet verified; the test artifact is not evidence of a passing runtime result.
+- Evidence: `docs/M3_D1_PRE_REFACTOR_FREEZE_2026-08-23.md`, `docs/M3_D2_FEEDBACK_EXTRACTION_RESULT_2026-08-23.md`, `docs/M3_D3_CANONICAL_APP_ISOLATION_RESULT_2026-08-23.md`, `docs/M3_D4_CANONICAL_APP_VERIFICATION_2026-08-23.md`.
+
 > Static/runtime-configuration mapping does **not** mark live runtime, integration, security or deployment functionality complete. Those require actual execution evidence.
 
 ---
@@ -111,13 +120,30 @@ Remaining:
 
 **Status: COMPLETE AS DESIGN REGISTER; STATIC IMPLEMENTATION MAPPING COMPLETE; RUNTIME VERIFICATION PENDING**
 
-Evidence: `docs/CAPABILITY_REGISTRY.md` + `docs/CAPABILITY_REPOSITORY_TEST_DEPLOYMENT_MAP_2026-08-23.md`.
+Evidence: `CAPABILITY_REGISTRY.md` + `CAPABILITY_REPOSITORY_TEST_DEPLOYMENT_MAP_2026-08-23.md`.
 
 ## 4. Core data contracts
 
 **Status: COMPLETE AS DESIGN REGISTER; STORAGE OWNERSHIP MAPPED; IMPLEMENTATION MIGRATION PENDING**
 
-Evidence: `docs/DATA_CONTRACTS.md` + `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
+Evidence: `DATA_CONTRACTS.md` + `STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
+
+## M3-A — Actual CI/test execution evidence
+
+**Status: NOT VERIFIED — OPEN**
+
+GitHub issue: **#18 — M3-A: Obtain actual CI/test execution evidence**.
+
+Required evidence remains:
+
+- actual Python pytest result;
+- actual Python compile result;
+- actual Rust/Dioxus result where applicable;
+- GitHub Actions execution status;
+- failure classification if any;
+- timestamp and commit SHA.
+
+The workflow definition and test artifacts are configuration/design evidence only.
 
 ---
 
@@ -144,6 +170,8 @@ Evidence: `docs/DATA_CONTRACTS.md` + `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
 | 17 Mesh SOS | ARCHITECTURE LOCKED — REPOSITORY MATERIAL EXISTS | V2 mesh material |
 | 18 Satellite SOS | ARCHITECTURE LOCKED | Data contract + checklist |
 | 19 Government Alerts | ARCHITECTURE LOCKED | Data contract + checklist |
+| M3-D Canonical API Assembly | IN PROGRESS — STRUCTURAL ISOLATION COMPLETE; RUNTIME VERIFICATION OPEN | M3-D.1–D.4 evidence documents |
+| M3-A CI/Test Execution | NOT VERIFIED — OPEN | GitHub issue #18 |
 
 ---
 
@@ -160,7 +188,7 @@ src/web_mvp/main.py
 api/agent_api.py
 ```
 
-**Decision:** No one of these is declared canonical until runtime/deployment verification is completed.
+**Decision:** No one of these is declared canonical until runtime/deployment verification is completed. The M3-D work now provides a clean FastAPI candidate at `src.web.canonical_app:app`, but it is still a candidate until runtime/deployment verification passes.
 
 ### F-02 — Deployment ambiguity
 
@@ -168,7 +196,7 @@ Observed deployment configurations point to different entry points. This remains
 
 ### F-03 — `src/web/app.py` structural duplication
 
-Static inspection identified repeated application/router/authentication definitions. Treat as high-risk convergence target; do not blindly rewrite until actual deployment dependency is verified.
+Static inspection identified repeated application/router/authentication definitions. M3-D.1 froze the file and M3-D.3 isolated a canonical candidate without deleting the legacy implementation. Further extraction remains gated by actual verification.
 
 ### F-04 — Directory remains CSV-backed
 
@@ -203,14 +231,14 @@ Static inspection previously identified literal interface-token values in `src/w
 
 # 5. CI / TEST EXECUTION STATUS
 
-The repository's current `.github/workflows/ci.yml` now explicitly runs:
+The repository's current `.github/workflows/ci.yml` explicitly runs:
 
 ```text
 python -m compileall src
 bash ./run_all_tests.sh
 ```
 
-and supplies mock AI credentials plus Redis environment variables. Evidence: `.github/workflows/ci.yml`.
+and supplies mock AI credentials plus Redis environment variables.
 
 `run_all_tests.sh` currently runs:
 
@@ -219,9 +247,9 @@ python -m pytest tests -v
 cargo test -- --nocapture
 ```
 
-when the root Dioxus package exists. Evidence: `run_all_tests.sh`.
+when the root Dioxus package exists. Evidence: `.github/workflows/ci.yml` and `run_all_tests.sh`.
 
-**Important distinction:** the workflow definition proves that the canonical test command is configured; it does **not** prove that the latest workflow run passed. A successful execution record is still required before marking M3-A complete.
+**Current verification result:** The repository interface did not expose a workflow execution result for the latest CI-establishing commit inspected. Therefore no passing CI/test result is claimed. M3-A remains open and is tracked by GitHub issue #18.
 
 ---
 
@@ -272,6 +300,8 @@ workflow status
 failure classification
 ```
 
+Tracked by GitHub issue #18.
+
 ## M3-B — Runtime deployment verification
 
 Trace and verify the actual production entrypoint, web/API process, Telegram process, workers, Redis and durable storage configuration.
@@ -280,7 +310,11 @@ Trace and verify the actual production entrypoint, web/API process, Telegram pro
 
 Verify Telegram, WhatsApp, Messenger, web and other declared ecosystem surfaces against their canonical contracts where implementation exists.
 
-## M3-D — Evidence record
+## M3-D — Canonical API assembly verification/extraction
+
+Current subphase: M3-D.4 test artifact exists; execution result is still required. If the canonical-app test passes, continue with controlled agent/SOS extraction. If it fails, remediate only the captured failure.
+
+## M3-E — Evidence record
 
 Record exact command/run, result, timestamp, commit SHA and any blocker in the status register.
 
@@ -320,10 +354,14 @@ Before starting a new audit, inspect these records and audit only the unresolved
 
 ---
 
-**CURRENT PHASE:** Runtime Verification Preparation  
+**CURRENT PHASE:** M3-A Actual Verification Evidence Gate / M3-D.4 Canonical App Verification Gate  
 **M2-A:** SUBSTANTIALLY COMPLETE  
 **M2-B:** STATIC CAPABILITY MAP COMPLETE  
 **M2-D:** STORAGE OWNERSHIP DESIGN COMPLETE  
+**M3-D.1:** COMPLETE  
+**M3-D.2:** STRUCTURAL EXTRACTION PARTIAL / SAFE GATE PASSED  
+**M3-D.3:** COMPLETE — STRUCTURAL ISOLATION  
+**M3-D.4:** TEST ARTIFACT COMPLETE; EXECUTION NOT VERIFIED  
 **M3-A LIVE EXECUTION:** NOT YET VERIFIED  
 **DESTRUCTIVE CHANGES:** NONE AUTHORISED  
-**NEXT ACTION:** M3-A actual test/CI execution evidence
+**NEXT ACTION:** Obtain actual M3-A execution evidence, then continue M3-D only from verified result
