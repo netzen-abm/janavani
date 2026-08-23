@@ -1,161 +1,188 @@
 # JANAVANI — MASTER TASK CHECKLIST RECONCILIATION
 
-**Date:** 23 August 2026
-**Purpose:** Reconcile the canonical Master Task Checklist against verified repository evidence without silently rewriting historical status.
+**Date:** 23 August 2026  
+**Purpose:** Reconcile the canonical Master Task Checklist against verified repository evidence and prevent duplicate audits.
 
-## 1. Why this file exists
+## 1. CONTROL RULE
 
-The canonical `docs/MASTER_TASK_CHECKLIST.md` is the master task inventory. The dated status register records verified progress. A reconciliation pass found that several checkboxes in the canonical checklist had not yet been synchronized with evidence already recorded in the status register.
+`docs/MASTER_TASK_CHECKLIST.md` is the authoritative task inventory.  
+`docs/MASTER_TASK_CHECKLIST_STATUS_2026-08-23.md` is the dated evidence/status register.  
+Dated audits are evidence records, not competing task lists.
 
-This document is the control record for that mismatch. It prevents duplicate audits and prevents a design task that is already documented from being treated as if it has never been done.
+Before any new audit:
 
-## 2. Verified synchronization findings
+1. Read `docs/DOCUMENTATION_INDEX.md`.
+2. Read `docs/MASTER_TASK_CHECKLIST.md`.
+3. Read the latest status register.
+4. Read only the relevant dated audits.
+5. Identify the unresolved delta.
+6. Audit only that delta.
+7. Record new evidence and update the checklist/status register.
 
-### Master Task 1 — Architecture & System Governance
+## 2. VERIFIED ARCHITECTURE / DOCUMENTATION FOUNDATIONS
 
-Already verified:
+Already evidenced:
 
-- 1.1 Master architecture exists.
-- 1.2 Capability-first architecture locked.
-- 1.3 Independent-channel principle locked.
-- 1.4 AI/non-AI independence locked.
-- 1.5 Mesh is a current SOS capability.
-- 1.6 Satellite is a current SOS capability.
-- 1.7 Archive-over-delete principle locked.
+- Master architecture exists.
+- Capability-first architecture is locked.
+- Independent-channel principle is locked.
+- AI/non-AI independence is locked.
+- Mesh and satellite are defined as SOS capabilities.
+- Archive-over-delete is locked.
+- `docs/CAPABILITY_REGISTRY.md` is DESIGN COMPLETE.
+- `docs/DATA_CONTRACTS.md` is DESIGN COMPLETE.
+- Ecosystem identity is locked as a full citizen-governance ecosystem, not an MVP.
+- README and ROADMAP have been reconciled with that scope.
+- Documentation authority/index and correction rules exist.
+- Canonical API assembly is `src/web/canonical_app.py`.
 
-Also already evidenced but not synchronized in the canonical checklist:
+## 3. VERIFIED STATIC REPOSITORY EVIDENCE
 
-- 1.8 Capability registry exists: `docs/CAPABILITY_REGISTRY.md`.
-- 1.9 Core data contracts exist: `docs/DATA_CONTRACTS.md`.
+Already evidenced; do not repeat as generic audits:
 
-These are **DESIGN COMPLETE**, not implementation complete.
+- Static repository/tree inventory.
+- Static storage/database inventory.
+- Static decentralized-component inventory.
+- Static implementation-vs-architecture comparison.
+- Preliminary duplicate/obsolete identification.
+- Static architecture-gap report.
+- Runtime/import/dependency mapping.
+- Deployment topology mapping.
+- Capability → repository → test → deployment static mapping.
+- Storage ownership reconnaissance/design mapping.
+- Canonical API route ownership mapping.
+- Canonical API assembly/legacy isolation structural verification.
 
-Still unresolved:
+These records remain the evidence base. Re-open only when a new code/document change materially changes the evidence.
 
-- 1.10 Permission/consent contracts.
-- 1.11 Transport abstraction contracts.
-- 1.12 Failure/dependency matrix.
-- 1.13 System-wide threat model.
-- 1.14 System-wide test strategy.
+## 4. OPEN MASTER TASK 1 — ARCHITECTURE & SYSTEM GOVERNANCE
 
-### Master Task 2 — Repository Baseline & Architecture Reconciliation
+**Status: IN PROGRESS**
 
-Verified from prior audits:
+Remaining:
 
-- 2.1 Static repository/tree inventory — complete.
-- 2.4 Static storage inventory — complete.
-- 2.6 Static decentralized inventory — complete.
-- 2.9 Static implementation-vs-architecture comparison — complete as a static audit.
-- 2.10 Preliminary duplicate/obsolete identification — complete as a static audit.
-- 2.12 Architecture-gap report — complete.
+- [ ] 1.10 Permission/consent contracts.
+- [ ] 1.11 Transport abstraction contracts.
+- [ ] 1.12 Failure/dependency matrix.
+- [ ] 1.13 System-wide threat model.
+- [ ] 1.14 System-wide test strategy.
 
-The following remain open because they require runtime/deployment evidence:
+## 5. OPEN MASTER TASK 2 — RUNTIME / DEPENDENCY RECONCILIATION
 
-- 2.2 Live runtime entry-point verification.
-- 2.3 Runtime API/service execution inventory.
-- 2.5 Runtime AI integration verification.
-- 2.7 Runtime SOS execution verification.
-- 2.8 Test/CI execution evidence inventory.
-- 2.9 Runtime comparison against Master Architecture.
-- 2.10 Runtime confirmation of duplicates/obsolete code.
-- 2.11 Archive decisions after dependency/replacement verification.
+**Status: IN PROGRESS — STATIC MAPPING COMPLETE; LIVE VERIFICATION OPEN**
 
-### Master Task 3 — Capability Registry
+Remaining:
 
-Verified design completion:
+- [ ] 2.2 Live runtime entry-point verification.
+- [ ] 2.3 Runtime API/service execution inventory.
+- [ ] 2.5 Runtime AI integration verification.
+- [ ] 2.7 Runtime SOS execution verification.
+- [ ] 2.8 Test/CI execution evidence inventory.
+- [ ] 2.11 Archive obsolete material only after dependency/replacement/runtime verification.
 
-- `docs/CAPABILITY_REGISTRY.md` exists.
-- Capability ID convention is defined.
-- Capability metadata fields are defined.
-- Civic, government, accountability, evidence, expert/volunteer, SOS and financial capability families are registered.
+Additional convergence note:
 
-Remaining: repository-module, test, deployment, security/privacy and evidence mapping for each capability.
+- `src/web/canonical_app.py` is the canonical API assembly boundary.
+- This does **not** yet prove the canonical production runtime.
+- `src/web.py`, `src/web/app.py`, `src/main.py`, and `src/web_mvp/main.py` remain runtime/legacy candidates until actual deployment ownership is verified.
+- `src/web.py` contains historical Web→Telegram process coupling; this is a P0 runtime/deployment verification item, not an immediate deletion target.
 
-### Master Task 4 — Core Data Contracts
+## 6. MASTER TASK 3 — CAPABILITY REGISTRY
 
-Verified design completion:
+**Status: DESIGN COMPLETE — STATIC IMPLEMENTATION MAPPING COMPLETE; RUNTIME VERIFICATION PENDING**
 
-- `docs/DATA_CONTRACTS.md` exists.
-- Identity, consent, preference, case, office, officer, representative, scheme, document, address, evidence, provenance, expert review, correction, SOS, alert, financial and archive/retention contracts are defined.
+Evidence:
 
-Remaining: implementation mapping and storage ownership validation. No database migration is authorised merely because the contract exists.
+- `docs/CAPABILITY_REGISTRY.md`
+- `docs/CAPABILITY_REPOSITORY_TEST_DEPLOYMENT_MAP_2026-08-23.md`
 
-## 3. Current execution phase
+## 7. MASTER TASK 4 — CORE DATA CONTRACTS
 
-**M2 — Repository Runtime / Dependency Reconciliation**
+**Status: DESIGN COMPLETE — STORAGE OWNERSHIP MAPPED; IMPLEMENTATION MIGRATION PENDING**
 
-Static mapping is substantially complete. The next work is not another generic repository audit.
+Evidence:
 
-The next unresolved work is:
+- `docs/DATA_CONTRACTS.md`
+- `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`
 
-1. M2-B — Capability → Repository → Test → Deployment Map.
-2. M2-C — Storage Ownership Map (reconnaissance already performed; ownership decisions still require verification).
-3. M2-D — Runtime Execution Verification.
+No destructive storage migration is authorised merely because contracts exist.
 
-## 4. Storage reconnaissance already completed
+## 8. DOCUMENTATION CONVERGENCE
 
-The 23 August storage reconnaissance established the following important facts:
+**Status: IN PROGRESS**
 
-- Local durable data exists in `database/complaints.jsonl`, `database/offices.csv`, and `database/ratings.jsonl`.
-- Canonical storage modules exist under `src/storage/`.
-- Redis is used extensively as a transient/volatile layer in the main, V2 and V3 paths.
-- Supabase integration exists but is not sufficient evidence of canonical runtime ownership.
-- V2/V3 contain separate Redis-backed paths.
-- Several legacy and duplicate storage paths remain.
+The canonical chain is:
 
-**Decision:** do not migrate, delete, merge or rename storage until the runtime ownership map is complete.
+```text
+North Star
+↓
+Ecosystem Charter
+↓
+Source of Truth
+↓
+Master Architecture
+↓
+Product Landscape
+↓
+Roadmap
+↓
+Capability Registry / Data Contracts / planning contracts
+↓
+Master Checklist + Status Register
+↓
+Actual implementation / tests / CI / deployment evidence
+```
 
-## 5. Documentation-control rule
+The repository has already corrected the major MVP-era product-boundary ambiguity. Remaining documentation work is controlled classification and reconciliation of supporting contracts, V2/V3 records, deployment/developer/contribution documents and remaining root-level material.
 
-Before beginning a new audit:
+Historical audits must not be rewritten merely to remove old observations. Their current interpretation is governed by the canonical hierarchy and `docs/DOCUMENTATION_CORRECTION_NOTICE_2026-08-23.md`.
 
-1. Check `MASTER_TASK_CHECKLIST.md`.
-2. Check the latest `MASTER_TASK_CHECKLIST_STATUS_<DATE>.md`.
-3. Check existing dated audit evidence.
-4. Audit only the unresolved delta.
-5. Record new evidence in a dated document.
-6. Update the checklist/status record.
+## 9. STORAGE CONTROL
 
-This is specifically intended to prevent repeating the same audit.
+Storage reconnaissance has already established:
 
-## 6. Ecosystem scope lock
+- `database/complaints.jsonl`
+- `database/offices.csv`
+- `database/ratings.jsonl`
+- `src/storage/` repository/cache/Supabase modules
+- Redis transient-storage usage across main/V2/V3
+- Supabase integration
+- legacy/parallel storage paths
 
-Janavani is **not an MVP project**.
+Decision: no migration, deletion, merge or rename until runtime ownership is verified.
 
-The product target is the complete citizen-governance ecosystem, including the capability layer and independently replaceable interfaces for:
+## 10. CURRENT EXECUTION GATE
 
-- Dynamic Web application.
-- Android application.
-- iOS application.
-- Telegram Bot.
-- Telegram Mini App.
-- WhatsApp integration.
-- Messenger integration.
-- Web3/DApp capability.
-- Internet transport.
-- Mesh/resilient transport.
-- Satellite/resilient transport where legally and technically supported.
-- Decentralized storage/transport evaluation.
-- AI and non-AI operating paths.
+The next engineering work is **not another broad audit**.
 
-Individual milestones are construction and verification stages, not the final product boundary.
+The immediate unresolved gate is:
 
-## 7. Archive rule
+```text
+M3-A — actual CI/test execution evidence
+        ↓
+M3-B — runtime/deployment ownership verification
+        ↓
+M3-C — channel integration/runtime verification
+        ↓
+targeted convergence of proven boundaries
+        ↓
+full ecosystem capability construction
+```
 
-No document, source directory, runtime, or implementation is to be archived solely because it appears old or duplicated.
+The broader ecosystem remains the destination. Any Web citizen-flow work is a construction milestone inside that ecosystem, not an MVP product boundary.
+
+## 11. ARCHIVE CONTROL
+
+No archive operation is authorised merely because a document or code path is old, duplicated, experimental or superseded-looking.
 
 Archive requires:
 
-- dependency verification;
-- runtime verification;
-- replacement identification;
-- data preservation assessment;
-- test verification;
-- historical-value assessment;
-- explicit archive record.
+1. no active dependency;
+2. no required runtime path;
+3. no irreplaceable data;
+4. replacement where required;
+5. test/runtime verification where applicable;
+6. historical value preserved;
+7. archive reason recorded.
 
-## 8. Next action
-
-Proceed to **M2-B — Capability → Repository → Test → Deployment Map**.
-
-Do not repeat the completed static repository inventory, capability-registry design, data-contract design, or storage reconnaissance except where new evidence requires reconciliation.
+**END — RECONCILIATION CONTROL RECORD**
