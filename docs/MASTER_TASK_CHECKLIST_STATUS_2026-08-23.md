@@ -6,7 +6,7 @@
 
 ---
 
-## 1. VERIFIED COMPLETIONS / STATUS CHANGES
+# 1. VERIFIED COMPLETIONS / STATUS CHANGES
 
 ### Architecture & governance
 
@@ -28,7 +28,7 @@
 - [x] 4.1–4.18 Core data-contract layer created and committed as `docs/DATA_CONTRACTS.md`.
 - Evidence commit: `8a856573a73169f31ab56502f045297f8d12175d`
 
-### Repository reconciliation
+### Repository reconciliation — static
 
 - [x] 2.1 Static repository/tree inventory performed.
 - [x] 2.4 Static database/storage inventory performed.
@@ -39,22 +39,45 @@
 - Evidence file: `docs/REPOSITORY_RECONCILIATION_AUDIT_2026-08-23.md`
 - Evidence commit: `a4036f669fe63bb821ba8b632bd17e0564c40045`
 
-> Important: static inventory does **not** mark runtime/integration/deployment functionality complete.
+### Repository reconciliation — runtime/import/deployment mapping
+
+- [x] M2-A static runtime/import/dependency map substantially completed.
+- Evidence file: `docs/RUNTIME_IMPORT_DEPENDENCY_MAP_2026-08-23.md`
+- Evidence commit: `4aebc04409399b8e8dc5843e58946d723407d32a`
+- [x] Candidate executable entry points identified.
+- [x] Telegram import chain mapped.
+- [x] Directory/search dependency mapped.
+- [x] Document dependency mapped.
+- [x] AI dependency paths mapped.
+- [x] Storage dependency families identified.
+- [x] SOS dependency path identified.
+- [x] Render/entrypoint/Docker deployment paths identified.
+- [x] Major runtime/deployment conflicts recorded.
+
+> Important: static/runtime-configuration mapping does **not** mark live runtime, integration, security or deployment functionality complete. Those require actual execution evidence.
 
 ---
 
 # 2. MASTER TASKS CURRENTLY IN PROGRESS
 
-## 2. Repository baseline & architecture reconciliation
+## 1. Master architecture & system governance
 
 **Status: IN PROGRESS**
 
-### Remaining verified work
+Remaining:
 
-- [ ] 2.2 Runtime entry-point inventory.
-- [ ] 2.3 Existing API/service runtime inventory.
-- [ ] 2.5 Runtime AI integration inventory.
-- [ ] 2.7 Runtime SOS implementation inventory.
+- [ ] 1.8–1.14 Formal permission/consent, transport, dependency/failure, threat-model and test-strategy documents.
+
+## 2. Repository baseline & architecture reconciliation
+
+**Status: IN PROGRESS — STATIC MAPPING SUBSTANTIALLY COMPLETE**
+
+Remaining verified work:
+
+- [ ] 2.2 Live/import execution verification of entry points.
+- [ ] 2.3 Runtime API/service execution inventory.
+- [ ] 2.5 Runtime AI integration verification.
+- [ ] 2.7 Runtime SOS execution verification.
 - [ ] 2.8 Test and CI execution/evidence inventory.
 - [ ] 2.9 Runtime comparison against Master Architecture.
 - [ ] 2.10 Runtime/dependency confirmation of duplicates and obsolete code.
@@ -70,7 +93,7 @@ The registry exists, but each capability still requires repository-module, test,
 
 **Status: COMPLETE AS DESIGN REGISTER; IMPLEMENTATION MAPPING PENDING**
 
-The contracts exist, but database/API schemas must not be changed until the repository storage/runtime mapping is completed.
+The contracts exist, but database/API schemas must not be changed until storage ownership and runtime mapping are complete.
 
 ---
 
@@ -79,28 +102,98 @@ The contracts exist, but database/API schemas must not be changed until the repo
 | Master Task | Status | Evidence |
 |---|---|---|
 | 1 Architecture & Governance | IN PROGRESS | Master architecture + capability/data contracts |
-| 2 Repository Reconciliation | IN PROGRESS | Reconciliation audit |
+| 2 Repository Reconciliation | IN PROGRESS — STATIC MAPPING | Reconciliation + runtime/import map |
 | 3 Capability Registry | COMPLETE — DESIGN | `CAPABILITY_REGISTRY.md` |
 | 4 Data Contracts | COMPLETE — DESIGN | `DATA_CONTRACTS.md` |
 | 5 Identity/Access | NOT STARTED | — |
 | 6 Multilingual/Accessibility | NOT STARTED | — |
 | 7 OCR/Vision | NOT STARTED | — |
-| 8 RAG/SLM/LLM/Agentic AI | NOT STARTED | — |
-| 9 Civic Document Engine | IN PROGRESS — ARCHITECTURE | Existing document layer + master checklist |
+| 8 RAG/SLM/LLM/Agentic AI | NOT STARTED — POC COMPONENTS EXIST | `api/agent_api.py`, `src/services/legal_agent.py` |
+| 9 Civic Document Engine | IN PROGRESS — ARCHITECTURE + PARTIAL IMPLEMENTATION | Document service/generator |
 | 10 User Corrections | NOT STARTED | — |
-| 11 Accountability | NOT STARTED | — |
+| 11 Accountability | NOT STARTED — PARTIAL MODULES EXIST | Rating/escalation modules |
 | 12 Government Schemes | NOT STARTED | — |
-| 13 RTI/Evidence | NOT STARTED | — |
+| 13 RTI/Evidence | NOT STARTED — PARTIAL DOCUMENT/AI SUPPORT | Existing document/AI components |
 | 14 Whistleblower | NOT STARTED | — |
 | 15 Expert/Volunteer/NGO | NOT STARTED | — |
-| 16 Personal SOS | ARCHITECTURE LOCKED | Data contract + checklist |
-| 17 Mesh SOS | ARCHITECTURE LOCKED | Data contract + repository evidence |
+| 16 Personal SOS | ARCHITECTURE LOCKED — EXPERIMENTAL PATH EXISTS | `src/services/emergency_sos.py` |
+| 17 Mesh SOS | ARCHITECTURE LOCKED — REPOSITORY MATERIAL EXISTS | V2 mesh material |
 | 18 Satellite SOS | ARCHITECTURE LOCKED | Data contract + checklist |
 | 19 Government Alerts | ARCHITECTURE LOCKED | Data contract + checklist |
 
 ---
 
-# 4. REQUIRED STATUS DISCIPLINE
+# 4. VERIFIED ARCHITECTURAL FINDINGS
+
+### F-01 — Multiple web/API runtimes
+
+Observed:
+
+```text
+src/web.py
+src/web/app.py
+src/web_mvp/main.py
+api/agent_api.py
+```
+
+**Decision:** No one of these is declared canonical until runtime/deployment verification is completed.
+
+### F-02 — Deployment ambiguity
+
+Observed deployment configurations point to different entry points:
+
+```text
+render.yaml → src/web.py
+entrypoint.sh → src.bot_telegram + src.web
+Dockerfile → src.web.app and api.agent_api
+```
+
+**Decision:** P0 convergence item.
+
+### F-03 — `src/web/app.py` is structurally duplicated
+
+Static inspection shows repeated application/router/authentication definitions in the same file.
+
+**Decision:** Treat as high-risk convergence target; do not blindly rewrite until actual deployment dependency is verified.
+
+### F-04 — Directory remains CSV-backed
+
+The Telegram search path uses `database/offices.csv` through `services/search_directory.py`.
+
+**Decision:** Preserve for now; later migrate to the canonical `GovernmentOffice` contract after storage ownership is proven.
+
+### F-05 — Document service is incomplete against canonical contract
+
+PDF path exists. DOCX explicitly remains unimplemented in the observed service.
+
+**Decision:** Do not mark full document capability complete.
+
+### F-06 — AI has two distinct paths
+
+Observed:
+
+```text
+src/services/legal_agent.py → external AI translation + OpenRouter drafting
+api/agent_api.py → FAISS/RAG POC
+```
+
+**Decision:** Keep separate until canonical AI architecture is mapped.
+
+### F-07 — SOS implementation does not equal canonical SOS
+
+`src/services/emergency_sos.py` currently performs Redis cache deletion/token revocation and constructs a Nostr emergency event. This is not sufficient evidence for the canonical trusted-contact + authority-choice + offline + mesh + satellite + acknowledgement SOS capability.
+
+**Decision:** Experimental security/SOS path only until redesigned and verified.
+
+### F-08 — Authentication secret hygiene requires remediation
+
+Static inspection of `src/web/app.py` found literal interface-token values.
+
+**Decision:** Treat as a production security blocker if those values are real credentials. Replace with secure secret management before deployment exposure.
+
+---
+
+# 5. REQUIRED STATUS DISCIPLINE
 
 A checkbox in the canonical Master Task Checklist must not be marked `[x]` merely because:
 
@@ -133,20 +226,11 @@ DESIGN DOCUMENT EXISTS
 
 ---
 
-# 5. NEXT MASTER TASKS — LOCKED ORDER
+# 6. NEXT MASTER TASKS — LOCKED ORDER
 
-### M2-A — Runtime / Import / Dependency Map
+### M2-B — Capability → Repository → Test → Deployment Map
 
-1. Identify all executable entry points.
-2. Trace imports into service/domain/storage layers.
-3. Identify duplicated responsibilities.
-4. Identify dead/unreachable modules where evidence permits.
-5. Record tests covering each path.
-6. Record deployment references.
-
-### M2-B — Capability → Repository Map
-
-For every capability:
+For every canonical capability:
 
 ```text
 Capability ID
@@ -155,7 +239,9 @@ Capability ID
 → entry point(s)
 → channel(s)
 → transport(s)
+→ storage
 → test(s)
+→ CI
 → deployment evidence
 → security/privacy requirements
 → current status
@@ -171,13 +257,37 @@ src/storage/*
 planning database contracts
 V2/V3 storage
 external database references
+Redis
+FAISS / RAG stores
 ```
 
 No migration until ownership is proven.
 
+### M2-D — Runtime Execution Verification
+
+Run/verify, where the environment permits:
+
+```text
+imports
+startup
+health
+Telegram startup
+web startup
+API startup
+Supabase connectivity
+Redis connectivity
+RAG path
+AI provider failure path
+SOS failure path
+PDF generation
+DOCX status
+```
+
+Record exact command, result, timestamp and evidence.
+
 ---
 
-# 6. ARCHIVE CONTROL
+# 7. ARCHIVE CONTROL
 
 **No archive operation is authorised by this status register.**
 
@@ -193,7 +303,7 @@ Archive requires a separate verified decision showing:
 
 ---
 
-# 7. TRACK-LOSS PREVENTION RULE
+# 8. TRACK-LOSS PREVENTION RULE
 
 Every future major Janavani work session must update or reference:
 
@@ -212,5 +322,7 @@ This prevents architecture drift, duplicated work, accidental deletion and hallu
 ---
 
 **CURRENT PHASE:** Repository Runtime / Dependency Reconciliation  
+**STATIC M2-A:** SUBSTANTIALLY COMPLETE  
+**LIVE EXECUTION VERIFICATION:** NOT YET COMPLETE  
 **DESTRUCTIVE CHANGES:** NONE AUTHORISED  
-**NEXT ACTION:** Runtime/import/dependency mapping
+**NEXT ACTION:** M2-B Capability → Repository → Test → Deployment Map
