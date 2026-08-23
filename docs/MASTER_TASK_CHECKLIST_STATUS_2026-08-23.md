@@ -54,7 +54,29 @@
 - [x] Render/entrypoint/Docker deployment paths identified.
 - [x] Major runtime/deployment conflicts recorded.
 
-> Important: static/runtime-configuration mapping does **not** mark live runtime, integration, security or deployment functionality complete. Those require actual execution evidence.
+### M2-B — Capability → Repository → Test → Deployment static map
+
+- [x] Capability-to-repository evidence mapped.
+- [x] Capability-to-test evidence mapped.
+- [x] Capability-to-deployment evidence mapped where repository evidence exists.
+- [x] Capability status discipline established: PRESENT / PARTIAL / POC / DESIGN / UNVERIFIED / BLOCKED / VERIFIED.
+- Evidence file: `docs/CAPABILITY_REPOSITORY_TEST_DEPLOYMENT_MAP_2026-08-23.md`.
+- **Important:** this is static evidence mapping, not runtime verification.
+
+### M2-D — Storage ownership reconciliation
+
+- [x] Local CSV/JSONL persistence surfaces identified.
+- [x] Repository/storage modules identified.
+- [x] Redis transient-storage surfaces identified.
+- [x] Supabase/PostgreSQL intended durable-storage path identified.
+- [x] V2/V3 decentralised/experimental storage surfaces identified.
+- [x] Canonical ownership target defined for major domain objects.
+- [x] Storage conflicts recorded: JSONL vs repositories, CSV vs office repository, durable ratings vs Redis aggregates, Supabase vs local files.
+- [x] Migration and archive safety rules defined.
+- Evidence file: `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
+- **Important:** ownership design is complete; runtime migration has NOT started.
+
+> Static/runtime-configuration mapping does **not** mark live runtime, integration, security or deployment functionality complete. Those require actual execution evidence.
 
 ---
 
@@ -66,34 +88,36 @@
 
 Remaining:
 
-- [ ] 1.8–1.14 Formal permission/consent, transport, dependency/failure, threat-model and test-strategy documents.
+- [ ] 1.10 Formal permission/consent contracts.
+- [ ] 1.11 Transport abstraction contracts.
+- [ ] 1.12 Failure/dependency matrix.
+- [ ] 1.13 System-wide threat model.
+- [ ] 1.14 System-wide test strategy.
 
 ## 2. Repository baseline & architecture reconciliation
 
-**Status: IN PROGRESS — STATIC MAPPING SUBSTANTIALLY COMPLETE**
+**Status: IN PROGRESS — STATIC MAPPING SUBSTANTIALLY COMPLETE; LIVE EXECUTION OPEN**
 
-Remaining verified work:
+Remaining:
 
-- [ ] 2.2 Live/import execution verification of entry points.
+- [ ] 2.2 Live runtime entry-point verification.
 - [ ] 2.3 Runtime API/service execution inventory.
 - [ ] 2.5 Runtime AI integration verification.
 - [ ] 2.7 Runtime SOS execution verification.
-- [ ] 2.8 Test and CI execution/evidence inventory.
-- [ ] 2.9 Runtime comparison against Master Architecture.
-- [ ] 2.10 Runtime/dependency confirmation of duplicates and obsolete code.
-- [ ] 2.11 Archive candidates only after dependency/replacement verification.
+- [ ] 2.8 Test/CI execution evidence inventory.
+- [ ] 2.11 Archive obsolete material only after dependency/replacement/runtime verification.
 
 ## 3. Capability registry
 
-**Status: COMPLETE AS DESIGN REGISTER; IMPLEMENTATION MAPPING PENDING**
+**Status: COMPLETE AS DESIGN REGISTER; STATIC IMPLEMENTATION MAPPING COMPLETE; RUNTIME VERIFICATION PENDING**
 
-The registry exists, but each capability still requires repository-module, test, deployment and evidence mapping.
+Evidence: `docs/CAPABILITY_REGISTRY.md` + `docs/CAPABILITY_REPOSITORY_TEST_DEPLOYMENT_MAP_2026-08-23.md`.
 
 ## 4. Core data contracts
 
-**Status: COMPLETE AS DESIGN REGISTER; IMPLEMENTATION MAPPING PENDING**
+**Status: COMPLETE AS DESIGN REGISTER; STORAGE OWNERSHIP MAPPED; IMPLEMENTATION MIGRATION PENDING**
 
-The contracts exist, but database/API schemas must not be changed until storage ownership and runtime mapping are complete.
+Evidence: `docs/DATA_CONTRACTS.md` + `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md`.
 
 ---
 
@@ -102,9 +126,9 @@ The contracts exist, but database/API schemas must not be changed until storage 
 | Master Task | Status | Evidence |
 |---|---|---|
 | 1 Architecture & Governance | IN PROGRESS | Master architecture + capability/data contracts |
-| 2 Repository Reconciliation | IN PROGRESS — STATIC MAPPING | Reconciliation + runtime/import map |
-| 3 Capability Registry | COMPLETE — DESIGN | `CAPABILITY_REGISTRY.md` |
-| 4 Data Contracts | COMPLETE — DESIGN | `DATA_CONTRACTS.md` |
+| 2 Repository Reconciliation | IN PROGRESS — STATIC MAPPING COMPLETE | Reconciliation + runtime/import + capability + storage maps |
+| 3 Capability Registry | COMPLETE — DESIGN + STATIC MAPPING | `CAPABILITY_REGISTRY.md`, capability map |
+| 4 Data Contracts | COMPLETE — DESIGN + STORAGE OWNERSHIP MAPPED | `DATA_CONTRACTS.md`, storage map |
 | 5 Identity/Access | NOT STARTED | — |
 | 6 Multilingual/Accessibility | NOT STARTED | — |
 | 7 OCR/Vision | NOT STARTED | — |
@@ -140,44 +164,30 @@ api/agent_api.py
 
 ### F-02 — Deployment ambiguity
 
-Observed deployment configurations point to different entry points:
+Observed deployment configurations point to different entry points. This remains a P0 convergence item.
 
-```text
-render.yaml → src/web.py
-entrypoint.sh → src.bot_telegram + src.web
-Dockerfile → src.web.app and api.agent_api
-```
+### F-03 — `src/web/app.py` structural duplication
 
-**Decision:** P0 convergence item.
-
-### F-03 — `src/web/app.py` is structurally duplicated
-
-Static inspection shows repeated application/router/authentication definitions in the same file.
-
-**Decision:** Treat as high-risk convergence target; do not blindly rewrite until actual deployment dependency is verified.
+Static inspection identified repeated application/router/authentication definitions. Treat as high-risk convergence target; do not blindly rewrite until actual deployment dependency is verified.
 
 ### F-04 — Directory remains CSV-backed
 
 The Telegram search path uses `database/offices.csv` through `services/search_directory.py`.
 
-**Decision:** Preserve for now; later migrate to the canonical `GovernmentOffice` contract after storage ownership is proven.
+**Decision:** Preserve for now; later migrate to the canonical `GovernmentOffice` contract after storage ownership and runtime are proven.
 
-### F-05 — Document service is incomplete against canonical contract
+### F-05 — Document service incomplete against canonical contract
 
-PDF path exists. DOCX explicitly remains unimplemented in the observed service.
+PDF path exists. DOCX remains unimplemented in the observed service. Do not mark full document capability complete.
 
-**Decision:** Do not mark full document capability complete.
-
-### F-06 — AI has two distinct paths
-
-Observed:
+### F-06 — AI has distinct paths
 
 ```text
-src/services/legal_agent.py → external AI translation + OpenRouter drafting
+src/services/legal_agent.py → external AI translation/drafting path
 api/agent_api.py → FAISS/RAG POC
 ```
 
-**Decision:** Keep separate until canonical AI architecture is mapped.
+Keep separate until canonical AI architecture is mapped.
 
 ### F-07 — SOS implementation does not equal canonical SOS
 
@@ -187,13 +197,35 @@ api/agent_api.py → FAISS/RAG POC
 
 ### F-08 — Authentication secret hygiene requires remediation
 
-Static inspection of `src/web/app.py` found literal interface-token values.
-
-**Decision:** Treat as a production security blocker if those values are real credentials. Replace with secure secret management before deployment exposure.
+Static inspection previously identified literal interface-token values in `src/web/app.py`. Treat as a production security blocker if those values are real credentials.
 
 ---
 
-# 5. REQUIRED STATUS DISCIPLINE
+# 5. CI / TEST EXECUTION STATUS
+
+The repository's current `.github/workflows/ci.yml` now explicitly runs:
+
+```text
+python -m compileall src
+bash ./run_all_tests.sh
+```
+
+and supplies mock AI credentials plus Redis environment variables. Evidence: `.github/workflows/ci.yml`.
+
+`run_all_tests.sh` currently runs:
+
+```text
+python -m pytest tests -v
+cargo test -- --nocapture
+```
+
+when the root Dioxus package exists. Evidence: `run_all_tests.sh`.
+
+**Important distinction:** the workflow definition proves that the canonical test command is configured; it does **not** prove that the latest workflow run passed. A successful execution record is still required before marking M3-A complete.
+
+---
+
+# 6. REQUIRED STATUS DISCIPLINE
 
 A checkbox in the canonical Master Task Checklist must not be marked `[x]` merely because:
 
@@ -226,72 +258,39 @@ DESIGN DOCUMENT EXISTS
 
 ---
 
-# 6. NEXT MASTER TASKS — LOCKED ORDER
+# 7. NEXT MASTER TASKS — LOCKED ORDER
 
-### M2-B — Capability → Repository → Test → Deployment Map
+## M3-A — Execute / obtain actual verification evidence
 
-For every canonical capability:
-
-```text
-Capability ID
-→ module(s)
-→ data contract(s)
-→ entry point(s)
-→ channel(s)
-→ transport(s)
-→ storage
-→ test(s)
-→ CI
-→ deployment evidence
-→ security/privacy requirements
-→ current status
-```
-
-### M2-C — Storage Ownership Map
-
-Map every data source and writer:
+Use the repository's canonical CI/test path and record an actual execution result. Required evidence:
 
 ```text
-database/*.jsonl / CSV
-src/storage/*
-planning database contracts
-V2/V3 storage
-external database references
-Redis
-FAISS / RAG stores
+pytest result
+Rust/Dioxus result where applicable
+compile result
+workflow status
+failure classification
 ```
 
-No migration until ownership is proven.
+## M3-B — Runtime deployment verification
 
-### M2-D — Runtime Execution Verification
+Trace and verify the actual production entrypoint, web/API process, Telegram process, workers, Redis and durable storage configuration.
 
-Run/verify, where the environment permits:
+## M3-C — Channel integration verification
 
-```text
-imports
-startup
-health
-Telegram startup
-web startup
-API startup
-Supabase connectivity
-Redis connectivity
-RAG path
-AI provider failure path
-SOS failure path
-PDF generation
-DOCX status
-```
+Verify Telegram, WhatsApp, Messenger, web and other declared ecosystem surfaces against their canonical contracts where implementation exists.
 
-Record exact command, result, timestamp and evidence.
+## M3-D — Evidence record
+
+Record exact command/run, result, timestamp, commit SHA and any blocker in the status register.
 
 ---
 
-# 7. ARCHIVE CONTROL
+# 8. ARCHIVE CONTROL
 
 **No archive operation is authorised by this status register.**
 
-Archive requires a separate verified decision showing:
+Archive requires proof of:
 
 1. no active dependency;
 2. no required runtime path;
@@ -303,7 +302,7 @@ Archive requires a separate verified decision showing:
 
 ---
 
-# 8. TRACK-LOSS PREVENTION RULE
+# 9. TRACK-LOSS PREVENTION RULE
 
 Every future major Janavani work session must update or reference:
 
@@ -317,12 +316,14 @@ relevant capability/design document
 implementation commit/PR evidence where applicable
 ```
 
-This prevents architecture drift, duplicated work, accidental deletion and hallucinated completion claims.
+Before starting a new audit, inspect these records and audit only the unresolved delta. This prevents architecture drift, duplicated work, accidental deletion and hallucinated completion claims.
 
 ---
 
-**CURRENT PHASE:** Repository Runtime / Dependency Reconciliation  
-**STATIC M2-A:** SUBSTANTIALLY COMPLETE  
-**LIVE EXECUTION VERIFICATION:** NOT YET COMPLETE  
+**CURRENT PHASE:** Runtime Verification Preparation  
+**M2-A:** SUBSTANTIALLY COMPLETE  
+**M2-B:** STATIC CAPABILITY MAP COMPLETE  
+**M2-D:** STORAGE OWNERSHIP DESIGN COMPLETE  
+**M3-A LIVE EXECUTION:** NOT YET VERIFIED  
 **DESTRUCTIVE CHANGES:** NONE AUTHORISED  
-**NEXT ACTION:** M2-B Capability → Repository → Test → Deployment Map
+**NEXT ACTION:** M3-A actual test/CI execution evidence
