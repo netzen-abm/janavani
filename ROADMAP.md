@@ -1,638 +1,427 @@
-﻿# ðŸ‡®ðŸ‡³ JANAVANI â€” PRODUCT ROADMAP
+# 🇮🇳 JANAVANI — FULL ECOSYSTEM ROADMAP
 
-**Version:** 1.0
-**Status:** ACTIVE
-**Last Updated:** 11 August 2026
-**Purpose:** Execution roadmap for the Janavani platform
+**Status:** ACTIVE — ECOSYSTEM BUILD
+**Version:** 2.0
+**Date:** 23 August 2026
 
----
+> Janavani is being built as a full citizen-governance ecosystem. The roadmap is therefore capability- and architecture-driven, not an MVP completion plan.
 
-# 1. VISION
-
-Janavani enables citizens to transform a government-related problem into informed, lawful, and effective civic action through simple, privacy-first digital workflows.
-
-The immediate product journey is:
+## 1. STRATEGIC DESTINATION
 
 ```text
-Citizen Problem
-      â†“
-Understand the Issue
-      â†“
-Identify the Relevant Authority
-      â†“
-Prepare the Appropriate Document
-      â†“
-Review
-      â†“
-Generate
-      â†“
-Submit
-      â†“
-Track
-      â†“
-Follow Up
-      â†“
-Escalate When Appropriate
+Citizen Reality
+   ↓
+Understanding + Evidence
+   ↓
+Correct Authority
+   ↓
+Lawful Civic Action
+   ↓
+Submission / Communication
+   ↓
+Government Response
+   ↓
+Tracking / Follow-up / Escalation
+   ↓
+Outcome
+   ↓
+Accountability
+   ↓
+Public Learning
+```
 
-The long-term objective is to evolve this workflow into a broader citizen-governance platform.
+The ecosystem must make this lifecycle increasingly usable across web, mobile, messaging, API, and decentralized-capable interfaces.
 
-2. ROADMAP STATUS LEGEND
-âœ… Completed
-ðŸŸ¢ Current
-ðŸŸ¡ Next
-ðŸ”µ Planned
-âšª Long-Term
-â¸ Deferred
-3. PHASE 0 â€” FOUNDATION
-Status
+## 2. ROADMAP PRINCIPLES
 
-âœ… COMPLETED
+- Build the ecosystem, not an MVP.
+- Capabilities are primary; interfaces are access surfaces.
+- Preserve interface independence.
+- AI is replaceable infrastructure, not the product identity.
+- Privacy, security, provenance, and consent are system invariants.
+- Existing working capabilities are foundations, not limits on scope.
+- Archive obsolete designs rather than silently deleting history.
+- Verify implementation status from GitHub code/tests, not documentation alone.
+- Do not repeat completed audits; use the Master Checklist and dated audit records.
 
-Repository
- GitHub Repository
- Git Workflow
- Repository Documentation
- Project Structure
- Development Environment
-Architecture
- Modular Architecture
- Conversation Layer
- Workflow Layer
- Workflow Engine
- State Registry
- Workflow Registry
- Workflow Context
- Domain Layer
- Services Layer
- Documents Layer
- Storage Layer
-Engineering Principles
- Privacy First
- Security by Design
- Replaceable Components
- Separation of Concerns
- Workflow-Driven Architecture
- Open Source First
- Human-Centered Design
-4. PHASE 1 â€” TELEGRAM MVP
-Status
+## 3. WORKSTREAM A — ECOSYSTEM GOVERNANCE & DOCUMENTATION
 
-ðŸŸ¢ FUNCTIONAL / FROZEN
+**Status: IN PROGRESS**
 
-Telegram is the first production interface for Janavani.
+- Ecosystem identity and charter
+- North Star reconciliation
+- Canonical Source of Truth
+- Master Architecture
+- Product Landscape
+- Capability Registry
+- Data contracts
+- Permission and consent contracts
+- Transport abstraction contracts
+- Failure/dependency matrix
+- Threat model
+- Test strategy
+- Documentation authority and archival policy
 
-The Telegram implementation should now be treated as a stable interface.
+## 4. WORKSTREAM B — SHARED PLATFORM
 
-Future development should avoid unnecessary restructuring of the working Telegram flow.
+**Status: IN PROGRESS**
 
-Current Citizen Flow
-Citizen
-    â†“
-Describe Issue
-    â†“
-Select Document
-    â†“
-Select District
-    â†“
-Search Office
-    â†“
-Select Office / Fallback
-    â†“
-Identity
-    â†“
-Preview
-    â†“
-Document Generation
-    â†“
-PDF
-    â†“
-Download
-Completed Capabilities
- Telegram interface
- Issue capture
- Conversation states
- Session handling
- Document selection
- District selection
- Office search
- Office fallback
- Identity selection
- Preview
- Complaint generation
- PDF generation
- Document delivery
-Telegram Rule
+Build and converge reusable platform capabilities across:
 
-Telegram is an interface.
+- Domain model
+- Conversation / interaction layer
+- Workflow engine
+- State and session management
+- Services
+- Document composition
+- Evidence
+- Storage and repositories
+- Search and government data
+- Privacy and security services
+- Identity and consent
+- Analytics
+- Notification and delivery
+- API boundaries
 
-It must not become the owner of Janavani business logic.
+The shared platform must remain independent of Telegram, Web, WhatsApp, Messenger, Android, iOS, and DApp presentation layers.
 
-5. PHASE 2 â€” WEB MVP
-Status
+## 5. WORKSTREAM C — DYNAMIC WEB
 
-ðŸŸ¢ CURRENT PRIORITY
+**Status: ACTIVE BUILD**
 
-The Web App is the current development focus.
+The Web is a first-class product surface, not a temporary MVP shell.
 
-The Web interface must consume Janavani capabilities rather than recreate Telegram-specific business logic.
+Target capabilities include:
 
-Goal
+- Dynamic citizen onboarding
+- Issue understanding
+- Guided civic workflows
+- Government information discovery
+- Office/authority intelligence
+- Document creation
+- Evidence handling
+- Citizen review and approval
+- Submission and delivery
+- Case tracking
+- Follow-up and escalation
+- Citizen history with privacy controls
+- Feedback and accountability views
+- Multilingual and accessibility support
+- Governance dashboards where appropriate
 
-Provide the same core citizen capability through a browser.
+## 6. WORKSTREAM D — MOBILE ECOSYSTEM
 
-Citizen
-    â†“
-Web Interface
-    â†“
-Janavani Platform
-    â†“
-Workflow
-    â†“
-Office / Document Services
-    â†“
-Complaint
-    â†“
-PDF
-Web MVP Priorities
- Web application entry point
- Citizen issue input
- Document selection
- District/location selection
- Office search
- Identity selection
- Complaint preview
- Complaint generation
- PDF generation
- PDF download
- Error handling
- Responsive citizen interface
- Privacy-first data handling
-Web Principle
+**Status: PLANNED / ARCHITECTURE TRACK**
 
-The Web App must not depend on Telegram.
+### Android
 
-Web â”€â”€â”€â”€â”€â”€â”€â†’ Janavani Platform
-Telegram â”€â”€â†’ Janavani Platform
+Independent Janavani application consuming shared platform APIs/capabilities.
 
-Not:
+### iOS
 
-Web â†’ Telegram
-6. PHASE 3 â€” MVP RELIABILITY
-Status
+Independent Janavani application consuming shared platform APIs/capabilities.
 
-ðŸŸ¡ NEXT
+Potential shared mobile capabilities:
 
-Before expanding the feature set, the core citizen journey must become reliable.
+- Identity and consent
+- Notifications
+- Evidence capture
+- Location
+- Offline/low-bandwidth workflows
+- Case tracking
+- Emergency/SOS
+- Secure local state
 
-Testing
- Unit tests
- Workflow tests
- Conversation tests
- Document tests
- Office search tests
- PDF generation tests
- Web integration tests
- Telegram integration tests
-Reliability
- Centralized error handling
- Structured logging
- State validation
- Input validation
- Configuration validation
- Deployment health checks
- Backup strategy
- Monitoring
-Security
- Secrets management review
- Rate limiting
- Privacy review
- PII minimization
- Audit logging
- Secure document handling
-7. PHASE 4 â€” CITIZEN EXPERIENCE
-Status
+## 7. WORKSTREAM E — MESSAGING ECOSYSTEM
 
-ðŸ”µ PLANNED
+**Status: EXISTING FOUNDATION + EXPANSION**
 
-Improve the first citizen journey before creating many new document types.
+### Telegram Bot
 
-Identity
- Anonymous mode
- Name-only mode
- Full identity mode
- Clear explanation of data requirements
-Evidence
- Photo upload
- Document attachments
- Evidence metadata
- Evidence privacy controls
-User Experience
- Better preview
- Edit before generation
- Clear confirmation
- Submission guidance
- Complaint reference ID
- Download history
-8. PHASE 5 â€” AI ASSISTANCE
-Status
+Existing working interface; protect from unnecessary refactoring while shared capabilities converge.
 
-ðŸ”µ PLANNED
+### Telegram Mini App
 
-AI must remain a controlled assistance layer.
+First-class Telegram web surface using shared Janavani capabilities rather than bot-owned business logic.
 
-AI is not the product.
+### WhatsApp
 
-AI must not become an unrestricted chatbot inside Janavani.
+Independent integration adapter.
 
-AI Capabilities
- Issue understanding
- Issue structuring
- Subject generation
- Complaint drafting assistance
- Department classification
- Office recommendation
- Language normalization
- Malayalam / English assistance
- Manglish normalization
-AI Safety Principles
- Structured outputs
- Deterministic fallback
- Human review before final document
- No unnecessary personal-data exposure
- Clear distinction between legal information and legal advice
- Confidence handling
- Hallucination safeguards
-9. PHASE 6 â€” DOCUMENT PLATFORM
-Status
+### Messenger
 
-ðŸ”µ PLANNED
+Independent integration adapter.
 
-Janavani should evolve from a complaint generator into a reusable document composition platform.
+The messaging layer is an access layer, not the platform core.
 
-Document Types
- Complaint
- Grievance
- RTI
- Representation
- Petition
- Appeal
- Follow-up
- Escalation
-Document Composition
+## 8. WORKSTREAM F — API & INTEGRATION PLATFORM
 
-Reusable components should eventually include:
+**Status: IN PROGRESS / EXPANDING**
 
-Header
-Recipient
-Subject
-Reference
-Facts
-Legal / Policy Basis
-Requests
-Documents Requested
-Response Request
+Build stable APIs and contracts for:
+
+- Web
+- Mobile
+- Messaging adapters
+- DApp/Web3 interfaces
+- Institutional integrations
+- Approved third-party applications
+
+API design must expose capabilities rather than interface-specific workflows.
+
+## 9. WORKSTREAM G — DAPP / WEB3 / DECENTRALIZED CAPABILITIES
+
+**Status: ARCHITECTURE / RESEARCH / SELECTIVE IMPLEMENTATION**
+
+Potential capabilities:
+
+- Citizen-controlled identity/credentials
+- Verifiable credentials
+- Evidence provenance
+- Decentralized records where appropriate
+- Community-operated infrastructure
+- DApp access
+- Alternative storage
+- Censorship-resilient communication
+- Privacy-enhancing technologies
+
+Blockchain, IPFS, Nostr, Nym, and other technologies are tools. Each must have a demonstrated capability-level justification.
+
+## 10. WORKSTREAM H — CIVIC DOCUMENT ECOSYSTEM
+
+**Status: FOUNDATION EXISTS / EXPANDING**
+
+Document families:
+
+- Complaint
+- Grievance
+- RTI
+- Representation
+- Petition
+- Objection
+- Appeal
+- Follow-up
+- Escalation
+- Whistleblower
+- Other lawful civic communications
+
+The target is one reusable document-composition architecture, not disconnected generators.
+
+## 11. WORKSTREAM I — EVIDENCE & KNOWLEDGE
+
+**Status: PLANNED / FOUNDATION**
+
+- Photo/video/document evidence
+- Voice evidence where appropriate
+- OCR and document understanding
+- Evidence metadata
+- Provenance
+- Verification status
+- Citizen correction
+- Expert review
+- Volunteer review
+- Institutional review
+- Correction history
+
+## 12. WORKSTREAM J — GOVERNMENT INFORMATION & INTELLIGENCE
+
+**Status: EXPANDING**
+
+- Office directory
+- Department directory
+- Officer information
+- Representative information
+- Government schemes
+- Public services
+- Laws/rules/notifications
+- Bills and policy changes
+- Local-government information
+- Project information
+- Budget and expenditure information
+- Public-source provenance
+
+## 13. WORKSTREAM K — CITIZEN ACTION LIFECYCLE
+
+**Status: FOUNDATION / EXPANDING**
+
+```text
+Case
+ ↓
+Document / Action
+ ↓
+Submission
+ ↓
 Acknowledgement
-Submission Metadata
-Signature
-Enclosures
-Copy To
-Delivery Profiles
- Email
- Registered Post
- Speed Post
- Hand Delivery
- Government Portal
- Future digital channels
-10. PHASE 7 â€” CITIZEN ACTION & TRACKING
-Status
-
-ðŸ”µ PLANNED
-
-Janavani should eventually continue after document generation.
-
-Generate
-   â†“
-Submit
-   â†“
-Reference ID
-   â†“
-Track
-   â†“
-Follow Up
-   â†“
-Escalate
-Capabilities
- Complaint ID
- Submission record
- Submission method
- Submission metadata
- Status tracking
- Follow-up reminders
- Follow-up document generation
- Escalation workflow
- Response recording
- Resolution recording
-11. PHASE 8 â€” INTELLIGENT GOVERNANCE SERVICES
-Status
-
-âšª LONG-TERM
-
-Once the core citizen workflow is reliable, Janavani can expand into broader governance intelligence.
-
-Location Intelligence
- District intelligence
- Local-body mapping
- Panchayat / Municipality mapping
- Geographic office matching
- Location-aware routing
-Office Intelligence
- Office aliases
- Department mapping
- Confidence scoring
- Office ranking
- Office verification
- Citizen corrections
-Government Information
- Public scheme information
- Service information
- Government process guidance
- Public-document intelligence
- Legal-information library
-12. PHASE 9 â€” CITIZEN FEEDBACK & ACCOUNTABILITY
-Status
-
-âšª LONG-TERM
-
-Janavani can eventually create a feedback loop between citizen experience and governance performance.
-
-Capabilities
- Office feedback
- Service ratings
- Response-time data
- Resolution data
- Department-level patterns
- Geographic patterns
- Citizen feedback analysis
-Accountability Intelligence
- Office performance indicators
- Department performance indicators
- Public service responsiveness
- Complaint-resolution patterns
- Public accountability dashboards
-
-All public-facing accountability features must have strong verification, privacy, anti-abuse, and fairness safeguards.
-
-13. PHASE 10 â€” MULTI-INTERFACE PLATFORM
-Status
-
-âšª LONG-TERM
-
-Janavani should eventually support multiple independent interfaces.
-
-Interfaces
- Telegram
-[ðŸŸ¢] Web
- Android
- iOS
- WhatsApp
- Messenger
- Public API
-Architecture Rule
-
-Every interface must consume the shared Janavani platform.
-
-                 Janavani Platform
-                       â”‚
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â†“              â†“              â†“
-     Telegram         Web          Mobile
-        â†“              â†“              â†“
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                       â†“
-                 Shared Services
-
-No interface should become the dependency of another interface.
-
-14. PHASE 11 â€” COMMUNITY & DATA QUALITY
-Status
-
-âšª LONG-TERM
-
-Citizen participation can eventually improve the quality of Janavani's governance data.
-
-Capabilities
- Volunteer participation
- Office verification
- Office suggestions
- Data correction
- Data moderation
- Community validation
- Source verification
-15. PHASE 12 â€” SPECIALIZED GOVERNANCE SERVICES
-Status
-
-âšª LONG-TERM / RESEARCH
-
-Future specialized modules may include:
-
- Land / Bhu-Janavani
- Legal document demystification
- RTI assistance
- Public-service entitlement checking
- Ration entitlement auditing
- Public project intelligence
- Governance data analysis
- Public accountability intelligence
-
-These are future capabilities.
-
-They must not delay completion of the core citizen workflow.
-
-16. CURRENTLY DEFERRED TECHNOLOGIES
-
-The following should remain research / future considerations rather than MVP priorities:
-
-Blockchain
-IPFS
-Nostr
-Nym
-Decentralized identity
-Advanced cryptographic infrastructure
-Large-scale autonomous AI agents
-
-Technology should only be introduced when a demonstrated citizen or system requirement justifies it.
-
-17. CURRENT TECHNICAL DEBT
-
-These items should be addressed through controlled maintenance rather than another architecture rewrite.
-
- Review remaining legacy code
- Verify duplicate implementations
- Complete automated test coverage
- Improve error handling
- Improve structured logging
- Review deployment configuration
- Audit GitHub workflows
- Verify configuration consistency
- Verify unused dependencies
- Verify deprecated modules before deletion
-
-Nothing should be deleted solely because it appears old.
-
-Deletion requires:
-
-Replacement exists.
-Imports are removed.
-Tests pass.
-Runtime is verified.
-Git history is preserved.
-18. DOCUMENTATION AUTHORITY
-
-Janavani documentation follows this hierarchy:
-
-JANAVANI NORTH STAR
-        â†“
-SOURCE OF TRUTH
-        â†“
-ARCHITECTURE
-        â†“
-PRODUCT LANDSCAPE
-        â†“
-ROADMAP
-        â†“
-PROJECT MAP
-        â†“
-RELEASE CHECKLIST
-        â†“
-CODE
-
-Each document answers a different question.
-
-North Star
-
-Why does Janavani exist?
-
-Source of Truth
-
-What architectural principles govern Janavani?
-
-Architecture
-
-How is the system structured?
-
-Product Landscape
-
-What can Janavani become?
-
-Roadmap
-
-What are we building and when?
-
-Project Map
-
-Where does the code live?
-
-Release Checklist
-
-What is actually complete?
-
-Code
-
-What is actually implemented?
-
-19. EXECUTION RULE
-
-From this point forward:
-
-One citizen journey before one new platform capability.
-
-Do not begin a new major feature while an existing citizen journey remains unreliable.
-
-20. CURRENT EXECUTION PRIORITY
-ðŸ”´ PRIORITY 1
-
-Complete and stabilize the Web MVP.
-
-Web
- â†“
-Issue
- â†“
-Document
- â†“
-Location
- â†“
-Office
- â†“
-Identity
- â†“
-Preview
- â†“
-Complaint
- â†“
-PDF
- â†“
-Download
-ðŸŸ  PRIORITY 2
-
-Make the shared complaint capability reliable across Telegram and Web.
-
-ðŸŸ¡ PRIORITY 3
-
-Testing, security, privacy, logging, and operational reliability.
-
-ðŸŸ¢ PRIORITY 4
-
-Evidence, tracking, follow-up, and escalation.
-
-ðŸ”µ PRIORITY 5
-
-AI assistance and multilingual capabilities.
-
-âšª PRIORITY 6
-
-Governance intelligence and the broader Janavani ecosystem.
-
-21. MVP DEFINITION
-
-The Janavani MVP is considered complete when a citizen can reliably:
-
-Describe a government-related problem.
-Select or receive the appropriate document type.
-Provide only the necessary information.
-Identify or receive a relevant authority.
-Review the resulting document.
-Select the appropriate identity mode.
-Generate a professional document.
-Download the document.
-Understand how to submit it.
-
-The MVP must work reliably through the current supported interface(s).
-
-22. NORTH STAR
-
-The immediate product is:
-
-Citizen Problem â†’ Government-Ready Document
-
-The long-term platform is:
-
-Citizen Reality â†’ Understanding â†’ Evidence â†’ Action â†’ Government Response â†’ Follow-up â†’ Accountability â†’ Public Learning
-
-The second objective must never cause us to neglect the first.
-
-23. CURRENT RULE
-BUILD THE PRODUCT BEFORE THE ECOSYSTEM.
-
-Do not build the future Janavani ecosystem before the core citizen journey is reliable.
-
-Every major development decision should ask:
-
-Does this help a citizen?
-Does this preserve privacy?
-Does this improve reliability?
-Does this reduce unnecessary complexity?
-Does this move Janavani toward the next verified milestone?
-
-If not, defer it.
-
-END
+ ↓
+Tracking
+ ↓
+Follow-up
+ ↓
+RTI / Appeal / Escalation where appropriate
+ ↓
+Outcome
+ ↓
+Feedback
+```
+
+## 14. WORKSTREAM L — ACCOUNTABILITY & PUBLIC LEARNING
+
+**Status: ARCHITECTURE / FOUNDATION**
+
+Potential capabilities:
+
+- Office/service feedback
+- Officer/service experience reporting
+- Representative information
+- Response-time and resolution signals
+- Government performance intelligence
+- Project/commitment tracking
+- Public dashboards
+- Positive governance recognition
+- Source-backed public learning
+
+Citizen reports must remain distinguishable from verified findings.
+
+## 15. WORKSTREAM M — AI / RAG / SLM / LLM / AGENTIC CAPABILITIES
+
+**Status: ARCHITECTURE / FOUNDATION**
+
+- AI provider abstraction
+- Local/SLM assessment
+- RAG with source provenance
+- Knowledge freshness policy
+- Structured outputs
+- Human approval gates
+- Tool permissions
+- AI failure fallback
+- Evaluation suite
+- Prompt/version registry
+- Hallucination/error reporting
+- Multilingual assistance
+
+AI should reduce bureaucratic burden without creating new uncertainty.
+
+## 16. WORKSTREAM N — IDENTITY, PRIVACY & SECURITY
+
+**Status: FOUNDATION / EXPANDING**
+
+- Optional account model
+- Anonymous workflows where appropriate
+- Consent
+- Cross-channel identity linking only with consent
+- Role/permission system
+- Access auditability
+- Data minimization
+- Retention controls
+- Evidence protection
+- Threat model
+- Abuse prevention
+- Security testing
+
+## 17. WORKSTREAM O — MULTILINGUAL & ACCESSIBILITY
+
+**Status: ARCHITECTURE**
+
+- English baseline
+- Indian-language architecture
+- Malayalam and other regional-language support
+- Manglish normalization
+- Voice where supported
+- Accessibility baseline
+- Low-bandwidth UX
+- Offline-capable workflows where required
+
+## 18. WORKSTREAM P — SOS & RESILIENT TRANSPORT
+
+**Status: ARCHITECTURE LOCKED / IMPLEMENTATION PROGRESSIVELY VERIFIED**
+
+Potential transport layers:
+
+- Internet
+- Local Bluetooth/Wi-Fi
+- Mesh / Reticulum / LoRa-class transport
+- Community relay/gateway
+- Satellite-capable transport
+
+Emergency capability requires stronger resilience, integrity, privacy, delivery-state, retry, and abuse controls than ordinary workflows.
+
+## 19. WORKSTREAM Q — EXPERT / VOLUNTEER / NGO / INSTITUTION ECOSYSTEM
+
+**Status: ARCHITECTURE**
+
+- Registration
+- Verification levels
+- Expertise registry
+- Review assignment
+- Conflict-of-interest controls
+- Reputation/quality safeguards
+- Institutional participation
+- Permission control
+
+## 20. WORKSTREAM R — OPERATIONS & DEPLOYMENT
+
+**Status: IN PROGRESS**
+
+- Independent runtimes
+- Deployment topology
+- Configuration management
+- CI/CD
+- Observability
+- Metrics
+- Health checks
+- Backup/recovery
+- Security scanning
+- Dependency management
+- Release evidence
+
+## 21. WORKSTREAM S — VERIFICATION & QUALITY
+
+**Status: CONTINUOUS**
+
+Every capability progresses through:
+
+```text
+VISION
+ ↓
+DESIGNED
+ ↓
+IMPLEMENTED
+ ↓
+FUNCTIONAL
+ ↓
+TESTED
+ ↓
+SECURITY-VERIFIED
+ ↓
+PRIVACY-VERIFIED
+ ↓
+PRODUCTION-READY
+```
+
+The Master Task Checklist is the control mechanism for this progression.
+
+## 22. CURRENT SEQUENCE
+
+The immediate sequence is not “finish MVP, then ecosystem.”
+
+It is:
+
+1. **Documentation and architectural convergence**
+2. **Capability registry and contracts**
+3. **Shared-platform/runtime convergence**
+4. **Dynamic Web foundation**
+5. **Expand and verify civic capabilities**
+6. **API and integration platform**
+7. **Telegram Mini App / WhatsApp / Messenger integrations**
+8. **Android and iOS applications**
+9. **DApp/Web3 capabilities where justified**
+10. **Governance intelligence, accountability, and public-learning layers**
+11. **Resilient/decentralized transport and advanced ecosystem capabilities**
+
+These streams can overlap when dependencies and verification permit.
+
+## 23. DEFINITION OF SUCCESS
+
+Janavani succeeds when citizens can use one coherent ecosystem across multiple independent interfaces to move from lived public problems to informed action, institutional response, follow-up, accountability, and public learning — while preserving privacy, provenance, user control, and system resilience.
+
+**The target is the ecosystem.**
