@@ -1,365 +1,113 @@
-# JANAVANI — FULL ECOSYSTEM CHARTER
+# 🇮🇳 JANAVANI — ECOSYSTEM CHARTER
 
-**Status:** LOCKED — CURRENT STRATEGIC IDENTITY
-**Version:** 2.0
-**Date:** 23 August 2026
-**Repository:** `netzen-abm/janavani`
+**Status:** LOCKED — CURRENT IDENTITY AND SCOPE  
+**Version:** 1.0  
+**Date:** 23 August 2026  
+**Authority:** Highest-level product identity document below the North Star
 
-## 1. PURPOSE
+## 1. WHAT JANAVANI IS
 
-This document establishes the current identity, scope, architecture, and development direction of Janavani.
+Janavani is a **full citizen-governance ecosystem** designed to reduce the distance between a citizen's lived public reality and informed, lawful, effective, accountable engagement with public institutions.
 
-It supersedes any older documentation that frames Janavani primarily as an MVP, a Telegram bot, a complaint generator, or a single-interface application.
+Janavani is **not** an MVP whose scope ends after one workflow, a Telegram bot, a website-only product, an AI chatbot, a PDF generator, a database product, a single cloud deployment, a blockchain product, or a single transport network. Existing working components are foundations inside the larger ecosystem.
 
-Those descriptions may remain useful as historical records of earlier development stages, but they are not the current strategic definition.
+## 2. PRODUCT DESTINATION
 
-## 2. WHAT JANAVANI IS
+The ecosystem is intended to provide independent access through Dynamic Web, Android, iOS, Telegram Bot, Telegram Mini App, WhatsApp, Messenger, public/partner APIs, DApp/Web3 capabilities, decentralized/resilient infrastructure where justified, offline/local capabilities where technically appropriate, mesh communication where appropriate, and satellite-capable communication where technically and legally supported.
 
-Janavani is a **full citizen-governance ecosystem** designed to help citizens understand public problems, access verified government information, prepare and execute lawful civic action, communicate with public institutions, track outcomes, contribute evidence and knowledge, and participate in transparent public accountability.
+These are product surfaces and capability access paths, not separate products with separate business logic.
 
-Janavani is not defined by a single interface, technology, database, AI model, or deployment.
-
-The durable product is the shared capability platform and the citizen-governance system built around it.
-
-## 3. THE CURRENT STRATEGIC OBJECTIVE
-
-We are building the ecosystem itself.
-
-We are **not building an MVP as the product objective**.
-
-Existing working functionality is treated as an implementation foundation and verification baseline. It is not a ceiling on scope.
-
-The engineering strategy is therefore:
+## 3. THE PRODUCT IS THE CAPABILITY PLATFORM
 
 ```text
-LOCK THE ECOSYSTEM ARCHITECTURE
-        ↓
-CONVERGE DOCUMENTATION
-        ↓
-CONVERGE SHARED PLATFORM CAPABILITIES
-        ↓
-BUILD AND VERIFY REAL CAPABILITIES
-        ↓
-EXPOSE THEM THROUGH INDEPENDENT INTERFACES
-        ↓
-HARDEN SECURITY / PRIVACY / OPERATIONS
-        ↓
-EXPAND THE ECOSYSTEM
+JANAVANI ECOSYSTEM
+        │
+Shared Capabilities + Trust/Data + Platform Services
+        │
+ ┌──────┼──────────┬─────────┬──────────┐
+ Web  Mobile   Messaging    API       DApp/Web3
+      Android/iOS TG/WA/Messenger
+        │
+Transport adapters: Internet / Local / Mesh / Satellite / Other
 ```
 
-## 4. ECOSYSTEM SURFACE
+Interfaces consume capabilities. Capabilities do not depend on an interface for their core logic.
 
-Janavani is intended to provide independent access through multiple surfaces:
-
-- Dynamic Web application
-- Android application
-- iOS application
-- Telegram Bot
-- Telegram Mini App
-- WhatsApp integration
-- Messenger integration
-- Public/partner API
-- DApp / Web3 interface where justified
-- Decentralized-capable transports and services
-- Future interfaces that conform to the platform contracts
-
-The list is a product-scope map, not a claim that every surface is already production-ready.
-
-## 5. ONE PLATFORM — MANY INTERFACES
-
-The canonical model is:
+## 4. CITIZEN-GOVERNANCE LIFECYCLE
 
 ```text
-                       JANAVANI PLATFORM
-                              │
-       ┌──────────────────────┼──────────────────────┐
-       │                      │                      │
-   CAPABILITIES            DATA / TRUST          TRANSPORT
-       │                      │                      │
-       └──────────────────────┼──────────────────────┘
-                              │
-                 ┌────────────┼────────────┐
-                 │            │            │
-                Web        Mobile       Messaging
-                 │          Android      Telegram
-                 │          iOS          WhatsApp
-                 │                       Messenger
-                 │
-                 └──── DApp / Web3 / API ────┘
+Citizen Reality → Understanding → Evidence/Context → Correct Authority
+→ Lawful Civic Action → Submission/Communication → Government Response
+→ Tracking → Follow-up/RTI/Appeal/Escalation → Outcome
+→ Accountability → Public Learning → Better Governance
 ```
 
-Every interface consumes shared Janavani capabilities.
+A particular implementation milestone may cover only part of this lifecycle. That does not redefine the product scope.
 
-No interface owns core business logic.
+## 5. CAPABILITY FAMILIES
 
-No interface is a required dependency of another interface.
+The ecosystem includes, progressively and subject to verification: identity/consent/user control; issue understanding; government authority intelligence; civic documents; evidence/provenance; submission and tracking; follow-up/RTI/appeal/escalation; schemes and benefits; laws/rules/bills/notifications/policy intelligence; citizen corrections; accountability; government performance and financial transparency; expert/volunteer/NGO/institution participation; multilingual/accessibility; OCR/vision/document understanding; AI/RAG/SLM/LLM/controlled agents; personal SOS and government alerts; mesh/satellite/resilient transport; DApp/Web3/decentralized capabilities; analytics and public learning.
 
-## 6. CAPABILITY-FIRST ARCHITECTURE
+## 6. LOCKED INDEPENDENCE RULES
 
-The platform is organized around reusable capabilities rather than around channels.
+- Web must not require Telegram to operate.
+- Telegram must not require Web to operate.
+- WhatsApp and Messenger are independent adapters.
+- Android and iOS are independent product surfaces.
+- AI-provider failure must not break non-AI capabilities.
+- Blockchain or decentralized-network failure must not break ordinary civic or SOS capabilities.
+- Satellite failure must never be represented as successful delivery.
+- No single storage provider is the universal architectural dependency.
 
-Core capability families include:
+## 7. AI POSITION
 
-- Citizen identity, consent, and user control
-- Issue understanding and classification
-- Government office and authority intelligence
-- Civic documents and document composition
-- Evidence capture, organization, and provenance
-- Submission and delivery
-- Case/complaint lifecycle and tracking
-- Follow-up and escalation
-- RTI and civic-legal workflows
-- Government schemes and benefits intelligence
-- Public policy / law / notification intelligence
-- Citizen feedback and corrections
-- Office and public-service accountability
-- Public representative information
-- Government performance and financial-transparency intelligence
-- Expert / volunteer / NGO / institution participation
-- Emergency / SOS capability
-- Multilingual and accessibility services
-- AI / RAG / SLM / LLM assistance
-- Analytics and public-learning systems
+AI is a **replaceable, purpose-bound capability**, not Janavani's identity or source of truth. It may assist with issue understanding, classification, drafting, retrieval, multilingual assistance, document understanding, evidence classification and other approved functions. It must not fabricate authorities, legal provisions, evidence, government actions or delivery states.
 
-Capabilities may be exposed through any compatible interface.
+## 8. PRIVACY, TRUST AND PROVENANCE
 
-## 7. AI IS OPTIONAL INFRASTRUCTURE
+Privacy by Design, Privacy by Default, minimum necessary collection, consent, user control, provenance, evidence protection, access control, retention discipline, auditability and abuse prevention are ecosystem invariants. Citizen-provided, authoritative, system-derived, expert-reviewed and AI-generated information must remain distinguishable.
 
-AI is a platform capability, not the identity of Janavani.
+## 9. DYNAMIC WEB AND CONSTRUCTION SEQUENCE
 
-AI must be replaceable and independently operable.
+The Dynamic Web is a **first-class product surface** and part of the full ecosystem. An incremental Web milestone may be used as an engineering construction unit, but it is never the product's final scope and must not be described as a separate MVP destination. A verified citizen flow is a construction sequence, not a reduction of ecosystem scope.
 
-The platform must remain functional for defined workflows when an AI provider is unavailable.
+## 10. DOCUMENTATION AUTHORITY
 
-AI outputs must preserve the distinction between:
-
-- Citizen-provided information
-- Verified authoritative information
-- System-derived information
-- AI-assisted suggestions
-- Unverified information
-
-AI must not fabricate facts, authorities, legal provisions, evidence, or government actions.
-
-## 8. PRIVACY AND SECURITY ARE SYSTEM INVARIANTS
-
-Privacy by Design and Privacy by Default apply across the entire ecosystem.
-
-Security is not an interface feature.
-
-The architecture must support:
-
-- Minimum necessary data collection
-- Consent and purpose control
-- Identity minimization
-- Data separation where appropriate
-- Secure evidence handling
-- Retention and deletion controls
-- Access control
-- Auditability
-- Threat modelling
-- Abuse prevention
-- Failure isolation
-
-Privacy and security requirements must be testable, not merely documented.
-
-## 9. DYNAMIC WEB
-
-The Web is a major product surface, not a temporary MVP shell.
-
-The dynamic website will progressively provide:
-
-- Citizen workflows
-- Account and consent controls
-- Government information discovery
-- Document creation
-- Evidence workflows
-- Tracking
-- Feedback
-- Governance intelligence
-- Public dashboards where appropriate
-- Multilingual and accessibility features
-- Integration with the same platform used by other interfaces
-
-## 10. MOBILE
-
-Android and iOS are first-class interfaces.
-
-They must consume the shared platform and must not depend on Telegram, WhatsApp, Web, or another interface for core functionality.
-
-The mobile architecture should support appropriate offline/low-bandwidth operation where required by the capability and transport contracts.
-
-## 11. TELEGRAM
-
-Telegram remains an important operational interface because it already contains a working citizen workflow.
-
-It is an interface, not the platform.
-
-The Telegram Bot and future Telegram Mini App must consume shared capabilities.
-
-The working Telegram flow should be protected from unnecessary refactoring while shared-platform convergence continues.
-
-## 12. WHATSAPP AND MESSENGER
-
-WhatsApp and Messenger are independent access channels.
-
-They must connect to Janavani capabilities through adapters/integration boundaries.
-
-Neither channel may become the owner of workflows, data, or business logic.
-
-## 13. DAPP / WEB3 / DECENTRALIZED CAPABILITY
-
-Web3 and decentralized technology are part of the ecosystem scope where they provide a real architectural or citizen benefit.
-
-Potential roles include:
-
-- Decentralized identity
-- Citizen-controlled credentials
-- Verifiable records
-- Decentralized evidence/provenance
-- Censorship-resilient communication
-- Community-operated infrastructure
-- Alternative storage/transport
-- DApp access to selected Janavani capabilities
-
-These technologies must be capability-driven rather than technology-driven.
-
-Blockchain, IPFS, Nostr, Nym, Reticulum, mesh, satellite, or other decentralized components must not be treated as mandatory dependencies for capabilities that do not require them.
-
-## 14. SOS / RESILIENT COMMUNICATION
-
-Emergency capability is part of the ecosystem architecture.
-
-The architecture may support Internet, local, mesh, gateway, and satellite transports according to capability requirements and regulatory/technical feasibility.
-
-Emergency functions must prioritize resilience, privacy, integrity, delivery state, and failure handling.
-
-## 15. CITIZEN-GOVERNMENT LIFECYCLE
-
-The ecosystem is designed around the full lifecycle, not document generation alone:
+When documents disagree, use:
 
 ```text
-Citizen Reality
-      ↓
-Understand
-      ↓
-Evidence / Context
-      ↓
-Correct Authority
-      ↓
-Lawful Civic Action
-      ↓
-Submission / Communication
-      ↓
-Government Response
-      ↓
-Tracking
-      ↓
-Follow-up / RTI / Escalation
-      ↓
-Outcome
-      ↓
-Feedback / Accountability
-      ↓
-Public Learning
-```
-
-## 16. GOVERNANCE INTELLIGENCE
-
-Janavani may progressively connect public information across:
-
-- Government departments
-- Local governments
-- Offices and services
-- Schemes and benefits
-- Laws, rules, bills, notifications, and policies
-- Public budgets and expenditure
-- Projects and implementation
-- Elected representatives
-- Citizen experience
-- Accountability and outcome data
-
-Public claims must use provenance and distinguish verified information from citizen reports, analysis, and AI assistance.
-
-## 17. STATUS LANGUAGE
-
-Every capability and document must distinguish among:
-
-`VISION`
-`DESIGNED`
-`IMPLEMENTED`
-`FUNCTIONAL`
-`TESTED`
-`SECURITY-VERIFIED`
-`PRIVACY-VERIFIED`
-`PRODUCTION-READY`
-`ARCHIVED`
-
-A capability is not considered complete merely because code, a prototype, or documentation exists.
-
-## 18. DOCUMENTATION AUTHORITY
-
-The documentation hierarchy is:
-
-```text
-JANAVANI ECOSYSTEM CHARTER
-        ↓
 NORTH STAR
-        ↓
+↓
+ECOSYSTEM CHARTER
+↓
 SOURCE OF TRUTH
-        ↓
+↓
 MASTER ARCHITECTURE
-        ↓
+↓
 PRODUCT LANDSCAPE
-        ↓
+↓
 ROADMAP
-        ↓
-CAPABILITY REGISTRY / CONTRACTS
-        ↓
-MASTER TASK CHECKLIST
-        ↓
-CODE / TESTS / DEPLOYMENT
+↓
+CAPABILITY REGISTRY / DATA CONTRACTS
+↓
+MASTER TASK CHECKLIST + STATUS REGISTER
+↓
+IMPLEMENTATION / TEST / DEPLOYMENT EVIDENCE
 ```
 
-Where documents conflict, the conflict must be explicitly reconciled. No silent interpretation is permitted.
+Historical audits and superseded plans remain evidence but do not override current canonical direction.
 
-## 19. ARCHIVE RULE
+## 11. STATUS DISCIPLINE
 
-Historical MVP documents, obsolete architectural proposals, superseded roadmaps, and experimental plans may be archived.
+```text
+VISION → DESIGNED → IMPLEMENTED → FUNCTIONAL → TESTED
+→ SECURITY-VERIFIED → PRIVACY-VERIFIED → PRODUCTION-READY
+```
 
-Archive rather than delete when historical context has value.
+Documentation or code existence alone never establishes production readiness.
 
-Before archiving:
+## 12. FINAL IDENTITY
 
-1. Identify the replacement/current document.
-2. Migrate active references.
-3. Verify no active dependency.
-4. Preserve the historical content in an archive path.
-5. Record the reason and date.
+> **Janavani is one full citizen-governance ecosystem, experienced through many independent interfaces, built from shared capabilities, governed by citizen control, evidence, provenance, privacy and resilience.**
 
-Deletion is a later, separately verified action and is not the default.
-
-## 20. DEVELOPMENT RULE
-
-Do not repeatedly rediscover the architecture.
-
-Before a new engineering task:
-
-1. Check the Ecosystem Charter.
-2. Check the North Star.
-3. Check Source of Truth.
-4. Check the Master Architecture.
-5. Check the capability registry.
-6. Check the Master Task Checklist and subtasks.
-7. Inspect the actual GitHub implementation.
-8. Make the smallest justified change.
-9. Test and verify.
-10. Update documentation when the architecture or capability state changes.
-
-## 21. FINAL DEFINITION
-
-**Janavani is a citizen-governance ecosystem: one shared, privacy-first, capability-oriented platform exposed through independent web, mobile, messaging, API, and decentralized-capable interfaces.**
-
-The objective is not to finish an MVP.
-
-The objective is to build, verify, and progressively operationalize the full ecosystem.
+The ecosystem is the destination. Individual milestones are construction steps within it.
