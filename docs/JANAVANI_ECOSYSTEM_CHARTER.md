@@ -1,8 +1,8 @@
 # 🇮🇳 JANAVANI — ECOSYSTEM CHARTER
 
 **Status:** LOCKED — CURRENT IDENTITY AND SCOPE  
-**Version:** 1.0  
-**Date:** 23 August 2026  
+**Version:** 1.1  
+**Date:** 24 August 2026  
 **Authority:** Highest-level product identity document below the North Star
 
 ## 1. WHAT JANAVANI IS
@@ -11,13 +11,33 @@ Janavani is a **full citizen-governance ecosystem** designed to reduce the dista
 
 Janavani is **not** an MVP whose scope ends after one workflow, a Telegram bot, a website-only product, an AI chatbot, a PDF generator, a database product, a single cloud deployment, a blockchain product, or a single transport network. Existing working components are foundations inside the larger ecosystem.
 
-## 2. PRODUCT DESTINATION
+## 2. CONSTITUTIONAL AND CIVIC FOUNDATION
 
-The ecosystem is intended to provide independent access through Dynamic Web, Android, iOS, Telegram Bot, Telegram Mini App, WhatsApp, Messenger, public/partner APIs, DApp/Web3 capabilities, decentralized/resilient infrastructure where justified, offline/local capabilities where technically appropriate, mesh communication where appropriate, and satellite-capable communication where technically and legally supported.
+Janavani operates within the constitutional and legal environment of India.
+
+The Preamble's **"We, the People of India"** framing is a foundational civic principle for citizen-centered design.
+
+The constitutional **Articles 14, 19 and 21** framework, commonly described as the "golden triangle", is relevant to equality, freedoms, life, personal liberty and privacy-sensitive design where applicable.
+
+**Article 51A** contains the Fundamental Duties of citizens. It may inform civic education and participation but is not a standalone authorization for Janavani to exercise public authority.
+
+The **Bharatiya Sakshya Adhiniyam (BSA)** is statutory evidence law and must not be described as constitutional text.
+
+Janavani is not a court, government authority, election authority, law-enforcement body, or substitute for qualified legal representation.
+
+## 3. PRODUCT DESTINATION
+
+The ecosystem is intended to provide independent access through Dynamic Web/WebApp, Android, iOS, Telegram Bot/app, Telegram Mini App, WhatsApp, Messenger, public/partner APIs, DApp/Web3 capabilities, decentralized/resilient infrastructure where justified, offline/local capabilities where technically appropriate, mesh communication where appropriate, and satellite-capable communication where technically and legally supported.
 
 These are product surfaces and capability access paths, not separate products with separate business logic.
 
-## 3. THE PRODUCT IS THE CAPABILITY PLATFORM
+## 4. USER CHOICE
+
+Citizens choose which supported interface and optional capability they use.
+
+AI, Web3/DApp, agentic automation, local AI, messaging, offline, mesh, decentralized and other optional capabilities must not be silently forced. Material safety, legal, destination, device, network and emergency constraints may limit available choices and must be explicit.
+
+## 5. THE PRODUCT IS THE CAPABILITY PLATFORM
 
 ```text
 JANAVANI ECOSYSTEM
@@ -31,9 +51,17 @@ Shared Capabilities + Trust/Data + Platform Services
 Transport adapters: Internet / Local / Mesh / Satellite / Other
 ```
 
-Interfaces consume capabilities. Capabilities do not depend on an interface for their core logic.
+Interfaces consume capabilities. Capabilities do not depend on interfaces for their core logic.
 
-## 4. CITIZEN-GOVERNANCE LIFECYCLE
+## 6. CAPABILITY AND MODEL INDEPENDENCE
+
+A user-facing capability is not the same thing as a model/runtime family.
+
+The ecosystem may use independently replaceable intelligence families including OCR, Computer Vision, SAM, VLM, SLM, LLM, MLM, MoE, LAM, RAG and controlled Agentic AI.
+
+A capability may use zero, one or multiple families. No single model/provider is a mandatory dependency for unrelated workflows.
+
+## 7. CITIZEN-GOVERNANCE LIFECYCLE
 
 ```text
 Citizen Reality → Understanding → Evidence/Context → Correct Authority
@@ -44,34 +72,41 @@ Citizen Reality → Understanding → Evidence/Context → Correct Authority
 
 A particular implementation milestone may cover only part of this lifecycle. That does not redefine the product scope.
 
-## 5. CAPABILITY FAMILIES
+## 8. LOCKED INDEPENDENCE RULES
 
-The ecosystem includes, progressively and subject to verification: identity/consent/user control; issue understanding; government authority intelligence; civic documents; evidence/provenance; submission and tracking; follow-up/RTI/appeal/escalation; schemes and benefits; laws/rules/bills/notifications/policy intelligence; citizen corrections; accountability; government performance and financial transparency; expert/volunteer/NGO/institution participation; multilingual/accessibility; OCR/vision/document understanding; AI/RAG/SLM/LLM/controlled agents; personal SOS and government alerts; mesh/satellite/resilient transport; DApp/Web3/decentralized capabilities; analytics and public learning.
-
-## 6. LOCKED INDEPENDENCE RULES
-
-- Web must not require Telegram to operate.
+- Web/WebApp must not require Telegram to operate.
 - Telegram must not require Web to operate.
 - WhatsApp and Messenger are independent adapters.
 - Android and iOS are independent product surfaces.
-- AI-provider failure must not break non-AI capabilities.
+- DApp/Web3 must be optional and must not be required for ordinary civic operation.
+- AI/model/provider failure must not break non-AI capabilities.
+- OCR/CV/VLM/SAM failure must not eliminate manual evidence paths where practical.
+- Agent runtime failure must not eliminate deterministic guided workflows where practical.
 - Blockchain or decentralized-network failure must not break ordinary civic or SOS capabilities.
 - Satellite failure must never be represented as successful delivery.
 - No single storage provider is the universal architectural dependency.
 
-## 7. AI POSITION
+## 9. AI POSITION
 
-AI is a **replaceable, purpose-bound capability**, not Janavani's identity or source of truth. It may assist with issue understanding, classification, drafting, retrieval, multilingual assistance, document understanding, evidence classification and other approved functions. It must not fabricate authorities, legal provisions, evidence, government actions or delivery states.
+AI is a **replaceable, purpose-bound capability**, not Janavani's identity or source of truth. It may assist with issue understanding, classification, drafting, retrieval, multilingual assistance, document understanding, evidence classification and other approved functions.
 
-## 8. PRIVACY, TRUST AND PROVENANCE
+AI must not fabricate authorities, legal provisions, evidence, government actions, emergency alerts, delivery acknowledgements or verification states.
 
-Privacy by Design, Privacy by Default, minimum necessary collection, consent, user control, provenance, evidence protection, access control, retention discipline, auditability and abuse prevention are ecosystem invariants. Citizen-provided, authoritative, system-derived, expert-reviewed and AI-generated information must remain distinguishable.
+## 10. PRIVACY, SAFETY, TRUST AND PROVENANCE
 
-## 9. DYNAMIC WEB AND CONSTRUCTION SEQUENCE
+**Privacy by Design, Privacy by Default, Safety by Design and Safety by Default** are ecosystem invariants.
 
-The Dynamic Web is a **first-class product surface** and part of the full ecosystem. An incremental Web milestone may be used as an engineering construction unit, but it is never the product's final scope and must not be described as a separate MVP destination. A verified citizen flow is a construction sequence, not a reduction of ecosystem scope.
+The system applies minimum necessary collection, consent, identity minimisation, user control, provenance, evidence protection, access control, retention discipline, auditability and abuse prevention.
 
-## 10. DOCUMENTATION AUTHORITY
+Citizen-provided, authoritative, system-derived, expert-reviewed and AI-generated information must remain distinguishable.
+
+## 11. DYNAMIC WEB AND CONSTRUCTION SEQUENCE
+
+The Dynamic Web is a **first-class product surface and the first active product-building surface**. An incremental Web milestone may be used as an engineering construction unit, but it is never the product's final scope and must not be described as a separate MVP destination.
+
+The Web must consume shared capabilities and must not become the architectural dependency for Android, iOS, messaging, DApp or API surfaces.
+
+## 12. DOCUMENTATION AUTHORITY
 
 When documents disagree, use:
 
@@ -79,6 +114,8 @@ When documents disagree, use:
 NORTH STAR
 ↓
 ECOSYSTEM CHARTER
+↓
+CONSTITUTIONAL GOVERNANCE
 ↓
 SOURCE OF TRUTH
 ↓
@@ -97,7 +134,7 @@ IMPLEMENTATION / TEST / DEPLOYMENT EVIDENCE
 
 Historical audits and superseded plans remain evidence but do not override current canonical direction.
 
-## 11. STATUS DISCIPLINE
+## 13. STATUS DISCIPLINE
 
 ```text
 VISION → DESIGNED → IMPLEMENTED → FUNCTIONAL → TESTED
@@ -106,8 +143,8 @@ VISION → DESIGNED → IMPLEMENTED → FUNCTIONAL → TESTED
 
 Documentation or code existence alone never establishes production readiness.
 
-## 12. FINAL IDENTITY
+## 14. FINAL IDENTITY
 
-> **Janavani is one full citizen-governance ecosystem, experienced through many independent interfaces, built from shared capabilities, governed by citizen control, evidence, provenance, privacy and resilience.**
+> **Janavani is one full citizen-governance ecosystem, experienced through many independent interfaces, built from shared capabilities, governed by citizen choice, constitutional/legal discipline, evidence, provenance, privacy, safety and resilience.**
 
 The ecosystem is the destination. Individual milestones are construction steps within it.
