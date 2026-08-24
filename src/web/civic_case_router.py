@@ -8,7 +8,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from src.core.civic_authority import AuthorityCandidate, AuthorityConfidence, resolve_authority
-from src.core.civic_case import CaseType, CivicCase
+from src.core.civic_case import CaseEventType, CaseType, CivicCase
 from src.core.civic_case_service import CivicCaseService
 from src.core.civic_document import CivicDocument, PartyRef
 from src.core.civic_evidence import EvidenceObject, EvidenceStatus, validate_evidence
@@ -80,16 +80,9 @@ def _get_case(case_id: str, policy_ref: str | None) -> CivicCase:
     return case
 
 
-def _save(case: CivicCase, policy_ref: str | None) -> None:
+def _service_mutation(case: CivicCase, policy: str, operation: str, mutation, event_type: CaseEventType = CaseEventType.EDITED):
     try:
-        _CASE_REPOSITORY.save(case, access_policy_ref=_policy(policy_ref))
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-
-
-def _service_transition(fn):
-    try:
-        return fn()
+        return _CASE_SERVICE.mutate(case, access_policy_ref=policy, occurred_at=_now_iso(), operation=operation, mutation=mutation, event_type=event_type, source_channel="canonical_api")
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
@@ -118,56 +111,53 @@ async def get_case(case_id: str, x_access_policy_ref: str | None = Header(defaul
 
 @router.post("/{case_id}/consent")
 async def add_consent(case_id: str, request: ConsentRequest, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     if request.consent_id not in case.consent_refs:
-        case.consent_refs.append(request.consent_id)
-    _save(case, x_access_policy_ref)
+        _service_mutation(case, policy, f"consent:{request.consent_id}", lambda c: c.consent_refs.append(request.consent_id))
     return {"case_id": case.case_id, "consent_refs": list(case.consent_refs)}
 
 
 @router.post("/{case_id}/authority")
 async def resolve_case_authority(case_id: str, request: AuthorityRequest, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     resolution = resolve_authority(case.case_id, [AuthorityCandidate(**request.model_dump())])
     if resolution.selected_office_id:
-        case.related_office_id = resolution.selected_office_id
-        _save(case, x_access_policy_ref)
+        _service_mutation(case, policy, f"authority:{resolution.selected_office_id}", lambda c: setattr(c, "related_office_id", resolution.selected_office_id))
     return {"case_id": case.case_id, "selected_office_id": resolution.selected_office_id, "verified": resolution.verified}
 
 
 @router.post("/{case_id}/evidence")
 async def add_evidence(case_id: str, request: EvidenceRequest, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     evidence = EvidenceObject(**request.model_dump(), status=EvidenceStatus.ACTIVE)
     try:
         validate_evidence(evidence)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if evidence.evidence_id not in case.evidence_refs:
-        case.evidence_refs.append(evidence.evidence_id)
-        _save(case, x_access_policy_ref)
+        _service_mutation(case, policy, f"evidence:{evidence.evidence_id}", lambda c: c.evidence_refs.append(evidence.evidence_id), CaseEventType.EVIDENCE_ADDED)
     return {"case_id": case.case_id, "evidence_id": evidence.evidence_id, "status": evidence.status.value}
 
 
 @router.post("/{case_id}/documents")
 async def create_document(case_id: str, request: DocumentCreateRequest, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     if request.document_id in _DOCUMENTS:
         raise HTTPException(status_code=409, detail="Document already exists")
-    document = CivicDocument(
-        document_id=request.document_id, document_type=request.document_type, title=request.title,
-        language=request.language, to_party=PartyRef(request.to_party_type, request.to_name),
-        subject=request.subject, body=request.body,
-    )
+    document = CivicDocument(document_id=request.document_id, document_type=request.document_type, title=request.title, language=request.language, to_party=PartyRef(request.to_party_type, request.to_name), subject=request.subject, body=request.body)
     _DOCUMENTS[document.document_id] = document
-    case.document_refs.append(document.document_id)
-    _save(case, x_access_policy_ref)
+    _service_mutation(case, policy, f"document:{document.document_id}", lambda c: c.document_refs.append(document.document_id))
     return {"case_id": case.case_id, "document_id": document.document_id, "status": document.status.value}
 
 
 @router.post("/{case_id}/documents/{document_id}/approve")
 async def approve_document(case_id: str, document_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     document = _DOCUMENTS.get(document_id)
     if document is None or document_id not in case.document_refs:
         raise HTTPException(status_code=404, detail="Document not found on case")
@@ -179,7 +169,12 @@ async def approve_document(case_id: str, document_id: str, x_access_policy_ref: 
 async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at=_now_iso()))
+    try:
+        event = _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at=_now_iso())
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value}
 
 
@@ -187,15 +182,14 @@ async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(defa
 async def submit_case(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at=_now_iso(), source_channel="canonical_api"))
+    try:
+        event = _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at=_now_iso(), source_channel="canonical_api")
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value, "acknowledged": False}
 
 
 def _serialize(case: CivicCase) -> dict[str, object]:
-    return {
-        "case_id": case.case_id, "case_type": case.case_type.value, "subject": case.subject,
-        "narrative": case.narrative, "created_by": case.created_by, "related_office_id": case.related_office_id,
-        "evidence_refs": list(case.evidence_refs), "document_refs": list(case.document_refs),
-        "consent_refs": list(case.consent_refs), "status": case.status.value,
-        "events": [{"event_id": e.event_id, "event_type": e.event_type.value, "occurred_at": e.occurred_at} for e in case.events],
-    }
+    return {"case_id": case.case_id, "case_type": case.case_type.value, "subject": case.subject, "narrative": case.narrative, "created_by": case.created_by, "related_office_id": case.related_office_id, "evidence_refs": list(case.evidence_refs), "document_refs": list(case.document_refs), "consent_refs": list(case.consent_refs), "status": case.status.value, "events": [{"event_id": e.event_id, "event_type": e.event_type.value, "occurred_at": e.occurred_at} for e in case.events]}
