@@ -14,7 +14,7 @@ class JanavaniSecurityAnchors:
     # Deterministic test/development trust-root placeholder in valid npub length
     # format. Replace with governed production public keys before live deployment.
     TRUSTED_DIRECTORY_SIGNERS: list[str] = [
-        "npub1janavani789xxyz0123456789abcdef0123456789abcdef012345678901"
+        "npub1janavani789xxyz0123456789abcdef0123456789abcdef01234567890"
     ]
 
     @classmethod
