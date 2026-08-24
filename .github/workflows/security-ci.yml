@@ -25,7 +25,7 @@ jobs:
     name: Isolated Component Validation Testing
     runs-on: ubuntu-latest
     needs: security-scan
-    
+
     steps:
       - name: Checkout Code Repository Base
         uses: actions/checkout@v4
@@ -35,17 +35,17 @@ jobs:
           echo "OPENROUTER_API_KEY=mock-verification-token" >> .env
           echo "HUGGINGFACE_API_KEY=mock-verification-token" >> .env
           docker compose up -d transient-memory-grid
-          
+
       - name: Set up Python Environment Pipeline
         uses: actions/setup-python@v5
         with:
-          python-python: '3.11'
+          python-version: '3.11'
           cache: 'pip'
 
-      - name: Install Testing Tool Stack
+      - name: Install Project Dependencies
         run: |
-          pip install --upgrade pip
-          pip install pytest fakeredis fastapi httpx pydantic pydantic-settings requests redis
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Execute Component Verification Engine Suite
         run: |
@@ -53,7 +53,7 @@ jobs:
           export REDIS_PORT=6379
           export OPENROUTER_API_KEY=mock-verification-token
           export HUGGINGFACE_API_KEY=mock-verification-token
-          pytest tests/ -v
+          python -m pytest tests/ -v
 
       - name: Tear Down Testing Environments
         if: always()
