@@ -46,6 +46,7 @@ class SupabaseCivicCaseRepository(CivicCaseRepository):
             .eq("case_id", case.case_id)
             .eq("access_policy_ref", access_policy_ref)
             .execute()
+        )
         if not result.data:
             raise PermissionError("Case not found or access policy mismatch")
         return case
