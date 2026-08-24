@@ -174,7 +174,7 @@ async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(defa
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value}
 
 
