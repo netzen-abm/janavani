@@ -15,7 +15,7 @@ from src.storage.civic_runtime_factory import build_civic_runtime
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 _CIVIC_RUNTIME = build_civic_runtime()
 _CASE_REPOSITORY = _CIVIC_RUNTIME.service.cases
-_CASE_SERVICE = _CIVIC_RUNTIME.service
+_CASE_SERVICE: CivicCaseService = _CIVIC_RUNTIME.service
 _DOCUMENTS: dict[str, CivicDocument] = {}
 
 
