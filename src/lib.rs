@@ -2,6 +2,8 @@
 //! This library provides modular, independent features for civic governance.
 //! Each sub-module is entirely decoupled and activated via specific Cargo features.
 
+pub mod client_contract;
+
 // ==========================================
 // 1. NOSTR PROTOCOL FEATURE (Identity)
 // ==========================================
