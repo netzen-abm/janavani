@@ -33,6 +33,7 @@ class CaseStatus(str, Enum):
 class CaseEventType(str, Enum):
     CREATED = "created"
     EDITED = "edited"
+    READY = "ready"
     EVIDENCE_ADDED = "evidence_added"
     SUBMITTED = "submitted"
     ACKNOWLEDGED = "acknowledged"
@@ -76,7 +77,7 @@ class CivicCase:
         if self.status not in {CaseStatus.DRAFT, CaseStatus.READY}:
             raise ValueError(f"Cannot mark {self.status.value} case ready")
         self.status = CaseStatus.READY
-        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.EDITED, occurred_at, actor_id, notes="case_ready"))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.READY, occurred_at, actor_id, notes="case_ready"))
 
     def submit(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.READY:
