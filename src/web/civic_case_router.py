@@ -10,13 +10,12 @@ from src.core.civic_case import CaseType, CivicCase
 from src.core.civic_case_service import CivicCaseService
 from src.core.civic_document import CivicDocument, PartyRef
 from src.core.civic_evidence import EvidenceObject, EvidenceStatus, validate_evidence
-from src.storage.repositories.civic_case_events import InMemoryCivicCaseEventRepository
-from src.storage.repositories.civic_case_repository import InMemoryCivicCaseRepository
+from src.storage.civic_runtime_factory import build_civic_runtime
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
-_CASE_REPOSITORY = InMemoryCivicCaseRepository()
-_EVENT_REPOSITORY = InMemoryCivicCaseEventRepository()
-_CASE_SERVICE = CivicCaseService(_CASE_REPOSITORY, _EVENT_REPOSITORY)
+_CIVIC_RUNTIME = build_civic_runtime()
+_CASE_REPOSITORY = _CIVIC_RUNTIME.service.cases
+_CASE_SERVICE = _CIVIC_RUNTIME.service
 _DOCUMENTS: dict[str, CivicDocument] = {}
 
 
@@ -174,10 +173,7 @@ async def approve_document(case_id: str, document_id: str, x_access_policy_ref: 
 async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    try:
-        event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at="api"))
-    except HTTPException:
-        raise
+    event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at="api"))
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value}
 
 
@@ -185,10 +181,7 @@ async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(defa
 async def submit_case(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    try:
-        event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at="api", source_channel="canonical_api"))
-    except HTTPException:
-        raise
+    event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at="api", source_channel="canonical_api"))
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value, "acknowledged": False}
 
 
