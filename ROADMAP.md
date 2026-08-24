@@ -1,10 +1,10 @@
 # 🇮🇳 JANAVANI — FULL ECOSYSTEM ROADMAP
 
-**Status:** ACTIVE — ECOSYSTEM BUILD
-**Version:** 2.0
-**Date:** 23 August 2026
+**Status:** ACTIVE — ECOSYSTEM BUILD  
+**Version:** 2.1  
+**Date:** 24 August 2026
 
-> Janavani is being built as a full citizen-governance ecosystem. The roadmap is therefore capability- and architecture-driven, not an MVP completion plan.
+> Janavani is being built as a full citizen-governance ecosystem. The roadmap is capability- and architecture-driven, not an MVP completion plan.
 
 ## 1. STRATEGIC DESTINATION
 
@@ -30,15 +30,21 @@ Accountability
 Public Learning
 ```
 
-The ecosystem must make this lifecycle increasingly usable across web, mobile, messaging, API, and decentralized-capable interfaces.
+The ecosystem must make this lifecycle increasingly usable across Web/WebApp, Android, iOS, messaging, API and decentralized-capable interfaces.
 
 ## 2. ROADMAP PRINCIPLES
 
 - Build the ecosystem, not an MVP.
 - Capabilities are primary; interfaces are access surfaces.
 - Preserve interface independence.
+- Let users choose optional capabilities and access surfaces.
+- No optional feature becomes an implicit architectural dependency.
 - AI is replaceable infrastructure, not the product identity.
-- Privacy, security, provenance, and consent are system invariants.
+- OCR/CV/SAM/VLM/SLM/LLM/MLM/MoE/LAM/RAG/Agentic AI are distinct model/intelligence families, not one mandatory pipeline.
+- Privacy by Design and Privacy by Default.
+- Safety by Design and Safety by Default.
+- Preserve provenance, consent, user control and truthful delivery states.
+- Constitutional/legal framing must remain accurate and source-disciplined.
 - Existing working capabilities are foundations, not limits on scope.
 - Archive obsolete designs rather than silently deleting history.
 - Verify implementation status from GitHub code/tests, not documentation alone.
@@ -50,17 +56,21 @@ The ecosystem must make this lifecycle increasingly usable across web, mobile, m
 
 - Ecosystem identity and charter
 - North Star reconciliation
+- Constitutional governance principles
 - Canonical Source of Truth
 - Master Architecture
 - Product Landscape
 - Capability Registry
+- User capability-choice model
 - Data contracts
 - Permission and consent contracts
 - Transport abstraction contracts
 - Failure/dependency matrix
 - Threat model
+- Privacy/safety model
 - Test strategy
 - Documentation authority and archival policy
+- Wiki/project/milestone synchronization with canonical docs
 
 ## 4. WORKSTREAM B — SHARED PLATFORM
 
@@ -82,18 +92,22 @@ Build and converge reusable platform capabilities across:
 - Analytics
 - Notification and delivery
 - API boundaries
+- Capability routing
+- Health/failure/degraded-state handling
+- Async job/event fabric and recovery
 
-The shared platform must remain independent of Telegram, Web, WhatsApp, Messenger, Android, iOS, and DApp presentation layers.
+The shared platform must remain independent of Telegram, Web, WhatsApp, Messenger, Android, iOS and DApp presentation layers.
 
-## 5. WORKSTREAM C — DYNAMIC WEB
+## 5. WORKSTREAM C — DYNAMIC WEB / WEBAPP
 
-**Status: ACTIVE BUILD**
+**Status: ACTIVE BUILD — FIRST PRODUCT-BUILDING SURFACE**
 
-The Web is a first-class product surface, not a temporary MVP shell.
+The Web is a first-class product surface, not a temporary MVP shell and not the platform dependency for other clients.
 
 Target capabilities include:
 
 - Dynamic citizen onboarding
+- User-controlled capability selection
 - Issue understanding
 - Guided civic workflows
 - Government information discovery
@@ -106,8 +120,15 @@ Target capabilities include:
 - Follow-up and escalation
 - Citizen history with privacy controls
 - Feedback and accountability views
-- Multilingual and accessibility support
 - Governance dashboards where appropriate
+- Multilingual and accessibility support
+- Optional AI/RAG/SLM/LLM/VLM/OCR/CV and controlled agentic features
+
+### First complete Web vertical slice
+
+`issue → understanding → authority → action/draft → evidence → review → submission/tracking`
+
+This is a construction and verification sequence, not a reduction of ecosystem scope.
 
 ## 6. WORKSTREAM D — MOBILE ECOSYSTEM
 
@@ -131,12 +152,13 @@ Potential shared mobile capabilities:
 - Case tracking
 - Emergency/SOS
 - Secure local state
+- Optional local AI
 
 ## 7. WORKSTREAM E — MESSAGING ECOSYSTEM
 
 **Status: EXISTING FOUNDATION + EXPANSION**
 
-### Telegram Bot
+### Telegram Bot / app
 
 Existing working interface; protect from unnecessary refactoring while shared capabilities converge.
 
@@ -152,7 +174,7 @@ Independent integration adapter.
 
 Independent integration adapter.
 
-The messaging layer is an access layer, not the platform core.
+Messaging is an access layer, not the platform core.
 
 ## 8. WORKSTREAM F — API & INTEGRATION PLATFORM
 
@@ -160,14 +182,14 @@ The messaging layer is an access layer, not the platform core.
 
 Build stable APIs and contracts for:
 
-- Web
+- Web/WebApp
 - Mobile
 - Messaging adapters
 - DApp/Web3 interfaces
 - Institutional integrations
 - Approved third-party applications
 
-API design must expose capabilities rather than interface-specific workflows.
+API design exposes capabilities rather than interface-specific workflows.
 
 ## 9. WORKSTREAM G — DAPP / WEB3 / DECENTRALIZED CAPABILITIES
 
@@ -185,7 +207,7 @@ Potential capabilities:
 - Censorship-resilient communication
 - Privacy-enhancing technologies
 
-Blockchain, IPFS, Nostr, Nym, and other technologies are tools. Each must have a demonstrated capability-level justification.
+Blockchain, IPFS, Nostr, Nym, Reticulum and other technologies are tools. Each must have a demonstrated capability-level justification and must not become a mandatory dependency for unrelated workflows.
 
 ## 10. WORKSTREAM H — CIVIC DOCUMENT ECOSYSTEM
 
@@ -205,8 +227,6 @@ Document families:
 - Whistleblower
 - Other lawful civic communications
 
-The target is one reusable document-composition architecture, not disconnected generators.
-
 ## 11. WORKSTREAM I — EVIDENCE & KNOWLEDGE
 
 **Status: PLANNED / FOUNDATION**
@@ -214,6 +234,8 @@ The target is one reusable document-composition architecture, not disconnected g
 - Photo/video/document evidence
 - Voice evidence where appropriate
 - OCR and document understanding
+- Computer Vision
+- VLM/SAM-assisted analysis where appropriate
 - Evidence metadata
 - Provenance
 - Verification status
@@ -282,11 +304,28 @@ Potential capabilities:
 
 Citizen reports must remain distinguishable from verified findings.
 
-## 15. WORKSTREAM M — AI / RAG / SLM / LLM / AGENTIC CAPABILITIES
+## 15. WORKSTREAM M — AI / INTELLIGENCE FABRIC
 
 **Status: ARCHITECTURE / FOUNDATION**
 
-- AI provider abstraction
+Model/intelligence families are independently replaceable capabilities behind contracts:
+
+- OCR
+- Computer Vision (CV)
+- SAM / segmentation
+- VLM
+- SLM
+- LLM
+- MLM
+- MoE
+- LAM
+- RAG
+- Agentic AI
+- Translation/speech/multimodal services
+
+Requirements:
+
+- Provider/model abstraction
 - Local/SLM assessment
 - RAG with source provenance
 - Knowledge freshness policy
@@ -298,8 +337,9 @@ Citizen reports must remain distinguishable from verified findings.
 - Prompt/version registry
 - Hallucination/error reporting
 - Multilingual assistance
+- Deterministic/degraded path for critical workflows
 
-AI should reduce bureaucratic burden without creating new uncertainty.
+AI should reduce bureaucratic burden without creating new uncertainty or becoming the sole source of truth.
 
 ## 16. WORKSTREAM N — IDENTITY, PRIVACY & SECURITY
 
@@ -316,6 +356,10 @@ AI should reduce bureaucratic burden without creating new uncertainty.
 - Evidence protection
 - Threat model
 - Abuse prevention
+- Privacy by Design
+- Privacy by Default
+- Safety by Design
+- Safety by Default
 - Security testing
 
 ## 17. WORKSTREAM O — MULTILINGUAL & ACCESSIBILITY
@@ -373,6 +417,8 @@ Emergency capability requires stronger resilience, integrity, privacy, delivery-
 - Security scanning
 - Dependency management
 - Release evidence
+- Failure-injection testing
+- Queue/DLQ observability
 
 ## 21. WORKSTREAM S — VERIFICATION & QUALITY
 
@@ -406,22 +452,23 @@ The immediate sequence is not “finish MVP, then ecosystem.”
 
 It is:
 
-1. **Documentation and architectural convergence**
-2. **Capability registry and contracts**
+1. **Canonical documentation + constitutional governance convergence**
+2. **Capability registry, dependency matrix and contracts**
 3. **Shared-platform/runtime convergence**
-4. **Dynamic Web foundation**
+4. **Dynamic Web/WebApp foundation and first complete vertical slice**
 5. **Expand and verify civic capabilities**
 6. **API and integration platform**
 7. **Telegram Mini App / WhatsApp / Messenger integrations**
 8. **Android and iOS applications**
 9. **DApp/Web3 capabilities where justified**
-10. **Governance intelligence, accountability, and public-learning layers**
-11. **Resilient/decentralized transport and advanced ecosystem capabilities**
+10. **AI/intelligence fabric expansion and model independence**
+11. **Governance intelligence, accountability and public-learning layers**
+12. **Resilient/decentralized transport and advanced ecosystem capabilities**
 
 These streams can overlap when dependencies and verification permit.
 
 ## 23. DEFINITION OF SUCCESS
 
-Janavani succeeds when citizens can use one coherent ecosystem across multiple independent interfaces to move from lived public problems to informed action, institutional response, follow-up, accountability, and public learning — while preserving privacy, provenance, user control, and system resilience.
+Janavani succeeds when citizens can use one coherent ecosystem across multiple independent interfaces to move from lived public problems to informed action, institutional response, follow-up, accountability and public learning — while preserving privacy, safety, provenance, user control, constitutional/legal discipline and system resilience.
 
 **The target is the ecosystem.**
