@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
@@ -94,6 +96,10 @@ def _service_transition(fn):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 @router.post("")
 async def create_case(request: CaseCreateRequest, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
@@ -173,7 +179,7 @@ async def approve_document(case_id: str, document_id: str, x_access_policy_ref: 
 async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at="api"))
+    event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at=_now_iso()))
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value}
 
 
@@ -181,7 +187,7 @@ async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(defa
 async def submit_case(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
     policy = _policy(x_access_policy_ref)
     case = _get_case(case_id, policy)
-    event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at="api", source_channel="canonical_api"))
+    event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at=_now_iso(), source_channel="canonical_api"))
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value, "acknowledged": False}
 
 
