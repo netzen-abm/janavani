@@ -25,15 +25,17 @@ def test_canonical_platform_endpoints() -> None:
 
 
 def test_canonical_domain_route_prefixes() -> None:
-    routes = {route.path for route in app.routes}
+    """Verify published canonical API paths through FastAPI's OpenAPI surface."""
+    client = TestClient(app)
+    paths = set(client.get("/openapi.json").json()["paths"])
 
-    assert "/api/v1/feedback/submit" in routes
-    assert "/api/v1/feedback/summary/{office_id}" in routes
-    assert "/api/v1/legislative/directory/{constituency_code}" in routes
-    assert "/api/v1/legislative/dispatch-email" in routes
-    assert "/api/v1/constitutional/bill/{bill_code}" in routes
-    assert "/api/v1/constitutional/generate-objection" in routes
-    assert "/api/v1/land/compile-kml" in routes
+    assert "/api/v1/feedback/submit" in paths
+    assert "/api/v1/feedback/summary/{office_id}" in paths
+    assert "/api/v1/legislative/directory/{constituency_code}" in paths
+    assert "/api/v1/legislative/dispatch-email" in paths
+    assert "/api/v1/constitutional/bill/{bill_code}" in paths
+    assert "/api/v1/constitutional/generate-objection" in paths
+    assert "/api/v1/land/compile-kml" in paths
 
 
 def test_legacy_app_is_not_imported_by_canonical_assembly() -> None:
