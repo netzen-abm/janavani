@@ -14,6 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout diagnostics
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          git status --short
+          git ls-files -s src/storage/repositories/supabase_civic_case_repository.py
+          sha256sum src/storage/repositories/supabase_civic_case_repository.py
+          sed -n '35,55p' src/storage/repositories/supabase_civic_case_repository.py
+          python -m py_compile src/storage/repositories/supabase_civic_case_repository.py
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
