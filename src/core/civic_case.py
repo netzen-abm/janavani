@@ -73,7 +73,7 @@ class CivicCase:
         if not self.subject.strip() or not self.narrative.strip():
             raise ValueError("A ready case requires a subject and narrative")
         if not self.consent_refs:
-            raise PermissionError("Submission consent is required before a case can be ready")
+            raise ValueError("Submission consent is required before a case can be ready")
         if self.status not in {CaseStatus.DRAFT, CaseStatus.READY}:
             raise ValueError(f"Cannot mark {self.status.value} case ready")
         self.status = CaseStatus.READY
