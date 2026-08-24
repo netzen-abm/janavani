@@ -32,3 +32,36 @@ jobs:
           OPENROUTER_API_KEY: mock-verification-token
           HUGGINGFACE_API_KEY: mock-verification-token
         run: bash ./run_all_tests.sh
+
+      - name: Build canonical Docker image
+        run: docker build --file Dockerfile --tag janavani-ci:canonical .
+
+      - name: Start canonical container
+        run: |
+          docker run --detach --rm --name janavani-ci \
+            --publish 8000:8000 \
+            --env JANAVANI_CIVIC_STORAGE=memory \
+            janavani-ci:canonical
+
+      - name: Smoke test canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/liveness >/tmp/liveness.json; then
+              break
+            fi
+            sleep 1
+          done
+          test "$(python -c 'import json; print(json.load(open("/tmp/liveness.json"))["status"])')" = "ok"
+          curl --fail --silent http://127.0.0.1:8000/version >/tmp/version.json
+          test "$(python -c 'import json; print(json.load(open("/tmp/version.json"))["version"])')" = "canonical-m3"
+          curl --fail --silent http://127.0.0.1:8000/openapi.json >/tmp/openapi.json
+          python -c 'import json; d=json.load(open("/tmp/openapi.json")); assert "/civic/cases" in d["paths"]'
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Stop canonical container
+        if: always()
+        run: docker stop janavani-ci || true
