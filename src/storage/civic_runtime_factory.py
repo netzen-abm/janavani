@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.core.civic_case_service import CivicCaseService
+from src.config.supabase import build_supabase_client
 from src.storage.civic_repository_factory import build_civic_case_repository
 from src.storage.repositories.civic_case_events import CivicCaseEventRepository, InMemoryCivicCaseEventRepository
 from src.storage.repositories.supabase_civic_case_events import SupabaseCivicCaseEventRepository
@@ -20,6 +21,10 @@ class CivicRuntime:
 
 def build_civic_runtime(*, supabase_client: Any | None = None) -> CivicRuntime:
     mode = os.getenv("JANAVANI_CIVIC_STORAGE", "memory").lower()
+
+    if mode == "supabase" and supabase_client is None:
+        supabase_client = build_supabase_client()
+
     cases = build_civic_case_repository(supabase_client=supabase_client)
 
     if mode != "supabase":
