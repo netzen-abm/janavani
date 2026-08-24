@@ -8,7 +8,7 @@ from src.storage.repositories.supabase_civic_case_repository import SupabaseCivi
 
 class FakeQuery:
     def __init__(self, rows=None):
-        self.rows = rows or []
+        self.rows = rows if rows is not None else []
 
     def insert(self, payload):
         self.rows.append(payload)
