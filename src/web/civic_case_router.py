@@ -7,12 +7,16 @@ from pydantic import BaseModel, Field
 
 from src.core.civic_authority import AuthorityCandidate, AuthorityConfidence, resolve_authority
 from src.core.civic_case import CaseType, CivicCase
+from src.core.civic_case_service import CivicCaseService
 from src.core.civic_document import CivicDocument, PartyRef
 from src.core.civic_evidence import EvidenceObject, EvidenceStatus, validate_evidence
+from src.storage.repositories.civic_case_events import InMemoryCivicCaseEventRepository
 from src.storage.repositories.civic_case_repository import InMemoryCivicCaseRepository
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 _CASE_REPOSITORY = InMemoryCivicCaseRepository()
+_EVENT_REPOSITORY = InMemoryCivicCaseEventRepository()
+_CASE_SERVICE = CivicCaseService(_CASE_REPOSITORY, _EVENT_REPOSITORY)
 _DOCUMENTS: dict[str, CivicDocument] = {}
 
 
@@ -80,6 +84,15 @@ def _save(case: CivicCase, policy_ref: str | None) -> None:
         _CASE_REPOSITORY.save(case, access_policy_ref=_policy(policy_ref))
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+def _service_transition(fn):
+    try:
+        return fn()
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("")
@@ -159,23 +172,23 @@ async def approve_document(case_id: str, document_id: str, x_access_policy_ref: 
 
 @router.post("/{case_id}/ready")
 async def mark_ready(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     try:
-        event = case.mark_ready(event_id=f"ready:{case_id}", occurred_at="api")
-    except (ValueError, PermissionError) as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    _save(case, x_access_policy_ref)
+        event = _service_transition(lambda: _CASE_SERVICE.mark_ready(case, access_policy_ref=policy, occurred_at="api"))
+    except HTTPException:
+        raise
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value}
 
 
 @router.post("/{case_id}/submit")
 async def submit_case(case_id: str, x_access_policy_ref: str | None = Header(default=None)) -> dict[str, object]:
-    case = _get_case(case_id, x_access_policy_ref)
+    policy = _policy(x_access_policy_ref)
+    case = _get_case(case_id, policy)
     try:
-        event = case.submit(event_id=f"submit:{case_id}", occurred_at="api", source_channel="canonical_api")
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    _save(case, x_access_policy_ref)
+        event = _service_transition(lambda: _CASE_SERVICE.submit(case, access_policy_ref=policy, occurred_at="api", source_channel="canonical_api"))
+    except HTTPException:
+        raise
     return {"case_id": case.case_id, "status": case.status.value, "event": event.event_type.value, "acknowledged": False}
 
 
