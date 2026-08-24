@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
+from src.core.civic_case import CaseStatus, CaseType, CivicCase
 from src.storage.repositories.civic_case_repository import CivicCaseRepository
 
 
