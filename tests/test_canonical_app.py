@@ -1,4 +1,4 @@
-"""M3-D.4 canonical FastAPI assembly verification."""
+"""Canonical FastAPI assembly verification."""
 
 from fastapi.testclient import TestClient
 
@@ -25,7 +25,6 @@ def test_canonical_platform_endpoints() -> None:
 
 
 def test_canonical_domain_route_prefixes() -> None:
-    """Verify published canonical API paths through FastAPI's OpenAPI surface."""
     client = TestClient(app)
     paths = set(client.get("/openapi.json").json()["paths"])
 
@@ -36,6 +35,7 @@ def test_canonical_domain_route_prefixes() -> None:
     assert "/api/v1/constitutional/bill/{bill_code}" in paths
     assert "/api/v1/constitutional/generate-objection" in paths
     assert "/api/v1/land/compile-kml" in paths
+    assert "/civic/cases" in paths
 
 
 def test_legacy_app_is_not_imported_by_canonical_assembly() -> None:
