@@ -9,6 +9,8 @@ This document records the shared infrastructure skeleton introduced during repos
 
 Janavani is a capability-first ecosystem with independent access surfaces. The shared platform provides stable contracts and reusable infrastructure; it must not turn one interface into a runtime dependency of another.
 
+**Important terminology:** "optional" describes **user activation/participation**, not whether the ecosystem possesses the capability. A capability may be implemented and available to the ecosystem while a particular user chooses not to enable or use it. User choice must not remove the capability from the system or make it unavailable to other users.
+
 The canonical architecture places independent interfaces above shared Janavani capabilities and identifies `src/adapters/` as the external integration layer, with domain, workflow, service, document and storage layers underneath.
 
 ## Initial foundation
@@ -43,9 +45,35 @@ CapabilityResult
 
 Clients should depend on the contract, not on another client or a provider-specific implementation.
 
+## Capability availability versus user activation
+
+The ecosystem-level model is:
+
+```text
+Capability exists in Janavani
+          |
+          +---- available to eligible users
+          |
+          +---- user may enable/use it
+          |
+          +---- user may decline/disable it
+          |
+          +---- unrelated capabilities continue working
+```
+
+Therefore these terms must be distinguished in code, APIs and documentation:
+
+- **Available:** capability is implemented and exposed by the ecosystem.
+- **Enabled:** capability is active for a particular user/account/device according to policy.
+- **Used:** user has invoked the capability for a specific task.
+- **Unavailable:** capability cannot currently execute because implementation, configuration, permission, transport, provider or service health prevents execution.
+- **Degraded:** capability remains present but some execution path/provider is unavailable.
+
+A user's choice not to use AI, Web3, mesh, blockchain, a messaging channel or another feature must **not** be interpreted as the capability being absent from Janavani.
+
 ## Failure isolation
 
-A capability result has an explicit status and optional error code. Implementations must define degraded behavior where the underlying capability is optional or replaceable.
+A capability result has an explicit status and optional error code. Implementations must define degraded behavior where an execution path, provider or transport is unavailable.
 
 A transport outage must not become a domain outage.
 
@@ -53,7 +81,34 @@ An AI-provider outage must not become a basic civic-workflow outage.
 
 A storage-provider migration must not require rewriting interfaces.
 
-A DApp/Web3 integration must not become a mandatory dependency for Web, Android, iOS or messaging surfaces unless a future architectural decision explicitly establishes that requirement.
+A DApp/Web3 integration must not become a mandatory dependency for Web, Android, iOS or messaging surfaces merely because those technologies are present in the ecosystem.
+
+## User-choice model
+
+User choice is a policy/permission layer above capability availability:
+
+```text
+                 JANAVANI CAPABILITY
+                         |
+              +----------+----------+
+              |                     |
+          capability              policy
+           exists              + consent
+              |                     |
+              +----------+----------+
+                         |
+                   user/device
+                     settings
+                         |
+             +-----------+-----------+
+             |                       |
+          enabled                 declined
+             |                       |
+       capability can run      capability remains
+                               implemented/available
+```
+
+The implementation must never remove a shared capability merely because one interface or user has not selected it.
 
 ## Adapter model
 
