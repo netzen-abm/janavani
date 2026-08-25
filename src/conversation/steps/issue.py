@@ -5,9 +5,8 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
 from platform.capability_adapter import dispatch_transport_message
-from platform.registry import CapabilityRegistry
+from platform.capabilities import build_capability_registry
 from platform.transport import TransportMessage
-from capabilities.complaint import ComplaintCapability
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -16,8 +15,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
     session = get_session(user_id)
 
-    registry = CapabilityRegistry()
-    registry.register(ComplaintCapability())
+    registry = build_capability_registry()
     message = TransportMessage(
         transport="telegram",
         message_id=str(update.message.message_id),
