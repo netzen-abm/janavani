@@ -1,0 +1,80 @@
+import subprocess
+
+from flask import Flask
+
+from core.config import Config
+from database.supabase import supabase
+
+app = Flask(__name__)
+
+
+@app.route("/")
+def home():
+    return """
+    <h1>🇮🇳 Janavani</h1>
+    <h2>Citizen Governance Platform</h2>
+    <p>✅ Flask Running</p>
+    <ul>
+        <li><a href="/health">Health Check</a></li>
+        <li><a href="/supabase">Supabase Test</a></li>
+    </ul>
+    """
+
+
+@app.route("/health")
+def health():
+    return {
+        "status": "healthy",
+        "database": "connected" if supabase else "not configured",
+    }
+
+
+@app.route("/supabase")
+def supabase_test():
+    if supabase is None:
+        return {
+            "status": "error",
+            "message": "Supabase is not configured.",
+        }, 500
+
+    try:
+        response = (
+            supabase
+            .table("offices")
+            .select("*")
+            .limit(5)
+            .execute()
+        )
+        return {
+            "status": "connected",
+            "count": len(response.data),
+            "rows": response.data,
+        }
+    except Exception as exc:
+        return {
+            "status": "failed",
+            "error": str(exc),
+        }, 500
+
+
+if __name__ == "__main__":
+    print("=" * 50)
+    print("Starting Janavani Web Server")
+    print("=" * 50)
+    print("Starting Telegram Bot...")
+
+    bot_process = subprocess.Popen(
+        ["python3", "-u", "src/bot_telegram.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    print(f"Telegram Bot PID: {bot_process.pid}")
+    print("Telegram Bot Started")
+
+    app.run(
+        host="0.0.0.0",
+        port=Config.PORT,
+        debug=False,
+    )
