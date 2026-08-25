@@ -39,6 +39,8 @@ DocumentEngine
         v
 StructuredDocument
         |
+        +--> optional legal-analysis enrichment
+        |
         +--> renderer (PDF/DOCX/etc.)
         |
         v
@@ -63,7 +65,13 @@ Supported document types currently exposed by the contract are complaint, RTI, p
 
 It does not render PDF/DOCX and does not perform channel delivery.
 
-The existing legal-analysis function is retained as an enrichment layer. It must not be interpreted as official legal authority. Future AI/RAG implementations must remain replaceable and provenance-aware.
+## Optional legal enrichment
+
+`src/documents/legal_enrichment.py` is a new capability boundary introduced during this convergence. It defines a small `LegalEnricher` protocol and a deterministic `NoOpLegalEnricher` fallback.
+
+Legal enrichment is explicitly best-effort. If no enricher is supplied, or an enricher fails, document composition continues with `legal_analysis=None`. The structured document provenance records whether enrichment was available.
+
+This prevents legacy legal rules, AI providers, RAG systems or future legal-analysis implementations from becoming hard dependencies of deterministic document composition. Enrichment output is analysis metadata and is not an authoritative legal determination.
 
 ## Failure isolation
 
@@ -71,7 +79,7 @@ Document composition must remain available without Telegram, Web, WhatsApp, Mess
 
 Rendering and delivery failures must not corrupt the underlying structured draft.
 
-AI/provider failure must not become an unnecessary dependency for deterministic document construction.
+AI/provider/legal-enrichment failure must not become an unnecessary dependency for deterministic document construction.
 
 ## Archive-first migration rule
 
@@ -94,7 +102,7 @@ Before promoting this capability beyond `IMPLEMENTATION` / `VERIFYING`, test:
 5. DOCX rendering;
 6. artifact metadata/content type;
 7. channel-independent invocation;
-8. operation when optional AI enrichment is unavailable;
+8. operation when optional legal/AI enrichment is unavailable;
 9. no cross-channel imports from document core;
 10. migration compatibility for existing callers.
 
