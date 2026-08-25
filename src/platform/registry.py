@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from platform.contracts import CapabilityHandler
+from .contracts import CapabilityHandler
 
 
 class CapabilityRegistry:
