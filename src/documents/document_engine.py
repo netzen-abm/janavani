@@ -1,57 +1,21 @@
-"""
-Document Engine
+"""Canonical entry point for channel-neutral civic document composition."""
 
-Central entry point for all document generation.
+from __future__ import annotations
 
-Supported document types:
-
-- Complaint
-- RTI
-- Petition
-- Grievance
-
-Additional document types can be registered
-without changing conversation logic.
-"""
-
-from documents.complaint_builder import ComplaintBuilder
+from documents.complaint_builder import build_complaint
+from documents.document_contract import DocumentRequest, StructuredDocument
 
 
 class DocumentEngine:
-    """
-    Builds structured legal documents.
+    """Compose structured documents without owning rendering or delivery."""
 
-    This class acts as the public interface
-    between the Workflow Engine and the
-    individual document builders.
-    """
-
-    def __init__(self):
-        self.complaint_builder = ComplaintBuilder()
-
-    def generate(
-        self,
-        document_type: str,
-        **kwargs,
-    ):
-        """
-        Generate a document.
-
-        Parameters
-        ----------
-        document_type
-
-            complaint
-            rti
-            petition
-            grievance
-        """
-
-        document_type = document_type.lower()
-
-        if document_type == "complaint":
-            return self.complaint_builder.build(**kwargs)
-
-        raise ValueError(
-            f"Unsupported document type: {document_type}"
-        )
+    def generate(self, request: DocumentRequest) -> StructuredDocument:
+        if request.document_type == "complaint":
+            return build_complaint(
+                user_name=request.user_name,
+                user_address=request.user_address,
+                office_id=request.office_id,
+                issue_text=request.issue_text,
+                language=request.language,
+            )
+        raise ValueError(f"Unsupported document type: {request.document_type}")
