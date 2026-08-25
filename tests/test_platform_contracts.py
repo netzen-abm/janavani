@@ -1,5 +1,5 @@
-from platform.contracts import CapabilityRequest, CapabilityResult
-from platform.registry import CapabilityRegistry
+from src.platform.contracts import CapabilityRequest, CapabilityResult
+from src.platform.registry import CapabilityRegistry
 
 
 class FakeCapability:
