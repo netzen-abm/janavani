@@ -2,7 +2,7 @@
 
 **Status:** IMPLEMENTATION / VERIFYING  
 **Date:** 25 August 2026  
-**Scope:** Canonical document composition and future rendering/delivery integration
+**Scope:** Canonical document composition, pluggable rendering, and future delivery integration
 
 ## Purpose
 
@@ -41,7 +41,10 @@ StructuredDocument
         |
         +--> optional legal-analysis enrichment
         |
-        +--> renderer (PDF/DOCX/etc.)
+        +--> renderer contract
+        |       +--> PDF adapter
+        |       +--> DOCX adapter
+        |       +--> future format adapters
         |
         v
 channel-specific delivery adapter
@@ -57,6 +60,10 @@ No channel should own civic document composition or file rendering.
 - `StructuredDocument` — channel-neutral composed document.
 - `DocumentArtifact` — rendered artifact with format and media type.
 
+`src/documents/renderer.py` defines the technology-neutral `DocumentRenderer` protocol.
+
+`src/documents/renderers.py` defines `RendererRegistry`, allowing output formats to be registered and replaced without changing builders or clients.
+
 Supported document types currently exposed by the contract are complaint, RTI, petition and grievance. Only complaint composition is implemented in this convergence step. The registry remains authoritative for capability completion status.
 
 ## Complaint implementation
@@ -69,9 +76,25 @@ It does not render PDF/DOCX and does not perform channel delivery.
 
 `src/documents/legal_enrichment.py` is a new capability boundary introduced during this convergence. It defines a small `LegalEnricher` protocol and a deterministic `NoOpLegalEnricher` fallback.
 
-Legal enrichment is explicitly best-effort. If no enricher is supplied, or an enricher fails, document composition continues with `legal_analysis=None`. The structured document provenance records whether enrichment was available.
+Legal enrichment is explicitly best-effort. If no enricher is supplied, or an enricher fails, document composition continues with `legal_analysis=None`.
 
 This prevents legacy legal rules, AI providers, RAG systems or future legal-analysis implementations from becoming hard dependencies of deterministic document composition. Enrichment output is analysis metadata and is not an authoritative legal determination.
+
+## Renderer plug-in model
+
+Rendering is deliberately separate from composition:
+
+```text
+StructuredDocument
+       |
+       +--> PDF renderer
+       +--> DOCX renderer
+       +--> HTML renderer (future)
+       +--> signed package renderer (future)
+       +--> Web3-verifiable package (future)
+```
+
+`RendererRegistry` resolves a renderer by its declared format. A future format must implement the renderer contract, register itself, add tests, and update this documentation. Client code must not need to know how a format is produced.
 
 ## Failure isolation
 
@@ -80,6 +103,8 @@ Document composition must remain available without Telegram, Web, WhatsApp, Mess
 Rendering and delivery failures must not corrupt the underlying structured draft.
 
 AI/provider/legal-enrichment failure must not become an unnecessary dependency for deterministic document construction.
+
+A missing renderer is an explicit capability error; it must not silently substitute an unrelated format.
 
 ## Archive-first migration rule
 
@@ -101,10 +126,11 @@ Before promoting this capability beyond `IMPLEMENTATION` / `VERIFYING`, test:
 4. PDF rendering;
 5. DOCX rendering;
 6. artifact metadata/content type;
-7. channel-independent invocation;
-8. operation when optional legal/AI enrichment is unavailable;
-9. no cross-channel imports from document core;
-10. migration compatibility for existing callers.
+7. renderer registry and unknown-format behavior;
+8. channel-independent invocation;
+9. operation when optional legal/AI enrichment is unavailable;
+10. no cross-channel imports from document core;
+11. migration compatibility for existing callers.
 
 ## Future extension
 
