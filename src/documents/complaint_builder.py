@@ -9,14 +9,26 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from uuid import uuid4
-
-from legal_brain import get_legal_advice
+from typing import Any
 
 from documents.document_contract import DocumentRequest, StructuredDocument
+from documents.legal_enrichment import LegalEnricher, enrich_document
 
 
-def build_complaint(user_name: str, user_address: str, office_id: str, issue_text: str, *, language: str = "en") -> StructuredDocument:
-    """Build a structured complaint without rendering or delivery side effects."""
+def build_complaint(
+    user_name: str,
+    user_address: str,
+    office_id: str,
+    issue_text: str,
+    *,
+    language: str = "en",
+    legal_enricher: LegalEnricher | None = None,
+) -> StructuredDocument:
+    """Build a structured complaint without rendering or delivery side effects.
+
+    Legal analysis is optional enrichment. A provider failure never prevents
+    deterministic document composition.
+    """
     request = DocumentRequest(
         document_type="complaint",
         user_name=user_name,
@@ -27,6 +39,12 @@ def build_complaint(user_name: str, user_address: str, office_id: str, issue_tex
     )
     created_at = datetime.now(timezone.utc)
     document_id = f"JV-{created_at:%Y%m%d}-{uuid4().hex[:12]}"
+    legal_analysis = enrich_document(request.issue_text, enricher=legal_enricher)
+    provenance: dict[str, Any] = {
+        "builder": "documents.complaint_builder.build_complaint",
+        "generated_at": created_at.isoformat(),
+        "legal_enrichment": "available" if legal_analysis is not None else "unavailable",
+    }
     return StructuredDocument(
         document_type=request.document_type,
         document_id=document_id,
@@ -38,9 +56,6 @@ def build_complaint(user_name: str, user_address: str, office_id: str, issue_tex
             "issue": request.issue_text,
             "language": request.language,
         },
-        legal_analysis=get_legal_advice(request.issue_text),
-        provenance={
-            "builder": "documents.complaint_builder.build_complaint",
-            "generated_at": created_at.isoformat(),
-        },
+        legal_analysis=legal_analysis,
+        provenance=provenance,
     )
