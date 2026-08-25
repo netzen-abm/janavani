@@ -1,57 +1,27 @@
+"""Canonical document capability entry point.
+
+DocumentEngine composes structured documents and delegates rendering to the
+shared renderer. Channels and transports never own document business logic.
 """
-Document Engine
 
-Central entry point for all document generation.
-
-Supported document types:
-
-- Complaint
-- RTI
-- Petition
-- Grievance
-
-Additional document types can be registered
-without changing conversation logic.
-"""
+from __future__ import annotations
 
 from documents.complaint_builder import ComplaintBuilder
+from documents.renderers import DocumentArtifact, DocumentRenderer
 
 
 class DocumentEngine:
-    """
-    Builds structured legal documents.
+    """Stable capability facade for document composition and export."""
 
-    This class acts as the public interface
-    between the Workflow Engine and the
-    individual document builders.
-    """
+    def __init__(self, complaint_builder: ComplaintBuilder | None = None):
+        self.complaint_builder = complaint_builder or ComplaintBuilder()
 
-    def __init__(self):
-        self.complaint_builder = ComplaintBuilder()
-
-    def generate(
-        self,
-        document_type: str,
-        **kwargs,
-    ):
-        """
-        Generate a document.
-
-        Parameters
-        ----------
-        document_type
-
-            complaint
-            rti
-            petition
-            grievance
-        """
-
-        document_type = document_type.lower()
-
-        if document_type == "complaint":
+    def compose(self, document_type: str, **kwargs) -> dict:
+        normalized = document_type.lower()
+        if normalized == "complaint":
             return self.complaint_builder.build(**kwargs)
+        raise ValueError(f"Unsupported document type: {document_type}")
 
-        raise ValueError(
-            f"Unsupported document type: {document_type}"
-        )
+    def generate(self, document_type: str, format_type: str = "pdf", **kwargs) -> DocumentArtifact:
+        payload = self.compose(document_type, **kwargs)
+        return DocumentRenderer.render(payload, format_type)
