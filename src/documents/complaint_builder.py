@@ -1,33 +1,46 @@
-# src/documents/complaint_builder.py
+"""Canonical complaint document builder.
 
-import datetime
+The builder creates channel-neutral structured data. Rendering and delivery
+are separate capabilities so Web, mobile, messaging, DApp and future clients
+can use the same document contract independently.
+"""
+
+from __future__ import annotations
+
+from datetime import date, datetime, timezone
+from uuid import uuid4
+
 from legal_brain import get_legal_advice
 
+from documents.document_contract import DocumentRequest, StructuredDocument
 
-def build_complaint(user_name: str, user_address: str, office_id: str, issue_text: str) -> dict:
-    """
-    Builds structured complaint data
-    This does NOT generate PDF
-    """
 
-    # 1. Generate complaint ID (centralized here)
-    complaint_id = f"JV{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-
-    # 2. Get legal grounding
-    law_data = get_legal_advice(issue_text)
-
-    # 3. Date
-    today = datetime.date.today().strftime("%d-%m-%Y")
-
-    # 4. Structured output
-    return {
-        "complaint_id": complaint_id,
-        "date": today,
-        "user": {
-            "name": user_name,
-            "address": user_address
+def build_complaint(user_name: str, user_address: str, office_id: str, issue_text: str, *, language: str = "en") -> StructuredDocument:
+    """Build a structured complaint without rendering or delivery side effects."""
+    request = DocumentRequest(
+        document_type="complaint",
+        user_name=user_name,
+        user_address=user_address,
+        office_id=office_id,
+        issue_text=issue_text,
+        language=language,
+    )
+    created_at = datetime.now(timezone.utc)
+    document_id = f"JV-{created_at:%Y%m%d}-{uuid4().hex[:12]}"
+    return StructuredDocument(
+        document_type=request.document_type,
+        document_id=document_id,
+        created_on=date.today(),
+        content={
+            "date": created_at.date().isoformat(),
+            "user": {"name": request.user_name, "address": request.user_address},
+            "office_id": request.office_id,
+            "issue": request.issue_text,
+            "language": request.language,
         },
-        "office_id": office_id,
-        "issue": issue_text,
-        "law": law_data
-    }
+        legal_analysis=get_legal_advice(request.issue_text),
+        provenance={
+            "builder": "documents.complaint_builder.build_complaint",
+            "generated_at": created_at.isoformat(),
+        },
+    )
