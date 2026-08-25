@@ -4,64 +4,46 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
-
-from services.issue_classifier import classify_issue
-from documents.complaint_builder import build_complaint
+from platform.capability_adapter import dispatch_transport_message
+from platform.registry import CapabilityRegistry
+from platform.transport import TransportMessage
+from capabilities.complaint import ComplaintCapability
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    # --------------------------------------------------
-    # 🔐 USER + INPUT
-    # --------------------------------------------------
-
+    """Telegram presentation/orchestration layer for complaint intake."""
     user_id = update.effective_user.id
     user_input = update.message.text.strip()
-
     session = get_session(user_id)
 
-    # --------------------------------------------------
-    # 📝 SAVE ISSUE
-    # --------------------------------------------------
+    registry = CapabilityRegistry()
+    registry.register(ComplaintCapability())
+    message = TransportMessage(
+        transport="telegram",
+        message_id=str(update.message.message_id),
+        conversation_id=str(update.effective_chat.id) if update.effective_chat else None,
+        actor_ref=str(user_id),
+        text=user_input,
+    )
+    dispatched = dispatch_transport_message(message, registry, "complaint")
+    result = dispatched.result
 
-    session["issue"] = user_input
+    if result.status != "completed":
+        await update.message.reply_text(result.message or "Unable to prepare the complaint.")
+        return
 
-    # --------------------------------------------------
-    # 🧠 CLASSIFY ISSUE
-    # --------------------------------------------------
-
-    classification = classify_issue(user_input)
-
-    session["category"] = classification["category"]
-    session["department"] = classification["department"]
-
-    # --------------------------------------------------
-    # 📤 FEEDBACK TO USER
-    # --------------------------------------------------
+    data = result.data or {}
+    session["issue"] = data.get("issue")
+    session["category"] = data.get("category")
+    session["department"] = data.get("department")
+    session["complaint"] = data.get("complaint")
 
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
         f"🏛 Department: {session['department']}"
     )
 
-    # --------------------------------------------------
-    # 📝 BUILD COMPLAINT (PREVIEW)
-    # --------------------------------------------------
-
-    complaint = build_complaint(
-        user_name="Anonymous",
-        user_address="Not Provided",
-        office_id="1",  # temporary
-        issue_text=user_input
-    )
-
-    # Save complaint in session (important for next step)
-    session["complaint"] = complaint
-
-    # --------------------------------------------------
-    # 📄 SHOW PREVIEW
-    # --------------------------------------------------
-
+    complaint = session["complaint"]
     preview = f"""
 📝 *Complaint Preview*
 
@@ -81,9 +63,4 @@ Choose next:
 """
 
     await update.message.reply_text(preview, parse_mode="Markdown")
-
-    # --------------------------------------------------
-    # 🔄 NEXT STEP
-    # --------------------------------------------------
-
     set_state(user_id, WAITING_FOR_DOCUMENT)
