@@ -17,6 +17,6 @@ COPY src/ ./src/
 
 EXPOSE 8000
 
-# src.web.app is a compatibility entrypoint that delegates to the
-# canonical FastAPI assembly in src.web.canonical_app.
-CMD ["uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# General Janavani API deployments use the canonical assembly directly.
+# Channel processes remain independently deployable and are not started here.
+CMD ["uvicorn", "src.web.canonical_app:app", "--host", "0.0.0.0", "--port", "8000"]
