@@ -1,43 +1,16 @@
-"""
-PDF Generator
+"""Compatibility facade for the former standalone PDF generator.
 
-Converts document text into a professional PDF.
-
-Pure rendering layer.
-
-No Telegram.
-No Database.
-No Business Logic.
+Canonical rendering lives in ``documents.renderers.DocumentRenderer``.
 """
 
-from pathlib import Path
-
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate
+from documents.renderers import DocumentRenderer
 
 
 class PDFGenerator:
-    """
-    Generate PDFs from plain text.
-    """
+    """Legacy file-path facade over the canonical PDF renderer."""
 
     def generate(self, text: str, output_file: str) -> str:
-
-        document = SimpleDocTemplate(output_file)
-        styles = getSampleStyleSheet()
-
-        story = []
-
-        for line in text.split("\n"):
-            line = line.strip()
-
-            if line == "":
-                line = "&nbsp;"
-
-            story.append(
-                Paragraph(line, styles["Normal"])
-            )
-
-        document.build(story)
-
-        return str(Path(output_file).resolve())
+        artifact = DocumentRenderer.pdf({"title": "JANAVANI DOCUMENT", "content": text})
+        with open(output_file, "wb") as handle:
+            handle.write(artifact.content)
+        return output_file
