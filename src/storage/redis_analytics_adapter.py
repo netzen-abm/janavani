@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import redis
 
-from src.platform.analytics import AnalyticsResult
+from src.platform.analytics import AnalyticsResult, validate_dimensions
 
 
 class RedisAnalyticsAdapter:
@@ -32,8 +32,9 @@ class RedisAnalyticsAdapter:
     def increment(self, metric: str, dimensions: dict[str, str] | None = None) -> AnalyticsResult:
         if not metric.strip():
             return AnalyticsResult(ok=False, error_code="INVALID_METRIC")
-        # Dimensions are deliberately limited to caller-supplied aggregate labels;
-        # no actor, IP, request, or other identifying dimensions are introduced here.
+        validation = validate_dimensions(dimensions)
+        if not validation.ok:
+            return validation
         labels = dimensions or {}
         suffix = ":".join(f"{k}={v}" for k, v in sorted(labels.items()))
         key = f"metrics:aggregate:{metric}" + (f":{suffix}" if suffix else "")
