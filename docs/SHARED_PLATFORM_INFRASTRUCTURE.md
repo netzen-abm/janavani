@@ -19,11 +19,14 @@ The canonical architecture places independent interfaces above shared Janavani c
 
 - `contracts.py` — channel-neutral capability, transport, storage and AI-provider contracts;
 - `registry.py` — small capability registry for runtime resolution;
+- `storage.py` — provider-neutral durable storage contract;
+- `cache.py` — provider-neutral transient-cache contract;
+- `analytics.py` — provider-neutral aggregate-telemetry contract;
 - `__init__.py` — package boundary.
 
 The registry and tests must import through the `src.platform` package boundary. This avoids an import collision with Python's standard-library `platform` module when the repository is executed from its root.
 
-This is a skeleton, not a claim that the full platform infrastructure is implemented.
+This is still a foundation, not a claim that the full platform infrastructure is implemented.
 
 ## Shared capability contract
 
@@ -85,86 +88,41 @@ A DApp/Web3 integration must not become a mandatory dependency for Web, Android,
 
 ## User-choice model
 
-User choice is a policy/permission layer above capability availability:
-
-```text
-                 JANAVANI CAPABILITY
-                         |
-              +----------+----------+
-              |                     |
-          capability              policy
-           exists              + consent
-              |                     |
-              +----------+----------+
-                         |
-                   user/device
-                     settings
-                         |
-             +-----------+-----------+
-             |                       |
-          enabled                 declined
-             |                       |
-       capability can run      capability remains
-                               implemented/available
-```
+User choice is a policy/permission layer above capability availability.
 
 The implementation must never remove a shared capability merely because one interface or user has not selected it.
 
 ## Adapter model
 
-The platform is intended to support independently replaceable adapters for:
-
-- Web/API;
-- Android;
-- iOS;
-- Telegram Bot;
-- Telegram Mini App;
-- WhatsApp;
-- Messenger;
-- DApp/Web3;
-- future decentralized or resilient transports;
-- storage providers;
-- AI/model providers;
-- document renderers;
-- government/external integrations.
+The platform is intended to support independently replaceable adapters for Web/API, Android, iOS, Telegram Bot, Telegram Mini App, WhatsApp, Messenger, DApp/Web3, future resilient transports, storage providers, AI/model providers, document renderers and government/external integrations.
 
 An adapter translates its native protocol into a stable Janavani contract. It must not copy the underlying domain implementation.
 
-## Future technology plug-in rule
+## Storage, cache and analytics convergence
 
-Future Web3/Web4/Web5-style technologies, decentralized identity, verifiable credentials, blockchain, Nostr, Nym, Reticulum, Freenet, new AI runtimes, new model providers and future client technologies should enter through adapters/contracts where they provide a verified capability.
-
-The desired migration is:
+The infrastructure boundaries are intentionally separated by semantics:
 
 ```text
-new technology
-    -> adapter implementing existing contract
-    -> capability registration
-    -> policy / consent / security review
-    -> tests
-    -> documentation
-    -> independent deployment
+Durable persistence
+    -> src.platform.storage.StorageAdapter
+    -> provider adapter, currently Supabase
+
+Transient state
+    -> src.platform.cache.CacheAdapter
+    -> provider adapter, currently Redis
+
+Aggregate telemetry
+    -> src.platform.analytics.AnalyticsAdapter
+    -> provider adapter, currently Redis
 ```
 
-The ecosystem must not require a rewrite of existing clients to adopt a new technology.
+The Redis cache adapter is implemented in `src/storage/redis_cache_adapter.py`. The existing transient cache implementation remains temporarily available in `src/storage/cache.py` only for migration compatibility.
 
-## Storage convergence — first implementation step
+The Redis analytics adapter is implemented in `src/storage/redis_analytics_adapter.py`. The existing `PrivacyPreservingAnalytics` implementation remains temporarily available while consumers are traced and migrated.
 
-The existing `src/storage/supabase.py` remains provider-specific and currently constructs a Supabase client directly from configuration. It is therefore treated as an implementation candidate behind the shared `StorageAdapter` contract, not as the storage architecture itself.
+Analytics must remain aggregate-only. No actor IDs, IP addresses, request identifiers or other identifying dimensions may be introduced merely for convenience.
 
-The migration order is:
-
-```text
-StorageAdapter contract
-        |
-        +--> existing Supabase implementation
-        +--> future SQL/local/offline implementation
-        +--> future decentralized implementation
-```
-
-No provider-specific singleton should be imported by independent interfaces as the long-term ownership model.
-
-The live Supabase diagnostic script is also not part of the deterministic test suite: it requires credentials and performs a real network/database operation. Its legacy implementation is preserved under `docs/archive/legacy/src/test_supabase.py` during convergence.
+The Supabase provider remains behind `src/platform/storage.py` through `src/storage/supabase_adapter.py`. Provider SDK access must remain inside the provider adapter.
 
 ## Deployment convergence
 
@@ -172,21 +130,7 @@ The canonical web assembly is `src.web.canonical_app:app`. `src.web.app` remains
 
 ## Scope boundary
 
-This foundation does **not** yet implement:
-
-- service discovery;
-- distributed messaging/event bus;
-- authentication/identity provider;
-- authorization/policy engine;
-- persistent registry;
-- health aggregation;
-- observability;
-- secrets management;
-- queues;
-- caching;
-- concrete storage adapters;
-- concrete AI adapters;
-- concrete Web3/Web5 adapters.
+This foundation does **not** yet implement service discovery, distributed messaging/event bus, authentication/identity provider, authorization/policy engine, persistent registry, health aggregation, observability, secrets management, queues, concrete decentralized adapters, or full platform orchestration.
 
 Those should be added only as evidence-driven shared infrastructure, with contracts, tests and documentation in the same change.
 
