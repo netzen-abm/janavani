@@ -1,6 +1,6 @@
 # Janavani Shared Platform Infrastructure
 
-**Status:** FOUNDATION / IMPLEMENTATION
+**Status:** FOUNDATION / IMPLEMENTATION  
 **Date:** 25 August 2026
 
 ## Purpose
@@ -9,7 +9,7 @@ This document records the shared infrastructure skeleton introduced during repos
 
 Janavani is a capability-first ecosystem with independent access surfaces. The shared platform provides stable contracts and reusable infrastructure; it must not turn one interface into a runtime dependency of another.
 
-The canonical architecture places independent interfaces above shared Janavani capabilities and identifies `src/adapters/` as the external integration layer, with domain, workflow, service, document and storage layers underneath. fileciteturn497file0L2-L2
+The canonical architecture places independent interfaces above shared Janavani capabilities and identifies `src/adapters/` as the external integration layer, with domain, workflow, service, document and storage layers underneath.
 
 ## Initial foundation
 
@@ -91,6 +91,24 @@ new technology
 
 The ecosystem must not require a rewrite of existing clients to adopt a new technology.
 
+## Storage convergence — first implementation step
+
+The existing `src/storage/supabase.py` remains provider-specific and currently constructs a Supabase client directly from configuration. It is therefore treated as an implementation candidate behind the shared `StorageAdapter` contract, not as the storage architecture itself.
+
+The migration order is:
+
+```text
+StorageAdapter contract
+        |
+        +--> existing Supabase implementation
+        +--> future SQL/local/offline implementation
+        +--> future decentralized implementation
+```
+
+No provider-specific singleton should be imported by independent interfaces as the long-term ownership model.
+
+The live Supabase diagnostic script is also not part of the deterministic test suite: it requires credentials and performs a real network/database operation. Its legacy implementation is preserved under `docs/archive/legacy/src/test_supabase.py` during convergence.
+
 ## Scope boundary
 
 This foundation does **not** yet implement:
@@ -113,7 +131,7 @@ Those should be added only as evidence-driven shared infrastructure, with contra
 
 ## Relationship to existing layers
 
-The current architecture already assigns external translation to `src/adapters/`, workflow orchestration to workflow/engine layers, domain rules to `src/domain/`, application/integration services to `src/services/`, documents to `src/documents/`, storage to `src/storage/`, and platform configuration to `src/core/`. fileciteturn497file0L2-L2
+The current architecture assigns external translation to `src/adapters/`, workflow orchestration to workflow/engine layers, domain rules to `src/domain/`, application/integration services to `src/services/`, documents to `src/documents/`, storage to `src/storage/`, and platform configuration to `src/core/`.
 
 `src/platform/` therefore must remain a **small infrastructure-contract layer**, not a second copy of those responsibilities.
 
