@@ -19,6 +19,8 @@ The canonical architecture places independent interfaces above shared Janavani c
 - `registry.py` — small capability registry for runtime resolution;
 - `__init__.py` — package boundary.
 
+The registry and tests must import through the `src.platform` package boundary. This avoids an import collision with Python's standard-library `platform` module when the repository is executed from its root.
+
 This is a skeleton, not a claim that the full platform infrastructure is implemented.
 
 ## Shared capability contract
@@ -108,6 +110,10 @@ StorageAdapter contract
 No provider-specific singleton should be imported by independent interfaces as the long-term ownership model.
 
 The live Supabase diagnostic script is also not part of the deterministic test suite: it requires credentials and performs a real network/database operation. Its legacy implementation is preserved under `docs/archive/legacy/src/test_supabase.py` during convergence.
+
+## Deployment convergence
+
+The canonical web assembly is `src.web.canonical_app:app`. `src.web.app` remains a compatibility import that delegates to the canonical assembly and must not accumulate new business logic. Deployment configuration is therefore expected to reference the canonical assembly directly rather than the compatibility module.
 
 ## Scope boundary
 
