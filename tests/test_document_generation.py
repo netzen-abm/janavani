@@ -1,29 +1,36 @@
-import pytest
 import io
-from src.services.document_generator import MultiFormatDocumentEngine
 
-def test_pdf_generation_output_stream():
-    """Verifies that the document engine correctly writes to an active PDF binary buffer stream."""
-    sample_text = "Line 1: Constitutional Violation Analysis\nLine 2: Section 4 Details"
-    
-    pdf_stream = MultiFormatDocumentEngine.generate_pdf_stream(sample_text)
-    
-    assert pdf_stream is not None
-    assert isinstance(pdf_stream, io.BytesIO)
-    
-    binary_data = pdf_stream.getvalue()
-    # Confirm the output matches the standard binary header definition for PDFs
-    assert binary_data.startswith(b"%PDF")
+from datetime import date
 
-def test_docx_generation_output_stream():
-    """Verifies that the document engine correctly writes to an active Word .docx binary buffer stream."""
-    sample_text = "Line 1: Constitutional Violation Analysis\nLine 2: Section 4 Details"
-    
-    docx_stream = MultiFormatDocumentEngine.generate_docx_stream(sample_text)
-    
-    assert docx_stream is not None
-    assert isinstance(docx_stream, io.BytesIO)
-    
-    binary_data = docx_stream.getvalue()
-    # Confirm the output matches the standard zip archive binary header format used by Microsoft Office files
-    assert binary_data.startswith(b"PK")
+from documents.document_contract import StructuredDocument
+from documents.renderers import RendererRegistry
+
+
+def sample_document() -> StructuredDocument:
+    return StructuredDocument(
+        document_type="complaint",
+        document_id="JV-TEST-001",
+        created_on=date(2026, 8, 25),
+        content={
+            "date": "2026-08-25",
+            "user": {"name": "Test User", "address": "Test Address"},
+            "office_id": "1",
+            "issue": "Constitutional Violation Analysis",
+        },
+    )
+
+
+def test_pdf_renderer_output_artifact():
+    artifact = RendererRegistry().get("pdf").render(sample_document())
+    assert artifact.format == "pdf"
+    assert artifact.media_type == "application/pdf"
+    assert isinstance(artifact.content, bytes)
+    assert artifact.content.startswith(b"%PDF")
+
+
+def test_docx_renderer_output_artifact():
+    artifact = RendererRegistry().get("docx").render(sample_document())
+    assert artifact.format == "docx"
+    assert artifact.media_type.startswith("application/vnd.openxmlformats")
+    assert isinstance(artifact.content, bytes)
+    assert artifact.content.startswith(b"PK")
