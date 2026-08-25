@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from .contracts import CapabilityHandler
 
 
@@ -17,6 +15,8 @@ class CapabilityRegistry:
         name = handler.capability.strip().lower()
         if not name:
             raise ValueError("capability name must not be empty")
+        if name in self._handlers:
+            raise ValueError(f"Capability is already registered: {name}")
         self._handlers[name] = handler
 
     def get(self, capability: str) -> CapabilityHandler:
