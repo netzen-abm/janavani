@@ -4,9 +4,9 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
-from platform.capability_adapter import dispatch_transport_message
-from platform.capabilities import build_capability_registry
-from platform.transport import TransportMessage
+from src.platform.capability_adapter import dispatch_transport_message
+from src.platform.capabilities import build_capability_registry
+from src.platform.transport import TransportMessage
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -27,7 +27,8 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = dispatched.result
 
     if result.status != "completed":
-        await update.message.reply_text(result.message or "Unable to prepare the complaint.")
+        detail = result.error_code or "UNKNOWN_CAPABILITY_ERROR"
+        await update.message.reply_text(f"Unable to prepare the complaint ({detail}).")
         return
 
     data = result.data or {}
