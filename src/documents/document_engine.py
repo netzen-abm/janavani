@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from documents.complaint_builder import build_complaint
-from documents.document_contract import DocumentRequest, StructuredDocument
+from src.documents.complaint_builder import build_complaint
+from src.documents.document_contract import DocumentRequest, StructuredDocument
 
 
 class DocumentEngine:
