@@ -1,14 +1,18 @@
-"""Stable shared contracts for independently operable Janavani surfaces.
+"""Stable shared capability contracts for independently operable surfaces.
 
-These contracts deliberately contain no provider-specific implementation.
-Future transports, storage systems, AI runtimes, Web3/Web5 integrations, and
-new clients can implement the contracts without changing domain capabilities.
+Provider- and transport-specific contracts live in their dedicated modules:
+``transport.py`` and ``storage.py``. This module owns the channel-neutral
+request/result and capability-handler contracts and re-exports those adapter
+protocols for compatibility.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
+
+from .storage import StorageAdapter
+from .transport import TransportAdapter
 
 
 @dataclass(frozen=True)
@@ -24,7 +28,7 @@ class CapabilityRequest:
 
 @dataclass(frozen=True)
 class CapabilityResult:
-    """Channel-neutral capability result with explicit failure/degraded state."""
+    """Channel-neutral capability result with explicit outcome state."""
 
     capability: str
     request_id: str
@@ -43,24 +47,6 @@ class CapabilityHandler(Protocol):
         ...
 
 
-class TransportAdapter(Protocol):
-    """Contract for a client or transport adapter."""
-
-    name: str
-
-    def health(self) -> Mapping[str, Any]:
-        ...
-
-
-class StorageAdapter(Protocol):
-    """Replaceable persistence/storage boundary."""
-
-    name: str
-
-    def health(self) -> Mapping[str, Any]:
-        ...
-
-
 class AIProviderAdapter(Protocol):
     """Replaceable AI provider/runtime boundary."""
 
@@ -68,3 +54,13 @@ class AIProviderAdapter(Protocol):
 
     def health(self) -> Mapping[str, Any]:
         ...
+
+
+__all__ = [
+    "AIProviderAdapter",
+    "CapabilityHandler",
+    "CapabilityRequest",
+    "CapabilityResult",
+    "StorageAdapter",
+    "TransportAdapter",
+]
