@@ -22,12 +22,18 @@ class FakeRenderer:
 
 
 def test_renderer_registry_is_format_driven() -> None:
-    registry = RendererRegistry()
+    registry = RendererRegistry(register_defaults=False)
     renderer = FakeRenderer()
     registry.register(renderer)
 
     assert registry.get("PDF") is renderer
     assert registry.formats() == ("pdf",)
+
+
+def test_default_renderer_registry_exposes_approved_formats() -> None:
+    registry = RendererRegistry()
+    assert registry.get("pdf").format == "pdf"
+    assert registry.get("docx").format == "docx"
 
 
 def test_unknown_renderer_is_explicit() -> None:
