@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from documents.docx_renderer import DocxRenderer
-from documents.pdf_renderer import PdfRenderer
-from documents.renderer import DocumentRenderer
+from src.documents.docx_renderer import DocxRenderer
+from src.documents.pdf_renderer import PdfRenderer
+from src.documents.renderer import DocumentRenderer
 
 
 class RendererRegistry:
