@@ -1,15 +1,22 @@
-import json
-from datetime import datetime
+"""Compatibility service for complaint persistence.
 
-FILE_PATH = "database/complaints.jsonl"
+Business-facing callers keep the historical function names while persistence
+is delegated to the provider-neutral repository boundary. The repository can
+later be swapped for the canonical durable adapter without changing callers.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from storage.complaint_repository import ComplaintRepository
 
 
-# --------------------------------------------------
-# 💾 SAVE COMPLAINT
-# --------------------------------------------------
+_repository = ComplaintRepository()
 
-def save_complaint(session: dict):
 
+def save_complaint(session: dict[str, Any]) -> None:
+    """Persist the complaint session through the repository boundary."""
     record = {
         "complaint_id": session.get("complaint_id"),
         "issue": session.get("issue"),
@@ -17,29 +24,14 @@ def save_complaint(session: dict):
         "department": session.get("department"),
         "district": session.get("district"),
         "office": session.get("office"),
-        "created_at": datetime.now().isoformat(),
-        "status": "Pending"
+        "status": "Pending",
     }
-
-    with open(FILE_PATH, "a") as f:
-        f.write(json.dumps(record) + "\n")
+    _repository.save(record)
 
 
-# --------------------------------------------------
-# 🔍 FETCH COMPLAINT BY ID
-# --------------------------------------------------
+def get_complaint_by_id(complaint_id: str) -> dict[str, Any] | None:
+    """Fetch a complaint through the repository boundary."""
+    return _repository.get_by_id(complaint_id)
 
-def get_complaint_by_id(complaint_id: str):
 
-    try:
-        with open(FILE_PATH, "r") as f:
-            for line in f:
-                record = json.loads(line)
-
-                if record.get("complaint_id") == complaint_id:
-                    return record
-
-    except FileNotFoundError:
-        return None
-
-    return None
+__all__ = ["get_complaint_by_id", "save_complaint"]
