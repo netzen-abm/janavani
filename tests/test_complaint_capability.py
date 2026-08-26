@@ -1,3 +1,4 @@
+from src.documents.document_contract import StructuredDocument
 from src.platform.contracts import CapabilityRequest
 from src.capabilities.complaint import ComplaintCapability
 
@@ -16,6 +17,8 @@ def test_complaint_capability_is_channel_neutral():
     assert result.status == "completed"
     assert result.capability == "complaint"
     assert result.data["issue"] == "Street light is not working"
+    assert isinstance(result.data["complaint"], StructuredDocument)
+    assert result.data["complaint"].content["issue"] == "Street light is not working"
 
 
 def test_complaint_capability_rejects_empty_text():
