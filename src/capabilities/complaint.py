@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from platform.contracts import CapabilityRequest, CapabilityResult
-from documents.complaint_builder import build_complaint
-from services.issue_classifier import classify_issue
+from src.platform.contracts import CapabilityRequest, CapabilityResult
+from src.documents.complaint_builder import build_complaint
+from src.services.issue_classifier import classify_issue
 
 
 class ComplaintCapability:
