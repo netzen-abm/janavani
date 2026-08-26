@@ -12,7 +12,7 @@ use api_client::{DraftResponse, JanavaniDioxusBridge};
 use sos_interface::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
 
 fn main() {
-    dioxus::web::launch(App);
+    dioxus::launch(App);
 }
 
 #[component]
@@ -73,14 +73,12 @@ fn App() -> Element {
         main {
             class: "container",
             style: "margin: 2rem auto; max-width: 900px; padding: 1rem;",
-
             header {
                 style: "text-align: center; margin-bottom: 2rem;",
                 h1 { "JANAVANI" }
                 p { "Independent civic capabilities — App / DApp / Web" }
                 p { style: "font-size: 0.85rem;", "{context_badge}" }
             }
-
             section {
                 style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px;",
                 h2 { "Capability status" }
@@ -93,7 +91,6 @@ fn App() -> Element {
                     li { "Blockchain / wallet: optional" }
                 }
             }
-
             section {
                 style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px;",
                 h2 { "Civic action" }
@@ -110,7 +107,6 @@ fn App() -> Element {
                     if *is_loading.read() { "Processing…" } else { "Prepare civic document" }
                 }
             }
-
             if let Some(error) = runtime_error.read().as_ref() {
                 section {
                     style: "padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #d66; border-radius: 8px;",
@@ -119,7 +115,6 @@ fn App() -> Element {
                     p { "Other independent capabilities remain available." }
                 }
             }
-
             if let Some(result) = display_result.read().as_ref() {
                 section {
                     style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #aaa; border-radius: 8px;",
@@ -136,7 +131,6 @@ fn App() -> Element {
                     }
                 }
             }
-
             section {
                 style: "padding: 1.25rem; border: 1px solid #ecc; border-radius: 8px;",
                 h2 { "Emergency capability" }
