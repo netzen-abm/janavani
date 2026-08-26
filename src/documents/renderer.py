@@ -15,7 +15,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-from documents.document_contract import DocumentArtifact, StructuredDocument
+from src.documents.document_contract import DocumentArtifact, StructuredDocument
 
 
 class DocumentRenderer(Protocol):
