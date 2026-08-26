@@ -10,7 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-from documents.document_contract import DocumentArtifact, StructuredDocument
+from src.documents.document_contract import DocumentArtifact, StructuredDocument
 
 
 def _lines(document: StructuredDocument) -> list[str]:
