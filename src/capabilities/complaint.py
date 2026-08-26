@@ -6,10 +6,8 @@ not import Telegram, WhatsApp, Messenger, or other interface SDKs.
 
 from __future__ import annotations
 
-from typing import Any
-
-from src.platform.contracts import CapabilityRequest, CapabilityResult
 from src.documents.complaint_builder import build_complaint
+from src.platform.contracts import CapabilityRequest, CapabilityResult
 from src.services.issue_classifier import classify_issue
 
 
@@ -22,9 +20,10 @@ class ComplaintCapability:
         text = str(request.payload.get("text") or "").strip()
         if not text:
             return CapabilityResult(
-                status="rejected",
                 capability=self.capability,
-                message="Complaint text is required.",
+                request_id=request.request_id,
+                status="rejected",
+                error_code="MISSING_COMPLAINT_TEXT",
             )
 
         classification = classify_issue(text)
@@ -36,9 +35,9 @@ class ComplaintCapability:
         )
 
         return CapabilityResult(
-            status="completed",
             capability=self.capability,
-            message="Complaint prepared.",
+            request_id=request.request_id,
+            status="completed",
             data={
                 "issue": text,
                 "category": classification.get("category"),
