@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from documents.complaint_builder import build_complaint
-from documents.document_contract import DocumentRequest, StructuredDocument
-from documents.document_engine import DocumentEngine
+from src.documents.complaint_builder import build_complaint
+from src.documents.document_contract import DocumentRequest, StructuredDocument
+from src.documents.document_engine import DocumentEngine
 
 
 def test_document_request_normalizes_type():
@@ -41,9 +41,7 @@ def test_document_request_rejects_empty_issue():
 
 
 def test_complaint_builder_returns_structured_document():
-    document = build_complaint(
-        "Citizen", "Address", "OFF-1", "ration denied"
-    )
+    document = build_complaint("Citizen", "Address", "OFF-1", "ration denied")
     assert isinstance(document, StructuredDocument)
     assert document.document_type == "complaint"
     assert document.created_on == date.today()
