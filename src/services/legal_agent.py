@@ -25,6 +25,7 @@ class JanavaniLegalAgent:
     SYSTEM_PROMPT = (
         "You are a bounded civic-document drafting assistant. "
         "Only assist with the requested civic-document task; do not provide open chat. "
+        "Do not answer questions outside the requested civic-document task. "
         "Do not provide legal advice or invent authorities, laws, evidence, official "
         "actions, acknowledgements, addresses, or verification states. Return structured "
         "JSON and clearly mark claims requiring source verification and human review."
@@ -50,11 +51,7 @@ class JanavaniLegalAgent:
         citizen_issue: str,
         location_code: str | None = None,
     ) -> Dict[str, Any]:
-        """Draft a structured civic document when an AI provider is available.
-
-        Regional metadata is optional context. It is never treated as proof of
-        legal authority and must come from the verified municipal profile source.
-        """
+        """Draft a structured civic document when an AI provider is available."""
         issue = citizen_issue.strip()
         if not issue:
             return {
@@ -108,11 +105,7 @@ class JanavaniLegalAgent:
             return self._fallback(issue)
 
     def translate_input_if_needed(self, text: str, target_lang: str = "en") -> str:
-        """Translate input through the configured Hugging Face service when enabled.
-
-        Translation is an independent, optional intelligence capability. A provider
-        failure returns the original text rather than claiming a translation occurred.
-        """
+        """Translate input through the configured service when enabled."""
         if not text:
             return text
         if target_lang.lower() in {"", "auto"}:
