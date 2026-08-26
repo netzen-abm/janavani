@@ -2,8 +2,8 @@ import io
 
 from datetime import date
 
-from documents.document_contract import StructuredDocument
-from documents.renderers import RendererRegistry
+from src.documents.document_contract import StructuredDocument
+from src.documents.renderers import RendererRegistry
 
 
 def sample_document() -> StructuredDocument:
