@@ -1,0 +1,28 @@
+# Pull-request labels based on changed paths.
+# Keep this configuration intentionally small and deterministic.
+
+python:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.py"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.toml"
+          - "*.ini"
+          - "*.cfg"
+          - "*.json"
+          - "*.yaml"
+          - "*.yml"
