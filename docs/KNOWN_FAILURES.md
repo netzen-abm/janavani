@@ -25,6 +25,11 @@ This register exists so failures remain visible until evidence demonstrates reso
 | KF-006 | Python compatibility | Starlette/httpx compatibility warning remains in the canonical environment. | UNVERIFIED | Determine compatible pinned versions and add explicit compatibility verification. |
 | KF-007 | Redis API | Redis `setex` deprecation warning remains in test/runtime evidence. | UNVERIFIED | Trace the call site, migrate to the supported API, and retain behavior tests. |
 | KF-008 | M3-B release gate | Runtime/deployment evidence is not yet sufficient to close M3-B. | BLOCKED | Complete authoritative startup, container, Compose, deployment-target and workflow evidence. |
+| KF-009 | SOS transport | Reticulum adapter is unavailable; SOS must not claim offline mesh broadcast success. | UNVERIFIED | Implement and verify a real Reticulum adapter before enabling offline SOS transport. |
+| KF-010 | SOS online delivery | Current client has no evidence that backend acceptance equals emergency delivery. | UNVERIFIED | Define delivery acknowledgement/state contract and test end-to-end. |
+| KF-011 | SOS configuration | Previous client embedded a fixed backend URL and interface token. | FAILED | Removed from active client; establish a secure server-side/configuration boundary before enabling online dispatch. |
+| KF-012 | SOS location | Previous client fabricated a default coordinate pair. | FAILED | Removed default; require a supplied/verified location source and explicit location status. |
+| KF-013 | SOS data deletion | Previous client described local storage clearing as a global cache wipe and invoked it automatically. | FAILED | Active code no longer makes that claim or auto-wipes; define explicit, consented local-data policy before adding wipe behavior. |
 
 ## Rules
 
@@ -40,3 +45,7 @@ Do not delete resolved history merely because the code is fixed.
 ## Truthfulness requirement
 
 The repository may have many capabilities in source code or documentation while still having unverified or failed runtime paths. Those states are intentionally visible. Capability existence, configuration, test coverage, provider reachability, and production operation are separate claims and require separate evidence.
+
+## Safety-critical rule
+
+Emergency/SOS behavior is not production-ready until location provenance, transport availability, backend acceptance, delivery acknowledgement, failure recovery, privacy/data-retention behavior, and user-visible state transitions have executable evidence.
