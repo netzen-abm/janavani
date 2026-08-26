@@ -8,10 +8,14 @@ class AISettings(BaseSettings):
 
     # Credentials are supplied by the runtime environment; never commit secrets.
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
-    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
+    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_TOKEN", ""))
 
     # Provider endpoints are configuration, not capability ownership.
     OPENROUTER_URL: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1")
+    HUGGINGFACE_TRANSLATION_URL: str = os.getenv(
+        "HUGGINGFACE_TRANSLATION_URL",
+        "https://api-inference.huggingface.co/models/ai4bharat/indictrans2-en-indic-1b",
+    )
 
     # Model mappings are replaceable implementations behind capability contracts.
     LEGAL_DRAFTING_MODEL: str = os.getenv(
