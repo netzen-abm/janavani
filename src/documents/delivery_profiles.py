@@ -1,11 +1,15 @@
-EMAIL
+"""Supported delivery profiles for document workflows."""
 
-REGISTERED_POST
+from enum import StrEnum
 
-SPEED_POST
 
-HAND_DELIVERY
+class DeliveryProfile(StrEnum):
+    EMAIL = "EMAIL"
+    REGISTERED_POST = "REGISTERED_POST"
+    SPEED_POST = "SPEED_POST"
+    HAND_DELIVERY = "HAND_DELIVERY"
+    ONLINE_PORTAL = "ONLINE_PORTAL"
+    COURIER = "COURIER"
 
-ONLINE_PORTAL
 
-COURIER
+__all__ = ["DeliveryProfile"]
