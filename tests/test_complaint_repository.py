@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from storage.complaint_repository import ComplaintRepository
+from src.storage.complaint_repository import ComplaintRepository
 
 
 def test_repository_round_trips_complaint(tmp_path: Path):
