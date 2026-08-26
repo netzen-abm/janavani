@@ -11,8 +11,8 @@ from datetime import date, datetime, timezone
 from uuid import uuid4
 from typing import Any
 
-from documents.document_contract import DocumentRequest, StructuredDocument
-from documents.legal_enrichment import LegalEnricher, enrich_document
+from src.documents.document_contract import DocumentRequest, StructuredDocument
+from src.documents.legal_enrichment import LegalEnricher, enrich_document
 
 
 def build_complaint(
@@ -41,7 +41,7 @@ def build_complaint(
     document_id = f"JV-{created_at:%Y%m%d}-{uuid4().hex[:12]}"
     legal_analysis = enrich_document(request.issue_text, enricher=legal_enricher)
     provenance: dict[str, Any] = {
-        "builder": "documents.complaint_builder.build_complaint",
+        "builder": "src.documents.complaint_builder.build_complaint",
         "generated_at": created_at.isoformat(),
         "legal_enrichment": "available" if legal_analysis is not None else "unavailable",
     }
