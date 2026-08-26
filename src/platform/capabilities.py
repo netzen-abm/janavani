@@ -8,7 +8,7 @@ instances per request.
 from __future__ import annotations
 
 from .registry import CapabilityRegistry
-from capabilities.complaint import ComplaintCapability
+from src.capabilities.complaint import ComplaintCapability
 
 
 def build_capability_registry() -> CapabilityRegistry:
