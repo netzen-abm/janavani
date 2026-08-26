@@ -6,7 +6,7 @@ import io
 
 from docx import Document
 
-from documents.document_contract import DocumentArtifact, StructuredDocument
+from src.documents.document_contract import DocumentArtifact, StructuredDocument
 
 
 def _lines(document: StructuredDocument) -> list[str]:
