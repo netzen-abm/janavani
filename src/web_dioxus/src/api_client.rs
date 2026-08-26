@@ -21,6 +21,7 @@ pub struct DraftResponse {
     pub document: DocumentPayload,
 }
 
+#[derive(PartialEq)]
 pub struct JanavaniDioxusBridge {
     pub backend_url: Option<String>,
     pub is_freenet_context: bool,
