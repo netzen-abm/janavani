@@ -1,7 +1,7 @@
 # Janavani Evidence Capability Convergence
 
-**Status:** IMPLEMENTATION — boundary established, provider integration pending verification  
-**Date:** 26 August 2026  
+**Status:** IMPLEMENTATION — boundary established; provider integration and repository-wide migration remain to be verified.
+**Date:** 26 August 2026
 **Scope:** shared ecosystem capability
 
 ## Authority
@@ -11,7 +11,8 @@ This document is subordinate to:
 1. `docs/SOURCE_OF_TRUTH.md`
 2. `docs/JANAVANI_MASTER_ARCHITECTURE.md`
 3. `docs/CAPABILITY_REGISTRY.md`
-4. `docs/MASTER_TASK_CHECKLIST.md`
+4. `docs/DATA_CONTRACTS.md`
+5. `docs/MASTER_TASK_CHECKLIST.md`
 
 It records the implementation decision for the shared evidence/provenance boundary; it does not replace those documents.
 
@@ -34,8 +35,7 @@ Web / Telegram / Android / iOS / DApp / API / other interfaces
                     |                   |
                     +---------+---------+
                               v
-                     EvidenceItem
-                     + provenance
+                  EvidenceItem + Provenance
 ```
 
 ## Core rule
@@ -54,6 +54,10 @@ An evidence adapter, storage provider, OCR system, AI model or device-security a
 - `ProvenanceRecorder` — provider-neutral provenance boundary.
 - `EvidenceCapability` — reusable orchestration boundary.
 
+## Alignment with canonical data contracts
+
+`docs/DATA_CONTRACTS.md` requires stable identifiers, provenance where practical, explicit distinction between user-generated claims and verified facts, UTC timestamps internally, schema/version discipline, privacy minimisation, and capability contracts rather than channel-specific internal objects. The capability follows those rules without introducing a competing data model.
+
 ## Failure behavior
 
 The capability must fail truthfully:
@@ -70,7 +74,7 @@ Implementations must follow the ecosystem privacy and safety invariants in `SOUR
 
 ## Implementation boundary
 
-This first convergence step intentionally does **not** implement:
+This convergence step intentionally does **not** implement:
 
 - a new database schema;
 - a new object-storage provider;
