@@ -1,158 +1,181 @@
-//! # Janavani Decentralized Stack Core
-//! This library provides modular, independent features for civic governance.
-//! Each sub-module is entirely decoupled and activated via specific Cargo features.
+//! Janavani decentralized capability boundary.
+//!
+//! Protocol features remain independently selectable. A feature being enabled
+//! means its dependency is available to the build; it does not claim that the
+//! real network capability is operational. Until a verified adapter exists,
+//! operations return an explicit unavailable result rather than synthetic
+//! success.
 
-// ==========================================
-// 1. NOSTR PROTOCOL FEATURE (Identity)
-// ==========================================
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapabilityUnavailable {
+    pub capability: &'static str,
+    pub reason: &'static str,
+}
+
+impl fmt::Display for CapabilityUnavailable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} capability unavailable: {}", self.capability, self.reason)
+    }
+}
+
+impl std::error::Error for CapabilityUnavailable {}
+
 #[cfg(feature = "nostr")]
 pub mod janavani_nostr {
+    use super::CapabilityUnavailable;
+
     pub struct NostrBridge;
-    
+
     impl NostrBridge {
-        pub fn init_identity() -> Result<(), &'static str> {
-            println!("⚡ Nostr Module: Initializing decentralized identity via local keypair.");
-            Ok(())
+        pub fn init_identity() -> Result<(), CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "nostr",
+                reason: "real key-management and relay adapter is not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// 2. NYM PROTOCOL FEATURE (Network Privacy)
-// ==========================================
 #[cfg(feature = "nym")]
 pub mod janavani_nym {
+    use super::CapabilityUnavailable;
+
     pub struct NymPrivacyLayer;
-    
+
     impl NymPrivacyLayer {
-        pub fn send_anonymous_packet(payload: Vec<u8>) -> Result<(), &'static str> {
-            println!("🔎 Nym Module: Shrouding metadata. Routing packet over the Sphinx Mixnet.");
-            Ok(())
+        pub fn send_anonymous_packet(_payload: Vec<u8>) -> Result<(), CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "nym",
+                reason: "real Nym transport adapter is not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// 3. RETICULUM PROTOCOL FEATURE (Mesh Networking)
-// ==========================================
 #[cfg(feature = "reticulum")]
 pub mod janavani_reticulum {
+    use super::CapabilityUnavailable;
+
     pub struct ReticulumMesh;
-    
+
     impl ReticulumMesh {
-        pub fn broadcast_off_grid(data: &[u8]) -> Result<(), &'static str> {
-            println!("📡 Reticulum Module: Establishing alternative interface link over LoRa/Mesh networks.");
-            Ok(())
+        pub fn broadcast_off_grid(_data: &[u8]) -> Result<(), CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "reticulum",
+                reason: "real Reticulum transport adapter is not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// 4. ZERO-KNOWLEDGE PROOFS FEATURE (Privacy Validation)
-// ==========================================
 #[cfg(feature = "zkp")]
 pub mod janavani_zkp {
+    use super::CapabilityUnavailable;
+
     pub struct ResidencyVerifier;
-    
+
     impl ResidencyVerifier {
-        pub fn generate_membership_proof() -> Result<Vec<u8>, &'static str> {
-            println!("🔒 ZKP Module: Synthesizing zk-SNARK mathematical proof of local eligibility.");
-            // Returning a dummy mock proof byte array
-            Ok(vec![0x01, 0x02, 0x03])
+        pub fn generate_membership_proof() -> Result<Vec<u8>, CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "zkp",
+                reason: "real proof circuit, witness handling, and verifier are not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// 5. BLOCKCHAIN ANCHORING FEATURE (Immutability)
-// ==========================================
 #[cfg(feature = "blockchain")]
 pub mod janavani_blockchain {
+    use super::CapabilityUnavailable;
+
     pub struct LedgerAnchor;
-    
+
     impl LedgerAnchor {
-        pub fn lock_grievance_hash(hash: [u8; 32]) -> Result<(), &'static str> {
-            println!("⛓️ Blockchain Module: Anchoring data state hash to immutable public ledger.");
-            Ok(())
+        pub fn lock_grievance_hash(_hash: [u8; 32]) -> Result<(), CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "blockchain",
+                reason: "real chain client, transaction submission, and confirmation are not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// 6. FREENET PROTOCOL FEATURE (Decentralized State)
-// ==========================================
 #[cfg(feature = "freenet")]
 pub mod janavani_freenet {
-    // Note: Freenet standard library uses WebAssembly macros for dynamic bindings
+    use super::CapabilityUnavailable;
+
     pub struct FreenetContract;
-    
+
     impl FreenetContract {
-        pub fn sync_shared_state() -> Result<(), &'static str> {
-            println!("🛠️ Freenet Module: Managing localized cryptographic Summary-Delta replication.");
-            Ok(())
+        pub fn sync_shared_state() -> Result<(), CapabilityUnavailable> {
+            Err(CapabilityUnavailable {
+                capability: "freenet",
+                reason: "real Contract/Delegate integration and network verification are not yet wired",
+            })
         }
     }
 }
 
-// ==========================================
-// MODULAR UNIT TESTS SECTION
-// ==========================================
 #[cfg(test)]
 mod tests {
-    // Bring all parent modules into local scope for testing
-    use super::*;
+    use super::CapabilityUnavailable;
 
-    // 1. Test Nostr Feature Configuration Isolation
+    #[test]
+    fn unavailable_error_is_explicit() {
+        let error = CapabilityUnavailable {
+            capability: "example",
+            reason: "adapter not wired",
+        };
+        assert_eq!(error.to_string(), "example capability unavailable: adapter not wired");
+    }
+
     #[test]
     #[cfg(feature = "nostr")]
-    fn test_nostr_feature_activation() {
-        let result = janavani_nostr::NostrBridge::init_identity();
-        assert!(result.is_ok(), "Nostr module initialization failed");
+    fn nostr_does_not_fake_success() {
+        let result = crate::janavani_nostr::NostrBridge::init_identity();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "nostr");
     }
 
-    // 2. Test Nym Feature Configuration Isolation
     #[test]
     #[cfg(feature = "nym")]
-    fn test_nym_feature_activation() {
-        let dummy_payload = vec![1, 2, 3, 4];
-        let result = janavani_nym::NymPrivacyLayer::send_anonymous_packet(dummy_payload);
-        assert!(result.is_ok(), "Nym modular routing failed");
+    fn nym_does_not_fake_success() {
+        let result = crate::janavani_nym::NymPrivacyLayer::send_anonymous_packet(vec![1, 2, 3]);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "nym");
     }
 
-    // 3. Test Reticulum Feature Configuration Isolation
     #[test]
     #[cfg(feature = "reticulum")]
-    fn test_reticulum_feature_activation() {
-        let dummy_packet = b"offgrid-packet-payload";
-        let result = janavani_reticulum::ReticulumMesh::broadcast_off_grid(dummy_packet);
-        assert!(result.is_ok(), "Reticulum mesh transport failed");
+    fn reticulum_does_not_fake_success() {
+        let result = crate::janavani_reticulum::ReticulumMesh::broadcast_off_grid(b"test");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "reticulum");
     }
 
-    // 4. Test ZKP Feature Configuration Isolation
     #[test]
     #[cfg(feature = "zkp")]
-    fn test_zkp_feature_activation() {
-        let result = janavani_zkp::ResidencyVerifier::generate_membership_proof();
-        assert!(result.is_ok(), "Zero-Knowledge logic failed to compute proof");
-        let proof = result.unwrap();
-        assert!(!proof.is_empty(), "ZKP generated an empty byte array array structure");
+    fn zkp_does_not_return_dummy_proof() {
+        let result = crate::janavani_zkp::ResidencyVerifier::generate_membership_proof();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "zkp");
     }
 
-    // 5. Test Blockchain Feature Configuration Isolation
     #[test]
     #[cfg(feature = "blockchain")]
-    fn test_blockchain_feature_activation() {
-        let dummy_hash = [0u8; 32];
-        let result = janavani_blockchain::LedgerAnchor::lock_grievance_hash(dummy_hash);
-        assert!(result.is_ok(), "Blockchain anchoring transaction execution failed");
+    fn blockchain_does_not_fake_anchoring() {
+        let result = crate::janavani_blockchain::LedgerAnchor::lock_grievance_hash([0u8; 32]);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "blockchain");
     }
 
-    // 6. Test Freenet Feature Configuration Isolation
     #[test]
     #[cfg(feature = "freenet")]
-    fn test_freenet_feature_activation() {
-        let result = janavani_freenet::FreenetContract::sync_shared_state();
-        assert!(result.is_ok(), "Freenet decentralized sync engine simulation failed");
+    fn freenet_does_not_fake_sync() {
+        let result = crate::janavani_freenet::FreenetContract::sync_shared_state();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().capability, "freenet");
     }
 }
-
