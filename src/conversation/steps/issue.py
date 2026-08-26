@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
+from src.documents.document_contract import StructuredDocument
 from src.platform.capability_adapter import dispatch_transport_message
 from src.platform.capabilities import build_capability_registry
 from src.platform.transport import TransportMessage
@@ -32,27 +33,35 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     data = result.data or {}
-    session["issue"] = data.get("issue")
+    document = data.get("complaint")
+    if not isinstance(document, StructuredDocument):
+        await update.message.reply_text("Unable to prepare the complaint (INVALID_DOCUMENT_RESULT).")
+        return
+
+    content = dict(document.content)
+    session["issue"] = content.get("issue")
     session["category"] = data.get("category")
     session["department"] = data.get("department")
-    session["complaint"] = data.get("complaint")
+    session["complaint"] = document
 
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
         f"🏛 Department: {session['department']}"
     )
 
-    complaint = session["complaint"]
+    legal_analysis = document.legal_analysis
+    legal_text = "Legal enrichment unavailable." if not legal_analysis else str(legal_analysis)
     preview = f"""
 📝 *Complaint Preview*
 
 *Issue:*
-{complaint['issue']}
+{content.get('issue', '')}
 
-*Legal Ground:*
-{complaint['law']['law']} - {complaint['law']['section']}
+*Document ID:*
+{document.document_id}
 
-{complaint['law']['explanation']}
+*Legal Analysis:*
+{legal_text}
 
 ---
 
