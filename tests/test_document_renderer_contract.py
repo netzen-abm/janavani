@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from datetime import date
 
 import pytest
 
-from documents.document_contract import DocumentArtifact, StructuredDocument
-from documents.renderers import RendererRegistry
+from src.documents.document_contract import DocumentArtifact, StructuredDocument
+from src.documents.renderers import RendererRegistry
 
 
 @dataclass
