@@ -1,4 +1,4 @@
-"""Bridge transport messages to shared capability contracts."""
+"""Bridge normalized transport messages to shared capabilities."""
 
 from __future__ import annotations
 
@@ -24,17 +24,21 @@ def dispatch_transport_message(
     capability: str,
     payload: dict[str, Any] | None = None,
 ) -> CapabilityDispatchResult:
-    """Dispatch a normalized transport message without coupling the transport to a capability."""
+    """Dispatch one normalized transport message without transport coupling."""
     request = CapabilityRequest(
         capability=capability,
-        actor_ref=message.actor_ref,
-        channel=message.transport,
+        request_id=message.message_id,
+        actor_id=message.actor_ref,
         payload={
             "message_id": message.message_id,
             "conversation_id": message.conversation_id,
             "text": message.text,
             "attachments": list(message.attachments),
             **(payload or {}),
+        },
+        metadata={
+            "transport": message.transport,
+            **dict(message.metadata),
         },
     )
     handler = registry.get(capability)
