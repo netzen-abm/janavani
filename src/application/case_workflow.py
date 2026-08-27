@@ -1,8 +1,4 @@
-"""Canonical application orchestration for the Janavani civic workflow.
-
-This layer coordinates domain objects. It does not persist data, select concrete
-transport providers, or generate legal conclusions.
-"""
+"""Canonical application orchestration for the Janavani civic workflow."""
 
 from __future__ import annotations
 
@@ -16,6 +12,7 @@ from src.domain.evidence import Evidence
 
 
 class CaseRepository(Protocol):
+    def get(self, case_id: str) -> Case | None: ...
     def save(self, case: Case) -> Case: ...
 
 
@@ -29,9 +26,12 @@ class AuthorityRepository(Protocol):
 
 @dataclass
 class InMemoryCaseRepository:
-    """Small deterministic repository useful for application tests."""
+    """Deterministic repository used by application tests and local composition."""
 
     cases: dict[str, Case] = field(default_factory=dict)
+
+    def get(self, case_id: str) -> Case | None:
+        return self.cases.get(case_id)
 
     def save(self, case: Case) -> Case:
         self.cases[case.id] = case
@@ -49,6 +49,8 @@ class InMemoryEvidenceRepository:
 
 @dataclass
 class CaseWorkflowService:
+    """Coordinate the canonical case lifecycle without provider coupling."""
+
     cases: CaseRepository
     evidence: EvidenceRepository
     authorities: AuthorityRepository
@@ -58,13 +60,7 @@ class CaseWorkflowService:
         case.add_event("case.created", actor=actor)
         return self.cases.save(case)
 
-    def attach_evidence(
-        self,
-        case_id: str,
-        evidence: Evidence,
-        *,
-        actor: str | None = None,
-    ) -> Case:
+    def attach_evidence(self, case_id: str, evidence: Evidence, *, actor: str | None = None) -> Case:
         case = self._case(case_id)
         if evidence.case_id != case.id:
             raise ValueError("evidence belongs to a different case")
@@ -74,16 +70,9 @@ class CaseWorkflowService:
             case.transition(CaseStatus.EVIDENCE_COLLECTION, actor=actor)
         return self.cases.save(case)
 
-    def select_authority(
-        self,
-        case_id: str,
-        authority_id: str,
-        *,
-        actor: str | None = None,
-    ) -> Case:
+    def select_authority(self, case_id: str, authority_id: str, *, actor: str | None = None) -> Case:
         case = self._case(case_id)
-        authority = self.authorities.get(authority_id)
-        if authority is None:
+        if self.authorities.get(authority_id) is None:
             raise ValueError("authority not found")
         if authority_id not in case.authority_ids:
             case.authority_ids.append(authority_id)
@@ -95,14 +84,11 @@ class CaseWorkflowService:
         case = self._case(case_id)
         if consent.subject_id != case.id:
             raise ValueError("consent subject does not match case")
+        if not consent.is_active():
+            raise ValueError("consent is not active")
         if consent.consent_id not in case.consent_ids:
             case.consent_ids.append(consent.consent_id)
-        case.add_event(
-            "case.consent_recorded",
-            actor=actor,
-            consent_id=consent.consent_id,
-            capability_id=consent.capability_id,
-        )
+        case.add_event("case.consent_recorded", actor=actor, consent_id=consent.consent_id, capability_id=consent.capability_id)
         return self.cases.save(case)
 
     def request_submission_approval(self, case_id: str, *, actor: str | None = None) -> Case:
@@ -132,7 +118,7 @@ class CaseWorkflowService:
         return self.cases.save(case)
 
     def _case(self, case_id: str) -> Case:
-        case = self.cases.cases.get(case_id) if isinstance(self.cases, InMemoryCaseRepository) else None
+        case = self.cases.get(case_id)
         if case is None:
             raise ValueError(f"case not found: {case_id}")
         return case
