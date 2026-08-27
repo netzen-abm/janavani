@@ -1,8 +1,7 @@
 """Canonical authority references for civic case routing.
 
 Authority records are source-backed references to government organisations/offices.
-They are deliberately separate from AI-generated interpretation and from transport
-or directory-provider implementations.
+They remain separate from AI interpretation and transport implementations.
 """
 
 from __future__ import annotations
@@ -15,6 +14,8 @@ from uuid import uuid4
 
 
 class AuthorityVerificationStatus(str, Enum):
+    """Verification state for an authority reference."""
+
     UNVERIFIED = "unverified"
     CANDIDATE = "candidate"
     VERIFIED = "verified"
@@ -47,7 +48,9 @@ class Authority:
     contact_points: tuple[str, ...] = ()
     official_urls: tuple[str, ...] = ()
     source_refs: tuple[AuthoritySource, ...] = ()
-    verification_status: AuthorityVerificationStatus = AuthorityVerificationStatus.UNVERIFIED
+    verification_status: AuthorityVerificationStatus = (
+        AuthorityVerificationStatus.UNVERIFIED
+    )
     last_verified_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -64,9 +67,12 @@ class Authority:
         contact_points: list[str] | None = None,
         official_urls: list[str] | None = None,
         source_refs: list[AuthoritySource] | None = None,
-        verification_status: AuthorityVerificationStatus = AuthorityVerificationStatus.UNVERIFIED,
+        verification_status: AuthorityVerificationStatus = (
+            AuthorityVerificationStatus.UNVERIFIED
+        ),
         last_verified_at: datetime | None = None,
     ) -> "Authority":
+        """Create a validated authority reference."""
         name = name.strip()
         authority_type = authority_type.strip()
         if not name:
@@ -83,9 +89,17 @@ class Authority:
             jurisdiction=dict(jurisdiction or {}),
             organisation_id=organisation_id,
             office_id=office_id,
-            postal_addresses=tuple(x.strip() for x in (postal_addresses or []) if x.strip()),
-            contact_points=tuple(x.strip() for x in (contact_points or []) if x.strip()),
-            official_urls=tuple(x.strip() for x in (official_urls or []) if x.strip()),
+            postal_addresses=tuple(
+                value.strip()
+                for value in (postal_addresses or [])
+                if value.strip()
+            ),
+            contact_points=tuple(
+                value.strip() for value in (contact_points or []) if value.strip()
+            ),
+            official_urls=tuple(
+                value.strip() for value in (official_urls or []) if value.strip()
+            ),
             source_refs=tuple(source_refs or []),
             verification_status=verification_status,
             last_verified_at=last_verified_at,
