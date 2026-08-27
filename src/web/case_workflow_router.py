@@ -1,9 +1,4 @@
-"""Thin FastAPI boundary over the canonical CaseWorkflowService.
-
-This router owns transport DTOs only. Domain/application rules stay in
-``src.application.case_workflow`` and provider-specific delivery stays behind
-transport adapters.
-"""
+"""Thin FastAPI boundary over the canonical CaseWorkflowService."""
 
 from __future__ import annotations
 
@@ -13,13 +8,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from src.application.case_workflow import (
-    CaseWorkflowService,
-    InMemoryCaseRepository,
-    InMemoryEvidenceRepository,
-    InMemorySubmissionRepository,
-)
+from src.application.case_workflow import CaseWorkflowService
 from src.domain.submission import Submission
+from src.storage.case_memory_repository import (
+    MemoryAuthorityRepository,
+    MemoryCaseRepository,
+    MemoryEvidenceRepository,
+    MemorySubmissionRepository,
+)
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -54,13 +50,6 @@ class SubmissionResponse(BaseModel):
     events: list[dict[str, str | None]]
 
 
-class _MissingAuthorityRepository:
-    """Temporary boundary until the canonical authority persistence adapter is wired."""
-
-    def get(self, authority_id: str):
-        return None
-
-
 @dataclass
 class _WorkflowContainer:
     service: CaseWorkflowService
@@ -68,10 +57,10 @@ class _WorkflowContainer:
 
 _container = _WorkflowContainer(
     service=CaseWorkflowService(
-        cases=InMemoryCaseRepository(),
-        evidence=InMemoryEvidenceRepository(),
-        authorities=_MissingAuthorityRepository(),
-        submissions=InMemorySubmissionRepository(),
+        cases=MemoryCaseRepository(),
+        evidence=MemoryEvidenceRepository(),
+        authorities=MemoryAuthorityRepository(),
+        submissions=MemorySubmissionRepository(),
     )
 )
 
