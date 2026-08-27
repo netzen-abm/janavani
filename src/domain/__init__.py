@@ -4,6 +4,7 @@ from .authority import Authority, AuthoritySource, AuthorityVerificationStatus
 from .case import Case, CaseEvent, CaseStatus
 from .consent import Consent, ConsentStatus
 from .evidence import Evidence, EvidenceKind, EvidenceStatus
+from .submission import DeliveryEvent, Submission, SubmissionStatus
 
 __all__ = [
     "Authority",
@@ -17,4 +18,7 @@ __all__ = [
     "Evidence",
     "EvidenceKind",
     "EvidenceStatus",
+    "DeliveryEvent",
+    "Submission",
+    "SubmissionStatus",
 ]
