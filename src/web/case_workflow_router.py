@@ -54,6 +54,13 @@ class SubmissionResponse(BaseModel):
     events: list[dict[str, str | None]]
 
 
+class _MissingAuthorityRepository:
+    """Temporary boundary until the canonical authority persistence adapter is wired."""
+
+    def get(self, authority_id: str):
+        return None
+
+
 @dataclass
 class _WorkflowContainer:
     service: CaseWorkflowService
@@ -67,13 +74,6 @@ _container = _WorkflowContainer(
         submissions=InMemorySubmissionRepository(),
     )
 )
-
-
-class _MissingAuthorityRepository:
-    """Temporary boundary until the canonical authority persistence adapter is wired."""
-
-    def get(self, authority_id: str):
-        return None
 
 
 def get_workflow() -> CaseWorkflowService:
