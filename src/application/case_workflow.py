@@ -9,6 +9,7 @@ from src.domain.authority import Authority
 from src.domain.case import Case, CaseStatus
 from src.domain.consent import Consent
 from src.domain.evidence import Evidence
+from src.domain.submission import Submission, SubmissionStatus
 
 
 class CaseRepository(Protocol):
@@ -22,6 +23,11 @@ class EvidenceRepository(Protocol):
 
 class AuthorityRepository(Protocol):
     def get(self, authority_id: str) -> Authority | None: ...
+
+
+class SubmissionRepository(Protocol):
+    def get(self, submission_id: str) -> Submission | None: ...
+    def save(self, submission: Submission) -> Submission: ...
 
 
 @dataclass
@@ -48,12 +54,25 @@ class InMemoryEvidenceRepository:
 
 
 @dataclass
+class InMemorySubmissionRepository:
+    submissions: dict[str, Submission] = field(default_factory=dict)
+
+    def get(self, submission_id: str) -> Submission | None:
+        return self.submissions.get(submission_id)
+
+    def save(self, submission: Submission) -> Submission:
+        self.submissions[submission.submission_id] = submission
+        return submission
+
+
+@dataclass
 class CaseWorkflowService:
     """Coordinate the canonical case lifecycle without provider coupling."""
 
     cases: CaseRepository
     evidence: EvidenceRepository
     authorities: AuthorityRepository
+    submissions: SubmissionRepository | None = None
 
     def create_case(self, issue: str, *, actor: str | None = None) -> Case:
         case = Case(issue=issue)
@@ -109,16 +128,74 @@ class CaseWorkflowService:
         case.add_event("submission.approved", actor=actor)
         return self.cases.save(case)
 
-    def mark_submission_started(self, case_id: str, *, actor: str | None = None) -> Case:
+    def create_submission(
+        self,
+        case_id: str,
+        destination_ref: str,
+        *,
+        consent_ref: str | None = None,
+        authorization_ref: str | None = None,
+        payload_hash: str | None = None,
+        actor: str | None = None,
+    ) -> Submission:
+        if self.submissions is None:
+            raise ValueError("submission repository is not configured")
         case = self._case(case_id)
         if case.status != CaseStatus.APPROVED:
             raise ValueError("submission requires explicit approval")
-        case.transition(CaseStatus.SUBMISSION, actor=actor)
-        case.add_event("submission.started", actor=actor)
-        return self.cases.save(case)
+        if not destination_ref.strip():
+            raise ValueError("destination_ref is required")
+        submission = Submission(
+            case_id=case.id,
+            destination_ref=destination_ref.strip(),
+            consent_ref=consent_ref,
+            authorization_ref=authorization_ref,
+            payload_hash=payload_hash,
+        )
+        case.add_event("submission.created", actor=actor, submission_id=submission.submission_id)
+        self.cases.save(case)
+        return self.submissions.save(submission)
+
+    def mark_submission_queued(self, submission_id: str, *, actor: str | None = None) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.QUEUED, reason=f"queued by {actor}" if actor else None)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
+
+    def mark_submission_transmitting(self, submission_id: str) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.TRANSMITTING)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
+
+    def record_submission_sent(self, submission_id: str, *, adapter_id: str, reference: str) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.SENT, adapter_id=adapter_id, reference=reference)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
+
+    def record_submission_received(self, submission_id: str, *, adapter_id: str, reference: str) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.RECEIVED, adapter_id=adapter_id, reference=reference)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
+
+    def record_submission_acknowledged(self, submission_id: str, *, adapter_id: str, reference: str) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.ACKNOWLEDGED, adapter_id=adapter_id, reference=reference)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
+
+    def record_submission_failure(self, submission_id: str, *, reason: str, adapter_id: str | None = None) -> Submission:
+        submission = self._submission(submission_id)
+        submission.transition(SubmissionStatus.FAILED, adapter_id=adapter_id, reason=reason)
+        return self.submissions.save(submission)  # type: ignore[union-attr]
 
     def _case(self, case_id: str) -> Case:
         case = self.cases.get(case_id)
         if case is None:
             raise ValueError(f"case not found: {case_id}")
         return case
+
+    def _submission(self, submission_id: str) -> Submission:
+        if self.submissions is None:
+            raise ValueError("submission repository is not configured")
+        submission = self.submissions.get(submission_id)
+        if submission is None:
+            raise ValueError(f"submission not found: {submission_id}")
+        return submission
