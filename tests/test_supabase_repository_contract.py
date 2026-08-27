@@ -79,6 +79,10 @@ def test_case_get_uses_canonical_table_and_id_filter() -> None:
     assert query.limit_value == 1
 
 
+def test_case_get_returns_none_for_missing_record() -> None:
+    assert SupabaseCaseRepository(_Client()).get("missing") is None
+
+
 def test_case_save_upserts_serialized_row() -> None:
     case = Case(issue="Pothole")
     client = _Client()
@@ -110,8 +114,8 @@ def test_submission_get_and_save_use_submission_id() -> None:
     assert client.queries[0].table == "submissions"
     assert client.queries[0].filters == [("submission_id", submission.submission_id)]
 
-    client.queries.clear()
-    saved = repository.save(submission)
+    client = _Client()
+    saved = SupabaseSubmissionRepository(client).save(submission)
     assert saved.submission_id == submission.submission_id
     assert client.queries[0].table == "submissions"
     assert client.queries[0].upsert_payload["operation_id"] == submission.operation_id
