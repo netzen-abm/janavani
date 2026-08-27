@@ -4,11 +4,13 @@ use dioxus::prelude::*;
 
 mod api_client;
 mod capability_checker;
+mod client_capability;
 mod decentralized_drivers;
 mod sos_interface;
 mod storage_adapter;
 
 use api_client::{DraftResponse, JanavaniDioxusBridge};
+use client_capability::{ClientCapabilityAdapter, ConventionalNetworkCapability, DeviceLocationCapability};
 use sos_interface::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
 
 fn main() {
@@ -23,8 +25,9 @@ fn App() -> Element {
     let mut sos_notification = use_signal(|| Option::<String>::None);
     let mut is_loading = use_signal(|| false);
 
-    let current_coordinates = use_signal(|| "12.9716, 77.5946".to_string());
     let bridge_client = use_memo(JanavaniDioxusBridge::new);
+    let network_status = ConventionalNetworkCapability::new(bridge_client.read().backend_url.is_some()).status();
+    let location_status = DeviceLocationCapability.status();
 
     let on_submit = move |_| {
         let text = user_input.read().trim().to_string();
@@ -46,7 +49,7 @@ fn App() -> Element {
     };
 
     let on_sos = move |danger_type: String| {
-        let coordinates = current_coordinates.read().clone();
+        let coordinates = "LOCATION_OBSERVATION_REQUIRED".to_string();
         sos_notification.set(None);
 
         spawn(async move {
@@ -86,7 +89,8 @@ fn App() -> Element {
                 h2 { "Capability status" }
                 p { "Capabilities are isolated. An unavailable network, AI or decentralized adapter must not block unrelated civic workflows." }
                 ul {
-                    li { "Civic document workflow: available" }
+                    li { "Conventional network: {format_status(&network_status)}" }
+                    li { "Device location: {format_status(&location_status)}" }
                     li { "Freenet adapter: optional" }
                     li { "Nostr / mesh adapters: optional" }
                     li { "AI adapters: optional" }
@@ -151,5 +155,13 @@ fn App() -> Element {
                 }
             }
         }
+    }
+}
+
+fn format_status(status: &client_capability::CapabilityStatus) -> &'static str {
+    match status.state {
+        client_capability::CapabilityState::Available => "available",
+        client_capability::CapabilityState::Unavailable => "unavailable",
+        client_capability::CapabilityState::Degraded => "degraded",
     }
 }
