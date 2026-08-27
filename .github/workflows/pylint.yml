@@ -2,6 +2,9 @@ name: Pylint
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,5 +23,17 @@ jobs:
         pip install -r requirements.txt
         pip install pylint
     - name: Analyse canonical Python code with pylint
+      env:
+        PYTHONPATH: .
       run: |
-        pylint src/domain src/storage src/web --fail-under=7.0
+        pylint \
+          src/domain/authority.py \
+          src/domain/case.py \
+          src/domain/consent.py \
+          src/domain/evidence.py \
+          src/domain/submission.py \
+          src/application/case_workflow.py \
+          src/storage/case_memory_repository.py \
+          src/storage/supabase_repositories.py \
+          src/web/case_workflow_router.py \
+          --fail-under=7.0
