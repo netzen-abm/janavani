@@ -1,38 +1,104 @@
-use web_sys::window;
-use gloo_utils::window as gloo_window;
+//! Client execution-strategy capability.
+//!
+//! This module only reports observable client constraints. It does not make
+//! civic, legal, security, or authority determinations.
 
-#[derive(Debug, Clone, Copy)]
+use gloo_utils::window;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DocumentGenerationStrategy {
     LocalWasmCompilation,
     ServerSideDeferredFallback,
+    Unavailable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExecutionObservation {
+    pub hardware_concurrency: Option<u32>,
+    pub memory_api_exposed: bool,
 }
 
 pub struct DeviceCapabilityChecker;
 
 impl DeviceCapabilityChecker {
-    /// Inspects local hardware performance metrics to select an optimal processing path.
-    pub fn assess_execution_strategy() -> DocumentGenerationStrategy {
-        let nav = gloo_window().navigator();
-        
-        // 1. Core Count Evaluation (Detect low-tier mobile processors)
-        let CPU_cores = nav.hardware_concurrency() as u32;
-        
-        // 2. Memory Footprint Assessment (Using the window performance memory web-sys API hooks)
-        let is_low_memory_device = if let Ok(Some(perf)) = gloo_window().performance() {
-            // Check if the device reports constrained execution states
-            let raw_js_perf = js_sys::Reflect::get(&perf, &wasm_bindgen::JsValue::from_str("memory")).is_ok();
-            CPU_cores < 4 || !raw_js_perf
-        } else {
-            true
+    /// Collects browser observations without converting them into domain facts.
+    pub fn observe_execution_environment() -> ExecutionObservation {
+        let navigator = window().navigator();
+        let hardware_concurrency = match navigator.hardware_concurrency() {
+            value if value > 0 => Some(value as u32),
+            _ => None,
         };
 
-        // 3. Select strategy based on device capabilities
-        if CPU_cores < 4 || is_low_memory_device {
-            // Safe fallback route for low-powered mobile devices
-            DocumentGenerationStrategy::ServerSideDeferredFallback
-        } else {
-            // High-speed generation route for powerful desktop or high-end mobile devices
-            DocumentGenerationStrategy::LocalWasmCompilation
+        let memory_api_exposed = window()
+            .performance()
+            .ok()
+            .and_then(|performance| {
+                js_sys::Reflect::get(
+                    &performance,
+                    &wasm_bindgen::JsValue::from_str("memory"),
+                )
+                .ok()
+            })
+            .is_some();
+
+        ExecutionObservation {
+            hardware_concurrency,
+            memory_api_exposed,
         }
+    }
+
+    /// Selects an execution path from explicit local observations.
+    pub fn assess_execution_strategy(
+        observation: ExecutionObservation,
+    ) -> DocumentGenerationStrategy {
+        match observation.hardware_concurrency {
+            None => DocumentGenerationStrategy::ServerSideDeferredFallback,
+            Some(cores) if cores < 4 => DocumentGenerationStrategy::ServerSideDeferredFallback,
+            Some(_) if observation.memory_api_exposed => {
+                DocumentGenerationStrategy::LocalWasmCompilation
+            }
+            Some(_) => DocumentGenerationStrategy::ServerSideDeferredFallback,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unknown_cpu_count_uses_deferred_fallback() {
+        let observation = ExecutionObservation {
+            hardware_concurrency: None,
+            memory_api_exposed: false,
+        };
+        assert_eq!(
+            DeviceCapabilityChecker::assess_execution_strategy(observation),
+            DocumentGenerationStrategy::ServerSideDeferredFallback
+        );
+    }
+
+    #[test]
+    fn low_core_device_uses_deferred_fallback() {
+        let observation = ExecutionObservation {
+            hardware_concurrency: Some(2),
+            memory_api_exposed: true,
+        };
+        assert_eq!(
+            DeviceCapabilityChecker::assess_execution_strategy(observation),
+            DocumentGenerationStrategy::ServerSideDeferredFallback
+        );
+    }
+
+    #[test]
+    fn capable_device_can_use_local_wasm() {
+        let observation = ExecutionObservation {
+            hardware_concurrency: Some(8),
+            memory_api_exposed: true,
+        };
+        assert_eq!(
+            DeviceCapabilityChecker::assess_execution_strategy(observation),
+            DocumentGenerationStrategy::LocalWasmCompilation
+        );
     }
 }
