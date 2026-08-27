@@ -1,71 +1,49 @@
-use serde::{Serialize, Deserialize};
-use web_sys::window;
-use crate::decentralized_drivers::JanavaniDecentralizedCore;
+//! Emergency capability boundary for the Web client.
+//!
+//! SOS transport must only report a real dispatch result. This module does
+//! not manufacture delivery confirmations, provider IDs, or location data.
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct LocalEmergencyContext {
     pub tracking_id: String,
-    pub geo_coordinates: String,
-    pub danger_context: String, // e.g., "Network Offline / Stalker Scenario / Unsafe Travel"
+    pub geo_coordinates: Option<String>,
+    pub danger_context: String,
 }
 
 pub struct JanavaniWasmSOSTrigger;
 
 impl JanavaniWasmSOSTrigger {
-    /// Dispatches emergency distress events dynamically across available network mediums.
-    pub async fn dispatch_panic_beacon(context: LocalEmergencyContext) -> Result<String, String> {
-        let nav = gloo_utils::window().navigator();
-        let is_online = nav.on_line();
+    /// Returns an explicit unavailable result until a real SOS transport
+    /// adapter is configured.
+    pub async fn dispatch_panic_beacon(_context: LocalEmergencyContext) -> Result<String, String> {
+        Err("SOS transport provider is unavailable".to_string())
+    }
 
-        // Standardize the emergency string block format
-        let raw_payload = format!(
-            "🚨 JANAVANI SOS ALERT | TYPE: {} | LOC: {} | ID: {}", 
-            context.danger_context, context.geo_coordinates, context.tracking_id
-        );
+    /// Clear only Janavani-owned browser records. This is intentionally not
+    /// presented as a guaranteed forensic/device wipe.
+    pub fn clear_janavani_local_storage() -> Result<(), String> {
+        let storage = gloo_utils::window()
+            .local_storage()
+            .map_err(|_| "Storage access denied")?
+            .ok_or_else(|| "Local storage unavailable".to_string())?;
 
-        if !is_online {
-            // --- OFFLINE AD-HOC COMMUNICATIONS MESH VECTOR (RETICULUM) ---
-            // If network architecture drops completely, bypass internet routes and use ad-hoc channels.
-            match JanavaniDecentralizedCore::transmit_via_reticulum_mesh(&raw_payload) {
-                Ok(mesh_id) => {
-                    // Wipe local browser state caches immediately to safeguard privacy on device loss
-                    let _ = Self::local_emergency_device_wipe();
-                    return Ok(format!("Offline Mesh Broadcast Active over Reticulum. Token Hash: {}", mesh_id));
-                },
-                Err(e) => return Err(format!("Mesh interface hardware failure: {}", e)),
+        let length = storage.length().map_err(|_| "Unable to inspect local storage")?;
+        let mut keys = Vec::new();
+        for index in 0..length {
+            if let Ok(Some(key)) = storage.key(index) {
+                if key.starts_with("local_doc:") || key.starts_with("janavani:") {
+                    keys.push(key);
+                }
             }
         }
 
-        // --- ONLINE DISPATCH PATHWAY (HTTPS BACKEND RE-ROUTING) ---
-        let client = reqwest::Client::new();
-        let backend_url = "https://janavani.internal";
-
-        let response = client.post(backend_url)
-            .header("X-Janavani-Interface-Token", "web-mvp-token-abc")
-            .json(&serde_json::json!({
-                "session_tracking_id": context.tracking_id,
-                "approximate_coordinates": context.geo_coordinates
-            }))
-            .send()
-            .await
-            .map_err(|e| format!("Emergency backend connection dropped: {}", e))?;
-
-        if response.status().is_success() {
-            let _ = Self::local_emergency_device_wipe();
-            Ok("Online emergency routing complete. Cache wiped globally.".to_string())
-        } else {
-            Err(format!("Emergency server response failure code: {}", response.status()))
+        for key in keys {
+            storage
+                .remove_item(&key)
+                .map_err(|_| format!("Unable to clear local record: {key}"))?;
         }
-    }
-
-    /// Destroys all sensitive session data on the local device instantly.
-    pub fn local_emergency_device_wipe() -> Result<(), String> {
-        let storage = gloo_utils::window().local_storage()
-            .map_err(|_| "Storage access denied.")?
-            .ok_or_else(|| "Local storage space unavailable.")?;
-            
-        // Flash clear everything to prevent post-incident device extraction risks
-        storage.clear().map_err(|_| "Wipe operations aborted.")?;
         Ok(())
     }
 }
