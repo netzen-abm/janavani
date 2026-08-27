@@ -14,6 +14,8 @@ from uuid import uuid4
 
 
 class CaseStatus(str, Enum):
+    """Lifecycle states for a civic case."""
+
     OPEN = "open"
     UNDERSTANDING = "understanding"
     EVIDENCE_COLLECTION = "evidence_collection"
@@ -60,8 +62,14 @@ class Case:
         if not self.issue:
             raise ValueError("case issue is required")
 
-    def transition(self, status: CaseStatus, *, actor: str | None = None, **data: Any) -> None:
-        """Apply an explicit status transition and record the transition event."""
+    def transition(
+        self,
+        status: CaseStatus,
+        *,
+        actor: str | None = None,
+        **data: Any,
+    ) -> None:
+        """Apply a status transition and record the transition event."""
         if status == self.status:
             return
         previous = self.status
@@ -74,11 +82,23 @@ class Case:
             )
         )
 
-    def add_event(self, event_type: str, *, actor: str | None = None, **data: Any) -> None:
+    def add_event(
+        self,
+        event_type: str,
+        *,
+        actor: str | None = None,
+        **data: Any,
+    ) -> None:
+        """Append a domain event to the case history."""
         self.events.append(CaseEvent(event_type=event_type, actor=actor, data=data))
 
-    def attach_evidence(self, evidence_id: str, *, actor: str | None = None) -> None:
-        """Attach an existing Evidence identity without embedding its content."""
+    def attach_evidence(
+        self,
+        evidence_id: str,
+        *,
+        actor: str | None = None,
+    ) -> None:
+        """Attach an existing evidence identity without embedding its content."""
         evidence_id = evidence_id.strip()
         if not evidence_id:
             raise ValueError("evidence_id is required")
