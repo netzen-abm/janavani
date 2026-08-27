@@ -76,3 +76,13 @@ class Case:
 
     def add_event(self, event_type: str, *, actor: str | None = None, **data: Any) -> None:
         self.events.append(CaseEvent(event_type=event_type, actor=actor, data=data))
+
+    def attach_evidence(self, evidence_id: str, *, actor: str | None = None) -> None:
+        """Attach an existing Evidence identity without embedding its content."""
+        evidence_id = evidence_id.strip()
+        if not evidence_id:
+            raise ValueError("evidence_id is required")
+        if evidence_id in self.evidence_ids:
+            return
+        self.evidence_ids.append(evidence_id)
+        self.add_event("case.evidence_attached", actor=actor, evidence_id=evidence_id)
