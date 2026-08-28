@@ -65,7 +65,9 @@ def test_submission_delivery_requires_reference():
         assert "requires provider/delivery reference" in str(exc)
 
     service.record_submission_sent(submission.submission_id, adapter_id="test", reference="provider-1")
-    assert service._submission(submission.submission_id).status == SubmissionStatus.SENT
+    stored = service.submissions.get(submission.submission_id)  # type: ignore[union-attr]
+    assert stored is not None
+    assert stored.status == SubmissionStatus.SENT
 
 
 def test_consent_must_belong_to_case_and_be_active():
