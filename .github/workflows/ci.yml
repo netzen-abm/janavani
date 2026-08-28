@@ -5,7 +5,11 @@ on:
     branches:
       - main
       - develop/**
+      - refactor/case-capability-kernel
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   test:
