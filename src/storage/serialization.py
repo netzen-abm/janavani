@@ -75,6 +75,7 @@ def consent_row(consent: Consent) -> dict[str, Any]:
         "purpose": consent.purpose,
         "scope": list(consent.scope),
         "data_categories": list(consent.data_categories),
+        "grant_type": "explicit",
         "status": consent.status.value,
         "policy_version": consent.policy_version,
         "source_channel": consent.source_channel,
@@ -85,19 +86,35 @@ def consent_row(consent: Consent) -> dict[str, Any]:
     }
 
 
+def _party_row(party: Any) -> dict[str, Any]:
+    return {
+        "party_type": party.party_type,
+        "name": party.name,
+        "postal_address": party.postal_address,
+        "email": party.email,
+        "phone": party.phone,
+        "official_source_ref": party.official_source_ref,
+    }
+
+
 def document_row(document: Document) -> dict[str, Any]:
     return {
         "document_id": document.document_id,
-        "case_id": getattr(document, "case_id", None),
+        "case_id": document.case_id,
         "document_type": document.document_type.value,
         "title": document.title,
         "language": document.language,
         "subject": document.subject,
         "body": document.body,
+        "from_party": _party_row(document.from_party) if document.from_party else None,
+        "to_party": _party_row(document.to_party),
+        "cc_parties": [_party_row(item) for item in document.cc_parties],
+        "references_json": list(document.references),
+        "enclosures": list(document.enclosures),
         "version": document.version,
         "status": document.status.value,
-        "artifact_ref": getattr(document, "artifact_ref", None),
-        "content_hash": getattr(document, "content_hash", None),
+        "artifact_ref": document.artifact_ref,
+        "content_hash": document.content_hash,
     }
 
 
