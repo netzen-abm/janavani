@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from src.domain.authority import Authority
@@ -28,41 +28,6 @@ class AuthorityRepository(Protocol):
 class SubmissionRepository(Protocol):
     def get(self, submission_id: str) -> Submission | None: ...
     def save(self, submission: Submission) -> Submission: ...
-
-
-@dataclass
-class InMemoryCaseRepository:
-    """Deterministic repository used by application tests and local composition."""
-
-    cases: dict[str, Case] = field(default_factory=dict)
-
-    def get(self, case_id: str) -> Case | None:
-        return self.cases.get(case_id)
-
-    def save(self, case: Case) -> Case:
-        self.cases[case.id] = case
-        return case
-
-
-@dataclass
-class InMemoryEvidenceRepository:
-    evidence: dict[str, Evidence] = field(default_factory=dict)
-
-    def save(self, evidence: Evidence) -> Evidence:
-        self.evidence[evidence.evidence_id] = evidence
-        return evidence
-
-
-@dataclass
-class InMemorySubmissionRepository:
-    submissions: dict[str, Submission] = field(default_factory=dict)
-
-    def get(self, submission_id: str) -> Submission | None:
-        return self.submissions.get(submission_id)
-
-    def save(self, submission: Submission) -> Submission:
-        self.submissions[submission.submission_id] = submission
-        return submission
 
 
 @dataclass
