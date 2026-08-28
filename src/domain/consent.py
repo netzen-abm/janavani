@@ -13,6 +13,8 @@ from uuid import uuid4
 
 
 class ConsentStatus(str, Enum):
+    """Lifecycle status for a consent record."""
+
     GRANTED = "granted"
     DENIED = "denied"
     REVOKED = "revoked"
@@ -21,6 +23,8 @@ class ConsentStatus(str, Enum):
 
 @dataclass(frozen=True)
 class Consent:
+    """Purpose-bound authorization evidence for a case capability."""
+
     consent_id: str
     subject_id: str
     capability_id: str
@@ -49,6 +53,7 @@ class Consent:
         expires_at: datetime | None = None,
         proof_ref: str | None = None,
     ) -> "Consent":
+        """Create an active, purpose-bound consent record."""
         if not subject_id.strip():
             raise ValueError("subject_id is required")
         if not capability_id.strip():
@@ -73,12 +78,14 @@ class Consent:
         )
 
     def is_active(self, *, now: datetime | None = None) -> bool:
+        """Return whether consent is currently active."""
         now = now or datetime.now(timezone.utc)
         if self.status != ConsentStatus.GRANTED:
             return False
         return self.expires_at is None or self.expires_at > now
 
     def revoke(self, *, at: datetime | None = None) -> "Consent":
+        """Return a copy marked as revoked."""
         return Consent(
             consent_id=self.consent_id,
             subject_id=self.subject_id,
