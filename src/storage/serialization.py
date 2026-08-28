@@ -115,6 +115,8 @@ def document_row(document: Document) -> dict[str, Any]:
         "status": document.status.value,
         "artifact_ref": document.artifact_ref,
         "content_hash": document.content_hash,
+        "created_at": document.created_at.isoformat(),
+        "updated_at": document.updated_at.isoformat(),
     }
 
 
