@@ -105,7 +105,7 @@ def consent_from_row(row: dict[str, Any]) -> Consent:
 
 def _party_from_row(value: Any) -> PartyRef:
     if not isinstance(value, dict):
-        raise ValueError("document to_party must be an object")
+        raise ValueError("document party must be an object")
     return PartyRef(
         party_type=str(_required(value, "party_type")),
         name=str(_required(value, "name")),
@@ -127,7 +127,7 @@ def document_from_row(row: dict[str, Any]) -> Document:
         body=str(_required(row, "body")),
         from_party=PartyRef(**row["from_party"]) if row.get("from_party") else None,
         cc_parties=tuple(PartyRef(**item) for item in (row.get("cc_parties") or [])),
-        references=tuple(str(x) for x in (row.get("references") or [])),
+        references=tuple(str(x) for x in (row.get("references_json") or [])),
         enclosures=tuple(str(x) for x in (row.get("enclosures") or [])),
         version=int(row.get("version", 1)),
         status=DocumentStatus(str(row.get("status", DocumentStatus.DRAFT.value))),
