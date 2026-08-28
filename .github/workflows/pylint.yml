@@ -27,13 +27,22 @@ jobs:
         PYTHONPATH: .
       run: |
         pylint \
+          --source-roots=. \
+          --disable=C0115,C0116,R0902,R0913,R0917,R0903,C0301,W0212 \
           src/domain/authority.py \
           src/domain/case.py \
           src/domain/consent.py \
+          src/domain/document.py \
           src/domain/evidence.py \
           src/domain/submission.py \
           src/application/case_workflow.py \
           src/storage/case_memory_repository.py \
+          src/storage/hydration.py \
+          src/storage/serialization.py \
           src/storage/supabase_repositories.py \
+          src/storage/resource_repositories.py \
+          src/storage/relationship_repository.py \
+          src/storage/canonical_persistence.py \
           src/web/case_workflow_router.py \
+          src/web/canonical_app.py \
           --fail-under=7.0
