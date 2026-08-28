@@ -1,13 +1,13 @@
 """Pure SQL-row-to-domain hydration for canonical records.
 
 The functions validate required fields and reconstruct domain objects without
-performing database I/O. They are intentionally explicit so schema drift fails
-at the storage boundary instead of leaking malformed state into the domain.
+database I/O. They are intentionally explicit so schema drift fails at the
+storage boundary instead of leaking malformed state into the domain.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from src.domain.authority import Authority, AuthoritySource, AuthorityVerificationStatus
@@ -103,21 +103,39 @@ def consent_from_row(row: dict[str, Any]) -> Consent:
     )
 
 
+def _party_from_row(value: Any) -> PartyRef:
+    if not isinstance(value, dict):
+        raise ValueError("document to_party must be an object")
+    return PartyRef(
+        party_type=str(_required(value, "party_type")),
+        name=str(_required(value, "name")),
+        postal_address=value.get("postal_address"),
+        email=value.get("email"),
+        phone=value.get("phone"),
+        official_source_ref=value.get("official_source_ref"),
+    )
+
+
 def document_from_row(row: dict[str, Any]) -> Document:
-    to_party = row.get("to_party") or {}
     return Document(
         document_id=str(_required(row, "document_id")),
         document_type=DocumentType(str(_required(row, "document_type"))),
         title=str(_required(row, "title")),
-        language=str(row.get("language", "en")),
-        to=PartyRef(**to_party) if to_party else None,
-        subject=row.get("subject"),
-        body=row.get("body"),
+        language=str(_required(row, "language")),
+        to_party=_party_from_row(_required(row, "to_party")),
+        subject=str(_required(row, "subject")),
+        body=str(_required(row, "body")),
+        from_party=PartyRef(**row["from_party"]) if row.get("from_party") else None,
+        cc_parties=tuple(PartyRef(**item) for item in (row.get("cc_parties") or [])),
+        references=tuple(str(x) for x in (row.get("references") or [])),
+        enclosures=tuple(str(x) for x in (row.get("enclosures") or [])),
         version=int(row.get("version", 1)),
         status=DocumentStatus(str(row.get("status", DocumentStatus.DRAFT.value))),
         case_id=row.get("case_id"),
         artifact_ref=row.get("artifact_ref"),
         content_hash=row.get("content_hash"),
+        created_at=_dt(row.get("created_at")) or datetime.now(timezone.utc),
+        updated_at=_dt(row.get("updated_at")) or datetime.now(timezone.utc),
     )
 
 
