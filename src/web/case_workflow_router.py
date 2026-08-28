@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,12 +9,7 @@ from pydantic import BaseModel, Field
 
 from src.application.case_workflow import CaseWorkflowService
 from src.domain.submission import Submission
-from src.storage.case_memory_repository import (
-    MemoryAuthorityRepository,
-    MemoryCaseRepository,
-    MemoryEvidenceRepository,
-    MemorySubmissionRepository,
-)
+from src.storage.canonical_persistence import memory_persistence
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -50,23 +44,12 @@ class SubmissionResponse(BaseModel):
     events: list[dict[str, str | None]]
 
 
-@dataclass
-class _WorkflowContainer:
-    service: CaseWorkflowService
-
-
-_container = _WorkflowContainer(
-    service=CaseWorkflowService(
-        cases=MemoryCaseRepository(),
-        evidence=MemoryEvidenceRepository(),
-        authorities=MemoryAuthorityRepository(),
-        submissions=MemorySubmissionRepository(),
-    )
-)
+_memory = memory_persistence()
 
 
 def get_workflow() -> CaseWorkflowService:
-    return _container.service
+    """Return the explicitly selected development persistence workflow."""
+    return _memory.workflow
 
 
 Workflow = Annotated[CaseWorkflowService, Depends(get_workflow)]
