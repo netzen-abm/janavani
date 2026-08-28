@@ -14,6 +14,8 @@ from uuid import uuid4
 
 
 class EvidenceKind(str, Enum):
+    """Type of evidence attached to a civic case."""
+
     DOCUMENT = "document"
     PHOTO = "photo"
     VIDEO = "video"
@@ -25,6 +27,8 @@ class EvidenceKind(str, Enum):
 
 
 class EvidenceStatus(str, Enum):
+    """Lifecycle status for evidence metadata."""
+
     PROVIDED = "provided"
     VERIFIED = "verified"
     REJECTED = "rejected"
@@ -60,6 +64,7 @@ class Evidence:
         provenance: list[str] | None = None,
         status: EvidenceStatus = EvidenceStatus.PROVIDED,
     ) -> "Evidence":
+        """Create validated evidence metadata."""
         case_id = case_id.strip()
         title = title.strip()
         source = source.strip()
