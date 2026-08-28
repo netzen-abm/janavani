@@ -79,7 +79,10 @@ class Authority:
             raise ValueError("authority name is required")
         if not authority_type:
             raise ValueError("authority type is required")
-        if verification_status == AuthorityVerificationStatus.VERIFIED and not source_refs:
+        if (
+            verification_status == AuthorityVerificationStatus.VERIFIED
+            and not source_refs
+        ):
             raise ValueError("verified authority requires source references")
 
         return cls(
