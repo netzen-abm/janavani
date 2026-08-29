@@ -4,7 +4,7 @@
 # Security:
 # - pull_request_target is used because label updates require write access.
 # - This workflow does NOT checkout or execute code from the untrusted PR branch.
-# - The GitHub-maintained action is pinned to the immutable v7.0.0 release commit.
+# - GitHub's official Labeler action is pinned to the immutable v7.0.0 release commit.
 
 name: Labeler
 
