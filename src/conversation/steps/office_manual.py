@@ -5,45 +5,25 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_PREVIEW
 
-from conversation.steps.preview import handle_preview
-
 
 async def handle_office_manual(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
     user_id = update.effective_user.id
-
     session = get_session(user_id)
 
     text = update.message.text.strip()
 
     # --------------------------------------
-    # 🧾 PARSE INPUT
+    # 🧠 FLEXIBLE PARSING (IMPROVED)
     # --------------------------------------
-
-    try:
-        name, address = text.split(",", 1)
-
-    except ValueError:
-
-        await update.message.reply_text(
-            "❌ Invalid format.\n\n"
-            "Please use:\n"
-            "Office Name, Address\n\n"
-            "Example:\n"
-            "Village Office Kannur, Near Collectorate"
-        )
-        return
-
-    # --------------------------------------
-    # 🏢 SAVE OFFICE
-    # --------------------------------------
+    parts = [p.strip() for p in text.split(",")]
 
     office = {
         "id": "manual",
-        "name": name.strip(),
-        "address": address.strip(),
+        "name": parts[0] if parts else "Not specified",
+        "address": parts[1] if len(parts) > 1 else "",
         "district": session.get("district", "Unknown"),
     }
 
@@ -52,18 +32,16 @@ async def handle_office_manual(
     # --------------------------------------
     # ✅ CONFIRM TO USER
     # --------------------------------------
+    name = office["name"]
+    address = office["address"]
 
-    await update.message.reply_text(
-        f"✅ Office recorded\n\n"
-        f"🏢 {office['name']}\n"
-        f"📍 {office['address']}"
-    )
+    msg = f"✅ Office recorded\n\n🏢 {name}"
+    if address:
+        msg += f"\n📍 {address}"
+
+    await update.message.reply_text(msg)
 
     # --------------------------------------
-    # 🔄 MOVE TO PREVIEW
+    # 🔄 MOVE TO PREVIEW (STATE-DRIVEN)
     # --------------------------------------
-
     set_state(user_id, WAITING_FOR_PREVIEW)
-
-    # 🔥 TRIGGER NEXT STEP
-    await handle_preview(update, context)

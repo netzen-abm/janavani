@@ -12,7 +12,7 @@ from conversation.steps.generate import handle_generate
 # SHOW BUTTONS (SAFE FOR BOTH MESSAGE + CALLBACK)
 # --------------------------------------------------
 
-async def show_format_buttons(update: Update):
+async def show_format_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
@@ -23,7 +23,6 @@ async def show_format_buttons(update: Update):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # ✅ Handle both message & callback safely
     if update.message:
         await update.message.reply_text(
             "📄 Choose document format:",
@@ -37,7 +36,7 @@ async def show_format_buttons(update: Update):
 
 
 # --------------------------------------------------
-# HANDLE BUTTON CLICK
+# HANDLE FORMAT SELECTION
 # --------------------------------------------------
 
 async def handle_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,7 +51,7 @@ async def handle_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_id = query.from_user.id
 
-        # 🔒 Check state
+        # 🔒 Validate state
         current_state = get_state(user_id)
         if current_state != WAITING_FOR_FORMAT:
             await query.edit_message_text("⚠️ Invalid step. Please restart.")
@@ -82,24 +81,37 @@ async def handle_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # --------------------------------------
-    # 📝 TEXT FALLBACK (OPTIONAL BUT STRONG UX)
+    # 📝 TEXT INPUT (ENHANCED)
     # --------------------------------------
     elif update.message:
 
         user_id = update.effective_user.id
         text = update.message.text.strip().lower()
 
-        if text not in ["pdf", "docx"]:
+        # 🔒 Validate state
+        current_state = get_state(user_id)
+        if current_state != WAITING_FOR_FORMAT:
+            await update.message.reply_text("⚠️ Invalid step. Please restart.")
+            return
+
+        # --------------------------------------
+        # ✅ SUPPORT BOTH NUMBER + TEXT
+        # --------------------------------------
+        if text in ["1", "pdf"]:
+            format_selected = "pdf"
+        elif text in ["2", "docx"]:
+            format_selected = "docx"
+        else:
             await update.message.reply_text(
-                "❌ Invalid format.\nType 'pdf' or 'docx'."
+                "❌ Invalid format.\n\nReply:\n1 → PDF\n2 → DOCX"
             )
             return
 
         session = get_session(user_id)
-        session["format"] = text
+        session["format"] = format_selected
 
         await update.message.reply_text(
-            f"✅ Format selected: {text.upper()}\n\nGenerating document..."
+            f"✅ Format selected: {format_selected.upper()}\n\nGenerating document..."
         )
 
         set_state(user_id, WAITING_FOR_GENERATE)

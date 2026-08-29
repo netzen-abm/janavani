@@ -82,7 +82,7 @@ def generate_pdf_from_complaint(complaint: dict) -> str:
 # BACKWARD COMPATIBILITY WRAPPER
 # -------------------------------
 
-from src.documents.complaint_builder import build_complaint
+from documents.complaint_builder import build_complaint
 
 
 def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
@@ -97,4 +97,6 @@ def generate_complaint_pdf(user_name, user_address, office_id, issue_text):
         issue_text=issue_text
     )
 
-    return
+    # ✅ CALL NEW FUNCTION
+    return generate_pdf_from_complaint(complaint)
+    

@@ -3,82 +3,66 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
-from conversation.constants import WAITING_FOR_IDENTITY
 
-from documents.complaint_builder import build_complaint
+from conversation.constants import WAITING_FOR_FORMAT
 
 
 async def handle_preview(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    context: ContextTypes.DEFAULT_TYPE
 ):
-    """
-    Shows FULL complaint preview before identity selection.
-    """
-
     user_id = update.effective_user.id
     session = get_session(user_id)
 
-    issue = session.get("issue", "")
+    # --------------------------------------
+    # 🧹 SAFE EXTRACTION
+    # --------------------------------------
+
+    issue = session.get("issue", "Not provided")
+    category = session.get("category", "Not classified")
+    department = session.get("department", "Unknown")
+    district = session.get("district", "Unknown")
+
     office = session.get("office", {})
+    office_name = office.get("name", "Not specified")
+    office_city = office.get("city", "")
+
+    name = session.get("citizen_name", "Anonymous")
+    address = session.get("address", "Not provided")
 
     # --------------------------------------
-    # 🛡️ SAFE DEFAULTS
+    # 📄 BUILD PREVIEW
     # --------------------------------------
 
-    office_id = office.get("id", "manual")
-
-    try:
-        complaint = build_complaint(
-            user_name="Anonymous",
-            user_address="Not Provided",
-            office_id=office_id,
-            issue_text=issue
-        )
-
-        law = complaint.get("law", {})
-
-        preview_text = f"""
-Issue:
-{complaint.get('issue', 'Not provided')}
-
-Legal Ground:
-{law.get('law', 'Not available')} - {law.get('section', '')}
-
-{law.get('explanation', 'No explanation available')}
-"""
-
-    except Exception as e:
-        print("❌ PREVIEW ERROR:", e)
-
-        preview_text = f"""
-Issue:
-{issue}
-
-⚠️ Legal section could not be generated.
-"""
-
-    # --------------------------------------
-    # 📄 SEND PREVIEW
-    # --------------------------------------
-
-    await update.message.reply_text(
-        f"""
+    preview_text = f"""
 📄 Complaint Preview
 
-{preview_text}
+📝 Issue:
+{issue}
 
----
+📌 Category: {category}
+🏛 Department: {department}
+📍 District: {district}
 
-Choose Identity Mode:
+🏢 Office:
+{office_name} {f"({office_city})" if office_city else ""}
 
-1️⃣ Anonymous
-2️⃣ Name Only
-3️⃣ Address Only
-4️⃣ Full Details
+👤 Name: {name}
+🏠 Address: {address}
 
-Reply with 1, 2, 3, or 4.
+-----------------------------------
+
+Generate document?
+
+Reply:
+1 → PDF
+2 → DOCX
 """
-    )
 
-    set_state(user_id, WAITING_FOR_IDENTITY)
+    await update.message.reply_text(preview_text)
+
+    # --------------------------------------
+    # ➡️ NEXT STEP
+    # --------------------------------------
+
+    set_state(user_id, WAITING_FOR_FORMAT)

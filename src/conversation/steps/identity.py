@@ -3,9 +3,11 @@ from telegram.ext import ContextTypes
 
 from conversation.state import set_state
 from conversation.session import get_session
-from conversation.constants import WAITING_FOR_FORMAT
 
-from conversation.steps.format import show_format_buttons
+from conversation.constants import (
+    WAITING_FOR_NAME,
+    WAITING_FOR_ADDRESS
+)
 
 
 async def handle_identity(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,7 +35,7 @@ async def handle_identity(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "1": "anonymous",
         "2": "name_only",
         "3": "address_only",
-        "4": "full_details"
+        "4": "full"
     }
 
     identity_labels = {
@@ -50,17 +52,36 @@ async def handle_identity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["identity_mode"] = selected_mode
 
     # --------------------------------------
-    # MOVE TO NEXT STEP
+    # ROUTING (FIXED)
     # --------------------------------------
 
-    set_state(user_id, WAITING_FOR_FORMAT)
+    # ✅ Anonymous → skip name → go to address
+    if selected_mode == "anonymous":
+        session["citizen_name"] = "Anonymous"
 
-    await update.message.reply_text(
-        f"✅ Identity: {selected_label}"
-    )
+        set_state(user_id, WAITING_FOR_ADDRESS)
 
-    # --------------------------------------
-    # SHOW FORMAT OPTIONS (ONLY ONCE)
-    # --------------------------------------
+        await update.message.reply_text(
+            "✅ Identity: Anonymous\n\n📍 Enter your address:"
+        )
+        return
 
-    await show_format_buttons(update)
+    # ✅ Address Only → skip name → go to address
+    if selected_mode == "address_only":
+        session["citizen_name"] = "Not provided"
+
+        set_state(user_id, WAITING_FOR_ADDRESS)
+
+        await update.message.reply_text(
+            "✅ Identity: Address Only\n\n📍 Enter your address:"
+        )
+        return
+
+    # ✅ Name Only / Full → go to name
+    if selected_mode in ["name_only", "full"]:
+        set_state(user_id, WAITING_FOR_NAME)
+
+        await update.message.reply_text(
+            f"✅ Identity: {selected_label}\n\n👤 Enter your name:"
+        )
+        return

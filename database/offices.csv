@@ -1,4 +1,4 @@
-id,name,type,address,city,officer_role,email
-1,Edathala Panchayat,Panchayat,Edathala PO,Kochi,Secretary,secretary.edathala@kerala.gov.in
-2,Ernakulam General Hospital,Hospital,Ernakulam,Kochi,Superintendent,esh.ernakulam@health.kerala.gov.in
-3,Edathala Ration Shop,Ration Shop,Edathala,Kochi,Taluk Supply Officer,tso.ernakulam@foodsupply.kerala.gov.in
+id,name,type,address,city,district,officer_role,email
+1,Edathala Panchayat,Panchayat,Edathala PO,Kochi,Ernakulam,Secretary,secretary.edathala@kerala.gov.in
+2,Ernakulam General Hospital,Hospital,Ernakulam,Kochi,Ernakulam,Superintendent,esh.ernakulam@health.kerala.gov.in
+3,Edathala Ration Shop,Ration Shop,Edathala,Kochi,Ernakulam,Taluk Supply Officer,tso.ernakulam@foodsupply.kerala.gov.in

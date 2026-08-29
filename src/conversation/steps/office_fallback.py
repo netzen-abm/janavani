@@ -6,10 +6,8 @@ from conversation.state import set_state
 
 from conversation.constants import (
     WAITING_FOR_OFFICE_MANUAL,
-    WAITING_FOR_PREVIEW
+    WAITING_FOR_IDENTITY
 )
-
-from conversation.steps.preview import handle_preview  # 🔥 IMPORTANT
 
 
 async def handle_office_fallback(
@@ -17,20 +15,17 @@ async def handle_office_fallback(
     context: ContextTypes.DEFAULT_TYPE
 ):
     user_id = update.effective_user.id
-    text = update.message.text.strip()
-
     session = get_session(user_id)
 
-    # --------------------------------------
-    # OPTION 1 → MANUAL ENTRY
-    # --------------------------------------
-    if text == "1":
+    choice = update.message.text.strip()
 
+    # --------------------------------------
+    # OPTION 1 → MANUAL OFFICE ENTRY
+    # --------------------------------------
+    if choice == "1":
         await update.message.reply_text(
             "Please enter office details in this format:\n\n"
-            "Office Name, City\n\n"
-            "Example:\n"
-            "Edathala Panchayat, Kochi"
+            "Office Name, City"
         )
 
         set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
@@ -39,31 +34,27 @@ async def handle_office_fallback(
     # --------------------------------------
     # OPTION 2 → CONTINUE WITHOUT OFFICE
     # --------------------------------------
-    elif text == "2":
+    elif choice == "2":
 
         session["office"] = {
-            "id": "manual",
-            "name": "Not Specified",
-            "city": session.get("district", "Unknown")
+            "name": "Not specified",
+            "city": ""
         }
 
         await update.message.reply_text(
-            "✅ Continuing without specific office."
+            "Continuing without selecting an office.\n\n"
+            "Please choose identity option:\n"
+            "1. Anonymous\n"
+            "2. Name"
         )
 
-        # ✅ MOVE STATE
-        set_state(user_id, WAITING_FOR_PREVIEW)
-
-        # 🔥 CRITICAL FIX → TRIGGER NEXT STEP IMMEDIATELY
-        await handle_preview(update, context)
-
+        # ✅ GO TO IDENTITY (FIXED)
+        set_state(user_id, WAITING_FOR_IDENTITY)
         return
 
     # --------------------------------------
     # INVALID INPUT
     # --------------------------------------
     else:
-
-        await update.message.reply_text(
-            "❌ Invalid choice.\nReply with 1 or 2."
-        )
+        await update.message.reply_text("Please reply with 1 or 2.")
+        return

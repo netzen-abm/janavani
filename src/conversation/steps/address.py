@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
-from conversation.constants import WAITING_FOR_FORMAT
+from conversation.constants import WAITING_FOR_PREVIEW
 
 
 async def handle_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -11,10 +11,10 @@ async def handle_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     session = get_session(user_id)
 
+    # ✅ Save address
     session["address"] = update.message.text.strip()
 
-    set_state(user_id, WAITING_FOR_FORMAT)
+    # ✅ Move to preview (FIXED)
+    await update.message.reply_text("Preparing preview...")
 
-    await update.message.reply_text(
-        "📄 Choose format:\n1️⃣ PDF\n2️⃣ DOCX"
-    )
+    set_state(user_id, WAITING_FOR_PREVIEW)

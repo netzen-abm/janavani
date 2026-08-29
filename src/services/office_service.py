@@ -3,8 +3,7 @@ import pandas as pd
 DATA_FILE = "database/offices.csv"
 
 
-def find_offices(department: str, location: str):
-
+def find_offices(district: str, department: str = None, limit: int = 5):
     try:
         # --------------------------------------
         # 📂 LOAD DATA
@@ -12,45 +11,80 @@ def find_offices(department: str, location: str):
         df = pd.read_csv(DATA_FILE)
 
         # --------------------------------------
-        # 🧹 CLEAN INPUT
+        # 🧹 NORMALIZE COLUMNS
         # --------------------------------------
-        department = str(department).strip()
-        location = str(location).strip()
+        df.columns = df.columns.str.strip().str.lower()
+
+        # Ensure required columns exist
+        if "district" not in df.columns:
+            return []
+
+        if "type" not in df.columns:
+            df["type"] = ""
+
+        if "name" not in df.columns:
+            df["name"] = "Unknown Office"
+
+        if "city" not in df.columns:
+            df["city"] = ""
 
         # --------------------------------------
-        # 🔍 FILTER (SAFE - NO REGEX WARNING)
+        # 🧹 CLEAN DATA
         # --------------------------------------
-        results = df[
-            df["type"].str.contains(
-                department,
-                case=False,
-                na=False,
-                regex=False   # ✅ FIXED WARNING
-            )
-            &
-            df["city"].str.contains(
-                location,
-                case=False,
-                na=False,
-                regex=False   # ✅ FIXED WARNING
-            )
-        ]
+        df["district"] = df["district"].astype(str).str.strip().str.lower()
+        df["type"] = df["type"].astype(str).str.strip().str.lower()
+        df["name"] = df["name"].astype(str).str.strip()
+        df["city"] = df["city"].astype(str).str.strip()
+
+        district = str(district).strip().lower()
+        department = str(department).strip().lower() if department else ""
 
         # --------------------------------------
-        # 📭 NO RESULTS
+        # 🔍 FILTER BY DISTRICT (PARTIAL MATCH)
         # --------------------------------------
+        results = df[df["district"].str.contains(district, na=False)]
+
         if results.empty:
-            return None
+            return []
 
         # --------------------------------------
-        # 📤 RETURN RESULTS
+        # 🧠 SCORING (AI-LIKE MATCHING)
         # --------------------------------------
-        return results.to_dict(orient="records")
+        def score_row(row):
+            score = 0
+
+            # Base district match
+            score += 5
+
+            # Department relevance
+            if department and department in row["type"]:
+                score += 5
+
+            # Keyword hints (extensible)
+            keywords = ["hospital", "ration", "panchayat", "police"]
+            for kw in keywords:
+                if kw in row["type"]:
+                    score += 1
+
+            return score
+
+        results = results.copy()  # avoid pandas warning
+        results["score"] = results.apply(score_row, axis=1)
+
+        # --------------------------------------
+        # 📊 SORT + LIMIT
+        # --------------------------------------
+        results = results.sort_values(by="score", ascending=False).head(limit)
+
+        # --------------------------------------
+        # 📤 RETURN CLEAN DATA
+        # --------------------------------------
+        return results.drop(columns=["score"]).to_dict(orient="records")
 
     except FileNotFoundError:
         print("❌ offices.csv not found")
-        return None
+        return []
 
     except Exception as e:
         print("❌ Office search error:", e)
-        return None
+        return []
