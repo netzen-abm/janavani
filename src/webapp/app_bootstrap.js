@@ -6,6 +6,8 @@ import { LocalEvidenceStore } from "./evidence_store.js";
 /**
  * Shared WebApp bootstrap. All local capabilities receive the same vault key
  * for the active device session. No capability creates its own key.
+ *
+ * mode="create" initializes the device vault; mode="unlock" recovers it.
  */
 export async function createWebAppContext({ passphrase, mode = "unlock" } = {}) {
   const keyProvider = new BrowserDeviceKeyProvider();
