@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Janavani Key Lifecycle Verification</title></head>
+<body><main><h1>Janavani Device Key Lifecycle Verification</h1><pre id="output">Running…</pre></main>
+<script type="module">
+import { BrowserDeviceKeyProvider } from './device_key_provider.js';
+import { IndexedDbLocalVault } from './local_vault.js';
+import { LocalVaultCaseRepository } from './case_repository.js';
+const out=document.querySelector('#output'); const log=[];
+const assert=(ok,msg)=>{if(!ok)throw new Error(msg);log.push(`PASS: ${msg}`)};
+async function run(){
+ const pass='janavani-recovery-test-passphrase';
+ const provider=new BrowserDeviceKeyProvider();
+ const key1=await provider.create(pass);
+ const vault1=new IndexedDbLocalVault(key1); const repo1=new LocalVaultCaseRepository(vault1);
+ const id=`key-cycle-${crypto.randomUUID()}`;
+ await repo1.create({id,status:'draft',payload:{title:'Recovery test',secret:'DEVICE-LOCAL-ONLY'}});
+ assert((await repo1.get(id)).payload.secret==='DEVICE-LOCAL-ONLY','initial key decrypts Case');
+ await provider.destroy();
+ const provider2=new BrowserDeviceKeyProvider();
+ let wrongFailed=false; try{await provider2.unlock('wrong-passphrase-123')}catch{wrongFailed=true}
+ assert(wrongFailed,'wrong recovery passphrase is rejected');
+ const key2=await provider2.unlock(pass); const repo2=new LocalVaultCaseRepository(new IndexedDbLocalVault(key2));
+ assert((await repo2.get(id)).payload.secret==='DEVICE-LOCAL-ONLY','recovered key decrypts the same Case');
+ await provider2.rotate('janavani-new-recovery-passphrase');
+ let oldFailed=false; try{await new BrowserDeviceKeyProvider().unlock(pass)}catch{oldFailed=true}
+ assert(oldFailed,'old recovery passphrase is rejected after rotation');
+ const key3=await new BrowserDeviceKeyProvider().unlock('janavani-new-recovery-passphrase');
+ const repo3=new LocalVaultCaseRepository(new IndexedDbLocalVault(key3));
+ assert((await repo3.get(id)).payload.secret==='DEVICE-LOCAL-ONLY','rotated recovery still decrypts existing Case');
+ await provider2.destroy();
+ out.textContent=log.join('\\n')+'\\n\\nALL KEY LIFECYCLE CHECKS PASSED';
+}
+run().catch(e=>{out.textContent=log.join('\\n')+'\\n\\nFAIL: '+e.message;out.dataset.status='failed'});
+</script></body></html>
