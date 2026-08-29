@@ -6,9 +6,10 @@ automatic deletion instructions.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
+import json
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -49,43 +50,70 @@ def normalized_code(content: str) -> str:
     return "\n".join(lines)
 
 
-def main(root_arg: str = ".") -> int:
-    root = Path(root_arg).resolve()
-    findings: dict[str, list[str]] = defaultdict(list)
+def finding_confidence(signals: list[str]) -> str:
+    if len(signals) >= 3:
+        return "HIGH"
+    if len(signals) == 2:
+        return "MEDIUM"
+    return "LOW"
+
+
+def classify(category: str) -> str:
+    if category in {"LEGACY_NAMING_SIGNAL", "MIGRATION_SIGNAL", "POTENTIAL_ORPHAN_SCRIPT"}:
+        return "INVESTIGATE"
+    if category == "EXACT_DUPLICATE_CODE":
+        return "CONVERGE"
+    if category in {"MUTABLE_ACTION", "BROAD_PERMISSIONS"}:
+        return "INVESTIGATE"
+    return "INVESTIGATE"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Read-only Janavani repository hygiene audit")
+    parser.add_argument("root", nargs="?", default=".")
+    parser.add_argument("--json", action="store_true", dest="as_json", help="emit machine-readable JSON")
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+    findings: list[dict[str, object]] = []
     contents: dict[str, str] = {}
     hashes: dict[str, list[str]] = defaultdict(list)
 
     for path in iter_files(root):
         rel = path.relative_to(root).as_posix()
         try:
-            if path.stat().st_size == 0:
-                findings["EMPTY"].append(rel)
-                continue
+            size = path.stat().st_size
         except OSError:
+            continue
+        if size == 0:
+            findings.append({"category": "EMPTY", "path": rel, "signals": ["zero-byte file"], "confidence": "HIGH", "suggested_classification": "INVESTIGATE"})
             continue
         content = read_text(path)
         if content is None:
             continue
         contents[rel] = content
         if not content.strip():
-            findings["EMPTY"].append(rel)
+            findings.append({"category": "EMPTY", "path": rel, "signals": ["whitespace-only file"], "confidence": "HIGH", "suggested_classification": "INVESTIGATE"})
             continue
+        signals: list[tuple[str, str]] = []
         if PLACEHOLDER_RE.search(content):
-            findings["PLACEHOLDER"].append(rel)
+            signals.append(("PLACEHOLDER", "placeholder marker"))
         if GENERATED_RE.search(content):
-            findings["GENERATED"].append(rel)
-        if LEGACY_NAME_RE.search(Path(rel).name):
-            findings["LEGACY_NAMING_SIGNAL"].append(rel)
+            signals.append(("GENERATED", "generated-file marker"))
+        if LEGACY_NAME_RE.search(path.name):
+            signals.append(("LEGACY_NAMING_SIGNAL", "legacy-style filename"))
         if MIGRATION_RE.search(content):
-            findings["MIGRATION_SIGNAL"].append(rel)
+            signals.append(("MIGRATION_SIGNAL", "migration/deprecation language"))
+        for category, reason in signals:
+            findings.append({"category": category, "path": rel, "signals": [reason], "confidence": "LOW", "suggested_classification": classify(category)})
 
         if rel.startswith(".github/workflows/"):
             for match in ACTION_RE.finditer(content):
                 action = match.group(1)
                 if "@" in action and not re.fullmatch(r"[0-9a-fA-F]{40}", action.rsplit("@", 1)[1]):
-                    findings["MUTABLE_ACTION"].append(f"{rel}: {action}")
+                    findings.append({"category": "MUTABLE_ACTION", "path": rel, "signals": [f"mutable action reference: {action}"], "confidence": "LOW", "suggested_classification": "INVESTIGATE"})
             if re.search(r"permissions:\s*\n(?:\s+\S+:\s*(?:write|write-all)\b|\s+contents:\s*write\b)", content, re.I):
-                findings["BROAD_PERMISSIONS"].append(rel)
+                findings.append({"category": "BROAD_PERMISSIONS", "path": rel, "signals": ["workflow requests write permissions"], "confidence": "LOW", "suggested_classification": "INVESTIGATE"})
 
         if path.suffix.lower() in CODE_SUFFIXES:
             normalized = normalized_code(content)
@@ -94,38 +122,34 @@ def main(root_arg: str = ".") -> int:
 
     for paths in hashes.values():
         if len(paths) > 1:
-            findings["EXACT_DUPLICATE_CODE"].append(" | ".join(paths))
+            findings.append({"category": "EXACT_DUPLICATE_CODE", "path": paths, "signals": ["same normalized code content"], "confidence": "MEDIUM", "suggested_classification": "CONVERGE"})
 
     for rel in contents:
         path = Path(rel)
-        if path.suffix != ".py" or not rel.startswith("scripts/"):
-            continue
-        if path.name.startswith("__") or path.name.startswith("test"):
+        if path.suffix != ".py" or not rel.startswith("scripts/") or path.name.startswith(("__", "test")):
             continue
         stem = path.stem
-        references = sum(
-            1 for other_rel in contents
-            if other_rel != rel and (stem in contents[other_rel] or rel in contents[other_rel])
-        )
+        references = sum(1 for other_rel in contents if other_rel != rel and (stem in contents[other_rel] or rel in contents[other_rel]))
         if references == 0:
-            findings["POTENTIAL_ORPHAN_SCRIPT"].append(rel)
+            findings.append({"category": "POTENTIAL_ORPHAN_SCRIPT", "path": rel, "signals": ["no obvious textual reference"], "confidence": "LOW", "suggested_classification": "INVESTIGATE"})
+
+    if args.as_json:
+        print(json.dumps({"tool": "janavani_repo_audit", "version": "0.3", "root": str(root), "read_only": True, "findings": findings}, indent=2))
+        return 0
 
     print("JANAVANI REPOSITORY HYGIENE AUDIT")
     print(f"Root: {root}")
     print("=" * 72)
-    for category in (
-        "EMPTY", "PLACEHOLDER", "GENERATED", "LEGACY_NAMING_SIGNAL",
-        "MIGRATION_SIGNAL", "EXACT_DUPLICATE_CODE", "POTENTIAL_ORPHAN_SCRIPT",
-        "MUTABLE_ACTION", "BROAD_PERMISSIONS",
-    ):
-        items = findings.get(category, [])
-        print(f"\n{category} ({len(items)})")
-        for item in items:
-            print(f"  - {item}")
-    print("\nNo files were modified.")
-    print("Legacy, duplicate, migration, and orphan results are conservative review signals, not deletion instructions.")
+    for finding in findings:
+        print(f"\n[{finding['category']}] {finding['path']}")
+        print(f"  Signals: {', '.join(finding['signals'])}")
+        print(f"  Confidence: {finding['confidence']}")
+        print(f"  Suggested classification: {finding['suggested_classification']}")
+    print(f"\nFindings: {len(findings)}")
+    print("No files were modified.")
+    print("All classifications are review guidance, not automatic deletion instructions.")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1] if len(sys.argv) > 1 else "."))
+    raise SystemExit(main())
