@@ -58,7 +58,7 @@ export async function createVaultKey() {
   const cryptoApi = requireWebCrypto();
   return cryptoApi.subtle.generateKey(
     { name: "AES-GCM", length: KEY_SIZE },
-    true,
+    false,
     ["encrypt", "decrypt"],
   );
 }
@@ -121,6 +121,18 @@ export class IndexedDbLocalVault {
     });
     db.close();
     return record ? decryptValue(record.envelope, this.key) : null;
+  }
+
+  async list() {
+    const db = await openDatabase();
+    const records = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const request = tx.objectStore(STORE_NAME).getAll();
+      request.onsuccess = () => resolve(request.result ?? []);
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB list failed"));
+    });
+    db.close();
+    return Promise.all(records.map((record) => decryptValue(record.envelope, this.key)));
   }
 
   async remove(id) {
