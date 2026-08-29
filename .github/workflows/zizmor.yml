@@ -1,0 +1,28 @@
+name: Zizmor
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop/**
+      - refactor/**
+      - cleanup/**
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan workflows with Zizmor
+        uses: zizmorcore/zizmor-action@v0.2.0
+        with:
+          advanced-security: false
