@@ -1,15 +1,15 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from conversation.session import get_session
-from conversation.state import set_state
+from src.conversation.session import get_session
+from src.conversation.state import set_state
 
-from conversation.constants import (
+from src.conversation.constants import (
     WAITING_FOR_OFFICE,
     WAITING_FOR_OFFICE_FALLBACK,
 )
 
-from services.authority_service import find_authorities
+from src.services.authority_service import find_authorities
 
 
 def _authority_to_session_record(authority) -> dict:
