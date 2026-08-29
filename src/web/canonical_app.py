@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 
+from src.platform.capabilities import registry
 from src.web.feedback_router import router as feedback_router
 from src.web.legislative_router import router as legislative_router
 from src.web.constitutional_router import router as constitutional_router
@@ -24,6 +25,13 @@ def create_canonical_app() -> FastAPI:
     @app.get("/version", tags=["Platform"])
     async def version() -> dict[str, str]:
         return {"service": "janavani-platform-api", "version": "canonical-webapp"}
+
+    @app.get("/api/v1/capabilities", tags=["Platform"])
+    async def capabilities() -> dict[str, object]:
+        return {
+            "items": [descriptor.__dict__ for descriptor in registry.list()],
+            "health": registry.health(),
+        }
 
     return app
 
