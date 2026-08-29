@@ -1,2 +1,2 @@
 [tool.vercel]
-entrypoint = "src.web:app"
+entrypoint = "src.web.canonical_app:app"
