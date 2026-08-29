@@ -6,11 +6,13 @@ def test_evidence_repository_round_trips_evidence(tmp_path):
     repository = EvidenceRepository(tmp_path / "evidence.jsonl")
     evidence = Evidence.create(
         "CASE-1",
-        EvidenceKind.IMAGE,
+        EvidenceKind.PHOTO,
         "Road damage photo",
         "citizen",
         content_ref="object://photo-1",
-    ).with_status(EvidenceStatus.VERIFIED).add_provenance("source://record-1")
+        provenance=["source://record-1"],
+        status=EvidenceStatus.VERIFIED,
+    )
 
     repository.save(evidence)
 
@@ -20,7 +22,7 @@ def test_evidence_repository_round_trips_evidence(tmp_path):
 
 def test_evidence_repository_lists_only_case_evidence(tmp_path):
     repository = EvidenceRepository(tmp_path / "evidence.jsonl")
-    first = Evidence.create("CASE-1", EvidenceKind.IMAGE, "Photo", "citizen")
+    first = Evidence.create("CASE-1", EvidenceKind.PHOTO, "Photo", "citizen")
     second = Evidence.create("CASE-2", EvidenceKind.DOCUMENT, "Order", "citizen")
     repository.save(first)
     repository.save(second)
@@ -31,5 +33,4 @@ def test_evidence_repository_lists_only_case_evidence(tmp_path):
 
 def test_missing_evidence_returns_none(tmp_path):
     repository = EvidenceRepository(tmp_path / "evidence.jsonl")
-
     assert repository.get_by_id("EVD-MISSING") is None
