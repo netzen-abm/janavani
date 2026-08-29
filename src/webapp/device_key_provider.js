@@ -1,14 +1,4 @@
-/**
- * Provider-neutral device key boundary with a browser implementation.
- *
- * The raw data-encryption key is never persisted. It is wrapped by an
- * AES-GCM key derived from a user-controlled recovery passphrase. The
- * passphrase exists only in memory during the active operation/session.
- *
- * IMPORTANT: this provider is a lifecycle boundary. The vault key and
- * recovery wrapping must be generated from the same data key before this
- * provider is considered production-ready.
- */
+/** Provider-neutral device-key lifecycle with a browser implementation. */
 
 import { createVaultKey } from "./local_vault.js";
 import { createRecoveryRecord, recoverDataKey } from "./device_key_recovery.js";
@@ -28,7 +18,6 @@ function openDatabase() {
     request.onerror = () => reject(request.error ?? new Error("Device key store unavailable"));
   });
 }
-
 async function readRecord() {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -37,7 +26,6 @@ async function readRecord() {
     request.onerror = () => { db.close(); reject(request.error ?? new Error("Device key record unavailable")); };
   });
 }
-
 async function writeRecord(record) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -47,7 +35,6 @@ async function writeRecord(record) {
     tx.onerror = () => { db.close(); reject(tx.error ?? new Error("Device key record write failed")); };
   });
 }
-
 async function removeRecord() {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -71,8 +58,8 @@ export class BrowserDeviceKeyProvider extends DeviceKeyProvider {
   async create(passphrase) {
     if (typeof passphrase !== "string" || passphrase.length < 12) throw new Error("Recovery passphrase must be at least 12 characters");
     this.key = await createVaultKey();
-    const recoveryRecord = await createRecoveryRecord(passphrase);
-    await writeRecord({ version: 1, recovery: recoveryRecord });
+    const recovery = await createRecoveryRecord(this.key, passphrase);
+    await writeRecord({ version: 2, recovery });
     return this.key;
   }
 
@@ -83,9 +70,13 @@ export class BrowserDeviceKeyProvider extends DeviceKeyProvider {
     return this.key;
   }
 
-  async rotate(passphrase) {
-    await this.destroy();
-    return this.create(passphrase);
+  async rotate(oldPassphrase, newPassphrase) {
+    if (typeof newPassphrase !== "string" || newPassphrase.length < 12) throw new Error("New recovery passphrase must be at least 12 characters");
+    const currentKey = this.key ?? await this.unlock(oldPassphrase);
+    const recovery = await createRecoveryRecord(currentKey, newPassphrase);
+    await writeRecord({ version: 2, recovery });
+    this.key = currentKey;
+    return currentKey;
   }
 
   async destroy() {
