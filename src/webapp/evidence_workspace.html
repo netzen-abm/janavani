@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Janavani — Evidence</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:light dark}body{margin:0;background:Canvas;color:CanvasText}main{max-width:760px;margin:auto;padding:2rem 1rem 4rem}label{display:block;margin-top:1rem;font-weight:650}input,select,textarea,button{box-sizing:border-box;width:100%;padding:.7rem;margin-top:.4rem;font:inherit}textarea{min-height:7rem}.privacy{border:1px solid currentColor;padding:1rem;margin:1rem 0}.item{border:1px solid currentColor;padding:.8rem;margin-top:.7rem}.status{min-height:1.5rem}
+</style></head>
+<body><main>
+<header><strong>JANAVANI</strong><h1>Add evidence</h1><p>Keep evidence on this device while you build your civic action.</p></header>
+<section class="privacy"><strong>Private by design</strong><p>Evidence is stored locally and encrypted. It is not uploaded to AI or Agentic AI.</p></section>
+<form id="evidence-form">
+<label for="type">Evidence type</label><select id="type"><option value="photo">Photo</option><option value="document">Document</option><option value="audio">Audio</option><option value="video">Video</option><option value="link">Link</option><option value="note">Note</option></select>
+<label for="label">Label</label><input id="label" maxlength="200" autocomplete="off">
+<label for="source">Source URL (links only)</label><input id="source" type="url" maxlength="2000" autocomplete="off">
+<label for="notes">Notes</label><textarea id="notes" maxlength="2000"></textarea>
+<button type="submit">Save evidence on this device</button></form>
+<p id="status" class="status" role="status" aria-live="polite"></p><section><h2>Evidence saved on this device</h2><div id="list"></div></section>
+</main>
+<script type="module">
+import {createVaultKey,IndexedDbLocalVault} from './local_vault.js';
+import {LocalEvidenceStore} from './evidence_store.js';
+const CASE_ID=new URLSearchParams(location.search).get('case_id')||'unassigned';
+const key=await createVaultKey();const store=new LocalEvidenceStore(new IndexedDbLocalVault(key));
+const form=document.querySelector('#evidence-form'),list=document.querySelector('#list'),status=document.querySelector('#status');
+function render(items){list.replaceChildren();if(!items.length){list.textContent='No evidence saved yet.';return;}for(const item of items.filter(x=>x.case_id===CASE_ID)){const el=document.createElement('article');el.className='item';const title=document.createElement('strong');title.textContent=item.label||item.type;const meta=document.createElement('p');meta.textContent=`${item.type} · ${item.status} · ${new Date(item.captured_at).toLocaleString()}`;el.append(title,meta);if(item.notes){const note=document.createElement('p');note.textContent=item.notes;el.append(note)}list.append(el)}}
+async function refresh(){render(await store.list())} form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='Saving locally…';try{await store.add({id:crypto.randomUUID(),case_id:CASE_ID,type:document.querySelector('#type').value,label:document.querySelector('#label').value,source_url:document.querySelector('#source').value||null,notes:document.querySelector('#notes').value||null});form.reset();status.textContent='Evidence saved securely on this device.';await refresh()}catch(err){status.textContent=`Could not save evidence: ${err.message}`}});refresh().catch(err=>status.textContent=`Evidence store unavailable: ${err.message}`);
+</script></body></html>
