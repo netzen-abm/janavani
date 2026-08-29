@@ -34,19 +34,53 @@ Before changing a file, check as applicable:
 
 Search absence is never sufficient by itself to prove that a file is unused.
 
-## Generation detection
+## Legacy-generation signals
 
-A file may be considered a legacy-generation candidate when there is evidence of a newer canonical implementation providing the same capability or contract, for example:
+A file should be reported as a **legacy-generation candidate**, not automatically classified as obsolete, when multiple evidence signals indicate that another implementation may supersede the same capability.
+
+Useful signals include:
+
+- parallel modules with substantially overlapping names or responsibilities;
+- older and newer import paths exposing similar domain operations;
+- multiple implementations of the same interface or contract;
+- duplicated storage/provider/transport implementations;
+- historical configuration pointing to an older module;
+- tests covering an older implementation while newer code exists;
+- deployment or entrypoint configuration selecting one generation over another;
+- documentation identifying a newer canonical implementation;
+- explicit migration/deprecation markers;
+- Git history showing a replacement or migration sequence.
+
+### Evidence scoring guidance
+
+A future auditor may assign confidence using a small number of independent signals:
+
+```text
+LOW
+  one weak naming/reference signal
+
+MEDIUM
+  multiple independent structural signals
+
+HIGH
+  capability overlap + canonical owner + runtime/migration evidence
+```
+
+No score should directly trigger deletion. A high-confidence legacy signal should trigger a human review against the canonical ownership map and runtime evidence.
+
+### Example
 
 ```text
 legacy implementation
        ↓
-new implementation
+replacement implementation
        ↓
 canonical contract
+       ↓
+active runtime consumers
 ```
 
-Generation similarity must be established using capability, interfaces, imports, tests, runtime paths, and configuration—not filenames alone.
+Only when the evidence shows that the legacy implementation has no required consumer should it move from `INVESTIGATE`/`ARCHIVE` to `DELETE`.
 
 ## Duplicate detection
 
