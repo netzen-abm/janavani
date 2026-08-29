@@ -1,76 +1,58 @@
 import { createCasePayload } from "./contracts.js";
+import { IndexedDbLocalVault, createVaultKey } from "./local_vault.js";
+import { WebSessionKeyProvider } from "./device_key_provider.js";
 
-const DB_NAME = "janavani-local";
-const STORE_NAME = "cases";
-const DB_VERSION = 1;
+export async function createLocalCaseRepository() {
+  const keyProvider = new WebSessionKeyProvider(createVaultKey);
+  const key = await keyProvider.create();
+  return new EncryptedCaseRepository(new IndexedDbLocalVault(key), keyProvider);
+}
 
-function openDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
+export class EncryptedCaseRepository {
+  constructor(vault, keyProvider = null) {
+    this.vault = vault;
+    this.keyProvider = keyProvider;
+  }
+
+  async create(input) {
+    const payload = createCasePayload(input);
+    const now = new Date().toISOString();
+    const record = {
+      id: crypto.randomUUID(),
+      schema_version: payload.schema_version,
+      status: "draft",
+      created_at: now,
+      updated_at: now,
+      payload,
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error("Unable to open local case store"));
-  });
-}
+    await this.vault.put("case", record.id, record);
+    return record;
+  }
 
-function transaction(storeMode, work) {
-  return openDatabase().then((db) => new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, storeMode);
-    const store = tx.objectStore(STORE_NAME);
-    let result;
-    try {
-      result = work(store);
-    } catch (error) {
-      reject(error);
-      return;
-    }
-    tx.oncomplete = () => {
-      db.close();
-      resolve(result);
-    };
-    tx.onerror = () => {
-      db.close();
-      reject(tx.error || new Error("Local case transaction failed"));
-    };
-    tx.onabort = () => {
-      db.close();
-      reject(tx.error || new Error("Local case transaction aborted"));
-    };
-  }));
-}
+  async get(id) { return this.vault.get("case", id); }
+  async list() { return this.vault.list("case"); }
 
-function makeId() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  throw new Error("Secure random UUID support is required");
-}
+  async update(record) {
+    if (!record?.id) throw new Error("Case id is required");
+    const existing = await this.get(record.id);
+    if (!existing) return null;
+    const updated = { ...existing, ...record, updated_at: new Date().toISOString() };
+    await this.vault.put("case", updated.id, updated);
+    return updated;
+  }
 
-export async function saveCase(input) {
-  const payload = createCasePayload(input);
-  const record = {
-    id: makeId(),
-    created_at: new Date().toISOString(),
-    status: "draft",
-    payload,
-  };
-  await transaction("readwrite", (store) => store.put(record));
-  return record;
-}
+  async updateStatus(id, status) {
+    const existing = await this.get(id);
+    if (!existing) return null;
+    return this.update({ ...existing, status });
+  }
 
-export async function listCases() {
-  return transaction("readonly", (store) => {
-    const request = store.getAll();
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error("Unable to list local cases"));
-    });
-  });
-}
+  async delete(id) {
+    await this.vault.remove("case", id);
+    return true;
+  }
 
-export async function deleteCase(id) {
-  await transaction("readwrite", (store) => store.delete(id));
+  async destroySessionKey() {
+    if (this.keyProvider) await this.keyProvider.destroy();
+  }
 }
