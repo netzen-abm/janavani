@@ -1,5 +1,11 @@
-from src.core.platform_contracts import ProvenanceRef, TrackingEvent
+from datetime import timezone
+
+from src.core.platform_contracts import ProvenanceRef, TrackingEvent, utc_now
 from src.core.platform_memory import InMemoryProvenanceStore, InMemoryTrackingStore
+
+
+def test_utc_now_is_timezone_aware():
+    assert utc_now().tzinfo == timezone.utc
 
 
 def test_tracking_store_is_idempotent_and_scoped():
