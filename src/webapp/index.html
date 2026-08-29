@@ -10,11 +10,13 @@
     body { margin: 0; min-height: 100vh; background: Canvas; color: CanvasText; }
     main { max-width: 760px; margin: 0 auto; padding: 2rem 1rem 4rem; }
     label { display: block; margin-top: 1rem; font-weight: 650; }
-    input, textarea, select, button { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; font: inherit; }
+    input, textarea, button { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; font: inherit; }
     textarea { min-height: 9rem; resize: vertical; }
     button { cursor: pointer; }
     .privacy { border: 1px solid currentColor; padding: .9rem; margin: 1rem 0; }
     .status { min-height: 1.5rem; margin-top: 1rem; }
+    .cases { margin-top: 2rem; }
+    .case { border: 1px solid currentColor; padding: .8rem; margin-top: .7rem; }
   </style>
 </head>
 <body>
@@ -27,7 +29,7 @@
 
   <section class="privacy" aria-label="Privacy by design">
     <strong>Privacy by design</strong>
-    <p>This workspace does not send your case to AI or Agentic AI. Any future AI assistance must use non-personal, allow-listed context.</p>
+    <p>Your case is encrypted before it is stored in this browser. It is not sent to AI or Agentic AI.</p>
   </section>
 
   <form id="case-form">
@@ -43,26 +45,68 @@
     <label for="category">Category (optional)</label>
     <input id="category" name="category" maxlength="100" autocomplete="off">
 
-    <button type="submit">Save civic action on this device</button>
+    <button type="submit">Save securely on this device</button>
   </form>
   <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section class="cases" aria-labelledby="saved-heading">
+    <h2 id="saved-heading">Saved on this device</h2>
+    <div id="case-list"></div>
+  </section>
 </main>
 <script type="module">
-  import { createCasePayload } from "./contracts.js";
+  import { createLocalCaseRepository } from "./secure_case_store.js";
 
+  const repositoryPromise = createLocalCaseRepository();
   const form = document.querySelector("#case-form");
   const status = document.querySelector("#status");
-  form.addEventListener("submit", (event) => {
+  const list = document.querySelector("#case-list");
+
+  function render(cases) {
+    list.replaceChildren();
+    if (!cases.length) {
+      list.textContent = "No civic actions saved yet.";
+      return;
+    }
+    for (const item of cases) {
+      const card = document.createElement("article");
+      card.className = "case";
+      const title = document.createElement("strong");
+      title.textContent = item.payload.title;
+      const meta = document.createElement("p");
+      meta.textContent = `${item.status} · ${new Date(item.created_at).toLocaleString()}`;
+      card.append(title, meta);
+      list.append(card);
+    }
+  }
+
+  async function refresh() {
+    const repository = await repositoryPromise;
+    render(await repository.list());
+  }
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const data = new FormData(form);
-    const payload = createCasePayload({
-      title: data.get("title"),
-      description: data.get("description"),
-      location: data.get("location") || null,
-      category: data.get("category") || null,
-    });
-    // Persistence is deliberately wired only after the vault runtime gate is verified.
-    status.textContent = `Case payload prepared locally (${payload.schema_version}).`;
+    status.textContent = "Saving locally…";
+    try {
+      const data = new FormData(form);
+      const repository = await repositoryPromise;
+      await repository.create({
+        title: data.get("title"),
+        description: data.get("description"),
+        location: data.get("location") || null,
+        category: data.get("category") || null,
+      });
+      form.reset();
+      status.textContent = "Saved securely on this device.";
+      await refresh();
+    } catch (error) {
+      status.textContent = `Could not save locally: ${error.message}`;
+    }
+  });
+
+  refresh().catch((error) => {
+    status.textContent = `Local vault unavailable: ${error.message}`;
   });
 </script>
 </body>
