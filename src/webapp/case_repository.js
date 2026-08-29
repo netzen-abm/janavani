@@ -1,5 +1,7 @@
 import { IndexedDbLocalVault } from "./local_vault.js";
 
+const CASE_NAMESPACE = "case";
+
 /** Canonical browser adapter for the shared CaseRepository capability. */
 export class LocalVaultCaseRepository {
   constructor(vault) {
@@ -15,13 +17,13 @@ export class LocalVaultCaseRepository {
 
   async save(caseRecord) {
     if (!caseRecord?.id) throw new Error("Case id is required");
-    await this.vault.put(caseRecord.id, caseRecord);
+    await this.vault.put(CASE_NAMESPACE, caseRecord.id, caseRecord);
     return caseRecord;
   }
 
   async get(caseId) {
     if (!caseId) throw new Error("Case id is required");
-    return this.vault.get(caseId);
+    return this.vault.get(CASE_NAMESPACE, caseId);
   }
 
   async getById(caseId) {
@@ -29,7 +31,7 @@ export class LocalVaultCaseRepository {
   }
 
   async list() {
-    return this.vault.list();
+    return this.vault.list(CASE_NAMESPACE);
   }
 
   async update(caseRecord) {
@@ -45,7 +47,7 @@ export class LocalVaultCaseRepository {
 
   async delete(caseId) {
     if (!caseId) throw new Error("Case id is required");
-    await this.vault.remove(caseId);
+    await this.vault.remove(CASE_NAMESPACE, caseId);
     return true;
   }
 
