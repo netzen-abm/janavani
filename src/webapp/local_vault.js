@@ -7,12 +7,14 @@
  * - The encryption key is never written to IndexedDB.
  * - No network fallback is performed here.
  * - Callers must obtain consent/policy before remote processing.
+ * - Records are namespaced so capabilities share infrastructure safely.
  */
 
 const DB_NAME = "janavani_local_vault";
-const DB_VERSION = 1;
-const STORE_NAME = "encrypted_cases";
+const DB_VERSION = 2;
+const STORE_NAME = "encrypted_records";
 const KEY_SIZE = 256;
+const IV_BYTES = 12;
 
 function requireWebCrypto() {
   if (!globalThis.crypto?.subtle || !globalThis.crypto?.getRandomValues) {
@@ -32,12 +34,16 @@ function base64ToBytes(value) {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-function encodeJson(value) {
-  return new TextEncoder().encode(JSON.stringify(value));
+function encode(value) { return new TextEncoder().encode(JSON.stringify(value)); }
+function decode(bytes) { return JSON.parse(new TextDecoder().decode(bytes)); }
+
+function recordKey(namespace, id) {
+  if (!namespace || !id) throw new Error("Vault namespace and id are required");
+  return `${namespace}:${id}`;
 }
 
-function decodeJson(bytes) {
-  return JSON.parse(new TextDecoder().decode(bytes));
+function associatedData(namespace, id, version) {
+  return encode({ namespace, id, version });
 }
 
 function openDatabase() {
@@ -46,7 +52,7 @@ function openDatabase() {
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        db.createObjectStore(STORE_NAME, { keyPath: "key" });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -55,25 +61,27 @@ function openDatabase() {
 }
 
 export async function createVaultKey() {
-  const cryptoApi = requireWebCrypto();
-  return cryptoApi.subtle.generateKey(
+  return requireWebCrypto().subtle.generateKey(
     { name: "AES-GCM", length: KEY_SIZE },
     false,
     ["encrypt", "decrypt"],
   );
 }
 
-export async function encryptValue(value, key) {
+export async function encryptValue(value, key, namespace = "default", id = "value") {
   const cryptoApi = requireWebCrypto();
-  const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+  const version = 2;
+  const iv = cryptoApi.getRandomValues(new Uint8Array(IV_BYTES));
   const ciphertext = await cryptoApi.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv, additionalData: associatedData(namespace, id, version) },
     key,
-    encodeJson(value),
+    encode(value),
   );
   return {
-    version: 1,
+    version,
     algorithm: "AES-GCM",
+    namespace,
+    id,
     iv: bytesToBase64(iv),
     ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
   };
@@ -81,15 +89,19 @@ export async function encryptValue(value, key) {
 
 export async function decryptValue(envelope, key) {
   const cryptoApi = requireWebCrypto();
-  if (envelope?.version !== 1 || envelope?.algorithm !== "AES-GCM") {
+  if (envelope?.version !== 2 || envelope?.algorithm !== "AES-GCM") {
     throw new Error("Unsupported encrypted envelope");
   }
   const plaintext = await cryptoApi.subtle.decrypt(
-    { name: "AES-GCM", iv: base64ToBytes(envelope.iv) },
+    {
+      name: "AES-GCM",
+      iv: base64ToBytes(envelope.iv),
+      additionalData: associatedData(envelope.namespace, envelope.id, envelope.version),
+    },
     key,
     base64ToBytes(envelope.ciphertext),
   );
-  return decodeJson(new Uint8Array(plaintext));
+  return decode(new Uint8Array(plaintext));
 }
 
 export class IndexedDbLocalVault {
@@ -98,24 +110,22 @@ export class IndexedDbLocalVault {
     this.key = key;
   }
 
-  async put(id, value) {
-    if (!id) throw new Error("Vault record id is required");
-    const envelope = await encryptValue(value, this.key);
+  async put(namespace, id, value) {
+    const envelope = await encryptValue(value, this.key, namespace, id);
     const db = await openDatabase();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).put({ id, envelope });
+      tx.objectStore(STORE_NAME).put({ key: recordKey(namespace, id), envelope });
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
     });
     db.close();
   }
 
-  async get(id) {
+  async get(namespace, id) {
     const db = await openDatabase();
     const record = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const request = tx.objectStore(STORE_NAME).get(id);
+      const request = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(recordKey(namespace, id));
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error ?? new Error("IndexedDB read failed"));
     });
@@ -123,23 +133,24 @@ export class IndexedDbLocalVault {
     return record ? decryptValue(record.envelope, this.key) : null;
   }
 
-  async list() {
+  async list(namespace) {
     const db = await openDatabase();
     const records = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const request = tx.objectStore(STORE_NAME).getAll();
+      const request = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll();
       request.onsuccess = () => resolve(request.result ?? []);
       request.onerror = () => reject(request.error ?? new Error("IndexedDB list failed"));
     });
     db.close();
-    return Promise.all(records.map((record) => decryptValue(record.envelope, this.key)));
+    return Promise.all(records
+      .filter((record) => record.envelope?.namespace === namespace)
+      .map((record) => decryptValue(record.envelope, this.key)));
   }
 
-  async remove(id) {
+  async remove(namespace, id) {
     const db = await openDatabase();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).delete(id);
+      tx.objectStore(STORE_NAME).delete(recordKey(namespace, id));
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error ?? new Error("IndexedDB delete failed"));
     });
