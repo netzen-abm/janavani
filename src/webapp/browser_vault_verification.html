@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Janavani Local Vault Verification</title>
+</head>
+<body>
+  <main>
+    <h1>Janavani Local Vault Verification</h1>
+    <pre id="output">Running…</pre>
+  </main>
+  <script type="module">
+    import { createVaultKey, encryptValue, decryptValue, IndexedDbLocalVault } from "./local_vault.js";
+    import { LocalVaultCaseRepository } from "./case_repository.js";
+
+    const output = document.querySelector("#output");
+    const log = [];
+    const assert = (condition, message) => {
+      if (!condition) throw new Error(message);
+      log.push(`PASS: ${message}`);
+    };
+
+    async function readRawRecords() {
+      const request = indexedDB.open("janavani_local_vault", 2);
+      return new Promise((resolve, reject) => {
+        request.onerror = () => reject(request.error ?? new Error("IndexedDB open failed"));
+        request.onsuccess = () => {
+          const db = request.result;
+          const read = db.transaction("encrypted_records", "readonly")
+            .objectStore("encrypted_records").getAll();
+          read.onerror = () => reject(read.error ?? new Error("IndexedDB read failed"));
+          read.onsuccess = () => { db.close(); resolve(read.result ?? []); };
+        };
+      });
+    }
+
+    async function run() {
+      const key = await createVaultKey();
+      const vault = new IndexedDbLocalVault(key);
+      const repository = new LocalVaultCaseRepository(vault);
+      const caseRecord = {
+        id: `verification-${Date.now()}`,
+        status: "draft",
+        issue: "Browser vault verification",
+        private_note: "THIS MUST NEVER APPEAR IN RAW INDEXEDDB",
+      };
+
+      await repository.create(caseRecord);
+      const restored = await repository.get(caseRecord.id);
+      assert(restored.private_note === caseRecord.private_note, "created Case decrypts correctly");
+
+      const updated = { ...restored, status: "submitted" };
+      await repository.update(updated);
+      const afterUpdate = await repository.get(caseRecord.id);
+      assert(afterUpdate.status === "submitted", "updated Case persists correctly");
+
+      const listed = await repository.list();
+      assert(listed.some((item) => item.id === caseRecord.id), "Case is discoverable through repository list");
+
+      const rawRecords = await readRawRecords();
+      const raw = JSON.stringify(rawRecords);
+      assert(!raw.includes(caseRecord.private_note), "plaintext private Case data is absent from IndexedDB");
+      assert(raw.includes("ciphertext"), "IndexedDB stores encrypted envelopes");
+      assert(!raw.includes("password"), "recovery/passphrase material is absent from IndexedDB record payloads");
+
+      const envelope = await encryptValue({ value: "tamper-check" }, key, "verification", "tamper");
+      envelope.ciphertext = envelope.ciphertext.slice(0, -2) + "AA";
+      let tamperFailed = false;
+      try { await decryptValue(envelope, key); } catch { tamperFailed = true; }
+      assert(tamperFailed, "tampered ciphertext fails authentication");
+
+      await repository.delete(caseRecord.id);
+      assert(await repository.get(caseRecord.id) === null, "deleted Case is no longer retrievable");
+
+      output.textContent = `${log.join("\\n")}\\n\\nALL BROWSER VAULT CHECKS PASSED`;
+    }
+
+    run().catch((error) => {
+      output.textContent = `${log.join("\\n")}\\n\\nFAIL: ${error.message}`;
+      output.dataset.status = "failed";
+    });
+  </script>
+</body>
+</html>
