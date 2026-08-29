@@ -1,10 +1,10 @@
 # Janavani — Pull Request Labeler
 # Automatically labels PRs based on changed paths.
 #
-# Security note:
-# - Uses pull_request_target because labels require pull-requests: write.
-# - Does NOT checkout or execute code from the untrusted PR branch.
-# - Action is pinned to the immutable v7.0.0 release commit.
+# Security:
+# - pull_request_target is used because label updates require write access.
+# - This workflow does NOT checkout or execute code from the untrusted PR branch.
+# - The GitHub-maintained action is pinned to the immutable v7.0.0 release commit.
 
 name: Labeler
 
