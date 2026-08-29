@@ -1,6 +1,14 @@
 import { createCasePayload } from "./contracts.js";
-import { IndexedDbLocalVault } from "./local_vault.js";
+import { IndexedDbLocalVault, createVaultKey } from "./local_vault.js";
 
+export const CASE_NAMESPACE = "case";
+
+export async function createLocalCaseRepository() {
+  const key = await createVaultKey();
+  return new EncryptedCaseRepository(new IndexedDbLocalVault(key));
+}
+
+/** Canonical browser adapter for the shared CaseRepository capability. */
 export class EncryptedCaseRepository {
   constructor(vault) {
     if (!(vault instanceof IndexedDbLocalVault)) {
@@ -11,32 +19,28 @@ export class EncryptedCaseRepository {
 
   async create(input) {
     const payload = createCasePayload(input);
+    const now = new Date().toISOString();
     const record = {
       id: crypto.randomUUID(),
       schema_version: payload.schema_version,
       status: "draft",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
       payload,
     };
-    await this.vault.put(record.id, record);
+    await this.vault.put(CASE_NAMESPACE, record.id, record);
     return record;
   }
 
-  async get(id) {
-    return this.vault.get(id);
-  }
-
-  async list() {
-    return this.vault.list();
-  }
+  async get(id) { return this.vault.get(CASE_NAMESPACE, id); }
+  async list() { return this.vault.list(CASE_NAMESPACE); }
 
   async update(record) {
     if (!record?.id) throw new Error("Case id is required");
     const existing = await this.get(record.id);
     if (!existing) return null;
     const updated = { ...existing, ...record, updated_at: new Date().toISOString() };
-    await this.vault.put(updated.id, updated);
+    await this.vault.put(CASE_NAMESPACE, updated.id, updated);
     return updated;
   }
 
@@ -47,7 +51,7 @@ export class EncryptedCaseRepository {
   }
 
   async delete(id) {
-    await this.vault.remove(id);
+    await this.vault.remove(CASE_NAMESPACE, id);
     return true;
   }
 }
