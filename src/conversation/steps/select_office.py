@@ -3,60 +3,48 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
-
-from conversation.constants import (
-    WAITING_FOR_OFFICE_FALLBACK,
-    WAITING_FOR_OFFICE_MANUAL
-)
-
-from services.office_service import find_offices
+from conversation.constants import WAITING_FOR_OFFICE_FALLBACK, WAITING_FOR_OFFICE
+from capabilities.authority_directory import DirectoryAuthorityCapability
 
 
-async def handle_select_office(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def handle_select_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Discover authorities through the shared Authority capability."""
     user_id = update.effective_user.id
     location = update.message.text.strip()
-
     session = get_session(user_id)
     department = session.get("department", "")
 
-    offices = find_offices(department, location)
+    candidates = DirectoryAuthorityCapability().discover(
+        query=department,
+        jurisdiction=location,
+    )
 
-    # --------------------------------------
-    # ❌ NO OFFICE FOUND → FALLBACK
-    # --------------------------------------
-
-    if not offices:
-
+    if not candidates:
         await update.message.reply_text(
-            "⚠️ No exact office found.\n\n"
-            "You can still continue:\n\n"
-            "1 → Enter office manually\n"
-            "2 → Continue without office\n\n"
+            "⚠️ No exact authority found.\n\n"
+            "1 → Enter authority manually\n"
+            "2 → Continue without authority\n\n"
             "Reply with 1 or 2."
         )
-
-        session["office"] = None
-
+        session["offices"] = []
         set_state(user_id, WAITING_FOR_OFFICE_FALLBACK)
         return
 
-    # --------------------------------------
-    # ✅ OFFICE FOUND
-    # --------------------------------------
+    session["offices"] = [
+        {
+            "id": candidate.authority_id,
+            "name": candidate.name,
+            "office_name": candidate.name,
+            "type": candidate.authority_type,
+            "city": candidate.jurisdiction,
+        }
+        for candidate in candidates
+    ]
 
-    session["offices"] = offices
-
-    msg = "🏢 Found offices:\n\n"
-
-    for i, office in enumerate(offices, start=1):
-        msg += f"{i}. {office['name']} ({office.get('city', '')})\n"
-
-    msg += "\nReply with office number."
+    msg = "🏢 Found authorities:\n\n"
+    for i, candidate in enumerate(candidates, start=1):
+        msg += f"{i}. {candidate.name} ({candidate.jurisdiction or ''})\n"
+    msg += "\nReply with authority number."
 
     await update.message.reply_text(msg)
-
-    # 👉 TEMP: route to manual handler until selection step is built
-    set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
+    set_state(user_id, WAITING_FOR_OFFICE)
