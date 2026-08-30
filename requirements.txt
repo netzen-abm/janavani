@@ -9,6 +9,7 @@ FastAPI>=0.115.0
 uvicorn>=0.30.0
 python-dotenv>=1.0.1
 pydantic>=2.0.0
+pydantic-settings>=2.0.0
 
 # --------------------------------------------
 # Existing storage/provider
@@ -50,7 +51,6 @@ web3>=7.0.0
 ipfshttpclient>=0.7.0
 
 # NOTE:
-# Flask and NumPy are intentionally not listed here.
-# Flask is retained only in the historical src/web.py path and is no longer
-# a deployment dependency after canonical FastAPI convergence.
-# NumPy was not established as an active runtime dependency in the audit.
+# Flask is intentionally not listed here. The historical src/web.py path is
+# not a deployment dependency after canonical FastAPI convergence.
+# NumPy is not a direct requirement. pandas installs it transitively.
