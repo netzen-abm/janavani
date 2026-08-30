@@ -42,6 +42,12 @@ class SharedCaseActionGraph:
         self._nodes[node.action_id] = node
         return node
 
+    def get_action(self, action_id: str) -> CaseActionNode:
+        node = self._nodes.get(action_id)
+        if node is None:
+            raise KeyError(action_id)
+        return node
+
     def connect(
         self,
         from_action: CaseActionNode,
@@ -57,19 +63,15 @@ class SharedCaseActionGraph:
         return edge
 
     def transition(self, action_id: str, status: str) -> CaseActionNode:
-        node = self._nodes.get(action_id)
-        if node is None:
-            raise KeyError(action_id)
+        node = self.get_action(action_id)
         updated = CaseActionNode(node.action_id, node.case_id, node.action, status)
         self._nodes[action_id] = updated
         return updated
 
     def graph(self, case_id: str) -> CaseActionGraph:
         nodes = tuple(node for node in self._nodes.values() if node.case_id == case_id)
-        edges = tuple(
-            edge for edge in self._edges
-            if edge.from_action_id in {node.action_id for node in nodes}
-        )
+        node_ids = {node.action_id for node in nodes}
+        edges = tuple(edge for edge in self._edges if edge.from_action_id in node_ids)
         return CaseActionGraph(case_id, nodes, edges)
 
     def next_actions(self, case_id: str) -> tuple[CaseActionNode, ...]:
