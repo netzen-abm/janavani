@@ -1,48 +1,56 @@
 # ============================================
-# Janavani Requirements
+# Janavani Requirements — Canonical Runtime
 # ============================================
 
 # --------------------------------------------
-# Web Framework
+# Web/API Framework
 # --------------------------------------------
-Flask>=3.1.0
 FastAPI>=0.115.0
 uvicorn>=0.30.0
 python-dotenv>=1.0.1
+pydantic>=2.0.0
 
 # --------------------------------------------
-# Database
+# Existing storage/provider
 # --------------------------------------------
 supabase>=2.8.0
 
 # --------------------------------------------
-# Telegram Bot
+# Telegram channel
 # --------------------------------------------
 python-telegram-bot>=22.8
 
 # --------------------------------------------
-# HTTP Requests
+# HTTP / external adapters
 # --------------------------------------------
 requests>=2.32.0
 
 # --------------------------------------------
-# Data Processing
+# Directory / document processing
 # --------------------------------------------
 pandas>=2.2.2
-numpy>=1.26.4
 
 # --------------------------------------------
-# PDF Generation
+# Feedback API
+# --------------------------------------------
+redis>=5.0.0
+
+# --------------------------------------------
+# PDF / editable document generation
 # --------------------------------------------
 weasyprint>=65.0
 reportlab>=4.2.0
+python-docx>=1.1.0
 
 # --------------------------------------------
-# Blockchain (Future)
+# Future capability providers
+# Keep outside the canonical runtime when profiles are introduced.
 # --------------------------------------------
 web3>=7.0.0
-
-# --------------------------------------------
-# IPFS (Future)
-# --------------------------------------------
 ipfshttpclient>=0.7.0
+
+# NOTE:
+# Flask and NumPy are intentionally not listed here.
+# Flask is retained only in the historical src/web.py path and is no longer
+# a deployment dependency after canonical FastAPI convergence.
+# NumPy was not established as an active runtime dependency in the audit.
