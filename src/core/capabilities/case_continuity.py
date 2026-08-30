@@ -13,12 +13,7 @@ from src.core.contracts.follow_up import FollowUpTrigger
 
 
 class SharedCaseContinuity:
-    def __init__(
-        self,
-        state: SharedCaseStateRepository | None = None,
-        graph: SharedCaseActionGraph | None = None,
-        follow_up: SharedFollowUpEngine | None = None,
-    ):
+    def __init__(self, state=None, graph=None, follow_up=None):
         self.state = state or SharedCaseStateRepository()
         self.graph = graph or SharedCaseActionGraph()
         self.follow_up = follow_up or SharedFollowUpEngine()
@@ -47,19 +42,12 @@ class SharedCaseContinuity:
         self.state.set_lifecycle(case_id, CaseLifecycle.WAITING_FOR_TRIGGER)
         return node
 
-    def register_follow_up_trigger(
-        self,
-        case_id: str,
-        previous_action_id: str,
-        trigger: FollowUpTrigger,
-        *,
-        reference_date: date,
-    ) -> FollowUpRecommendation:
+    def register_follow_up_trigger(self, case_id: str, previous_action_id: str, trigger: FollowUpTrigger, *, reference_date: date) -> FollowUpRecommendation:
         recommendation = self.follow_up.evaluate(trigger, reference_date=reference_date)
+        previous = self.graph.get_action(previous_action_id)
+        if previous.case_id != case_id:
+            raise ValueError("previous action belongs to a different case")
         action = self.graph.add_action(case_id, CivicAction.FOLLOW_UP)
-        previous = self.graph._nodes.get(previous_action_id)
-        if previous is None or previous.case_id != case_id:
-            raise KeyError(previous_action_id)
         self.graph.connect(previous, action, ActionRelation.TRIGGERED_BY, trigger=trigger.trigger_id)
         summary = f"follow-up trigger registered: {trigger.trigger_id}"
         if recommendation.due_on:
