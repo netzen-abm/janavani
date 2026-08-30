@@ -1,35 +1,42 @@
-# src/tools/search_directory.py
-# Finds govt offices from CSV
+# src/services/search_directory.py
+# Provider for the shared Authority Discovery capability.
 
 import pandas as pd
 
-def search_office(query: str, city: str = "Kochi") -> str:
-    """
-    Input: query="ration shop", city="Kochi"
-    Output: List of offices
-    """
+
+def search_office_records(query: str, location: str | None = None) -> list[dict]:
+    """Return structured authority records without channel-specific formatting."""
     try:
         df = pd.read_csv("database/offices.csv")
     except FileNotFoundError:
-        return "Office database not found. Please add database/offices.csv"
+        return []
 
-    # Search by type and city
     results = df[
-        df['type'].str.contains(query, case=False, na=False) & 
-        df['city'].str.contains(city, case=False, na=False)
+        df["type"].astype(str).str.contains(query, case=False, na=False)
     ]
 
-    if results.empty:
+    if location:
+        results = results[
+            results["city"].astype(str).str.contains(location, case=False, na=False)
+        ]
+
+    return results.head(5).to_dict(orient="records")
+
+
+def search_office(query: str, city: str = "Kochi") -> str:
+    """Backward-compatible presentation helper for existing callers."""
+    records = search_office_records(query=query, location=city)
+    if not records:
         return f"No {query} found in {city}. You can add it to database/offices.csv"
 
-    output = f"Found {len(results)} {query}(s) in {city}:\n\n"
-    for index, row in results.head(5).iterrows():
-        output += f"ID: {row['id']}\n"
-        output += f"Name: {row['name']}\n"
-        output += f"Address: {row['address']}\n"
-        output += f"Officer: {row['officer_role']}\n"
-        output += f"Email: {row['email']}\n"
+    output = f"Found {len(records)} {query}(s) in {city}:\n\n"
+    for row in records:
+        output += f"ID: {row.get('id', '')}\n"
+        output += f"Name: {row.get('name', '')}\n"
+        output += f"Address: {row.get('address', '')}\n"
+        output += f"Officer: {row.get('officer_role', '')}\n"
+        output += f"Email: {row.get('email', '')}\n"
         output += "---\n"
-    
+
     output += "\nReply with the ID to file a complaint."
     return output
