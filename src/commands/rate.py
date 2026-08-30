@@ -1,20 +1,14 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from services.rate_office import save_rating
+from capabilities.feedback_file import JsonlFeedbackCapability
 
 
 async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    # ------------------------------------
-    # Validate Input
-    # ------------------------------------
-
+    """Telegram adapter for the shared Feedback capability."""
     if len(context.args) < 3:
-
         await update.message.reply_text(
-            """
-Usage
+            """Usage
 
 /rate office_id rating issue
 
@@ -25,41 +19,27 @@ Example
 Rating
 
 1 = Very Poor
-
 2 = Poor
-
 3 = Average
-
 4 = Good
-
-5 = Excellent
-"""
+5 = Excellent"""
         )
-
         return
 
-    # ------------------------------------
-    # Read Arguments
-    # ------------------------------------
+    authority_id = context.args[0]
+    try:
+        rating = int(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Rating must be a number from 1 to 5.")
+        return
 
-    office_id = context.args[0]
-
-    rating = int(context.args[1])
-
-    issue = " ".join(context.args[2:])
-
-    # ------------------------------------
-    # Save Rating
-    # ------------------------------------
-
-    result = save_rating(
-        office_id=office_id,
+    comment = " ".join(context.args[2:])
+    result = JsonlFeedbackCapability().submit_rating(
+        authority_id=authority_id,
         rating=rating,
-        issue=issue,
+        comment=comment,
     )
 
-    # ------------------------------------
-    # Reply
-    # ------------------------------------
-
-    await update.message.reply_text(result)
+    await update.message.reply_text(
+        result.message or "Feedback could not be recorded."
+    )
