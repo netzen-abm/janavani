@@ -1,4 +1,9 @@
-"""Shared document rendering orchestration."""
+"""Shared document rendering orchestration.
+
+Rendering accepts only an already reviewed DocumentDraft and an explicit user
+selected format. It performs no delivery, submission, email, database lookup,
+or additional personal-data collection.
+"""
 
 from pathlib import Path
 
@@ -17,6 +22,8 @@ class SharedDocumentRendering:
             raise ValueError("document draft is not renderable")
         if draft.submission_enabled:
             raise ValueError("document submission must remain disabled")
+        if not isinstance(fmt, DocumentFormat):
+            raise ValueError("document format must be explicitly selected")
         renderer = self._renderers.get(fmt)
         if renderer is None:
             raise ValueError(f"Unsupported document format: {fmt.value}")
