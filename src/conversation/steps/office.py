@@ -3,17 +3,15 @@ from telegram.ext import ContextTypes
 
 from conversation.session import get_session
 from conversation.state import set_state
-
-from conversation.constants import (
-    WAITING_FOR_PREVIEW,
-)
+from conversation.constants import WAITING_FOR_IDENTITY
+from capabilities.case_legacy import FileCaseCapability
 
 
 async def handle_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+    """Attach the citizen-selected authority to the shared Case."""
     user_id = update.effective_user.id
     session = get_session(user_id)
-
+    case_id = session.get("case_id")
     offices = session.get("offices", [])
 
     try:
@@ -27,20 +25,32 @@ async def handle_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     office = offices[choice - 1]
+    if not case_id:
+        await update.message.reply_text("Your case context is missing. Please type /start to restart.")
+        return
 
-    # ✅ Store selected office
-    session["office"] = office
+    authority = {
+        "id": office.get("id") or office.get("authority_id"),
+        "name": office.get("office_name") or office.get("name"),
+        "type": office.get("type"),
+        "jurisdiction": office.get("city") or session.get("district"),
+        "source": "directory",
+    }
 
-    # ✅ Move to preview step
-    set_state(user_id, WAITING_FOR_PREVIEW)
+    result = FileCaseCapability().update(case_id, office=authority, district=session.get("district"))
+    if not result.ok:
+        await update.message.reply_text("We could not save the selected authority to your case. Please try again.")
+        return
 
-    # ✅ Inform user
+    session["office"] = authority
+    set_state(user_id, WAITING_FOR_IDENTITY)
+
     await update.message.reply_text(
-        f"""
-✅ Office Selected
+        f"""✅ Authority Selected
 
-{office['office_name']}
+{authority['name']}
 
-Preparing your complaint preview...
-"""
+Your case is now linked to this authority.
+
+Next, choose how you want to provide your identity information."""
     )
