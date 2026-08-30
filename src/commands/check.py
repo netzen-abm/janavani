@@ -1,50 +1,36 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from services.storage_service import get_complaint_by_id
+from capabilities.tracking_file import LegacyComplaintTrackingCapability
 
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    # --------------------------------------------------
-    # 🧾 INPUT VALIDATION
-    # --------------------------------------------------
-
+    """Telegram adapter for the shared Case Tracking capability."""
     if not context.args:
         await update.message.reply_text(
-            "❗ Usage:\n/check <Complaint ID>\n\nExample:\n/check JNV-1234"
+            "❗ Usage:\n/check <Case ID>\n\nExample:\n/check JNV-1234"
         )
         return
 
-    complaint_id = context.args[0]
+    case_id = context.args[0]
+    result = LegacyComplaintTrackingCapability().get_status(case_id)
 
-    # --------------------------------------------------
-    # 🔍 FETCH DATA
-    # --------------------------------------------------
-
-    record = get_complaint_by_id(complaint_id)
-
-    # --------------------------------------------------
-    # ❌ NOT FOUND
-    # --------------------------------------------------
-
-    if not record:
+    if not result.ok or result.case is None:
         await update.message.reply_text(
-            f"❌ No complaint found with ID: {complaint_id}"
+            f"❌ {result.message or 'Case not found.'}"
         )
         return
 
-    # --------------------------------------------------
-    # ✅ FOUND
-    # --------------------------------------------------
+    case = result.case
+    district = case.jurisdiction.get("district")
+    department = case.metadata.get("department")
 
     response = f"""
-📄 Complaint Found
+📄 Case Found
 
-🆔 ID: {record.get("complaint_id")}
-📌 Status: {record.get("status")}
-🏢 Department: {record.get("department")}
-📍 District: {record.get("district")}
+🆔 ID: {case.case_id}
+📌 Status: {case.status.value}
+🏢 Department: {department or 'Not provided'}
+📍 District: {district or 'Not provided'}
 """
-
     await update.message.reply_text(response.strip())
