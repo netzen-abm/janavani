@@ -1,10 +1,12 @@
 services:
   - type: web
-    name: janavani-bot
+    name: janavani-platform-api
     env: python
 
     plan: free
 
     buildCommand: pip install -r requirements.txt
 
-    startCommand: python3 src/web.py
+    # Canonical FastAPI runtime entry point.
+    # The historical Flask entry point (src/web.py) is no longer used for deployment.
+    startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
