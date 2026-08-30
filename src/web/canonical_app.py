@@ -14,7 +14,6 @@ from src.web.feedback_router import router as feedback_router
 from src.web.legislative_router import router as legislative_router
 from src.web.constitutional_router import router as constitutional_router
 from src.web.land_router import router as land_router
-from src.web.case_workflow_router import router as case_workflow_router
 
 
 def create_canonical_app() -> FastAPI:
@@ -25,7 +24,6 @@ def create_canonical_app() -> FastAPI:
     app.include_router(legislative_router)
     app.include_router(constitutional_router)
     app.include_router(land_router)
-    app.include_router(case_workflow_router)
 
     @app.get("/liveness", tags=["Platform"])
     async def liveness() -> dict[str, str]:
