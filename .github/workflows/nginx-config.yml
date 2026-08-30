@@ -1,0 +1,41 @@
+name: Nginx Configuration
+
+on:
+  push:
+    paths:
+      - "nginx.conf"
+      - ".github/workflows/nginx-config.yml"
+  pull_request:
+    paths:
+      - "nginx.conf"
+      - ".github/workflows/nginx-config.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  nginx-config-test:
+    name: Validate canonical Nginx configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create temporary test certificate
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/janavani-nginx-certs"
+          openssl req -x509 -nodes -newkey rsa:2048 \
+            -keyout "$RUNNER_TEMP/janavani-nginx-certs/janavani_live.key" \
+            -out "$RUNNER_TEMP/janavani-nginx-certs/janavani_live.crt" \
+            -days 1 \
+            -subj "/CN=api.janavani.internal"
+
+      - name: Validate nginx.conf independently of Compose
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$RUNNER_TEMP/janavani-nginx-certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro" \
+            -v "$RUNNER_TEMP/janavani-nginx-certs/janavani_live.key:/etc/ssl/private/janavani_live.key:ro" \
+            nginx:alpine nginx -t -c /etc/nginx/nginx.conf
