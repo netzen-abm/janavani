@@ -1,0 +1,37 @@
+name: Repository Audit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - cleanup/**
+      - refactor/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run Janavani repository audit
+        run: python scripts/janavani_repo_audit.py . --json > audit.json
+
+      - name: Generate Markdown report
+        run: python scripts/janavani_audit_report.py audit.json > repository-audit.md
+
+      - name: Upload audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: janavani-repository-audit
+          path: |
+            audit.json
+            repository-audit.md
+          if-no-files-found: error
