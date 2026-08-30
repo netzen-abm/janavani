@@ -1,0 +1,1 @@
+"""OpenDataKerala public-data adapters."""
