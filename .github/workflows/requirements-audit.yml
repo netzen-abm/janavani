@@ -1,0 +1,29 @@
+name: Python Requirements Audit
+
+on:
+  push:
+    paths:
+      - "requirements.txt"
+      - "tools/audit_requirements.py"
+      - "src/**/*.py"
+      - ".github/workflows/requirements-audit.yml"
+  pull_request:
+    paths:
+      - "requirements.txt"
+      - "tools/audit_requirements.py"
+      - "src/**/*.py"
+      - ".github/workflows/requirements-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  requirements-audit:
+    name: Audit requirements against source imports
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run static dependency audit
+        run: python tools/audit_requirements.py
