@@ -3,14 +3,25 @@ from telegram.ext import ContextTypes
 
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_ISSUE
+from src.authorization.capabilities import PUBLIC_CAPABILITIES
+from src.authorization.guards import require_capability
+from src.authorization.policy import AuthorizationPolicy
+from src.identity.context import anonymous_context
 
 
 async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    """Telegram adapter for starting the public complaint workflow."""
+    identity = anonymous_context(
+        f"telegram-session:{update.effective_chat.id}",
+        interface="telegram",
+    )
+    require_capability(
+        identity,
+        "citizen.complaint.start",
+        policy=AuthorizationPolicy(anonymous_capabilities=PUBLIC_CAPABILITIES),
+    )
 
-    # 🎯 Start flow
-    set_state(user_id, WAITING_FOR_ISSUE)
-
+    set_state(update.effective_user.id, WAITING_FOR_ISSUE)
     await update.message.reply_text(
         """📝 Please describe your issue.
 
