@@ -1,89 +1,117 @@
-"""Capability-scoped privacy boundary.
+"""Privacy boundary primitives for JanaVani.
 
-This module is a policy boundary, not a PII detector or a substitute for
-client-side data minimisation. Personal and sensitive citizen data remains
-under user-device control; only explicitly permitted, minimised non-personal
-payloads may cross a capability boundary.
+This module intentionally contains policy-enforcement primitives rather than a
+central user-data store. It provides a small, dependency-free vocabulary that
+other capabilities can use to classify data and to construct minimized
+capability requests.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Mapping
+from typing import FrozenSet, Mapping
 
 
 class DataClass(str, Enum):
+    """Storage/processing sensitivity class."""
+
     PUBLIC = "public"
     OPERATIONAL = "operational"
     USER_PRIVATE = "user_private"
     SENSITIVE = "sensitive"
 
 
-class PrivacyBoundaryError(ValueError):
-    """Raised when a payload violates the privacy boundary."""
+class Capability(str, Enum):
+    """Independent execution boundaries recognized by the ecosystem."""
+
+    WEB = "web"
+    ANDROID = "android"
+    IOS = "ios"
+    DAPP = "dapp"
+    NOSTR = "nostr"
+    NYM = "nym"
+    RETICULUM = "reticulum"
+    FREENET = "freenet"
+    TELEGRAM = "telegram"
+    TELEGRAM_MINI_APP = "telegram_mini_app"
+    WHATSAPP = "whatsapp"
+    MESSENGER = "messenger"
+    AI = "ai"
+    AGENTIC_AI = "agentic_ai"
+    SLM = "slm"
+    RAG = "rag"
+    VLM = "vlm"
+    LAM = "lam"
+    MOE = "moe"
+    MLM = "mlm"
+    SAM = "sam"
+    OCR = "ocr"
+    COMPUTER_VISION = "computer_vision"
+    BLOCKCHAIN = "blockchain"
+    ZKP = "zkp"
 
 
 @dataclass(frozen=True)
 class CapabilityRequest:
-    capability: str
-    data_class: DataClass
+    """The minimum contract needed before protected data leaves a device."""
+
+    capability: Capability
+    fields: FrozenSet[str]
     user_authorized: bool = False
-    consent_granted: bool = False
+    encrypted: bool = False
+
+    def validate(self) -> None:
+        """Reject requests that violate the privacy boundary."""
+        if not self.user_authorized:
+            raise PermissionError("Protected capability request is not user-authorized")
+        if not self.encrypted:
+            raise PermissionError("Protected capability request must be encrypted")
 
 
-# Defense-in-depth only. This is deliberately conservative and must never be
-# treated as the primary privacy control; callers must use allow-listed,
-# minimised fields before invoking this boundary.
-_SENSITIVE_KEYS = frozenset(
+SENSITIVE_FIELD_NAMES: FrozenSet[str] = frozenset(
     {
-        "aadhaar",
-        "address",
-        "bank_account",
-        "biometric",
-        "dob",
-        "email",
-        "full_name",
+        "name",
+        "postal_address",
         "phone",
-        "phone_number",
-        "pan",
-        "password",
+        "email",
+        "government_id",
+        "identity_document",
+        "biometric",
+        "precise_location",
+        "location_history",
+        "private_key",
+        "wallet_seed",
+        "private_message",
+        "private_attachment",
+        "private_prompt",
+        "private_ai_output",
     }
 )
 
 
-def _contains_sensitive_key(value: Any) -> bool:
-    """Return whether a mapping contains a known sensitive field name."""
-    if isinstance(value, Mapping):
-        for key, child in value.items():
-            if str(key).strip().lower() in _SENSITIVE_KEYS:
-                return True
-            if _contains_sensitive_key(child):
-                return True
-    elif isinstance(value, (list, tuple)):
-        return any(_contains_sensitive_key(item) for item in value)
-    return False
+class PrivacyBoundary:
+    """Pure functions used by independent capabilities to enforce minimization."""
 
+    @staticmethod
+    def classify_field(field_name: str) -> DataClass:
+        normalized = field_name.strip().lower()
+        if normalized in SENSITIVE_FIELD_NAMES:
+            return DataClass.SENSITIVE
+        if normalized in {"draft", "complaint", "grievance", "evidence", "attachment"}:
+            return DataClass.USER_PRIVATE
+        if normalized in {"request_id", "capability", "created_at", "status", "error_code"}:
+            return DataClass.OPERATIONAL
+        return DataClass.PUBLIC
 
-def authorize_capability(request: CapabilityRequest, payload: Mapping[str, Any]) -> None:
-    """Enforce the shared privacy/authorization boundary.
+    @classmethod
+    def minimize(cls, payload: Mapping[str, object], allowed_fields: FrozenSet[str]) -> dict[str, object]:
+        """Return only explicitly allowed fields; never broaden a capability scope."""
+        return {key: value for key, value in payload.items() if key in allowed_fields}
 
-    USER_PRIVATE and SENSITIVE data never cross this boundary. Other data
-    requires explicit user authorization, and consequential capabilities also
-    require explicit consent.
-    """
-    if request.data_class in {DataClass.USER_PRIVATE, DataClass.SENSITIVE}:
-        raise PrivacyBoundaryError(
-            "Personal or sensitive data must remain under user-device control."
-        )
-
-    if not request.user_authorized:
-        raise PrivacyBoundaryError("Capability use requires user authorization.")
-
-    if not request.consent_granted:
-        raise PrivacyBoundaryError("Explicit consent is required for this capability.")
-
-    if _contains_sensitive_key(payload):
-        raise PrivacyBoundaryError(
-            "Payload contains a prohibited personal or sensitive field."
-        )
+    @staticmethod
+    def assert_no_sensitive_keys(payload: Mapping[str, object]) -> None:
+        """Guard operational/backend payloads against obvious sensitive fields."""
+        leaked = [key for key in payload if PrivacyBoundary.classify_field(key) is DataClass.SENSITIVE]
+        if leaked:
+            raise ValueError(f"Sensitive fields cannot enter an unclassified backend payload: {sorted(leaked)}")
