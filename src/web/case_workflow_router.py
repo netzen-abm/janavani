@@ -11,7 +11,7 @@ from src.application.case_workflow import CaseWorkflowService
 from src.domain.submission import Submission
 from src.storage.canonical_persistence import memory_persistence
 
-router = APIRouter(prefix="/cases", tags=["Cases"])
+router = APIRouter(prefix="/civic/cases", tags=["Cases"])
 
 
 class CreateCaseRequest(BaseModel):
