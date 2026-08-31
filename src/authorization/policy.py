@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import FrozenSet
 
 from src.identity.context import IdentityContext
+from .capabilities import PUBLIC_CAPABILITIES, PROTECTED_CAPABILITIES
 
 
 @dataclass(frozen=True)
@@ -21,14 +22,20 @@ class AuthorizationDecision:
 
 
 class AuthorizationPolicy:
-    """Minimal deny-by-default policy for shared capability execution."""
+    """Deny-by-default policy with a canonical capability registry."""
 
-    def __init__(self, anonymous_capabilities: FrozenSet[str] = frozenset()):
-        self._anonymous_capabilities = anonymous_capabilities
+    def __init__(self, anonymous_capabilities: FrozenSet[str] | None = None):
+        # A caller may further restrict anonymous access, but may not expand it
+        # beyond the centrally defined public capability set.
+        requested = PUBLIC_CAPABILITIES if anonymous_capabilities is None else anonymous_capabilities
+        self._anonymous_capabilities = frozenset(requested) & PUBLIC_CAPABILITIES
 
     def authorize(self, context: IdentityContext, capability: str) -> AuthorizationDecision:
         """Authorize a capability for the normalized request context."""
         principal = context.principal
+
+        if capability not in PUBLIC_CAPABILITIES and capability not in PROTECTED_CAPABILITIES:
+            return AuthorizationDecision(False, "unknown capability denied", capability)
 
         if capability in self._anonymous_capabilities:
             return AuthorizationDecision(True, "capability permits anonymous access", capability)
