@@ -3,12 +3,13 @@
 from dataclasses import dataclass
 from typing import FrozenSet
 
+from src.authorization.capabilities import DOCUMENT_TRANSMIT
 from src.authorization.consent import ConsentRecord, require_consent
 from src.authorization.endpoint import authorize_capability
 from src.identity.context import IdentityContext
 
 
-TRANSMIT_CAPABILITY = "citizen.document.transmit"
+TRANSMIT_CAPABILITY = DOCUMENT_TRANSMIT
 TRANSMIT_ACTION = "external.document.transmission"
 
 
@@ -26,12 +27,7 @@ def authorize_transmission(
     *,
     granted_consent_actions: FrozenSet[str] = frozenset(),
 ) -> TransmissionAuthorization:
-    """Authorize an external transmission; never perform the transmission.
-
-    This function is intentionally a policy gate. The caller remains
-    responsible for performing the actual network operation after receiving
-    this authorization evidence.
-    """
+    """Authorize an external transmission; never perform the transmission."""
     authorize_capability(context, TRANSMIT_CAPABILITY)
     consent = require_consent(
         context,
