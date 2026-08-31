@@ -1,34 +1,43 @@
-# src/services/document_service.py
+"""Document capability service with shared authorization enforcement."""
 
 from documents.complaint_builder import build_complaint
 from documents.generate_pdf import generate_pdf_from_complaint
 
+from src.authorization.endpoint import authorize_capability
+from src.identity.context import IdentityContext
+
+
+DOCUMENT_GENERATE_CAPABILITY = "citizen.document.generate"
+
 
 def generate_complaint_document(
+    context: IdentityContext,
     user_name: str,
     user_address: str,
     office_id: str,
     issue_text: str,
-    format_type: str = "pdf"
+    format_type: str = "pdf",
 ) -> str:
-    """
-    Central document generation service
-    """
+    """Generate a complaint document only after shared authorization.
 
-    # 1. Build complaint
+    The authorization boundary is deliberately evaluated before document
+    generation. Authentication, consent, and external delivery remain
+    separate concerns and are not implied by this function.
+    """
+    authorize_capability(context, DOCUMENT_GENERATE_CAPABILITY)
+
     complaint = build_complaint(
         user_name=user_name,
         user_address=user_address,
         office_id=office_id,
-        issue_text=issue_text
+        issue_text=issue_text,
     )
 
-    # 2. Format handling
-    if format_type.lower() == "pdf":
+    selected_format = format_type.lower()
+    if selected_format == "pdf":
         return generate_pdf_from_complaint(complaint)
 
-    elif format_type.lower() == "docx":
+    if selected_format == "docx":
         return "DOCX generation not implemented yet"
 
-    else:
-        return "Invalid format selected"
+    return "Invalid format selected"
