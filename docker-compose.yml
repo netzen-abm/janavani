@@ -25,6 +25,7 @@ services:
       OLLAMA_BASE_URL: http://local-slm-sandbox:11434
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY:-}
+      JANAVANI_INTERFACE_TOKENS: ${JANAVANI_INTERFACE_TOKENS:-}
     depends_on:
       - transient-memory-grid
       - local-slm-sandbox
