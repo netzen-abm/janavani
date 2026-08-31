@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # External facing security guard gateway
   reverse-proxy-gateway:
     image: nginx:alpine
     container_name: janavani-nginx-gateway
@@ -15,31 +16,36 @@ services:
     networks:
       - janavani-secure-mesh
 
+  # Core Python runtime containing AI modules
   ai-agent-service:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: janavani-ai-agent
+    ports:
+      - "8000:8000"
     environment:
       - REDIS_HOST=transient-memory-grid
       - REDIS_PORT=6379
-      # Point directly to the internal air-gapped container url instead of external cloud vendors
       - OLLAMA_BASE_URL=http://local-slm-sandbox:11434
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HF_TOKEN=${HF_API_KEY}
     depends_on:
       - transient-memory-grid
       - local-slm-sandbox
     networks:
       - janavani-secure-mesh
 
-  # NEW: Air-Gapped Local Inference Engine (Privacy Default Shield)
+  # Air-Gapped Local Inference Engine
   local-slm-sandbox:
     image: ollama/ollama:latest
     container_name: janavani-local-slm
     volumes:
       - ./ollama_storage:/root/.ollama
-    # Expose internally inside the isolated bridging network context only
     networks:
       - janavani-secure-mesh
 
+  # FastHTML Web MVP Frontend Application
   web-mvp-application:
     image: python:3.11-slim
     container_name: janavani-web-mvp-app
@@ -57,226 +63,7 @@ services:
     networks:
       - janavani-secure-mesh
 
-  transient-memory-grid:
-    image: redis:7-alpine
-    command: redis-server --appendonly no --save ""
-    networks:
-      - janavani-secure-mesh
-
-networks:
-  janavani-secure-mesh:
-    driver: bridge
-
-
-# --------------------------
-
-version: '3.8'
-services:
-  janavani:
-    build: .
-    volumes:
-      - ./database:/app/database
-    environment:
-      - DEMO_MODE=true
-# --------
-
-version: '3.8'
-
-services:
-  # Isolated Python runtime containing Janavani's AI modules
-  ai-agent-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - REDIS_HOST=transient-memory-grid
-      - REDIS_PORT=6379
-      # These credentials are passing safely from host system runtime parameters
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HF-TOKEN=${HUGGINGFACE_API_KEY}
-    depends_on:
-      - transient-memory-grid
-    networks:
-      - janavani-secure-mesh
-
-  # Non-persistent, zero-disk internal volatile cache structure
-  transient-memory-grid:
-    image: redis:7-alpine
-    command: redis-server --appendonly no --save ""
-    ports:
-      - "6379:6379"
-    networks:
-      - janavani-secure-mesh
-
-networks:
-  janavani-secure-mesh:
-    driver: bridge
-
-    # --------------------
-
-    version: '3.8'
-
-services:
-  # External facing security guard gateway
-  reverse-proxy-gateway:
-    image: nginx:alpine
-    container_name: janavani-nginx-gateway
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      # Securely map live SSL certificate bundles from production host storage layers
-      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
-      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
-    depends_on:
-      - ai-agent-service
-    networks:
-      - janavani-secure-mesh
-
-  ai-agent-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - REDIS_HOST=transient-memory-grid
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HF_TOKEN=${HUGGINGFACE_API_KEY}
-    depends_on:
-      - transient-memory-grid
-    networks:
-      - janavani-secure-mesh
-
-  transient-memory-grid:
-    image: redis:7-alpine
-    command: redis-server --appendonly no --save ""
-    networks:
-      - janavani-secure-mesh
-
-networks:
-  janavani-secure-mesh:
-    driver: bridge
-
-
-    # -------------------
-
-    version: '3.8'
-
-services:
-  # External facing security guard gateway
-  reverse-proxy-gateway:
-    image: nginx:alpine
-    container_name: janavani-nginx-gateway
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
-      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
-    depends_on:
-      - ai-agent-service
-    networks:
-      - janavani-secure-mesh
-
-  ai-agent-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - REDIS_HOST=transient-memory-grid
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HF_TOKEN=${HUGGINGFACE_API_KEY}
-    depends_on:
-      - transient-memory-grid
-    networks:
-      - janavani-secure-mesh
-
-  # Isolated Internal Admin UI Dashboard Component Instance
-  internal-admin-board:
-    image: python:3.11-slim
-    container_name: janavani-admin-panel
-    command: sh -c "pip install streamlit requests pandas && streamlit run src/web/admin_dashboard.py --server.port=8501 --server.address=0.0.0.0"
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    environment:
-      - JANAVANI_INTERNAL_API_URL=http://ai-agent-service:8000/api/v1/agent/metrics
-      - ADMIN_INTERFACE_SECRET_TOKEN=web-mvp-token-abc
-    ports:
-      - "8501:8501"
-    depends_on:
-      - ai-agent-service
-    networks:
-      - janavani-secure-mesh
-
-  transient-memory-grid:
-    image: redis:7-alpine
-    command: redis-server --appendonly no --save ""
-    networks:
-      - janavani-secure-mesh
-
-networks:
-  janavani-secure-mesh:
-    driver: bridge
-
-# -----------------------------
-
-version: '3.8'
-
-services:
-  # External-facing security proxy gateway
-  reverse-proxy-gateway:
-    image: nginx:alpine
-    container_name: janavani-nginx-gateway
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
-      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
-    depends_on:
-      - ai-agent-service
-    networks:
-      - janavani-secure-mesh
-
-  # Core Python runtime containing Janavani's AI and document modules
-  ai-agent-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - REDIS_HOST=transient-memory-grid
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-    depends_on:
-      - transient-memory-grid
-    networks:
-      - janavani-secure-mesh
-
-  # NEW: Isolated FastHTML Web MVP Frontend Container Instance
-  web-mvp-application:
-    image: python:3.11-slim
-    container_name: janavani-web-mvp-app
-    command: sh -c "pip install -r src/web_mvp/requirements.txt && python src/web_mvp/main.py"
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    environment:
-      # Route internal requests straight to the backend core container alias inside the bridge network
-      - JANAVANI_BACKEND_URL=http://ai-agent-service:8000/api/v1
-      - WEB_INTERFACE_TOKEN=web-mvp-token-abc
-    ports:
-      - "8080:8080"
-    depends_on:
-      - ai-agent-service
-    networks:
-      - janavani-secure-mesh
-
-  # Isolated Internal Admin UI Dashboard Component Instance
+  # Internal Admin UI Dashboard Component Instance
   internal-admin-board:
     image: python:3.11-slim
     container_name: janavani-admin-panel
@@ -298,50 +85,14 @@ services:
   # Non-persistent, zero-disk internal volatile cache structure
   transient-memory-grid:
     image: redis:7-alpine
+    container_name: janavani-redis
     command: redis-server --appendonly no --save ""
-    networks:
-      - janavani-secure-mesh
-
-networks:
-  janavani-secure-mesh:
-    driver: bridge
-
-
-# ------------------------------
-
-version: '3.8'
-
-services:
-  # Standard operational network interfaces
-  reverse-proxy-gateway:
-    image: nginx:alpine
-    container_name: janavani-nginx-gateway
     ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
-      - /etc/ssl/private/janavani_live.key:/etc/ssl/certs/janavani_live.key:ro
-    depends_on:
-      - ai-agent-service
+      - "6379:6379"
     networks:
       - janavani-secure-mesh
 
-  ai-agent-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - REDIS_HOST=transient-memory-grid
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-    depends_on:
-      - transient-memory-grid
-    networks:
-      - janavani-secure-mesh
-
-  # NEW: Dioxus WebAssembly Dev Compilation Container Toolchain
+  # Dioxus WebAssembly Dev Compilation Container Toolchain
   dioxus-frontend-app:
     image: rust:1.78-slim
     container_name: janavani-dioxus-compiler
@@ -352,13 +103,6 @@ services:
     networks:
       - janavani-secure-mesh
 
-  transient-memory-grid:
-    image: redis:7-alpine
-    command: redis-server --appendonly no --save ""
-    networks:
-      - janavani-secure-mesh
-
 networks:
   janavani-secure-mesh:
     driver: bridge
-
