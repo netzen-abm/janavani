@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from src.domain.authority import Authority, AuthoritySource
 from src.domain.case import Case
-from src.domain.consent import Consent
+from src.domain.consent import Consent, ConsentStatus
 from src.domain.document import Document, DocumentType, PartyRef
 from src.domain.evidence import Evidence, EvidenceKind
 from src.domain.submission import Submission
@@ -56,7 +56,7 @@ def test_consent_round_trip() -> None:
     consent = Consent(
         consent_id="CON-1", subject_id="CASE-1", capability_id="CAP-SUBMIT",
         purpose="Submit representation", scope=("case",), data_categories=("personal",),
-        status="granted", policy_version="v1", source_channel="web", granted_at=granted,
+        status=ConsentStatus.GRANTED, policy_version="v1", source_channel="web", granted_at=granted,
     )
     hydrated = consent_from_row(consent_row(consent))
     assert hydrated.consent_id == consent.consent_id
