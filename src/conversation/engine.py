@@ -1,25 +1,18 @@
 # src/conversation/engine.py
 
-"""
-Conversation Engine
+"""Conversation Engine
 
-Routes the current conversation state
-to the appropriate workflow step.
+Routes the current conversation state to the appropriate workflow step.
+Workflow state is routing data, not authorization.
 """
 
 from conversation.state import get_state
 from engine.state_registry import get_handler
+from authorization.workflow_guard import authorize_workflow_state
 
 
 async def run_step(update, context):
-    """
-    Execute workflow step
-    based on current state
-    """
-
-    # --------------------------------------
-    # 🔐 SAFE USER ID EXTRACTION
-    # --------------------------------------
+    """Execute the current workflow step after protected-capability checks."""
     if update.callback_query:
         user_id = update.callback_query.from_user.id
     else:
@@ -27,52 +20,41 @@ async def run_step(update, context):
 
     state = get_state(user_id)
 
-    # --------------------------------------------------
-    # 🟢 HANDLE NEW STATE
-    # --------------------------------------------------
     if state == "NEW":
         if update.message:
             await update.message.reply_text(
-                "👋 Welcome to Janavani\n\n"
-                "Use /complaint to begin."
+                "👋 Welcome to Janavani\n\nUse /complaint to begin."
             )
         return
 
-    # --------------------------------------------------
-    # 🔵 GET HANDLER
-    # --------------------------------------------------
     handler = get_handler(state)
 
-    # --------------------------------------------------
-    # 🟡 UNKNOWN STATE
-    # --------------------------------------------------
     if handler is None:
         if update.message:
             await update.message.reply_text(
-                "⚠️ Unknown state.\n\n"
-                "Please type /start to restart."
+                "⚠️ Unknown state.\n\nPlease type /start to restart."
             )
         print(f"❌ No handler for state: {state}")
         return
 
-    # --------------------------------------------------
-    # 🟣 EXECUTE HANDLER (WITH DEBUG)
-    # --------------------------------------------------
     try:
+        # Workflow state is routing data, never authority.
+        authorize_workflow_state(user_id, state, interface="telegram")
         await handler(update, context)
 
+    except PermissionError:
+        if update.message:
+            await update.message.reply_text(
+                "⚠️ This action is not authorized.\n\nPlease type /start to restart."
+            )
+
     except Exception as e:
-        # 🔥 PRINT FULL ERROR IN TERMINAL
         print("🔥 ERROR OCCURRED")
         print("State:", state)
         print("Error:", str(e))
-
-        # Optional: print full traceback
         import traceback
         traceback.print_exc()
-
-        # 👤 SHOW USER FRIENDLY ERROR
         if update.message:
             await update.message.reply_text(
-                f"⚠️ Error: {str(e)}\n\nType /start to restart."
+                "⚠️ Something went wrong.\n\nType /start to restart."
             )
