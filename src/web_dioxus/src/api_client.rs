@@ -21,6 +21,7 @@ pub struct DraftResponse {
     pub document: DocumentPayload,
 }
 
+#[derive(PartialEq)]
 pub struct JanavaniDioxusBridge {
     pub backend_url: Option<String>,
     pub is_freenet_context: bool,
@@ -30,9 +31,6 @@ impl JanavaniDioxusBridge {
     pub fn new() -> Self {
         let current_url = gloo_utils::window().location().href().unwrap_or_default();
         let is_freenet = current_url.contains("freenet") || current_url.contains("127.0.0.1:5050");
-
-        // A client application must never contain a reusable server secret.
-        // The conventional transport endpoint is deployment configuration, not a credential.
         let backend_url = option_env!("JANAVANI_BACKEND_URL").map(str::to_owned);
 
         Self {
