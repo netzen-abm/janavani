@@ -1,0 +1,20 @@
+name: Security Boundary
+
+on:
+  push:
+    branches:
+      - feat/capability-scoped-consent-agent-enforcement
+  pull_request:
+
+jobs:
+  authorization-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependency
+        run: python -m pip install --upgrade pip pytest
+      - name: Run security boundary tests
+        run: python -m pytest -q tests/test_authorization_boundary.py tests/test_consent_policy.py tests/test_agent_policy.py tests/test_abuse_control.py tests/test_workflow_guard.py
