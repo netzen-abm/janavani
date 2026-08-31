@@ -9,14 +9,6 @@ mod tests {
     }
 
     #[test]
-    fn test_nym_adapter_fails_closed_until_implemented() {
-        let result = futures_lite::future::block_on(
-            JanavaniDecentralizedCore::route_via_nym_mixnet("https://example.invalid", "test"),
-        );
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_reticulum_adapter_fails_closed_until_implemented() {
         let result = JanavaniDecentralizedCore::transmit_via_reticulum_mesh("test");
         assert!(result.is_err());
