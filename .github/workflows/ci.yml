@@ -28,14 +28,12 @@ jobs:
         run: python -m compileall src
 
       - name: Run smoke tests
-        # quick, lightweight verification to catch import/runtime regressions early
-        run: |
-          pytest -q tests/test_smoke.py || true
+        run: pytest -q tests/test_smoke.py
 
       - name: Run canonical test suite
         env:
           REDIS_HOST: localhost
           REDIS_PORT: "6379"
           OPENROUTER_API_KEY: mock-verification-token
-          HUGGINGFACE_API_KEY: mock-verification-token
+          HF_TOKEN: mock-verification-token
         run: bash ./run_all_tests.sh
