@@ -29,7 +29,7 @@ services:
       - REDIS_PORT=6379
       - OLLAMA_BASE_URL=http://local-slm-sandbox:11434
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-mock-verification-token}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-mock-verification-token}
+      - HF_TOKEN=${HF_TOKEN:-mock-verification-token}
     depends_on:
       - transient-memory-grid
       - local-slm-sandbox
@@ -55,7 +55,7 @@ services:
     working_dir: /workspace
     environment:
       - JANAVANI_BACKEND_URL=http://ai-agent-service:8000/api/v1
-      - WEB_INTERFACE_TOKEN=web-mvp-token-abc
+      - WEB_INTERFACE_TOKEN=${WEB_INTERFACE_TOKEN:-}
     ports:
       - "8080:8080"
     depends_on:
@@ -74,7 +74,7 @@ services:
     environment:
       - JANAVANI_INTERNAL_API_URL=http://ai-agent-service:8000/api/v1/agent/metrics
       - JANAVANI_INTERNAL_FEEDBACK_URL=http://ai-agent-service:8000/api/v1/feedback/summary
-      - ADMIN_INTERFACE_SECRET_TOKEN=web-mvp-token-abc
+      - ADMIN_INTERFACE_SECRET_TOKEN=${ADMIN_INTERFACE_SECRET_TOKEN:-}
     ports:
       - "8501:8501"
     depends_on:
