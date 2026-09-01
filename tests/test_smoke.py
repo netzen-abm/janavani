@@ -5,8 +5,8 @@ def test_search_and_rate():
 
     This test intentionally avoids PDF generation (weasyprint) to keep CI lightweight.
     """
-    from services.search_directory import search_office
-    from services.rate_office import save_rating
+    from src.services.search_directory import search_office
+    from src.services.rate_office import save_rating
 
     # search_office should always return a string (message or results)
     out = search_office("ration", "Kochi")
