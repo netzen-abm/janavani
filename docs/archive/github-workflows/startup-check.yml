@@ -1,0 +1,44 @@
+# Historical startup check.
+# This workflow inspected legacy Flask modules and is superseded by canonical
+# FastAPI/runtime validation in the active CI architecture.
+
+name: Startup check
+on:
+  push:
+  pull_request:
+
+jobs:
+  startup-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Install requirements (capture)
+        run: |
+          set -o pipefail
+          pip install --no-cache-dir -r requirements.txt 2>&1 | tee pip-install.log
+      - name: Write startup-check script
+        run: |
+          cat > startup_check.py <<'PY'
+          import importlib, traceback, sys
+          modules = ['src.web','src.bot_messenger','src.bot_whatsapp','src.main']
+          found_app = False
+          for m in modules:
+              try:
+                  mod = importlib.import_module(m)
+                  print(f"--- Imported {m}")
+                  if hasattr(mod, 'app'):
+                      found_app = True
+              except Exception:
+                  traceback.print_exc()
+          if not found_app:
+              sys.exit(2)
+          PY
+      - name: Run import/startup checks
+        run: python startup_check.py
