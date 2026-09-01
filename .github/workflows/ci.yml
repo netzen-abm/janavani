@@ -26,10 +26,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pytest fakeredis
+          python -m pip install pytest fakeredis ruff
 
       - name: Python syntax check
-        run: python -m compileall src
+        run: python -m compileall -q src
+
+      - name: Dependency integrity check
+        run: python -m pip check
+
+      - name: Static analysis
+        run: python -m ruff check src
 
       - name: Run smoke tests
         run: python -m pytest -q tests/test_smoke.py
