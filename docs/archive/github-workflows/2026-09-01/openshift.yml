@@ -1,0 +1,18 @@
+# Archived from .github/workflows/openshift.yml on 2026-09-01.
+# Reason: provider starter template requiring OPENSHIFT_SERVER and
+# OPENSHIFT_TOKEN secrets and an actual OpenShift deployment target.
+# Janavani's canonical deployment authority is currently container-based;
+# this provider path is not an active ecosystem capability.
+
+# Original source SHA: f5de1669f751372032c940d5d4b7774d1762d3a3
+
+name: OpenShift (archived)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archived:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Archived; no active OpenShift deployment target is defined."
