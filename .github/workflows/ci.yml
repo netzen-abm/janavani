@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - main
-      - develop/**
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -18,19 +20,19 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
+          python -m pip install pytest fakeredis
 
       - name: Python syntax check
         run: python -m compileall src
 
       - name: Run smoke tests
-        # quick, lightweight verification to catch import/runtime regressions early
-        run: |
-          pytest -q tests/test_smoke.py || true
+        run: python -m pytest -q tests/test_smoke.py
 
       - name: Run canonical test suite
         env:
