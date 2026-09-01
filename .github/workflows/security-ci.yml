@@ -52,7 +52,7 @@ jobs:
           export REDIS_HOST=localhost
           export REDIS_PORT=6379
           export OPENROUTER_API_KEY=mock-verification-token
-          export HUGGINGFACE_API_KEY=mock-verification-token
+          export HF_TOKEN=mock-verification-token
           pytest tests/ -v
 
       - name: Tear Down Testing Environments
