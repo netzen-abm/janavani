@@ -1,0 +1,20 @@
+# This is a basic workflow that was manually triggered.
+# Preserved for historical reference; not part of the canonical CI system.
+
+name: Manual workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Person to greet'
+        default: 'World'
+        required: true
+        type: string
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send greeting
+      run: echo "Hello ${{ inputs.name }}"
