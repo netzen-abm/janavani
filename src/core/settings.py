@@ -10,6 +10,9 @@ class AISettings(BaseSettings):
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     HF_TOKEN: str = os.getenv("HF_TOKEN", "")
 
+    # Backward-compatible alias for older integrations. HF_TOKEN is canonical.
+    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_TOKEN", ""))
+
     # Provider endpoints are configuration, not capability ownership.
     OPENROUTER_URL: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1")
 
