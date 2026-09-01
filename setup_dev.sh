@@ -7,10 +7,12 @@
 # ==============================================================================
 
 # Exit instantly if any initialization configuration encounters an uncaught failure
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "======================================================================"
-echo "🇮🇳 INITIALIZING JANAVANI MULTI-PROTOCOL DEV INSTALATION ENVIRONMENT"
+echo "🇮🇳 INITIALIZING JANAVANI MULTI-PROTOCOL DEV INSTALLATION ENVIRONMENT"
 echo "======================================================================"
 echo "Timestamp (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
@@ -47,7 +49,7 @@ if ! command -v dx &> /dev/null; then
     echo "📦 Compiling and locking localized Dioxus CLI system tools..."
     cargo install dioxus-cli --version 0.5.2
 fi
-cd ../..
+cd "$SCRIPT_DIR"
 
 # --- Step 4: Defensive Pre-Commit Interception Installation ---
 echo -e "\n🔹 [4/6] Activating Local Security Pre-Commit Protection Barriers..."
@@ -76,7 +78,7 @@ echo -e "\n=====================================================================
 echo "🎉 JANAVANI COMPOSITE DEVELOPMENT ENVIRONMENT INSTALLED SUCCESSFULLY."
 echo "======================================================================"
 echo "To begin local operations, run the following commands:"
-echo "  1. source venv/bin/activate             <- Active your isolated workspace"
+echo "  1. source venv/bin/activate             <- Activate your isolated workspace"
 echo "  2. docker compose up -d                  <- Fire up your background caching grid"
-echo "  3. ./build_wasm.sh                      <- Build your sovereign Dioxus client"
+echo "  3. ./build_wasm.sh                       <- Build your sovereign Dioxus client"
 echo "======================================================================"
