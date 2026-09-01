@@ -1,71 +1,40 @@
-# conversation/session.py
+"""Conversation session storage.
 
-"""
-Stores user conversation data.
-
-Currently stored in memory.
-
-Later this will be stored in Supabase.
+The current runtime keeps session state in memory.  The storage boundary is
+kept behind these functions so the implementation can later move to a shared
+persistent adapter without changing conversation steps.
 """
 
 user_sessions = {}
 
-sessions = {}
 
 def get_session(user_id):
-    if user_id not in sessions:
-        sessions[user_id] = {}
-    return sessions[user_id]
-
-
-def get_session(user_id):
-
+    """Return the mutable session for a user, creating it on first access."""
     if user_id not in user_sessions:
-
         user_sessions[user_id] = {
-
-    # Workflow
-    "workflow": "Complaint",
-
-    # Citizen Issue
-    "issue": "",
-
-    # Selected Document
-    "document": "",
-
-    # Location
-    "district": "",
-    "department": "",
-
-    # Office Search Results
-    "offices": [],
-
-    # Selected Office
-    "office": {
-        "office_id": "",
-        "office_name": "",
-        "office_address": "",
-        "department": "",
-        "district": "",
-    },
-
-    # Identity
-    "identity_mode": "anonymous",
-
-    # Citizen Details
-    "name": "",
-    "address": "",
-    "phone": "",
-    "email": "",
-
-    # Attachment
-    "photo": None,
-}
-
+            "workflow": "Complaint",
+            "issue": "",
+            "document": "",
+            "district": "",
+            "department": "",
+            "offices": [],
+            "office": {
+                "office_id": "",
+                "office_name": "",
+                "office_address": "",
+                "department": "",
+                "district": "",
+            },
+            "identity_mode": "anonymous",
+            "name": "",
+            "address": "",
+            "phone": "",
+            "email": "",
+            "photo": None,
+        }
     return user_sessions[user_id]
 
 
 def clear_session(user_id):
-
-    if user_id in user_sessions:
-        del user_sessions[user_id]
+    """Discard a user's in-memory session."""
+    user_sessions.pop(user_id, None)
