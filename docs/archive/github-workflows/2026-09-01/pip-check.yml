@@ -1,0 +1,16 @@
+# Archived from .github/workflows/pip-check.yml on 2026-09-01.
+# Reason: duplicate dependency installation. Canonical CI already installs
+# requirements.txt and therefore validates the same dependency contract.
+
+# Original source SHA: 907bd5bcbcaa389cb517bfd10bf972326ef20f4f
+
+name: Pip requirements check (archived)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archived:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Archived; canonical CI validates the requirements contract."
