@@ -9,11 +9,15 @@ Flask>=3.1.0
 FastAPI>=0.115.0
 uvicorn>=0.30.0
 python-dotenv>=1.0.1
+pydantic>=2.9.0
+pydantic-settings>=2.0.0
+httpx>=0.26.0
 
 # --------------------------------------------
-# Database
+# Database / Cache
 # --------------------------------------------
 supabase>=2.8.0
+redis>=5.0.0
 
 # --------------------------------------------
 # Telegram Bot
@@ -32,8 +36,9 @@ pandas>=2.2.2
 numpy>=1.26.4
 
 # --------------------------------------------
-# PDF Generation
+# Document / PDF Generation
 # --------------------------------------------
+python-docx>=1.1.0
 weasyprint>=65.0
 reportlab>=4.2.0
 
