@@ -1,0 +1,50 @@
+name: Freenet Layer CI/CD Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy_to_freenet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Check Freenet layer
+        id: layer
+        shell: bash
+        run: |
+          if [[ -d freenet-layer ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Freenet layer directory found."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Freenet layer is not present in this repository; deployment is skipped."
+          fi
+      - name: Set up Rust Toolchain
+        if: steps.layer.outputs.present == 'true'
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Freenet Binaries
+        if: steps.layer.outputs.present == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/freenet
+          key: ${{ runner.os }}-freenet-node
+      - name: Install Freenet Node Daemon
+        if: steps.layer.outputs.present == 'true'
+        shell: bash
+        run: |
+          if ! command -v freenet >/dev/null 2>&1; then
+            echo "Installing Freenet node daemon..."
+            cargo install freenet
+          fi
+      - name: Execute Freenet Layer
+        if: steps.layer.outputs.present == 'true'
+        working-directory: freenet-layer
+        env:
+          FREENET_PRIVATE_KEY: ${{ secrets.FREENET_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          echo "Freenet layer is present, but no publish/deploy command is defined yet."
+          echo "Add the layer's canonical publisher command before enabling production deployment."
