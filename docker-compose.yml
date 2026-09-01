@@ -28,8 +28,8 @@ services:
       - REDIS_HOST=transient-memory-grid
       - REDIS_PORT=6379
       - OLLAMA_BASE_URL=http://local-slm-sandbox:11434
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - HF_TOKEN=${HF_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-mock-verification-token}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-mock-verification-token}
     depends_on:
       - transient-memory-grid
       - local-slm-sandbox
