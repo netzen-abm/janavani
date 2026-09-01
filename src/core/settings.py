@@ -8,7 +8,7 @@ class AISettings(BaseSettings):
 
     # Credentials are supplied by the runtime environment; never commit secrets.
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
-    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
+    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
 
     # Provider endpoints are configuration, not capability ownership.
     OPENROUTER_URL: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1")
