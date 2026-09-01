@@ -1,0 +1,18 @@
+# Archived from .github/workflows/codacy.yml on 2026-09-01.
+# Reason: redundant third-party security/SARIF pipeline. GitHub Advanced Security
+# already provides repository-native code scanning, while canonical security-ci
+# owns secret detection and security boundary tests. Keeping Codacy would add
+# another external control plane and secret without a distinct required gate.
+
+# Original workflow source SHA: f0fc1d6094283c0ee8893ad3349aaa200827918c
+
+name: Codacy Security Scan (archived)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archived:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Archived; use GitHub Advanced Security plus canonical security-ci."
