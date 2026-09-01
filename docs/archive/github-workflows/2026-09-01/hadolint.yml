@@ -1,0 +1,25 @@
+# Archived from .github/workflows/hadolint.yml on 2026-09-01.
+# Reason: useful Dockerfile linting, but this repository does not need a separate
+# workflow for it. The check is being consolidated into the canonical Docker gate.
+
+# Original workflow:
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# hadoint is a Dockerfile linter written in Haskell
+# that helps you build best practice Docker images.
+
+name: Hadolint (archived)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archived:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Archived; Dockerfile linting is consolidated into the canonical Docker gate."
+
+# Original source SHA: a3654dba4970e5f72c83b188b9db19a6b06fd267
