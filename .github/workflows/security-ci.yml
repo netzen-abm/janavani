@@ -39,7 +39,7 @@ jobs:
       - name: Set up Python Environment Pipeline
         uses: actions/setup-python@v5
         with:
-          python-python: '3.11'
+          python: '3.11'
           cache: 'pip'
 
       - name: Install Testing Tool Stack
