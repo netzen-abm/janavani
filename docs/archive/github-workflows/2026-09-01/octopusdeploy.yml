@@ -1,0 +1,17 @@
+# Archived from .github/workflows/octopusdeploy.yml on 2026-09-01.
+# Reason: provider starter template with placeholder Octopus URL, project,
+# service account and environment. No canonical Janavani deployment contract
+# currently targets Octopus Deploy.
+
+# Original source SHA: b8ddb6ddfa6e6c75b1a8b31ead6d2385118b1f99
+
+name: Build and Deploy to Octopus Deploy (archived)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archived:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Archived; no active Octopus deployment target is defined."
