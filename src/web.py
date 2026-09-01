@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 from flask import Flask
 
@@ -76,7 +77,7 @@ def supabase_test():
 
 
 # ---------------------------------------------------
-# Main
+# Main (legacy developer-mode guarded)
 # ---------------------------------------------------
 if __name__ == "__main__":
 
@@ -84,20 +85,42 @@ if __name__ == "__main__":
     print("Starting Janavani Web Server")
     print("=" * 50)
 
-    print("Starting Telegram Bot...")
+    # Developer-controlled behavior: only start the Telegram bot as a subprocess
+    # when the environment variable START_TELEGRAM_FOR_LOCAL is set to a truthy value.
+    start_telegram = os.getenv("START_TELEGRAM_FOR_LOCAL", "false").lower() in ("1", "true", "yes")
 
-    bot_process = subprocess.Popen(
-        ["python3", "-u", "src/bot_telegram.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
+    if start_telegram:
+        print("WARNING: Starting Telegram bot as a child process. This is intended for local development only.")
+        try:
+            bot_process = subprocess.Popen(
+                ["python3", "-u", "src/bot_telegram.py"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
 
-    print(f"Telegram Bot PID: {bot_process.pid}")
-    print("Telegram Bot Started")
+            print(f"Telegram Bot PID: {bot_process.pid}")
+            print("Telegram Bot Started (dev mode)")
 
-    app.run(
-        host="0.0.0.0",
-        port=Config.PORT,
-        debug=False
-    )
+        except Exception as exc:
+            print("Failed to start Telegram bot as subprocess:", exc)
+            bot_process = None
+
+    else:
+        print("Starting Web server in independent runtime mode. Telegram bot will NOT be started as a subprocess.")
+        bot_process = None
+
+    try:
+        app.run(
+            host="0.0.0.0",
+            port=Config.PORT,
+            debug=False
+        )
+    finally:
+        # Attempt graceful shutdown of dev-mode bot if we started it
+        try:
+            if bot_process:
+                bot_process.terminate()
+                bot_process.wait(timeout=5)
+        except Exception:
+            pass
