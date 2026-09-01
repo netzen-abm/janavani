@@ -1,0 +1,6 @@
+# Archived generic SLSA starter workflow.
+# The original workflow generated placeholder artifact1/artifact2 files rather than
+# provenance for a real Janavani release artifact. It is therefore not an active
+# supply-chain control. A future SLSA workflow must bind provenance to actual,
+# reproducible Janavani release artifacts.
+# Original blob SHA: 35c829b139b59c6483d2505dbc342434445c829f
