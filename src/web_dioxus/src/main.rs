@@ -23,7 +23,7 @@ fn App() -> Element {
     let mut sos_notification = use_signal(|| Option::<String>::None);
     let mut is_loading = use_signal(|| false);
 
-    let current_coordinates = use_signal(|| "12.9716, 77.5946".to_string());
+    let current_coordinates = use_signal(String::new);
     let bridge_client = use_memo(JanavaniDioxusBridge::new);
 
     let on_submit = move |_| {
@@ -141,6 +141,7 @@ fn App() -> Element {
                 style: "padding: 1.25rem; border: 1px solid #ecc; border-radius: 8px;",
                 h2 { "Emergency capability" }
                 p { "Emergency handling is a separate capability and must not be required by ordinary civic workflows." }
+                p { "Emergency location must be supplied by the user/device; Janavani does not fabricate a default location." }
                 div {
                     button { onclick: move |_| on_sos("Late Night Travel / Unsafe Area".to_string()), "Late night danger" }
                     button { onclick: move |_| on_sos("Stalker / Being Followed".to_string()), "Being followed" }
