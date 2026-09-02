@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterable
+from typing import Any, Iterable
 
 
 class CaseType(str, Enum):
@@ -18,6 +18,9 @@ class CaseType(str, Enum):
     REPRESENTATION = "representation"
     OBJECTION = "objection"
     APPEAL = "appeal"
+    CORRUPTION = "corruption"
+    MISBEHAVIOUR = "misbehaviour"
+    TRANSFER_CONCERN = "transfer_concern"
     OTHER = "other"
 
 
@@ -75,7 +78,12 @@ class CivicCase:
     subject: str
     narrative: str
     created_by: str | None = None
+    jurisdiction: dict[str, Any] = field(default_factory=dict)
+    related_organisation_id: str | None = None
     related_office_id: str | None = None
+    related_official_id: str | None = None
+    related_representative_id: str | None = None
+    claims: list[dict[str, Any]] = field(default_factory=list)
     evidence_refs: list[str] = field(default_factory=list)
     document_refs: list[str] = field(default_factory=list)
     consent_refs: list[str] = field(default_factory=list)
@@ -260,8 +268,24 @@ class CivicCase:
         return event
 
 
+def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
+    """Validate basic event ownership and ordering invariants."""
+    previous = None
+    seen: set[str] = set()
+    for event in events:
+        if event.event_id in seen:
+            return False
+        seen.add(event.event_id)
+        if previous is not None and event.case_id != previous.case_id:
+            return False
+        if previous is not None and event.occurred_at < previous.occurred_at:
+            return False
+        previous = event
+    return True
+
+
 def confirmed_delivery(status: CaseStatus) -> bool:
-    """Return true only when destination acknowledgement has occurred."""
+    """Return True only once the destination has acknowledged receipt."""
     return status in {
         CaseStatus.ACKNOWLEDGED,
         CaseStatus.FOLLOW_UP,
@@ -270,16 +294,5 @@ def confirmed_delivery(status: CaseStatus) -> bool:
         CaseStatus.RESOLVED,
         CaseStatus.ESCALATED,
         CaseStatus.CLOSED,
+        CaseStatus.ARCHIVED,
     }
-
-
-def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
-    """Validate basic lifecycle ordering without becoming a persistence engine."""
-    previous: CaseEventType | None = None
-    for event in events:
-        if previous is CaseEventType.ACKNOWLEDGED and event.event_type is CaseEventType.SUBMITTED:
-            return False
-        if previous is CaseEventType.CLOSED:
-            return False
-        previous = event.event_type
-    return True
