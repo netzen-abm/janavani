@@ -1,10 +1,8 @@
 """Channel-neutral civic case lifecycle contract.
 
-This module is shared infrastructure. Surface adapters (Web, App, DApp,
-Telegram, WhatsApp, Messenger, etc.) must not own case lifecycle semantics.
+Shared infrastructure for Web, App, DApp and messaging adapters.
 External submission is deliberately distinct from destination acknowledgement.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -74,18 +72,13 @@ class CivicCase:
     events: list[CaseEvent] = field(default_factory=list)
 
     def add_evidence(self, evidence_id: str, *, event_id: str, occurred_at: str,
-                     actor_id: str | None = None,
-                     source_channel: str | None = None) -> CaseEvent:
+                     actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status in {CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
             raise ValueError("Cannot add evidence to a closed or archived case")
         if evidence_id not in self.evidence_refs:
             self.evidence_refs.append(evidence_id)
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.EVIDENCE_ADDED,
-            occurred_at=occurred_at, actor_id=actor_id,
-            source_channel=source_channel, notes=evidence_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.EVIDENCE_ADDED,
+                                      occurred_at, actor_id, source_channel, evidence_id))
 
     def mark_ready(self, *, event_id: str, occurred_at: str,
                    actor_id: str | None = None) -> CaseEvent:
@@ -96,47 +89,32 @@ class CivicCase:
         if self.status not in {CaseStatus.DRAFT, CaseStatus.READY}:
             raise ValueError(f"Cannot mark {self.status.value} case ready")
         self.status = CaseStatus.READY
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.EDITED, occurred_at=occurred_at,
-            actor_id=actor_id, notes="case_ready",
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.EDITED,
+                                      occurred_at, actor_id, notes="case_ready"))
 
     def submit(self, *, event_id: str, occurred_at: str,
-               actor_id: str | None = None,
-               source_channel: str | None = None) -> CaseEvent:
+               actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.READY:
             raise ValueError("Only a ready case can be submitted")
         self.status = CaseStatus.SUBMITTED
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.SUBMITTED, occurred_at=occurred_at,
-            actor_id=actor_id, source_channel=source_channel,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTED,
+                                      occurred_at, actor_id, source_channel))
 
     def acknowledge(self, *, event_id: str, occurred_at: str,
-                    source_channel: str | None = None,
-                    notes: str | None = None) -> CaseEvent:
+                    source_channel: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.SUBMITTED:
             raise ValueError("Only a submitted case can be acknowledged")
         self.status = CaseStatus.ACKNOWLEDGED
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.ACKNOWLEDGED, occurred_at=occurred_at,
-            source_channel=source_channel, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.ACKNOWLEDGED,
+                                      occurred_at, source_channel=source_channel, notes=notes))
 
     def close(self, *, event_id: str, occurred_at: str,
-              actor_id: str | None = None,
-              notes: str | None = None) -> CaseEvent:
+              actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {CaseStatus.RESPONDED, CaseStatus.ESCALATED}:
             raise ValueError("Only responded or escalated cases can be closed")
         self.status = CaseStatus.CLOSED
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.CLOSED, occurred_at=occurred_at,
-            actor_id=actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CLOSED,
+                                      occurred_at, actor_id, notes=notes))
 
     def _record(self, event: CaseEvent) -> CaseEvent:
         if event.case_id != self.case_id:
@@ -146,13 +124,8 @@ class CivicCase:
 
 
 def confirmed_delivery(status: CaseStatus) -> bool:
-    return status in {
-        CaseStatus.ACKNOWLEDGED,
-        CaseStatus.IN_PROGRESS,
-        CaseStatus.RESPONDED,
-        CaseStatus.ESCALATED,
-        CaseStatus.CLOSED,
-    }
+    return status in {CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS,
+                      CaseStatus.RESPONDED, CaseStatus.ESCALATED, CaseStatus.CLOSED}
 
 
 def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
