@@ -7,7 +7,7 @@ from src.core.civic_case import CivicCase
 
 
 class CivicCaseRepository(Protocol):
-    """Durable or local persistence contract for a CivicCase."""
+    """Durable or local persistence contract for CivicCase."""
 
     def save(self, case: CivicCase) -> None:
         """Persist the current case representation."""
@@ -19,10 +19,10 @@ class CivicCaseRepository(Protocol):
 
 
 class InMemoryCivicCaseRepository:
-    """Process-local repository used for tests and non-durable development."""
+    """Process-local repository used for tests and development."""
 
-    def __init__(self) -> None:
-        self._cases: dict[str, CivicCase] = {}
+    def __init__(self, store: dict[str, CivicCase] | None = None) -> None:
+        self._cases = store if store is not None else {}
 
     def save(self, case: CivicCase) -> None:
         self._cases[case.case_id] = case
