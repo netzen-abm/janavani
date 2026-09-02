@@ -277,22 +277,36 @@ class CivicCase:
         return event
 
     def confirmed_delivery(self) -> bool:
-        return self.status in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
-            CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
-            CaseStatus.RESOLVED, CaseStatus.ESCALATED, CaseStatus.CLOSED,
-        }
+        return confirmed_delivery(self.status)
 
 
-def validate_event_chain(case: CivicCase) -> None:
+def confirmed_delivery(status: CaseStatus) -> bool:
+    """Return true only when destination acknowledgement has occurred."""
+    return status in {
+        CaseStatus.ACKNOWLEDGED,
+        CaseStatus.FOLLOW_UP,
+        CaseStatus.IN_PROGRESS,
+        CaseStatus.RESPONDED,
+        CaseStatus.RESOLVED,
+        CaseStatus.ESCALATED,
+        CaseStatus.CLOSED,
+    }
+
+
+def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
+    """Validate basic lifecycle ordering without becoming a persistence engine."""
+    previous: CaseEventType | None = None
     seen: set[str] = set()
-    previous = ""
-    for event in case.events:
-        if event.case_id != case.case_id:
-            raise ValueError("Event belongs to a different case")
-        if event.event_id in seen:
-            raise ValueError("Duplicate event id")
-        if event.occurred_at < previous:
-            raise ValueError("Event timestamps must be chronological")
+    case_id: str | None = None
+    for event in events:
+        if case_id is None:
+            case_id = event.case_id
+        if event.case_id != case_id or event.event_id in seen:
+            return False
+        if previous is CaseEventType.ACKNOWLEDGED and event.event_type is CaseEventType.SUBMITTED:
+            return False
+        if previous is CaseEventType.CLOSED:
+            return False
         seen.add(event.event_id)
-        previous = event.occurred_at
+        previous = event.event_type
+    return True
