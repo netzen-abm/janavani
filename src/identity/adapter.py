@@ -36,6 +36,9 @@ class DefaultIdentityAdapter:
         except ValueError as exc:
             raise ValueError("unsupported authentication method") from exc
 
+        if method == AuthenticationMethod.NONE:
+            raise ValueError("authenticated identity requires an authentication method")
+
         principal = Principal(
             principal_id=identity.principal_id,
             identity_mode=IdentityMode.AUTHENTICATED,
