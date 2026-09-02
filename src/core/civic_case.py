@@ -158,6 +158,7 @@ class CivicCase:
         ))
 
     def acknowledge(self, *, event_id: str, occurred_at: str,
+                    actor_id: str | None = None,
                     source_channel: str | None = None,
                     source_ref: str | None = None,
                     notes: str | None = None) -> CaseEvent:
@@ -165,8 +166,14 @@ class CivicCase:
             raise ValueError("Only a submitted case can be acknowledged")
         self.status = CaseStatus.ACKNOWLEDGED
         return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.ACKNOWLEDGED, occurred_at,
-            source_channel, source_ref, notes,
+            event_id=event_id,
+            case_id=self.case_id,
+            event_type=CaseEventType.ACKNOWLEDGED,
+            occurred_at=occurred_at,
+            actor_id=actor_id,
+            source_channel=source_channel,
+            source_ref=source_ref,
+            notes=notes,
         ))
 
     def follow_up(self, *, event_id: str, occurred_at: str,
@@ -259,45 +266,33 @@ class CivicCase:
             CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
             CaseStatus.CLOSED, CaseStatus.ARCHIVED,
         }:
-            raise ValueError("Case content is no longer editable in this state")
+            raise ValueError("Case is no longer editable")
 
     def _record(self, event: CaseEvent) -> CaseEvent:
         if event.case_id != self.case_id:
-            raise ValueError("Case event belongs to a different case")
-        if any(item.event_id == event.event_id for item in self.events):
-            raise ValueError("Duplicate case event id")
+            raise ValueError("Event belongs to a different case")
+        if any(existing.event_id == event.event_id for existing in self.events):
+            raise ValueError("Duplicate event id")
         self.events.append(event)
         return event
 
+    def confirmed_delivery(self) -> bool:
+        return self.status in {
+            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
+            CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
+            CaseStatus.RESOLVED, CaseStatus.ESCALATED, CaseStatus.CLOSED,
+        }
 
-def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
-    """Validate case ownership, uniqueness, chronology, and key transitions."""
-    previous = None
+
+def validate_event_chain(case: CivicCase) -> None:
     seen: set[str] = set()
-    for event in events:
+    previous = ""
+    for event in case.events:
+        if event.case_id != case.case_id:
+            raise ValueError("Event belongs to a different case")
         if event.event_id in seen:
-            return False
+            raise ValueError("Duplicate event id")
+        if event.occurred_at < previous:
+            raise ValueError("Event timestamps must be chronological")
         seen.add(event.event_id)
-        if previous is not None:
-            if event.case_id != previous.case_id:
-                return False
-            if event.occurred_at < previous.occurred_at:
-                return False
-            if (
-                previous.event_type is CaseEventType.ACKNOWLEDGED
-                and event.event_type is CaseEventType.SUBMITTED
-            ):
-                return False
-            if previous.event_type is CaseEventType.CLOSED:
-                return False
-        previous = event
-    return True
-
-
-def confirmed_delivery(status: CaseStatus) -> bool:
-    """Return True only once the destination has acknowledged receipt."""
-    return status in {
-        CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
-        CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED, CaseStatus.RESOLVED,
-        CaseStatus.ESCALATED, CaseStatus.CLOSED, CaseStatus.ARCHIVED,
-    }
+        previous = event.occurred_at
