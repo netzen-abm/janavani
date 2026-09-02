@@ -174,21 +174,9 @@ async def acknowledge_case(case_id: str, request: EventRequest) -> dict[str, obj
         event_id=request.event_id,
         occurred_at=request.occurred_at,
         source_channel=request.source_channel,
+        source_ref=request.source_ref,
         notes=request.notes,
     )
-    if request.source_ref:
-        event = case.events[-1]
-        event = type(event)(
-            event.event_id,
-            event.case_id,
-            event.event_type,
-            event.occurred_at,
-            event.actor_id,
-            event.source_channel,
-            request.source_ref,
-            event.notes,
-        )
-        case.events[-1] = event
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
