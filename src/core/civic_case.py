@@ -281,7 +281,7 @@ class CivicCase:
 
 
 def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
-    """Validate case ownership, uniqueness, and chronological ordering."""
+    """Validate case ownership, uniqueness, chronology, and key transitions."""
     previous = None
     seen: set[str] = set()
     for event in events:
@@ -292,6 +292,13 @@ def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
             if event.case_id != previous.case_id:
                 return False
             if event.occurred_at < previous.occurred_at:
+                return False
+            if (
+                previous.event_type is CaseEventType.ACKNOWLEDGED
+                and event.event_type is CaseEventType.SUBMITTED
+            ):
+                return False
+            if previous.event_type is CaseEventType.CLOSED:
                 return False
         previous = event
     return True
