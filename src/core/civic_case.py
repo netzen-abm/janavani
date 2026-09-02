@@ -159,13 +159,14 @@ class CivicCase:
 
     def acknowledge(self, *, event_id: str, occurred_at: str,
                     source_channel: str | None = None,
+                    source_ref: str | None = None,
                     notes: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.SUBMITTED:
             raise ValueError("Only a submitted case can be acknowledged")
         self.status = CaseStatus.ACKNOWLEDGED
         return self._record(CaseEvent(
             event_id, self.case_id, CaseEventType.ACKNOWLEDGED, occurred_at,
-            source_channel=source_channel, notes=notes,
+            source_channel, source_ref, notes,
         ))
 
     def follow_up(self, *, event_id: str, occurred_at: str,
