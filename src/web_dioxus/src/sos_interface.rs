@@ -17,9 +17,8 @@ impl JanavaniWasmSOSTrigger {
     pub async fn dispatch_panic_beacon(
         context: LocalEmergencyContext,
     ) -> Result<String, String> {
-        let is_online = window()
-            .navigator()
-            .on_line();
+        let browser_window = window().ok_or_else(|| "Browser window unavailable.".to_string())?;
+        let is_online = browser_window.navigator().on_line();
         let raw_payload = format!(
             "JANAVANI SOS ALERT | TYPE: {} | LOC: {} | ID: {}",
             context.danger_context, context.geo_coordinates, context.tracking_id
@@ -38,16 +37,17 @@ impl JanavaniWasmSOSTrigger {
     /// Clears only Janavani-owned local browser records.
     /// It must never erase unrelated application or browser data.
     pub fn local_emergency_device_wipe() -> Result<(), String> {
-        let storage = window()
+        let browser_window = window().ok_or_else(|| "Browser window unavailable.".to_string())?;
+        let storage = browser_window
             .local_storage()
-            .map_err(|_| "Storage access denied.")?
-            .ok_or_else(|| "Local storage unavailable.")?;
+            .map_err(|_| "Storage access denied.".to_string())?
+            .ok_or_else(|| "Local storage unavailable.".to_string())?;
         let mut keys = Vec::new();
 
         for index in 0..storage.length().unwrap_or(0) {
             if let Some(key) = storage
                 .key(index)
-                .map_err(|_| "Storage key lookup failed.")?
+                .map_err(|_| "Storage key lookup failed.".to_string())?
             {
                 if key.starts_with("local_doc:") {
                     keys.push(key);
@@ -58,7 +58,7 @@ impl JanavaniWasmSOSTrigger {
         for key in keys {
             storage
                 .remove_item(&key)
-                .map_err(|_| "Wipe operation failed.")?;
+                .map_err(|_| "Wipe operation failed.".to_string())?;
         }
         Ok(())
     }
