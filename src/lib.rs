@@ -88,8 +88,7 @@ mod tests {
     #[test]
     #[cfg(feature = "nym")]
     fn test_nym_feature_activation() {
-        let result =
-            crate::janavani_nym::NymPrivacyLayer::send_anonymous_packet(vec![1, 2, 3, 4]);
+        let result = crate::janavani_nym::NymPrivacyLayer::send_anonymous_packet(vec![1, 2, 3, 4]);
         assert!(result.is_ok());
     }
 
