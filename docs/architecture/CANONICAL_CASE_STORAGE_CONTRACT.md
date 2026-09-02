@@ -31,7 +31,7 @@ It is **not production persistence**. Process restart still loses state.
 
 ## Durable target
 
-The existing repository audit identifies Supabase/PostgreSQL as the intended durable relational authority, with object storage for binary artifacts and Redis reserved for ephemeral state. fileciteturn462file0L2-L2
+The existing repository audit identifies Supabase/PostgreSQL as the intended durable relational authority, with object storage for binary artifacts and Redis reserved for ephemeral state.
 
 A durable Civic Case provider must be verified against the existing schema, access-control model, serialization/hydration requirements, audit events, and privacy rules before the HTTP adapter is switched to it.
 
@@ -41,7 +41,7 @@ Case storage may persist evidence metadata and references, but the case reposito
 
 ## Migration rule
 
-Do not migrate or delete legacy JSONL/CSV stores as part of this contract change. Existing storage audits classify those stores as migration sources and require schema mapping, validation, reference removal, tests, production verification, rollback capability, and archive preservation before retirement. fileciteturn462file0L2-L2
+Do not migrate or delete legacy JSONL/CSV stores as part of this contract change. Existing storage audits classify those stores as migration sources and require schema mapping, validation, reference removal, tests, production verification, rollback capability, and archive preservation before retirement.
 
 ## Next durable-provider gate
 
