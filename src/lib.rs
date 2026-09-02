@@ -10,7 +10,9 @@ pub mod janavani_nostr {
 
     impl NostrBridge {
         pub fn init_identity() -> Result<(), &'static str> {
-            println!("Nostr capability scaffold: identity initialization.");
+            println!(
+                "Nostr capability scaffold: identity initialization."
+            );
             Ok(())
         }
     }
@@ -103,16 +105,18 @@ mod tests {
     #[test]
     #[cfg(feature = "reticulum")]
     fn test_reticulum_feature_activation() {
-        let result = crate::janavani_reticulum::ReticulumMesh::broadcast_off_grid(
-            b"offgrid-packet-payload",
-        );
+        let result =
+            crate::janavani_reticulum::ReticulumMesh::broadcast_off_grid(
+                b"offgrid-packet-payload",
+            );
         assert!(result.is_ok());
     }
 
     #[test]
     #[cfg(feature = "zkp")]
     fn test_zkp_feature_activation() {
-        let result = crate::janavani_zkp::ResidencyVerifier::generate_membership_proof();
+        let result =
+            crate::janavani_zkp::ResidencyVerifier::generate_membership_proof();
         assert!(result.is_ok());
         assert!(!result.unwrap().is_empty());
     }
@@ -120,9 +124,10 @@ mod tests {
     #[test]
     #[cfg(feature = "blockchain")]
     fn test_blockchain_feature_activation() {
-        let result = crate::janavani_blockchain::LedgerAnchor::lock_grievance_hash(
-            [0u8; 32],
-        );
+        let result =
+            crate::janavani_blockchain::LedgerAnchor::lock_grievance_hash(
+                [0u8; 32],
+            );
         assert!(result.is_ok());
     }
 
