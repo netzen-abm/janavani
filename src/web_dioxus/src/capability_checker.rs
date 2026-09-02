@@ -1,5 +1,6 @@
-use web_sys::window;
-use gloo_utils::window as gloo_window;
+use gloo_utils::window;
+use wasm_bindgen::JsValue;
+use js_sys::Reflect;
 
 #[derive(Debug, Clone, Copy)]
 pub enum DocumentGenerationStrategy {
@@ -10,28 +11,22 @@ pub enum DocumentGenerationStrategy {
 pub struct DeviceCapabilityChecker;
 
 impl DeviceCapabilityChecker {
-    /// Inspects local hardware performance metrics to select an optimal processing path.
+    /// Inspects browser capabilities to select a safe processing path.
     pub fn assess_execution_strategy() -> DocumentGenerationStrategy {
-        let nav = gloo_window().navigator();
-        
-        // 1. Core Count Evaluation (Detect low-tier mobile processors)
-        let CPU_cores = nav.hardware_concurrency() as u32;
-        
-        // 2. Memory Footprint Assessment (Using the window performance memory web-sys API hooks)
-        let is_low_memory_device = if let Ok(Some(perf)) = gloo_window().performance() {
-            // Check if the device reports constrained execution states
-            let raw_js_perf = js_sys::Reflect::get(&perf, &wasm_bindgen::JsValue::from_str("memory")).is_ok();
-            CPU_cores < 4 || !raw_js_perf
-        } else {
-            true
-        };
+        let window = window();
+        let navigator = window.navigator();
+        let cpu_cores = navigator.hardware_concurrency();
+        let memory_api_available = window
+            .performance()
+            .ok()
+            .and_then(|performance| {
+                Reflect::get(&performance, &JsValue::from_str("memory")).ok()
+            })
+            .is_some_and(|value| !value.is_undefined() && !value.is_null());
 
-        // 3. Select strategy based on device capabilities
-        if CPU_cores < 4 || is_low_memory_device {
-            // Safe fallback route for low-powered mobile devices
+        if cpu_cores < 4 || !memory_api_available {
             DocumentGenerationStrategy::ServerSideDeferredFallback
         } else {
-            // High-speed generation route for powerful desktop or high-end mobile devices
             DocumentGenerationStrategy::LocalWasmCompilation
         }
     }
