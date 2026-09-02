@@ -11,14 +11,21 @@ def setup_function() -> None:
     _CASES.clear()
 
 
-def test_case_api_preserves_review_and_delivery_truth() -> None:
+def test_case_api_preserves_canonical_fields_and_delivery_truth() -> None:
     create = client.post(
         "/civic/cases",
         json={
             "case_id": "case-api-1",
-            "case_type": "complaint",
+            "case_type": "corruption",
             "subject": "Delayed public service",
             "narrative": "The requested service has not been delivered.",
+            "created_by": "user-1",
+            "jurisdiction": {"district": "Bengaluru Urban"},
+            "related_organisation_id": "org-1",
+            "related_office_id": "office-1",
+            "related_official_id": "official-1",
+            "related_representative_id": "rep-1",
+            "claims": [{"claim_id": "claim-1", "statement": "Service delayed"}],
         },
     )
     assert create.status_code == 200
@@ -62,12 +69,20 @@ def test_case_api_preserves_review_and_delivery_truth() -> None:
             "event_id": "e5",
             "occurred_at": "2026-08-24T00:04:00Z",
             "source_channel": "web",
-            "notes": "ACK-1",
+            "source_ref": "ACK-1",
+            "notes": "Destination acknowledged receipt",
         },
     )
     assert acknowledged.json()["status"] == "acknowledged"
 
     fetched = client.get("/civic/cases/case-api-1")
     assert fetched.status_code == 200
-    assert fetched.json()["status"] == "acknowledged"
-    assert len(fetched.json()["events"]) == 5
+    body = fetched.json()
+    assert body["status"] == "acknowledged"
+    assert body["jurisdiction"]["district"] == "Bengaluru Urban"
+    assert body["related_organisation_id"] == "org-1"
+    assert body["related_official_id"] == "official-1"
+    assert body["related_representative_id"] == "rep-1"
+    assert body["claims"][0]["claim_id"] == "claim-1"
+    assert body["events"][-1]["source_ref"] == "ACK-1"
+    assert len(body["events"]) == 5

@@ -18,12 +18,32 @@ def make_case() -> CivicCase:
         subject="Delayed public service",
         narrative="The requested service has not been delivered.",
         created_by="user-1",
+        jurisdiction={"district": "Bengaluru Urban"},
+        related_organisation_id="org-1",
         related_office_id="office-1",
+        related_official_id="official-1",
+        related_representative_id="rep-1",
+        claims=[{"claim_id": "claim-1", "statement": "Service delayed"}],
         consent_refs=["consent-1"],
     )
     case.start_review(event_id="event-1", occurred_at="2026-08-24T00:00:00Z")
     case.mark_ready(event_id="event-2", occurred_at="2026-08-24T00:01:00Z")
     return case
+
+
+def test_canonical_case_types_are_supported() -> None:
+    assert CaseType.CORRUPTION.value == "corruption"
+    assert CaseType.MISBEHAVIOUR.value == "misbehaviour"
+    assert CaseType.TRANSFER_CONCERN.value == "transfer_concern"
+
+
+def test_canonical_fields_survive_runtime_aggregate() -> None:
+    case = make_case()
+    assert case.jurisdiction["district"] == "Bengaluru Urban"
+    assert case.related_organisation_id == "org-1"
+    assert case.related_official_id == "official-1"
+    assert case.related_representative_id == "rep-1"
+    assert case.claims[0]["claim_id"] == "claim-1"
 
 
 def test_review_and_consent_gate() -> None:
@@ -87,9 +107,28 @@ def test_closed_case_rejects_evidence() -> None:
         case.add_evidence("evidence-1", event_id="event-9", occurred_at="2026-08-28T00:00:00Z")
 
 
+def test_duplicate_event_id_is_rejected() -> None:
+    case = make_case()
+    with pytest.raises(ValueError):
+        case.begin_submission(event_id="event-1", occurred_at="2026-08-24T00:02:00Z")
+
+
 def test_event_chain_rejects_submission_after_acknowledgement() -> None:
     events = [
         CaseEvent("1", "case-1", CaseEventType.ACKNOWLEDGED, "2026-08-24T00:00:00Z"),
         CaseEvent("2", "case-1", CaseEventType.SUBMITTED, "2026-08-24T00:01:00Z"),
     ]
     assert not validate_event_chain(events)
+
+
+def test_event_chain_rejects_duplicate_and_cross_case_events() -> None:
+    duplicate = [
+        CaseEvent("1", "case-1", CaseEventType.CREATED, "2026-08-24T00:00:00Z"),
+        CaseEvent("1", "case-1", CaseEventType.EDITED, "2026-08-24T00:01:00Z"),
+    ]
+    cross_case = [
+        CaseEvent("1", "case-1", CaseEventType.CREATED, "2026-08-24T00:00:00Z"),
+        CaseEvent("2", "case-2", CaseEventType.EDITED, "2026-08-24T00:01:00Z"),
+    ]
+    assert not validate_event_chain(duplicate)
+    assert not validate_event_chain(cross_case)

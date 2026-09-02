@@ -5,6 +5,8 @@ repository is process-local until a production durable provider is verified.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -20,7 +22,12 @@ class CaseCreateRequest(BaseModel):
     subject: str = Field(min_length=1)
     narrative: str = Field(min_length=1)
     created_by: str | None = None
+    jurisdiction: dict[str, Any] = Field(default_factory=dict)
+    related_organisation_id: str | None = None
     related_office_id: str | None = None
+    related_official_id: str | None = None
+    related_representative_id: str | None = None
+    claims: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ConsentRequest(BaseModel):
@@ -40,6 +47,7 @@ class EventRequest(BaseModel):
     occurred_at: str = Field(min_length=1)
     actor_id: str | None = None
     source_channel: str | None = None
+    source_ref: str | None = None
     notes: str | None = None
 
 
@@ -57,7 +65,12 @@ async def create_case(request: CaseCreateRequest) -> dict[str, object]:
         subject=request.subject,
         narrative=request.narrative,
         created_by=request.created_by,
+        jurisdiction=request.jurisdiction,
+        related_organisation_id=request.related_organisation_id,
         related_office_id=request.related_office_id,
+        related_official_id=request.related_official_id,
+        related_representative_id=request.related_representative_id,
+        claims=request.claims,
     )
     _REPOSITORY.save(case)
     return {"case_id": case.case_id, "status": case.status.value}
@@ -161,6 +174,7 @@ async def acknowledge_case(case_id: str, request: EventRequest) -> dict[str, obj
         event_id=request.event_id,
         occurred_at=request.occurred_at,
         source_channel=request.source_channel,
+        source_ref=request.source_ref,
         notes=request.notes,
     )
     _REPOSITORY.save(case)
@@ -189,7 +203,12 @@ def _serialize(case: CivicCase) -> dict[str, object]:
         "subject": case.subject,
         "narrative": case.narrative,
         "created_by": case.created_by,
+        "jurisdiction": case.jurisdiction,
+        "related_organisation_id": case.related_organisation_id,
         "related_office_id": case.related_office_id,
+        "related_official_id": case.related_official_id,
+        "related_representative_id": case.related_representative_id,
+        "claims": list(case.claims),
         "evidence_refs": list(case.evidence_refs),
         "document_refs": list(case.document_refs),
         "consent_refs": list(case.consent_refs),
@@ -201,6 +220,7 @@ def _serialize(case: CivicCase) -> dict[str, object]:
                 "occurred_at": event.occurred_at,
                 "actor_id": event.actor_id,
                 "source_channel": event.source_channel,
+                "source_ref": event.source_ref,
                 "notes": event.notes,
             }
             for event in case.events
