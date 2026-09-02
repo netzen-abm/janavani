@@ -88,18 +88,16 @@ mod tests {
     #[test]
     #[cfg(feature = "nym")]
     fn test_nym_feature_activation() {
-        let result = crate::janavani_nym::NymPrivacyLayer::send_anonymous_packet(
-            vec![1, 2, 3, 4],
-        );
+        let result =
+            crate::janavani_nym::NymPrivacyLayer::send_anonymous_packet(vec![1, 2, 3, 4]);
         assert!(result.is_ok());
     }
 
     #[test]
     #[cfg(feature = "reticulum")]
     fn test_reticulum_feature_activation() {
-        let result = crate::janavani_reticulum::ReticulumMesh::broadcast_off_grid(
-            b"offgrid-packet-payload",
-        );
+        let result =
+            crate::janavani_reticulum::ReticulumMesh::broadcast_off_grid(b"offgrid-packet-payload");
         assert!(result.is_ok());
     }
 
