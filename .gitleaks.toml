@@ -1,0 +1,10 @@
+title = "Janavani Gitleaks Configuration"
+
+# This is a narrowly scoped exception for a verified documentation false positive
+# in commit 9f6f93eff1a4b8499cd014586cfb70cf28e70e02. Gitleaks 8.24.3 flags one
+# prose fragment in the canonical case-storage contract as generic-api-key.
+# The commit was reviewed and contains no credential at that location.
+# Keep this exception commit-specific; remove it when the PR history is rebuilt.
+[allowlist]
+description = "Verified documentation false positive in case storage contract"
+commits = ["9f6f93eff1a4b8499cd014586cfb70cf28e70e02"]
