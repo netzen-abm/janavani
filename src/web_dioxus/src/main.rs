@@ -12,7 +12,7 @@ use api_client::{DraftResponse, JanavaniDioxusBridge};
 use sos_interface::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
 
 fn main() {
-    dioxus::web::launch(App);
+    dioxus::launch(App);
 }
 
 #[component]
@@ -58,7 +58,9 @@ fn App() -> Element {
 
             match JanavaniWasmSOSTrigger::dispatch_panic_beacon(context).await {
                 Ok(message) => sos_notification.set(Some(message)),
-                Err(error) => sos_notification.set(Some(format!("Emergency capability unavailable: {error}"))),
+                Err(error) => sos_notification.set(Some(format!(
+                    "Emergency capability unavailable: {error}"
+                ))),
             }
         });
     };
@@ -84,7 +86,9 @@ fn App() -> Element {
             section {
                 style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px;",
                 h2 { "Capability status" }
-                p { "Capabilities are isolated. An unavailable network, AI or decentralized adapter must not block unrelated civic workflows." }
+                p {
+                    "Capabilities are isolated. An unavailable network, AI or decentralized adapter must not block unrelated civic workflows."
+                }
                 ul {
                     li { "Civic document workflow: available" }
                     li { "Freenet adapter: optional" }
@@ -142,9 +146,18 @@ fn App() -> Element {
                 h2 { "Emergency capability" }
                 p { "Emergency handling is a separate capability and must not be required by ordinary civic workflows." }
                 div {
-                    button { onclick: move |_| on_sos("Late Night Travel / Unsafe Area".to_string()), "Late night danger" }
-                    button { onclick: move |_| on_sos("Stalker / Being Followed".to_string()), "Being followed" }
-                    button { onclick: move |_| on_sos("Administrative Harassment / Threat".to_string()), "Official threat" }
+                    button {
+                        onclick: move |_| on_sos("Late Night Travel / Unsafe Area".to_string()),
+                        "Late night danger"
+                    }
+                    button {
+                        onclick: move |_| on_sos("Stalker / Being Followed".to_string()),
+                        "Being followed"
+                    }
+                    button {
+                        onclick: move |_| on_sos("Administrative Harassment / Threat".to_string()),
+                        "Official threat"
+                    }
                 }
                 if let Some(message) = sos_notification.read().as_ref() {
                     p { "{message}" }
