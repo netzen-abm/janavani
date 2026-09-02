@@ -45,7 +45,7 @@ fn App() -> Element {
         });
     };
 
-    let on_sos = move |danger_type: String| {
+    let mut on_sos = move |danger_type: String| {
         let coordinates = current_coordinates.read().clone();
         sos_notification.set(None);
 
