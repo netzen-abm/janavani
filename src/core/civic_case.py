@@ -1,7 +1,6 @@
 """Channel-neutral civic case lifecycle contract.
 
-The case is shared infrastructure. Web, mobile, DApp and messaging surfaces
-consume this contract instead of owning lifecycle semantics.
+Web, mobile, DApp and messaging surfaces consume this shared contract.
 """
 from __future__ import annotations
 
@@ -90,8 +89,9 @@ class CivicCase:
     status: CaseStatus = CaseStatus.DRAFT
     events: list[CaseEvent] = field(default_factory=list)
 
-    def edit(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
-             subject: str | None = None, narrative: str | None = None) -> CaseEvent:
+    def edit(self, *, event_id: str, occurred_at: str,
+             actor_id: str | None = None, subject: str | None = None,
+             narrative: str | None = None) -> CaseEvent:
         self._ensure_editable()
         if subject is not None:
             self.subject = subject.strip()
@@ -170,9 +170,11 @@ class CivicCase:
     def follow_up(self, *, event_id: str, occurred_at: str,
                   actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
+            CaseStatus.ACKNOWLEDGED,
+            CaseStatus.IN_PROGRESS,
+            CaseStatus.RESPONDED,
         }:
-            raise ValueError("Only acknowledged, active, or responded cases can be followed up")
+            raise ValueError("Case is not ready for follow-up")
         self.status = CaseStatus.FOLLOW_UP
         return self._record(CaseEvent(
             event_id, self.case_id, CaseEventType.FOLLOW_UP, occurred_at,
@@ -182,10 +184,12 @@ class CivicCase:
     def respond(self, *, event_id: str, occurred_at: str,
                 actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS,
+            CaseStatus.ACKNOWLEDGED,
+            CaseStatus.FOLLOW_UP,
+            CaseStatus.IN_PROGRESS,
             CaseStatus.ESCALATED,
         }:
-            raise ValueError("Case is not in a response-eligible state")
+            raise ValueError("Case is not ready for a response")
         self.status = CaseStatus.RESPONDED
         return self._record(CaseEvent(
             event_id, self.case_id, CaseEventType.RESPONSE, occurred_at,
@@ -205,10 +209,12 @@ class CivicCase:
     def escalate(self, *, event_id: str, occurred_at: str,
                  actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS,
+            CaseStatus.ACKNOWLEDGED,
+            CaseStatus.FOLLOW_UP,
+            CaseStatus.IN_PROGRESS,
             CaseStatus.RESPONDED,
         }:
-            raise ValueError("Case is not in an escalation-eligible state")
+            raise ValueError("Case is not ready for escalation")
         self.status = CaseStatus.ESCALATED
         return self._record(CaseEvent(
             event_id, self.case_id, CaseEventType.ESCALATED, occurred_at,
@@ -225,8 +231,8 @@ class CivicCase:
             actor_id, notes=notes,
         ))
 
-    def add_evidence(self, evidence_id: str, *, event_id: str, occurred_at: str,
-                     actor_id: str | None = None,
+    def add_evidence(self, evidence_id: str, *, event_id: str,
+                     occurred_at: str, actor_id: str | None = None,
                      source_channel: str | None = None) -> CaseEvent:
         if self.status in {CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
             raise ValueError("Cannot add evidence to a closed or archived case")
@@ -252,9 +258,15 @@ class CivicCase:
 
     def _ensure_editable(self) -> None:
         if self.status in {
-            CaseStatus.SUBMITTING, CaseStatus.QUEUED, CaseStatus.SUBMITTED,
-            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
-            CaseStatus.RESOLVED, CaseStatus.ESCALATED, CaseStatus.CLOSED,
+            CaseStatus.SUBMITTING,
+            CaseStatus.QUEUED,
+            CaseStatus.SUBMITTED,
+            CaseStatus.ACKNOWLEDGED,
+            CaseStatus.IN_PROGRESS,
+            CaseStatus.RESPONDED,
+            CaseStatus.RESOLVED,
+            CaseStatus.ESCALATED,
+            CaseStatus.CLOSED,
             CaseStatus.ARCHIVED,
         }:
             raise ValueError("Case content is no longer editable in this state")
@@ -262,24 +274,25 @@ class CivicCase:
     def _record(self, event: CaseEvent) -> CaseEvent:
         if event.case_id != self.case_id:
             raise ValueError("Case event belongs to a different case")
-        if self.events and event.event_id == self.events[-1].event_id:
+        if any(item.event_id == event.event_id for item in self.events):
             raise ValueError("Duplicate case event id")
         self.events.append(event)
         return event
 
 
 def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
-    """Validate basic event ownership and ordering invariants."""
+    """Validate case ownership, uniqueness, and chronological ordering."""
     previous = None
     seen: set[str] = set()
     for event in events:
         if event.event_id in seen:
             return False
         seen.add(event.event_id)
-        if previous is not None and event.case_id != previous.case_id:
-            return False
-        if previous is not None and event.occurred_at < previous.occurred_at:
-            return False
+        if previous is not None:
+            if event.case_id != previous.case_id:
+                return False
+            if event.occurred_at < previous.occurred_at:
+                return False
         previous = event
     return True
 
