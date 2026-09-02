@@ -67,6 +67,7 @@ class CaseEvent:
     occurred_at: str
     actor_id: str | None = None
     source_channel: str | None = None
+    source_ref: str | None = None
     notes: str | None = None
 
 
@@ -170,9 +171,7 @@ class CivicCase:
     def follow_up(self, *, event_id: str, occurred_at: str,
                   actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED,
-            CaseStatus.IN_PROGRESS,
-            CaseStatus.RESPONDED,
+            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
         }:
             raise ValueError("Case is not ready for follow-up")
         self.status = CaseStatus.FOLLOW_UP
@@ -184,10 +183,8 @@ class CivicCase:
     def respond(self, *, event_id: str, occurred_at: str,
                 actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED,
-            CaseStatus.FOLLOW_UP,
-            CaseStatus.IN_PROGRESS,
-            CaseStatus.ESCALATED,
+            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
+            CaseStatus.IN_PROGRESS, CaseStatus.ESCALATED,
         }:
             raise ValueError("Case is not ready for a response")
         self.status = CaseStatus.RESPONDED
@@ -209,10 +206,8 @@ class CivicCase:
     def escalate(self, *, event_id: str, occurred_at: str,
                  actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {
-            CaseStatus.ACKNOWLEDGED,
-            CaseStatus.FOLLOW_UP,
-            CaseStatus.IN_PROGRESS,
-            CaseStatus.RESPONDED,
+            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
+            CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
         }:
             raise ValueError("Case is not ready for escalation")
         self.status = CaseStatus.ESCALATED
@@ -258,16 +253,10 @@ class CivicCase:
 
     def _ensure_editable(self) -> None:
         if self.status in {
-            CaseStatus.SUBMITTING,
-            CaseStatus.QUEUED,
-            CaseStatus.SUBMITTED,
-            CaseStatus.ACKNOWLEDGED,
-            CaseStatus.IN_PROGRESS,
-            CaseStatus.RESPONDED,
-            CaseStatus.RESOLVED,
-            CaseStatus.ESCALATED,
-            CaseStatus.CLOSED,
-            CaseStatus.ARCHIVED,
+            CaseStatus.SUBMITTING, CaseStatus.QUEUED, CaseStatus.SUBMITTED,
+            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS,
+            CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
+            CaseStatus.CLOSED, CaseStatus.ARCHIVED,
         }:
             raise ValueError("Case content is no longer editable in this state")
 
@@ -307,12 +296,7 @@ def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
 def confirmed_delivery(status: CaseStatus) -> bool:
     """Return True only once the destination has acknowledged receipt."""
     return status in {
-        CaseStatus.ACKNOWLEDGED,
-        CaseStatus.FOLLOW_UP,
-        CaseStatus.IN_PROGRESS,
-        CaseStatus.RESPONDED,
-        CaseStatus.RESOLVED,
-        CaseStatus.ESCALATED,
-        CaseStatus.CLOSED,
-        CaseStatus.ARCHIVED,
+        CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
+        CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED, CaseStatus.RESOLVED,
+        CaseStatus.ESCALATED, CaseStatus.CLOSED, CaseStatus.ARCHIVED,
     }
