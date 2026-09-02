@@ -1,7 +1,7 @@
 """Thin HTTP adapter for the shared civic case contract.
 
-This first adapter keeps state process-local for contract verification only.
-Production persistence must use the canonical storage capability.
+The adapter depends on the canonical repository boundary. The default
+repository is process-local until a production durable provider is verified.
 """
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from src.core.civic_case import CaseType, CivicCase
+from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 
@@ -43,11 +44,12 @@ class EventRequest(BaseModel):
 
 
 _CASES: dict[str, CivicCase] = {}
+_REPOSITORY = InMemoryCivicCaseRepository(_CASES)
 
 
 @router.post("")
 async def create_case(request: CaseCreateRequest) -> dict[str, object]:
-    if request.case_id in _CASES:
+    if _REPOSITORY.get(request.case_id) is not None:
         raise HTTPException(status_code=409, detail="Case already exists")
     case = CivicCase(
         case_id=request.case_id,
@@ -57,7 +59,7 @@ async def create_case(request: CaseCreateRequest) -> dict[str, object]:
         created_by=request.created_by,
         related_office_id=request.related_office_id,
     )
-    _CASES[case.case_id] = case
+    _REPOSITORY.save(case)
     return {"case_id": case.case_id, "status": case.status.value}
 
 
@@ -71,6 +73,7 @@ async def add_consent(case_id: str, request: ConsentRequest) -> dict[str, object
     case = _get_case(case_id)
     if request.consent_id not in case.consent_refs:
         case.consent_refs.append(request.consent_id)
+    _REPOSITORY.save(case)
     return {"case_id": case.case_id, "consent_refs": list(case.consent_refs)}
 
 
@@ -82,6 +85,7 @@ async def start_review(case_id: str, request: EventRequest) -> dict[str, object]
         occurred_at=request.occurred_at,
         actor_id=request.actor_id,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -93,6 +97,7 @@ async def mark_ready(case_id: str, request: EventRequest) -> dict[str, object]:
         occurred_at=request.occurred_at,
         actor_id=request.actor_id,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -106,6 +111,7 @@ async def add_evidence(case_id: str, request: EvidenceRequest) -> dict[str, obje
         actor_id=request.actor_id,
         source_channel=request.source_channel,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -118,6 +124,7 @@ async def begin_submission(case_id: str, request: EventRequest) -> dict[str, obj
         actor_id=request.actor_id,
         source_channel=request.source_channel,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -130,6 +137,7 @@ async def queue_submission(case_id: str, request: EventRequest) -> dict[str, obj
         actor_id=request.actor_id,
         source_channel=request.source_channel,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -142,6 +150,7 @@ async def submit_case(case_id: str, request: EventRequest) -> dict[str, object]:
         actor_id=request.actor_id,
         source_channel=request.source_channel,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
@@ -154,11 +163,12 @@ async def acknowledge_case(case_id: str, request: EventRequest) -> dict[str, obj
         source_channel=request.source_channel,
         notes=request.notes,
     )
+    _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
 
 def _get_case(case_id: str) -> CivicCase:
-    case = _CASES.get(case_id)
+    case = _REPOSITORY.get(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
     return case
