@@ -46,6 +46,7 @@ class CaseEventType(str, Enum):
     REVIEW_STARTED = "review_started"
     APPROVED = "approved"
     EVIDENCE_ADDED = "evidence_added"
+    DOCUMENT_ADDED = "document_added"
     SUBMITTING = "submitting"
     QUEUED = "queued"
     SUBMITTED = "submitted"
@@ -169,14 +170,10 @@ class CivicCase:
             raise ValueError("Only a submitted case can be acknowledged")
         self.status = CaseStatus.ACKNOWLEDGED
         return self._record(CaseEvent(
-            event_id=event_id,
-            case_id=self.case_id,
-            event_type=CaseEventType.ACKNOWLEDGED,
-            occurred_at=occurred_at,
-            actor_id=actor_id,
-            source_channel=source_channel,
-            source_ref=source_ref,
-            notes=notes,
+            event_id=event_id, case_id=self.case_id,
+            event_type=CaseEventType.ACKNOWLEDGED, occurred_at=occurred_at,
+            actor_id=actor_id, source_channel=source_channel,
+            source_ref=source_ref, notes=notes,
         ))
 
     def follow_up(self, *, event_id: str, occurred_at: str,
@@ -249,6 +246,19 @@ class CivicCase:
             actor_id, source_channel, evidence_id,
         ))
 
+    def add_document(self, document_id: str, *, event_id: str,
+                     occurred_at: str, actor_id: str | None = None,
+                     source_channel: str | None = None) -> CaseEvent:
+        """Attach a canonical document reference to this case."""
+        if self.status is CaseStatus.ARCHIVED:
+            raise ValueError("Cannot add a document to an archived case")
+        if document_id not in self.document_refs:
+            self.document_refs.append(document_id)
+        return self._record(CaseEvent(
+            event_id, self.case_id, CaseEventType.DOCUMENT_ADDED, occurred_at,
+            actor_id, source_channel, document_id,
+        ))
+
     def correct(self, *, event_id: str, occurred_at: str,
                 actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status in {CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
@@ -286,12 +296,8 @@ class CivicCase:
 def confirmed_delivery(status: CaseStatus) -> bool:
     """Return true only when destination acknowledgement has occurred."""
     return status in {
-        CaseStatus.ACKNOWLEDGED,
-        CaseStatus.FOLLOW_UP,
-        CaseStatus.IN_PROGRESS,
-        CaseStatus.RESPONDED,
-        CaseStatus.RESOLVED,
-        CaseStatus.ESCALATED,
+        CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS,
+        CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
         CaseStatus.CLOSED,
     }
 
