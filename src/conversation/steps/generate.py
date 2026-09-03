@@ -1,81 +1,117 @@
+"""Generate user-owned complaint artifacts through canonical capabilities."""
+from __future__ import annotations
+
+import hashlib
+from datetime import date
+from pathlib import Path
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
-from conversation.constants import COMPLETED
 
 from documents.complaint_builder import build_complaint
-
-from docx import Document
-
-from reportlab.platypus import SimpleDocTemplate
-from reportlab.platypus import Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-
-from services.id_generator import generate_complaint_id
-from services.case_migration import persist_generated_complaint
-
-
-# --------------------------------------------------
-# DOCX GENERATOR
-# --------------------------------------------------
-
-def generate_docx(file_path: str, text: str):
-    doc = Document()
-    doc.add_heading("Complaint", 0)
-
-    for line in text.split("\n"):
-        doc.add_paragraph(line)
-
-    doc.save(file_path)
+from documents.artifact_ref import ArtifactState, DocumentArtifactRef
+from documents.artifact_service import generate_artifact
+from documents.document_contract import DocumentFormat
+from documents.legacy_complaint_adapter import complaint_to_document_draft
+from services.authority_service import find_authority
+from services.case_migration import get_case_repository, persist_generated_complaint
+from storage.repositories.document_artifact import (
+    InMemoryDocumentArtifactRepository,
+)
 
 
-# --------------------------------------------------
-# PDF GENERATOR
-# --------------------------------------------------
-
-def generate_pdf(file_path: str, text: str):
-    doc = SimpleDocTemplate(file_path)
-    styles = getSampleStyleSheet()
-    content = []
-
-    for line in text.split("\n"):
-        p = Paragraph(line, styles["Normal"])
-        content.append(p)
-        content.append(Spacer(1, 10))
-
-    doc.build(content)
+_ARTIFACT_REPOSITORY = InMemoryDocumentArtifactRepository()
 
 
-# --------------------------------------------------
-# BUILD TEXT HELPER
-# --------------------------------------------------
-
-def build_text(complaint: dict) -> str:
-    law = complaint["law"]
-    text = []
-    text.append(f"Complaint ID: {complaint['complaint_id']}")
-    text.append("")
-    text.append(f"Date: {complaint['date']}")
-    text.append("")
-    text.append("Issue:")
-    text.append(complaint["issue"])
-    text.append("")
-    text.append("Legal Ground:")
-    text.append(f"{law['law']} - {law['section']}")
-    text.append("")
-    text.append(law["explanation"])
-    return "\n".join(text)
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
-# --------------------------------------------------
-# MAIN HANDLER
-# --------------------------------------------------
+def _document_format(value: str) -> DocumentFormat:
+    normalized = value.strip().lower()
+    if normalized == DocumentFormat.DOCX.value:
+        return DocumentFormat.DOCX
+    return DocumentFormat.PDF
+
+
+def build_canonical_complaint_artifact(session: dict):
+    """Build a canonical draft and user-owned artifact from a legacy session."""
+    complaint_id = str(session["complaint_id"])
+    case = persist_generated_complaint(session)
+    repository = get_case_repository()
+    case = repository.get(case.case_id) or case
+
+    office_id = str(case.related_office_id or "")
+    authority = find_authority(office_id)
+    if authority is None:
+        raise ValueError("Selected office cannot be resolved")
+
+    complaint = build_complaint(
+        user_name=str(session.get("name") or session.get("citizen_name") or "Not Provided"),
+        user_address=str(session.get("address") or "Not Provided"),
+        office_id=office_id,
+        issue_text=str(session.get("issue") or ""),
+    )
+    complaint["complaint_id"] = complaint_id
+
+    draft = complaint_to_document_draft(
+        complaint,
+        document_id=complaint_id,
+        case_id=case.case_id,
+        authority_repository=type(
+            "SingleAuthorityRepository",
+            (),
+            {
+                "get": lambda _self, authority_id: (
+                    authority if authority.authority_id == authority_id else None
+                ),
+            },
+        )(),
+    )
+
+    document_format = _document_format(str(session.get("format", "pdf")))
+    artifact = generate_artifact(
+        draft,
+        document_format,
+        Path("/tmp") / "janavani-artifacts",
+    )
+    path = Path(artifact.path)
+    artifact_id = f"{draft.document_id}:{document_format.value}"
+    artifact_ref = DocumentArtifactRef(
+        artifact_id=artifact_id,
+        document_id=draft.document_id,
+        case_id=draft.case_id,
+        format=document_format.value,
+        storage_ref=str(path),
+        content_sha256=_sha256(path),
+        state=ArtifactState.GENERATED,
+    )
+    _ARTIFACT_REPOSITORY.save(artifact_ref)
+
+    case = repository.get(case.case_id) or case
+    if artifact_id not in case.document_refs:
+        case.add_document(
+            artifact_id,
+            event_id=f"{case.case_id}:document:{document_format.value}",
+            occurred_at=date.today().isoformat(),
+            source_channel="telegram",
+        )
+        repository.save(case)
+
+    return path, artifact_ref
+
 
 async def handle_generate(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if update.callback_query:
         user_id = update.callback_query.from_user.id
@@ -85,66 +121,29 @@ async def handle_generate(
         message = update.message
 
     session = get_session(user_id)
-
     if "complaint_id" not in session:
+        from services.id_generator import generate_complaint_id
+
         session["complaint_id"] = generate_complaint_id()
 
-    format_type = session.get("format", "pdf")
-
     try:
-        office = session.get("office", {})
-        office_id = office.get("office_id") or office.get("id") or "1"
-        identity_mode = session.get("identity_mode", "anonymous")
+        await message.reply_text("Generating document for your review...")
+        file_path, artifact_ref = build_canonical_complaint_artifact(session)
+        filename = file_path.name
 
-        if identity_mode == "anonymous":
-            user_name = "Anonymous"
-            user_address = "Not Provided"
-        elif identity_mode == "name_only":
-            user_name = session.get("name") or session.get("citizen_name") or "Not Provided"
-            user_address = "Not Provided"
-        elif identity_mode == "address_only":
-            user_name = "Not Provided"
-            user_address = session.get("address") or "Not Provided"
-        else:
-            user_name = session.get("name") or session.get("citizen_name") or "Not Provided"
-            user_address = session.get("address") or "Not Provided"
+        with file_path.open("rb") as handle:
+            await message.reply_document(document=handle, filename=filename)
 
-        complaint = build_complaint(
-            user_name=user_name,
-            user_address=user_address,
-            office_id=office_id,
-            issue_text=session.get("issue", ""),
-        )
-        complaint["complaint_id"] = session["complaint_id"]
-        complaint_text = build_text(complaint)
-
-        await message.reply_text("Generating document...")
-
-        if format_type == "docx":
-            file_path = f"/tmp/complaint_{user_id}.docx"
-            filename = "complaint.docx"
-            generate_docx(file_path, complaint_text)
-        else:
-            file_path = f"/tmp/complaint_{user_id}.pdf"
-            filename = "complaint.pdf"
-            generate_pdf(file_path, complaint_text)
-
-        with open(file_path, "rb") as f:
-            await message.reply_document(
-                document=f,
-                filename=filename,
-            )
-
-        await message.reply_text(
-            "✅ Document generated for your review/printing. "
-            "JanaVani has not submitted it to the government."
-        )
-
-        persist_generated_complaint(session)
+        downloaded = artifact_ref.mark_downloaded()
+        _ARTIFACT_REPOSITORY.save(downloaded)
         set_state(user_id, COMPLETED)
 
-    except Exception as e:
-        print("ERROR in handle_generate:", e)
         await message.reply_text(
-            "❌ Failed to generate document."
+            "✅ Document generated and provided for your review, "
+            "printing, or download.\n\n"
+            "JanaVani has not submitted, emailed, or otherwise transmitted "
+            "the document to the government."
         )
+    except Exception as exc:
+        print("ERROR in handle_generate:", exc)
+        await message.reply_text("❌ Failed to generate document.")
