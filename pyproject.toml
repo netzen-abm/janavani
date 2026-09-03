@@ -1,2 +1,26 @@
+[project]
+name = "janavani"
+version = "2.1.0"
+description = "Janavani citizen-governance ecosystem"
+requires-python = ">=3.11"
+dependencies = [
+    "Flask>=3.1.0",
+    "FastAPI>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-dotenv>=1.0.1",
+    "pydantic-settings>=2.0.0",
+    "supabase>=2.8.0",
+    "python-telegram-bot>=22.8",
+    "requests>=2.32.0",
+    "pandas>=2.2.2",
+    "numpy>=1.26.4",
+    "weasyprint>=65.0",
+    "reportlab>=4.2.0",
+    "python-docx>=1.1.0",
+    "web3>=7.0.0",
+    "ipfshttpclient>=0.7.0",
+    "redis>=5.0.0",
+]
+
 [tool.vercel]
 entrypoint = "src.web.app:app"
