@@ -40,8 +40,8 @@ def _rows(response: Any) -> list[dict[str, Any]]:
     raise CivicCasePersistenceError("Unexpected Supabase response data")
 
 
-def _case_row(case: CivicCase, *, created_at: str, updated_at: str,
-              version: int) -> dict[str, Any]:
+def _case_row(case: CivicCase, *, created_at: str,
+              updated_at: str, version: int) -> dict[str, Any]:
     return {
         "case_id": case.case_id,
         "case_type": case.case_type.value,
@@ -109,6 +109,9 @@ def _hydrate(row: dict[str, Any], events: list[dict[str, Any]],
             )
             for item in events
         ],
+        created_at=row.get("created_at"),
+        updated_at=row.get("updated_at"),
+        version=int(row.get("version", 1)),
     )
 
 
@@ -117,6 +120,10 @@ class SupabaseCivicCaseRepository:
 
     The client is injected so the repository can be tested without a live
     Supabase service and without coupling the domain model to the provider.
+
+    Multi-table atomicity is intentionally not claimed here. A production
+    rollout must add a verified transaction/RPC boundary before this provider
+    replaces the development repository.
     """
 
     def __init__(self, client: Any) -> None:
@@ -128,25 +135,43 @@ class SupabaseCivicCaseRepository:
         case_rows = self._select("civic_cases", case_id=case_id)
         if not case_rows:
             return None
-        events = self._select("civic_case_events", case_id=case_id)
-        evidence = self._select("civic_case_evidence_refs", case_id=case_id)
-        documents = self._select("civic_case_document_refs", case_id=case_id)
-        consents = self._select("civic_case_consents", case_id=case_id)
         return _hydrate(
-            case_rows[0], events, evidence, documents, consents,
+            case_rows[0],
+            self._select("civic_case_events", case_id=case_id),
+            self._select("civic_case_evidence_refs", case_id=case_id),
+            self._select("civic_case_document_refs", case_id=case_id),
+            self._select("civic_case_consents", case_id=case_id),
         )
 
     def save(self, case: CivicCase) -> None:
         existing = self._select("civic_cases", case_id=case.case_id)
         if not existing:
             self._insert_case(case)
-            current_version = 1
+            persisted_version = 1
+            persisted_created_at = case.created_at or _now()
         else:
-            current_version = int(existing[0]["version"])
-            self._update_case(case, existing[0])
+            row = existing[0]
+            current_version = int(row["version"])
+            expected_version = case.version
+            if expected_version != current_version:
+                raise CivicCaseConcurrencyError(
+                    f"Expected version {expected_version}, "
+                    f"found {current_version} for {case.case_id}"
+                )
+            persisted_version = current_version + 1
+            persisted_created_at = str(row.get("created_at") or _now())
+            self._update_case(
+                case,
+                row,
+                version=persisted_version,
+                created_at=persisted_created_at,
+            )
 
-        self._persist_events(case, current_version)
+        self._persist_events(case)
         self._persist_refs(case)
+        case.created_at = persisted_created_at
+        case.updated_at = _now()
+        case.version = persisted_version
 
     def _select(self, table: str, *, case_id: str) -> list[dict[str, Any]]:
         try:
@@ -163,12 +188,15 @@ class SupabaseCivicCaseRepository:
             ) from exc
 
     def _insert_case(self, case: CivicCase) -> None:
-        now = _now()
+        now = case.created_at or _now()
         try:
             response = (
                 self._client.table("civic_cases")
                 .insert(_case_row(
-                    case, created_at=now, updated_at=now, version=1,
+                    case,
+                    created_at=now,
+                    updated_at=now,
+                    version=1,
                 ))
                 .execute()
             )
@@ -179,9 +207,9 @@ class SupabaseCivicCaseRepository:
         except Exception as exc:
             raise CivicCasePersistenceError("Failed to insert case") from exc
 
-    def _update_case(self, case: CivicCase, row: dict[str, Any]) -> None:
-        version = int(row["version"])
-        created_at = str(row.get("created_at") or _now())
+    def _update_case(self, case: CivicCase, row: dict[str, Any], *,
+                     version: int, created_at: str) -> None:
+        current_version = int(row["version"])
         try:
             response = (
                 self._client.table("civic_cases")
@@ -189,10 +217,10 @@ class SupabaseCivicCaseRepository:
                     case,
                     created_at=created_at,
                     updated_at=_now(),
-                    version=version + 1,
+                    version=version,
                 ))
                 .eq("case_id", case.case_id)
-                .eq("version", version)
+                .eq("version", current_version)
                 .execute()
             )
             if not _rows(response):
@@ -204,7 +232,7 @@ class SupabaseCivicCaseRepository:
         except Exception as exc:
             raise CivicCasePersistenceError("Failed to update case") from exc
 
-    def _persist_events(self, case: CivicCase, version: int) -> None:
+    def _persist_events(self, case: CivicCase) -> None:
         existing = self._select("civic_case_events", case_id=case.case_id)
         existing_ids = {str(item["event_id"]) for item in existing}
         pending = [
