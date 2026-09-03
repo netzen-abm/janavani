@@ -1,104 +1,130 @@
-from fastapi import APIRouter, HTTPException, Depends
+"""Constitutional oversight document adapter.
+
+This route prepares objection documents for user review, printing, and
+Download. JanaVani does not email or submit generated documents.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, Dict
+
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Dict, Any
-import smtplib
-from email.mime.text import MIMEText
-from datetime import datetime
-import os
+
 from src.core.legislative_monitor import fetch_active_bill_profile
 from src.core.vernacular_headers import fetch_localized_header_map
 from src.services.document_generator import MultiFormatDocumentEngine
 
-router = APIRouter(prefix="/api/v1/constitutional", tags=["Constitutional Oversight Engine"])
+router = APIRouter(
+    prefix="/api/v1/constitutional",
+    tags=["Constitutional Oversight Engine"],
+)
+
 
 class ObjectionDispatchPayload(BaseModel):
     bill_code: str
     citizen_comments: str
-    target_delivery_channel: str # 'EMAIL' or 'DOWNLOAD'
-    requested_file_format: str = Field("PDF", description="Format choices: 'PDF' or 'DOCX'")
+    target_delivery_channel: str = Field(
+        "DOWNLOAD",
+        description="Only DOWNLOAD is supported by JanaVani.",
+    )
+    requested_file_format: str = Field(
+        "PDF",
+        description="Format choices: PDF or DOCX.",
+    )
+
 
 @router.get("/bill/{bill_code}", response_model=Dict[str, Any])
 async def get_bill_compliance_report(bill_code: str):
+    """Return the available legislative compliance profile."""
     bill_data = fetch_active_bill_profile(bill_code)
     if not bill_data:
-        raise HTTPException(status_code=404, detail="Requested legislative bill index code not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Requested legislative bill index code not found.",
+        )
     return bill_data
 
+
 @router.post("/generate-objection")
-async def generate_and_route_objection(payload: ObjectionDispatchPayload):
+async def generate_objection(payload: ObjectionDispatchPayload):
+    """Generate an objection document for user review and download only."""
+    if payload.target_delivery_channel.strip().upper() != "DOWNLOAD":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "JanaVani does not email or submit generated documents. "
+                "Use DOWNLOAD and take any later action independently."
+            ),
+        )
+
     bill_data = fetch_active_bill_profile(payload.bill_code)
     if not bill_data:
-        raise HTTPException(status_code=404, detail="Target bill profile data missing.")
-        
+        raise HTTPException(
+            status_code=404,
+            detail="Target bill profile data missing.",
+        )
+
     evaluation = bill_data["constitutional_evaluation"]
-    
-    # Fetch appropriate localized translation headers based on target geography
     lang_tags = fetch_localized_header_map(bill_data["state"])
-    
-    # Compile a formal petition combining English structures with localized headers
     formal_letter_body = (
-        f"FORMAL PETITION OF OBJECTION / MEMORANDUM OF NON-COMPLIANCE\n"
-        f"====================================================================\n\n"
+        "FORMAL PETITION OF OBJECTION / MEMORANDUM OF NON-COMPLIANCE\n"
+        "====================================================================\n\n"
         f"{lang_tags['salutation']}\n"
-        f"The Legislative Assembly Secretariat / Standing Committee Board\n"
+        "The Legislative Assembly Secretariat / Standing Committee Board\n"
         f"Government of {bill_data['state']}\n\n"
-        f"{lang_tags['subject_prefix']} Formal Constitutional Objection Against '{bill_data['title']}'\n\n"
-        f"Respected Authority,\n\n"
-        f"I am writing to register my formal objection to the proposed legislative draft titled '{bill_data['title']}'. "
-        f"An evaluation of this bill indicates significant conflicts with the Golden Triangle of the Indian Constitution "
-        f"(Articles 14, 19, and 21), which form the core of our fundamental human rights.\n\n"
-        f"CONSTITUTIONAL BREACH ANALYSIS:\n"
-        f"1. ARTICLE 14 CLAUSE ASSESSMENT: {evaluation['article_14_analysis']}\n"
-        f"2. ARTICLE 19 CLAUSE ASSESSMENT: {evaluation['article_19_analysis']}\n"
-        f"3. ARTICLE 21 CLAUSE ASSESSMENT: {evaluation['article_21_analysis']}\n\n"
-        f"SUMMARY OF MATERIAL INCOMPLIANCE:\n"
+        f"{lang_tags['subject_prefix']} Formal Constitutional Objection Against "
+        f"'{bill_data['title']}'\n\n"
+        "Respected Authority,\n\n"
+        f"I am writing to register my formal objection to the proposed "
+        f"legislative draft titled '{bill_data['title']}'.\n\n"
+        "CONSTITUTIONAL BREACH ANALYSIS:\n"
+        f"1. ARTICLE 14 CLAUSE ASSESSMENT: "
+        f"{evaluation['article_14_analysis']}\n"
+        f"2. ARTICLE 19 CLAUSE ASSESSMENT: "
+        f"{evaluation['article_19_analysis']}\n"
+        f"3. ARTICLE 21 CLAUSE ASSESSMENT: "
+        f"{evaluation['article_21_analysis']}\n\n"
+        "SUMMARY OF MATERIAL INCOMPLIANCE:\n"
         f"{evaluation['overall_constitutional_summary']}\n\n"
-        f"CITIZEN REASONING SUBMISSION:\n"
+        "CITIZEN REASONING SUBMISSION:\n"
         f"\"{payload.citizen_comments}\"\n\n"
         f"{lang_tags['prayer_prefix']}\n"
-        f"The authority is requested to immediately withdraw or amend this bill to bring it into compliance with the "
-        f"fundamental liberties guaranteed by the Constitution of India.\n\n"
-        f"Submitted Sincerely,\n"
-        f"A Concerned Citizen of India\n"
-        f"Dated: {datetime.utcnow().strftime('%Y-%m-%d')}\n"
-        f"Generated via the Janavani Privacy-First Platform Framework."
+        "The authority is requested to consider the stated objection and "
+        "take appropriate action.\n\n"
+        "Submitted Sincerely,\n"
+        "A Concerned Citizen of India\n"
+        f"Dated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n\n"
+        "USER DELIVERY NOTICE:\n"
+        "This file is generated for user review, printing, and download. "
+        "JanaVani does not email or submit this document."
     )
 
-    if payload.target_delivery_channel == "DOWNLOAD":
-        if payload.requested_file_format.upper() == "DOCX":
-            doc_stream = MultiFormatDocumentEngine.generate_docx_stream(formal_letter_body)
-            return StreamingResponse(
-                doc_stream,
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={"Content-Disposition": f"attachment; filename=objection_{payload.bill_code}.docx"}
-            )
-        else:
-            pdf_stream = MultiFormatDocumentEngine.generate_pdf_stream(formal_letter_body)
-            return StreamingResponse(
-                pdf_stream,
-                media_type="application/pdf",
-                headers={"Content-Disposition": f"attachment; filename=objection_{payload.bill_code}.pdf"}
-            )
+    selected_format = payload.requested_file_format.strip().upper()
+    if selected_format == "DOCX":
+        document_stream = MultiFormatDocumentEngine.generate_docx_stream(
+            formal_letter_body
+        )
+        media_type = (
+            "application/vnd.openxmlformats-officedocument."
+            "wordprocessingml.document"
+        )
+        filename = f"objection_{payload.bill_code}.docx"
+    elif selected_format == "PDF":
+        document_stream = MultiFormatDocumentEngine.generate_pdf_stream(
+            formal_letter_body
+        )
+        media_type = "application/pdf"
+        filename = f"objection_{payload.bill_code}.pdf"
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Use PDF or DOCX.",
+        )
 
-    smtp_host = os.getenv("SMTP_SERVER_HOST", "smtp.janavani.internal")
-    smtp_port = int(os.getenv("SMTP_SERVER_PORT", "587"))
-    smtp_user = os.getenv("SMTP_SECURITY_USER", "")
-    smtp_pass = os.getenv("SMTP_SECURITY_PASSWORD", "")
-    
-    if not smtp_user:
-        raise HTTPException(status_code=503, detail="Mail server configuration is currently offline.")
-
-    msg = MIMEText(formal_letter_body)
-    msg["Subject"] = f"[CONSTITUTIONAL OBJECTION] Regarding {bill_data['title']}"
-    msg["From"] = f"advocacy@{os.getenv('DOMAIN_NAME', 'janavani.internal')}"
-    msg["To"] = "secretariat-legislation@state.gov.in"
-
-    try:
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(msg["From"], [msg["To"]], msg.as_string())
-        return {"delivery_mode": "SECURE_EMAIL_RELAY", "status": "DISPATCHED_TO_SECRETARIAT_SUCCESSFULLY"}
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Mailing subsystem failed: {str(e)}")
+    return StreamingResponse(
+        document_stream,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
