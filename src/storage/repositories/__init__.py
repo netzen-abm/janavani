@@ -6,6 +6,10 @@ from src.storage.repositories.civic_case import (
     CivicCaseRepository,
     InMemoryCivicCaseRepository,
 )
+from src.storage.repositories.document_artifact import (
+    DocumentArtifactRepository,
+    InMemoryDocumentArtifactRepository,
+)
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.postgres_civic_case import (
     PostgresCivicCaseConcurrencyError,
@@ -28,6 +32,8 @@ __all__ = [
     "InMemoryCivicCaseRepository",
     "InMemoryAuthorityRepository",
     "CsvAuthorityRepository",
+    "DocumentArtifactRepository",
+    "InMemoryDocumentArtifactRepository",
     "InMemoryEvidenceRepository",
     "CivicCaseConcurrencyError",
     "CivicCasePersistenceError",
