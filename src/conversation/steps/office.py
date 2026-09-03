@@ -4,21 +4,17 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 
-from conversation.constants import (
-    WAITING_FOR_PREVIEW,
-)
+from conversation.constants import WAITING_FOR_PREVIEW
 
 
 async def handle_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     user_id = update.effective_user.id
     session = get_session(user_id)
-
     offices = session.get("offices", [])
 
     try:
         choice = int(update.message.text.strip())
-    except ValueError:
+    except (TypeError, ValueError):
         await update.message.reply_text("Please enter a valid office number.")
         return
 
@@ -27,20 +23,18 @@ async def handle_office(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     office = offices[choice - 1]
-
-    # ✅ Store selected office
     session["office"] = office
-
-    # ✅ Move to preview step
     set_state(user_id, WAITING_FOR_PREVIEW)
 
-    # ✅ Inform user
+    office_name = office.get("name") or office.get("office_name") or "Selected office"
     await update.message.reply_text(
-        f"""
-✅ Office Selected
-
-{office['office_name']}
-
-Preparing your complaint preview...
-"""
+        "\n".join(
+            [
+                "✅ Office Selected",
+                "",
+                office_name,
+                "",
+                "Preparing your complaint preview...",
+            ]
+        )
     )
