@@ -54,10 +54,15 @@ def create_civic_case_repository(
             PostgresCivicCaseRepository,
         )
 
-        return PostgresCivicCaseRepository(
-            connection_factory=connection_factory,
-            dsn=dsn,
-        )
+        try:
+            return PostgresCivicCaseRepository(
+                connection_factory=connection_factory,
+                dsn=dsn,
+            )
+        except (ValueError, TypeError) as exc:
+            raise CivicCaseProviderConfigurationError(
+                "PostgreSQL provider requires a DSN or connection factory"
+            ) from exc
 
     if supabase_client is None:
         try:
@@ -67,6 +72,11 @@ def create_civic_case_repository(
                 "Supabase provider could not be initialized"
             ) from exc
         supabase_client = supabase
+
+    if supabase_client is None:
+        raise CivicCaseProviderConfigurationError(
+            "Supabase provider requires a configured client"
+        )
 
     from src.storage.repositories.supabase_civic_case import (
         SupabaseCivicCaseRepository,
