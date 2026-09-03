@@ -9,7 +9,7 @@ from src.documents.artifact_ref import ArtifactState, DocumentArtifactRef
 from src.documents.document_contract import DocumentDraft, DocumentFormat
 from src.documents.renderers import render_document
 from src.storage.artifact_blob import ArtifactBlobStore, StoredArtifact
-from src.storage.local_artifact_blob import LocalArtifactBlobStore
+from src.storage.artifact_blob_factory import create_artifact_blob_store
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ def generate_artifact(
     path = render_document(draft, document_format, output_dir)
     content = Path(path).read_bytes()
     digest = hashlib.sha256(content).hexdigest()
-    store = blob_store or LocalArtifactBlobStore(Path(output_dir) / "blobs")
+    store = blob_store or create_artifact_blob_store()
     stored = store.put(
         f"{draft.case_id}/{draft.document_id}.{document_format.value}",
         content,
