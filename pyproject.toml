@@ -22,5 +22,10 @@ dependencies = [
     "redis>=5.0.0",
 ]
 
+[project.optional-dependencies]
+postgres = [
+    "psycopg[binary]>=3.2.0",
+]
+
 [tool.vercel]
 entrypoint = "src.web.app:app"

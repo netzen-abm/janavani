@@ -4,6 +4,11 @@ from src.storage.repositories.civic_case import (
     CivicCaseRepository,
     InMemoryCivicCaseRepository,
 )
+from src.storage.repositories.postgres_civic_case import (
+    PostgresCivicCaseConcurrencyError,
+    PostgresCivicCasePersistenceError,
+    PostgresCivicCaseRepository,
+)
 from src.storage.repositories.supabase_civic_case import (
     CivicCaseConcurrencyError,
     CivicCasePersistenceError,
@@ -16,4 +21,7 @@ __all__ = [
     "CivicCaseConcurrencyError",
     "CivicCasePersistenceError",
     "SupabaseCivicCaseRepository",
+    "PostgresCivicCaseConcurrencyError",
+    "PostgresCivicCasePersistenceError",
+    "PostgresCivicCaseRepository",
 ]
