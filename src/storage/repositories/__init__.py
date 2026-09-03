@@ -21,6 +21,9 @@ from src.storage.repositories.provider import (
     SUPPORTED_PROVIDERS,
     create_civic_case_repository,
 )
+from src.storage.repositories.sqlite_document_artifact import (
+    SqliteDocumentArtifactRepository,
+)
 from src.storage.repositories.supabase_civic_case import (
     CivicCaseConcurrencyError,
     CivicCasePersistenceError,
@@ -34,6 +37,7 @@ __all__ = [
     "CsvAuthorityRepository",
     "DocumentArtifactRepository",
     "InMemoryDocumentArtifactRepository",
+    "SqliteDocumentArtifactRepository",
     "InMemoryEvidenceRepository",
     "CivicCaseConcurrencyError",
     "CivicCasePersistenceError",
