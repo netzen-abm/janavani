@@ -89,6 +89,9 @@ class CivicCase:
     consent_refs: list[str] = field(default_factory=list)
     status: CaseStatus = CaseStatus.DRAFT
     events: list[CaseEvent] = field(default_factory=list)
+    created_at: str | None = None
+    updated_at: str | None = None
+    version: int = 1
 
     def edit(self, *, event_id: str, occurred_at: str,
              actor_id: str | None = None, subject: str | None = None,
