@@ -90,7 +90,12 @@ class Query:
 
 class FakeSupabase:
     def __init__(self):
-        self.tables = {}
+        self.tables = {
+            "civic_case_consents": [{
+                "case_id": "case-1",
+                "consent_id": "consent-1",
+            }],
+        }
 
     def table(self, name):
         return Query(self, name)
