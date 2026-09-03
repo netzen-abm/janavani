@@ -1,56 +1,46 @@
-import pandas as pd
+"""Legacy-shaped office lookup adapter over the canonical authority contract."""
+from __future__ import annotations
 
-DATA_FILE = "database/offices.csv"
+from src.core.authority import AuthorityRepository
+from src.services.authority_service import find_authorities
 
 
-def find_offices(department: str, location: str):
-
-    try:
-        # --------------------------------------
-        # 📂 LOAD DATA
-        # --------------------------------------
-        df = pd.read_csv(DATA_FILE)
-
-        # --------------------------------------
-        # 🧹 CLEAN INPUT
-        # --------------------------------------
-        department = str(department).strip()
-        location = str(location).strip()
-
-        # --------------------------------------
-        # 🔍 FILTER (SAFE - NO REGEX WARNING)
-        # --------------------------------------
-        results = df[
-            df["type"].str.contains(
-                department,
-                case=False,
-                na=False,
-                regex=False   # ✅ FIXED WARNING
-            )
-            &
-            df["city"].str.contains(
-                location,
-                case=False,
-                na=False,
-                regex=False   # ✅ FIXED WARNING
-            )
-        ]
-
-        # --------------------------------------
-        # 📭 NO RESULTS
-        # --------------------------------------
-        if results.empty:
-            return None
-
-        # --------------------------------------
-        # 📤 RETURN RESULTS
-        # --------------------------------------
-        return results.to_dict(orient="records")
-
-    except FileNotFoundError:
-        print("❌ offices.csv not found")
+def find_offices(
+    department: str,
+    location: str,
+    *,
+    repository: AuthorityRepository | None = None,
+):
+    """Return the historical dict shape without owning authority lookup."""
+    authorities = find_authorities(
+        department,
+        location,
+        repository=repository,
+    )
+    if not authorities:
         return None
 
-    except Exception as e:
-        print("❌ Office search error:", e)
-        return None
+    return [
+        {
+            "id": authority.authority_id,
+            "name": authority.name,
+            "type": authority.authority_type,
+            "address": (
+                authority.primary_contact.address
+                if authority.primary_contact
+                else ""
+            ),
+            "city": authority.jurisdiction.get("city", ""),
+            "officer_role": (
+                authority.primary_contact.role
+                if authority.primary_contact
+                else ""
+            ),
+            "email": (
+                authority.primary_contact.email
+                if authority.primary_contact
+                else None
+            ),
+        }
+        for authority in authorities
+    ]
