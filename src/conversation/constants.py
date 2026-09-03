@@ -1,16 +1,6 @@
-"""
-Conversation States
-"""
-
-# --------------------------------------------------
-# Initial State
-# --------------------------------------------------
+"""Conversation States."""
 
 NEW = "NEW"
-
-# --------------------------------------------------
-# Conversation Steps
-# --------------------------------------------------
 
 WAITING_FOR_ISSUE = "WAITING_FOR_ISSUE"
 WAITING_FOR_DOCUMENT = "WAITING_FOR_DOCUMENT"
@@ -22,16 +12,10 @@ WAITING_FOR_OFFICE_FALLBACK = "WAITING_FOR_OFFICE_FALLBACK"
 
 WAITING_FOR_PREVIEW = "WAITING_FOR_PREVIEW"
 WAITING_FOR_IDENTITY = "WAITING_FOR_IDENTITY"
-
-# 🔥 NEW
 WAITING_FOR_NAME = "WAITING_FOR_NAME"
 WAITING_FOR_ADDRESS = "WAITING_FOR_ADDRESS"
 WAITING_FOR_FORMAT = "WAITING_FOR_FORMAT"
-
+WAITING_FOR_CONSENT = "WAITING_FOR_CONSENT"
 WAITING_FOR_GENERATE = "WAITING_FOR_GENERATE"
-
-# --------------------------------------------------
-# Finished
-# --------------------------------------------------
 
 COMPLETED = "COMPLETED"
