@@ -1,9 +1,12 @@
 """Repository contracts and canonical persistence providers."""
 
+from src.storage.repositories.authority import InMemoryAuthorityRepository
+from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import (
     CivicCaseRepository,
     InMemoryCivicCaseRepository,
 )
+from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.postgres_civic_case import (
     PostgresCivicCaseConcurrencyError,
     PostgresCivicCasePersistenceError,
@@ -23,6 +26,9 @@ from src.storage.repositories.supabase_civic_case import (
 __all__ = [
     "CivicCaseRepository",
     "InMemoryCivicCaseRepository",
+    "InMemoryAuthorityRepository",
+    "CsvAuthorityRepository",
+    "InMemoryEvidenceRepository",
     "CivicCaseConcurrencyError",
     "CivicCasePersistenceError",
     "SupabaseCivicCaseRepository",
