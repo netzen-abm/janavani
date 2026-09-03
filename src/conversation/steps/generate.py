@@ -22,7 +22,6 @@ from services.case_migration import persist_generated_complaint
 # --------------------------------------------------
 
 def generate_docx(file_path: str, text: str):
-
     doc = Document()
     doc.add_heading("Complaint", 0)
 
@@ -37,7 +36,6 @@ def generate_docx(file_path: str, text: str):
 # --------------------------------------------------
 
 def generate_pdf(file_path: str, text: str):
-
     doc = SimpleDocTemplate(file_path)
     styles = getSampleStyleSheet()
     content = []
@@ -55,7 +53,6 @@ def generate_pdf(file_path: str, text: str):
 # --------------------------------------------------
 
 def build_text(complaint: dict) -> str:
-
     law = complaint["law"]
     text = []
     text.append(f"Complaint ID: {complaint['complaint_id']}")
@@ -80,7 +77,6 @@ async def handle_generate(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-
     if update.callback_query:
         user_id = update.callback_query.from_user.id
         message = update.callback_query.message
@@ -97,18 +93,30 @@ async def handle_generate(
 
     try:
         office = session.get("office", {})
+        office_id = office.get("office_id") or office.get("id") or "1"
+        identity_mode = session.get("identity_mode", "anonymous")
+
+        if identity_mode == "anonymous":
+            user_name = "Anonymous"
+            user_address = "Not Provided"
+        elif identity_mode == "name_only":
+            user_name = session.get("name") or session.get("citizen_name") or "Not Provided"
+            user_address = "Not Provided"
+        elif identity_mode == "address_only":
+            user_name = "Not Provided"
+            user_address = session.get("address") or "Not Provided"
+        else:
+            user_name = session.get("name") or session.get("citizen_name") or "Not Provided"
+            user_address = session.get("address") or "Not Provided"
+
         complaint = build_complaint(
-            user_name="Anonymous",
-            user_address="Not Provided",
-            office_id=office.get("id", "1"),
-            issue_text=session.get("issue", "")
+            user_name=user_name,
+            user_address=user_address,
+            office_id=office_id,
+            issue_text=session.get("issue", ""),
         )
-
+        complaint["complaint_id"] = session["complaint_id"]
         complaint_text = build_text(complaint)
-
-        await message.reply_text(
-            "📄 Final Complaint Text:\n\n" + complaint_text
-        )
 
         await message.reply_text("Generating document...")
 
@@ -124,11 +132,12 @@ async def handle_generate(
         with open(file_path, "rb") as f:
             await message.reply_document(
                 document=f,
-                filename=filename
+                filename=filename,
             )
 
         await message.reply_text(
-            "✅ Complaint generated successfully."
+            "✅ Document generated for your review/printing. "
+            "JanaVani has not submitted it to the government."
         )
 
         persist_generated_complaint(session)
