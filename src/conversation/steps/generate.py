@@ -14,11 +14,11 @@ from reportlab.platypus import Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
 from services.id_generator import generate_complaint_id
-from services.storage_service import save_complaint
+from services.case_migration import persist_generated_complaint
 
 
 # --------------------------------------------------
-# 📄 DOCX GENERATOR
+# DOCX GENERATOR
 # --------------------------------------------------
 
 def generate_docx(file_path: str, text: str):
@@ -33,14 +33,13 @@ def generate_docx(file_path: str, text: str):
 
 
 # --------------------------------------------------
-# 📄 PDF GENERATOR
+# PDF GENERATOR
 # --------------------------------------------------
 
 def generate_pdf(file_path: str, text: str):
 
     doc = SimpleDocTemplate(file_path)
     styles = getSampleStyleSheet()
-
     content = []
 
     for line in text.split("\n"):
@@ -52,13 +51,12 @@ def generate_pdf(file_path: str, text: str):
 
 
 # --------------------------------------------------
-# 🧠 BUILD TEXT HELPER
+# BUILD TEXT HELPER
 # --------------------------------------------------
 
 def build_text(complaint: dict) -> str:
 
     law = complaint["law"]
-
     text = []
     text.append(f"Complaint ID: {complaint['complaint_id']}")
     text.append("")
@@ -71,22 +69,17 @@ def build_text(complaint: dict) -> str:
     text.append(f"{law['law']} - {law['section']}")
     text.append("")
     text.append(law["explanation"])
-
     return "\n".join(text)
 
 
 # --------------------------------------------------
-# 🚀 MAIN HANDLER
+# MAIN HANDLER
 # --------------------------------------------------
 
 async def handle_generate(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-
-    # --------------------------------------
-    # 🔐 SAFE MESSAGE
-    # --------------------------------------
 
     if update.callback_query:
         user_id = update.callback_query.from_user.id
@@ -97,22 +90,13 @@ async def handle_generate(
 
     session = get_session(user_id)
 
-    # --------------------------------------
-    # 🆔 COMPLAINT ID
-    # --------------------------------------
-
     if "complaint_id" not in session:
         session["complaint_id"] = generate_complaint_id()
 
     format_type = session.get("format", "pdf")
 
     try:
-        # --------------------------------------
-        # 🧠 BUILD COMPLAINT
-        # --------------------------------------
-
         office = session.get("office", {})
-
         complaint = build_complaint(
             user_name="Anonymous",
             user_address="Not Provided",
@@ -120,53 +104,24 @@ async def handle_generate(
             issue_text=session.get("issue", "")
         )
 
-        # --------------------------------------
-        # 📝 TEXT VERSION
-        # --------------------------------------
-
         complaint_text = build_text(complaint)
-
-        # --------------------------------------
-        # 📄 SHOW FINAL TEXT
-        # --------------------------------------
-
-        import asyncio   # add at top of file
 
         await message.reply_text(
             "📄 Final Complaint Text:\n\n" + complaint_text
         )
 
-        # ⏳ VERY IMPORTANT
-        await asyncio.sleep(1)
-
-        await message.reply_text(
-            "Generating document..."
-        )
-
-        # --------------------------------------
-        # 📂 FILE GENERATION
-        # --------------------------------------
+        await message.reply_text("Generating document...")
 
         if format_type == "docx":
-
             file_path = f"/tmp/complaint_{user_id}.docx"
             filename = "complaint.docx"
-
             generate_docx(file_path, complaint_text)
-
         else:
-
             file_path = f"/tmp/complaint_{user_id}.pdf"
             filename = "complaint.pdf"
-
             generate_pdf(file_path, complaint_text)
 
-        # --------------------------------------
-        # 📤 SEND FILE
-        # --------------------------------------
-
         with open(file_path, "rb") as f:
-
             await message.reply_document(
                 document=f,
                 filename=filename
@@ -176,17 +131,11 @@ async def handle_generate(
             "✅ Complaint generated successfully."
         )
 
-        # --------------------------------------
-        # 💾 SAVE + COMPLETE
-        # --------------------------------------
-
-        save_complaint(session)
+        persist_generated_complaint(session)
         set_state(user_id, COMPLETED)
 
     except Exception as e:
-
         print("ERROR in handle_generate:", e)
-
         await message.reply_text(
             "❌ Failed to generate document."
         )
