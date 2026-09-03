@@ -1,8 +1,7 @@
 """Generate user-owned complaint artifacts through canonical capabilities."""
 from __future__ import annotations
 
-import hashlib
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 
 from telegram import Update
@@ -12,34 +11,22 @@ from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
 
-from documents.complaint_builder import build_complaint
-from documents.artifact_ref import ArtifactState, DocumentArtifactRef
+from documents.artifact_ref import ArtifactState
 from documents.artifact_service import generate_artifact
 from documents.document_contract import DocumentFormat
 from documents.legacy_complaint_adapter import complaint_to_document_draft
+from documents.complaint_builder import build_complaint
 from services.authority_service import find_authority
 from services.case_migration import get_case_repository, persist_generated_complaint
-from storage.repositories.document_artifact import (
-    InMemoryDocumentArtifactRepository,
-)
+from storage.artifact_blob_factory import create_artifact_blob_store
+from storage.repositories.document_artifact import InMemoryDocumentArtifactRepository
 
 
 _ARTIFACT_REPOSITORY = InMemoryDocumentArtifactRepository()
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _document_format(value: str) -> DocumentFormat:
-    normalized = value.strip().lower()
-    if normalized == DocumentFormat.DOCX.value:
-        return DocumentFormat.DOCX
-    return DocumentFormat.PDF
+    return DocumentFormat.DOCX if value.strip().lower() == "docx" else DocumentFormat.PDF
 
 
 def build_canonical_complaint_artifact(session: dict):
@@ -55,58 +42,50 @@ def build_canonical_complaint_artifact(session: dict):
         raise ValueError("Selected office cannot be resolved")
 
     complaint = build_complaint(
-        user_name=str(session.get("name") or session.get("citizen_name") or "Not Provided"),
+        user_name=str(
+            session.get("name")
+            or session.get("citizen_name")
+            or "Not Provided"
+        ),
         user_address=str(session.get("address") or "Not Provided"),
         office_id=office_id,
         issue_text=str(session.get("issue") or ""),
     )
     complaint["complaint_id"] = complaint_id
 
+    class SingleAuthorityRepository:
+        def get(self, authority_id: str):
+            return authority if authority.authority_id == authority_id else None
+
     draft = complaint_to_document_draft(
         complaint,
         document_id=complaint_id,
         case_id=case.case_id,
-        authority_repository=type(
-            "SingleAuthorityRepository",
-            (),
-            {
-                "get": lambda _self, authority_id: (
-                    authority if authority.authority_id == authority_id else None
-                ),
-            },
-        )(),
+        authority_repository=SingleAuthorityRepository(),
     )
 
     document_format = _document_format(str(session.get("format", "pdf")))
+    output_dir = Path("/tmp") / "janavani-artifacts" / "rendered"
     artifact = generate_artifact(
         draft,
         document_format,
-        Path("/tmp") / "janavani-artifacts",
+        output_dir,
+        blob_store=create_artifact_blob_store(),
     )
-    path = Path(artifact.path)
-    artifact_id = f"{draft.document_id}:{document_format.value}"
-    artifact_ref = DocumentArtifactRef(
-        artifact_id=artifact_id,
-        document_id=draft.document_id,
-        case_id=draft.case_id,
-        format=document_format.value,
-        storage_ref=str(path),
-        content_sha256=_sha256(path),
-        state=ArtifactState.GENERATED,
-    )
-    _ARTIFACT_REPOSITORY.save(artifact_ref)
+    _ARTIFACT_REPOSITORY.save(artifact.reference)
 
     case = repository.get(case.case_id) or case
+    artifact_id = artifact.reference.artifact_id
     if artifact_id not in case.document_refs:
         case.add_document(
             artifact_id,
             event_id=f"{case.case_id}:document:{document_format.value}",
-            occurred_at=date.today().isoformat(),
+            occurred_at=datetime.now(timezone.utc).isoformat(),
             source_channel="telegram",
         )
         repository.save(case)
 
-    return path, artifact_ref
+    return artifact
 
 
 async def handle_generate(
@@ -128,19 +107,19 @@ async def handle_generate(
 
     try:
         await message.reply_text("Generating document for your review...")
-        file_path, artifact_ref = build_canonical_complaint_artifact(session)
-        filename = file_path.name
+        artifact = build_canonical_complaint_artifact(session)
 
-        with file_path.open("rb") as handle:
-            await message.reply_document(document=handle, filename=filename)
+        with open(artifact.path, "rb") as handle:
+            await message.reply_document(
+                document=handle,
+                filename=Path(artifact.path).name,
+            )
 
-        downloaded = artifact_ref.mark_downloaded()
-        _ARTIFACT_REPOSITORY.save(downloaded)
+        _ARTIFACT_REPOSITORY.save(artifact.reference.mark_downloaded())
         set_state(user_id, COMPLETED)
-
         await message.reply_text(
-            "✅ Document generated and provided for your review, "
-            "printing, or download.\n\n"
+            "✅ Document generated and provided for your review, printing, "
+            "or download.\n\n"
             "JanaVani has not submitted, emailed, or otherwise transmitted "
             "the document to the government."
         )
