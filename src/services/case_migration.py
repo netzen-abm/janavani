@@ -22,7 +22,7 @@ def _now() -> str:
 
 
 def get_case_repository() -> CivicCaseRepository:
-    """Reuse one selected repository for the lifetime of this process."""
+    """Reuse the selected repository for this process lifetime."""
     global _REPOSITORY
     if _REPOSITORY is None:
         _REPOSITORY = create_civic_case_repository()
@@ -30,13 +30,14 @@ def get_case_repository() -> CivicCaseRepository:
 
 
 def session_to_civic_case(session: dict) -> CivicCase:
-    """Translate the current Telegram session without changing its semantics."""
+    """Translate a legacy Telegram session into a new CivicCase."""
     case_id = session.get("complaint_id")
     if not case_id:
         raise ValueError("complaint_id is required for CivicCase migration")
 
     issue = (session.get("issue") or "").strip()
     office = session.get("office") or {}
+    office_id = office.get("office_id") or office.get("id")
     now = _now()
 
     event = CaseEvent(
@@ -53,11 +54,12 @@ def session_to_civic_case(session: dict) -> CivicCase:
         case_type=CaseType.COMPLAINT,
         subject=issue[:120] or "Citizen complaint",
         narrative=issue,
+        created_by=None,
         jurisdiction={
             "district": session.get("district"),
             "department": session.get("department"),
         },
-        related_office_id=str(office.get("id")) if office.get("id") else None,
+        related_office_id=str(office_id) if office_id else None,
         status=CaseStatus.DRAFT,
         events=[event],
         created_at=now,
@@ -75,9 +77,15 @@ def persist_generated_complaint(
     *,
     repository: CivicCaseRepository | None = None,
 ) -> CivicCase:
-    """Persist through the canonical boundary while preserving legacy history."""
-    case = session_to_civic_case(session)
-    persist_case(case, repository=repository)
+    """Persist without ever downgrading an already-reviewed/ready case."""
+    repo = repository or get_case_repository()
+    case_id = session.get("complaint_id")
+    case = repo.get(case_id) if case_id else None
+    if case is None:
+        case = session_to_civic_case(session)
+        repo.save(case)
+
+    # Preserve the existing JSONL record during migration.
     save_complaint(session)
     return case
 
@@ -101,10 +109,23 @@ def record_submission_consent(
     if consent_id not in case.consent_refs:
         case.consent_refs.append(consent_id)
 
-    case.mark_ready(
-        event_id=f"{case_id}:approved",
-        occurred_at=_now(),
-        actor_id=f"telegram:{session.get('telegram_user_id', 'unknown')}",
-    )
+    if case.status is CaseStatus.DRAFT:
+        case.start_review(
+            event_id=f"{case_id}:review",
+            occurred_at=_now(),
+            actor_id=f"telegram:{session.get('telegram_user_id', 'unknown')}",
+        )
+
+    if case.status is CaseStatus.REVIEW:
+        case.mark_ready(
+            event_id=f"{case_id}:approved",
+            occurred_at=_now(),
+            actor_id=f"telegram:{session.get('telegram_user_id', 'unknown')}",
+        )
+    elif case.status is not CaseStatus.READY:
+        raise ValueError(
+            f"Case cannot record new submission consent from {case.status.value}"
+        )
+
     repo.save(case)
     return case
