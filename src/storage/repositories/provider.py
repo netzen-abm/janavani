@@ -13,7 +13,6 @@ from src.storage.repositories.civic_case import (
     InMemoryCivicCaseRepository,
 )
 
-
 SUPPORTED_PROVIDERS = frozenset({"memory", "postgres", "supabase"})
 
 
@@ -82,4 +81,9 @@ def create_civic_case_repository(
         SupabaseCivicCaseRepository,
     )
 
-    return SupabaseCivicCaseRepository(supabase_client)
+    try:
+        return SupabaseCivicCaseRepository(supabase_client)
+    except (ValueError, TypeError) as exc:
+        raise CivicCaseProviderConfigurationError(
+            "Supabase provider requires a configured client"
+        ) from exc
