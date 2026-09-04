@@ -12,12 +12,12 @@ class PostgresUnitOfWork(UnitOfWork):
 
     def __init__(self, connection_factory: Callable[[], Any]) -> None:
         self._connection_factory = connection_factory
-        self.connection: Any | None = None
+        self.resource: Any | None = None
         self._transaction: Any | None = None
 
     def __enter__(self) -> Self:
-        self.connection = self._connection_factory()
-        self._transaction = self.connection.transaction()
+        self.resource = self._connection_factory()
+        self._transaction = self.resource.transaction()
         self._transaction.__enter__()
         return self
 
@@ -28,11 +28,11 @@ class PostgresUnitOfWork(UnitOfWork):
             return self._transaction.__exit__(exc_type, exc_value, traceback)
         finally:
             self._transaction = None
-            if self.connection is not None:
-                close = getattr(self.connection, "close", None)
+            if self.resource is not None:
+                close = getattr(self.resource, "close", None)
                 if close is not None:
                     close()
-                self.connection = None
+                self.resource = None
 
 
 def postgres_unit_of_work_factory(
