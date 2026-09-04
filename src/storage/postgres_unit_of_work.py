@@ -1,0 +1,47 @@
+"""PostgreSQL implementation of the shared Unit-of-Work contract."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any, Self
+
+from src.storage.unit_of_work import UnitOfWork
+
+
+class PostgresUnitOfWork(UnitOfWork):
+    """Own one PostgreSQL connection and its transaction lifecycle."""
+
+    def __init__(self, connection_factory: Callable[[], Any]) -> None:
+        self._connection_factory = connection_factory
+        self.resource: Any | None = None
+        self._transaction: Any | None = None
+
+    @property
+    def connection(self) -> Any | None:
+        """Compatibility alias for PostgreSQL-specific repository code."""
+        return self.resource
+
+    def __enter__(self) -> Self:
+        self.resource = self._connection_factory()
+        self._transaction = self.resource.transaction()
+        self._transaction.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> bool | None:
+        try:
+            if self._transaction is None:
+                return None
+            return self._transaction.__exit__(exc_type, exc_value, traceback)
+        finally:
+            self._transaction = None
+            if self.resource is not None:
+                close = getattr(self.resource, "close", None)
+                if close is not None:
+                    close()
+                self.resource = None
+
+
+def postgres_unit_of_work_factory(
+    connection_factory: Callable[[], Any],
+) -> Callable[[], PostgresUnitOfWork]:
+    """Create an injectable Unit-of-Work factory for a PostgreSQL provider."""
+    return lambda: PostgresUnitOfWork(connection_factory)
