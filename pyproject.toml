@@ -26,6 +26,9 @@ dependencies = [
 postgres = [
     "psycopg[binary]>=3.2.0",
 ]
+s3 = [
+    "boto3>=1.35.0",
+]
 
 [tool.vercel]
 entrypoint = "src.web.app:app"
