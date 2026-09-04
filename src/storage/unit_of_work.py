@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager
-from typing import Protocol, TypeVar
-
-T = TypeVar("T")
+from typing import Protocol, Self
 
 
 class UnitOfWork(AbstractContextManager, Protocol):
@@ -15,7 +13,7 @@ class UnitOfWork(AbstractContextManager, Protocol):
     when the context exits successfully; exceptions cause rollback.
     """
 
-    def __enter__(self) -> "UnitOfWork":
+    def __enter__(self) -> Self:
         ...
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool | None:
