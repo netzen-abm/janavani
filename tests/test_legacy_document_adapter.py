@@ -21,7 +21,7 @@ def test_legacy_complaint_becomes_canonical_draft(tmp_path):
         authority_repository=repo,
     )
     assert draft.document_id == "JV1"
-    assert draft.to.name == "Edathala Panchayat"
+    assert draft.to.name == "Secretary"
     assert draft.sender is not None
     assert draft.legal_ground == "Test Act - 1 - Ground"
 
