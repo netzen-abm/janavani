@@ -28,7 +28,7 @@ class PostgresUnitOfWork(UnitOfWork):
         finally:
             self._transaction = None
             if self.connection is not None:
-                self.connection.__exit__(exc_type, exc_value, traceback)
+                self.connection.close()
                 self.connection = None
 
 
