@@ -32,11 +32,11 @@ cargo test -p janavani-core -- --nocapture
 printf '%s\n' "[3/4] Running canonical Rust application-boundary tests..."
 cargo test -p janavani-application -- --nocapture
 
-printf '%s\n' "[4/4] Running Rust/Dioxus package tests..."
+printf '%s\n' "[4/4] Running existing Rust/Dioxus client package tests..."
 if [[ -f "$ROOT_DIR/src/web_dioxus/Cargo.toml" ]]; then
     (
         cd "$ROOT_DIR/src/web_dioxus"
-        cargo test -- --nocapture
+        cargo test --manifest-path Cargo.toml -- --nocapture
     )
 else
     printf '%s\n' "Rust/Dioxus package not present; skipping client suite."
