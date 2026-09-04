@@ -16,15 +16,10 @@ from documents.complaint_builder import build_complaint
 from documents.document_contract import DocumentFormat
 from documents.legacy_complaint_adapter import complaint_to_document_draft
 from services.authority_service import find_authority
-from services.case_migration import (
-    get_case_repository,
-    persist_generated_complaint,
-)
+from services.case_migration import persist_generated_complaint
 from storage.artifact_blob import ArtifactBlobStore
 from storage.artifact_blob_factory import create_artifact_blob_store
-from storage.repositories.artifact_provider import (
-    create_document_artifact_repository,
-)
+from storage.repositories.artifact_provider import create_document_artifact_repository
 from storage.repositories.civic_case import CivicCaseRepository
 from storage.repositories.document_artifact import DocumentArtifactRepository
 
@@ -40,6 +35,8 @@ class TelegramGenerationDependencies:
 
 def create_telegram_generation_dependencies() -> TelegramGenerationDependencies:
     """Compose the default adapters once at the Telegram application boundary."""
+    from services.case_migration import get_case_repository
+
     return TelegramGenerationDependencies(
         case_repository=get_case_repository(),
         artifact_repository=create_document_artifact_repository(),
@@ -58,10 +55,7 @@ def build_canonical_complaint_artifact(
 ):
     """Build a canonical draft and artifact using injected repositories/providers."""
     complaint_id = str(session["complaint_id"])
-    case = persist_generated_complaint(
-        session,
-        repository=dependencies.case_repository,
-    )
+    case = persist_generated_complaint(session, repository=dependencies.case_repository)
     case = dependencies.case_repository.get(case.case_id) or case
 
     office_id = str(case.related_office_id or "")
@@ -112,10 +106,7 @@ def build_canonical_complaint_artifact(
     return artifact
 
 
-async def handle_generate(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
+async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         user_id = update.callback_query.from_user.id
         message = update.callback_query.message
@@ -130,22 +121,16 @@ async def handle_generate(
 
     dependencies = context.application.bot_data.get("telegram_generation_dependencies")
     if dependencies is None:
-        dependencies = create_telegram_generation_dependencies()
-        context.application.bot_data["telegram_generation_dependencies"] = dependencies
+        raise RuntimeError("Telegram generation dependencies were not composed")
 
     try:
         await message.reply_text("Generating document for your review...")
-        artifact = build_canonical_complaint_artifact(
-            session,
-            dependencies=dependencies,
-        )
-
+        artifact = build_canonical_complaint_artifact(session, dependencies=dependencies)
         with dependencies.blob_store.open(artifact.reference.storage_ref) as handle:
             await message.reply_document(
                 document=handle,
                 filename=Path(artifact.reference.storage_ref).name,
             )
-
         dependencies.artifact_repository.save(artifact.reference.mark_downloaded())
         set_state(user_id, COMPLETED)
         await message.reply_text(
