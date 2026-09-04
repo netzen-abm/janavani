@@ -22,6 +22,8 @@ from src.core.civic_case import (
     CaseType,
     CivicCase,
 )
+from src.storage.postgres_unit_of_work import postgres_unit_of_work_factory
+from src.storage.unit_of_work import UnitOfWorkFactory
 
 
 class PostgresCivicCasePersistenceError(RuntimeError):
@@ -129,16 +131,27 @@ class PostgresCivicCaseRepository:
     ``connection_factory`` is injected for tests and deployment freedom. When
     omitted, ``JANAVANI_POSTGRES_DSN`` is used with Psycopg 3. The provider
     does not import or initialize Supabase.
+
+    ``unit_of_work_factory`` can be injected when this repository participates
+    in a larger provider-owned transaction boundary. By default it is derived
+    from this repository's connection factory, preserving standalone behavior.
     """
 
-    def __init__(self, connection_factory: Callable[[], Any] | None = None,
-                 dsn: str | None = None) -> None:
+    def __init__(
+        self,
+        connection_factory: Callable[[], Any] | None = None,
+        dsn: str | None = None,
+        unit_of_work_factory: UnitOfWorkFactory | None = None,
+    ) -> None:
         self._dsn = dsn or os.getenv("JANAVANI_POSTGRES_DSN")
         self._connection_factory = connection_factory
         if self._connection_factory is None and not self._dsn:
             raise ValueError(
                 "Provide connection_factory or JANAVANI_POSTGRES_DSN"
             )
+        self._unit_of_work_factory = unit_of_work_factory or (
+            postgres_unit_of_work_factory(self._connect)
+        )
 
     def _connect(self) -> Any:
         if self._connection_factory is not None:
@@ -184,43 +197,43 @@ class PostgresCivicCaseRepository:
 
     def save(self, case: CivicCase) -> None:
         try:
-            with self._connect() as conn:
-                with conn.transaction():
-                    with conn.cursor(row_factory=self._row_factory()) as cur:
-                        cur.execute(
-                            "SELECT version, created_at "
-                            "FROM civic_cases "
-                            "WHERE case_id = %s FOR UPDATE",
-                            (case.case_id,),
+            with self._unit_of_work_factory() as uow:
+                conn = uow.connection
+                with conn.cursor(row_factory=self._row_factory()) as cur:
+                    cur.execute(
+                        "SELECT version, created_at "
+                        "FROM civic_cases "
+                        "WHERE case_id = %s FOR UPDATE",
+                        (case.case_id,),
+                    )
+                    current = cur.fetchone()
+                    now = _now()
+                    if current is None:
+                        persisted_version = 1
+                        created_at = case.created_at or now
+                        self._insert_case(
+                            cur, case, created_at, now, persisted_version
                         )
-                        current = cur.fetchone()
-                        now = _now()
-                        if current is None:
-                            persisted_version = 1
-                            created_at = case.created_at or now
-                            self._insert_case(
-                                cur, case, created_at, now, persisted_version
+                    else:
+                        current_version = int(current["version"])
+                        if case.version != current_version:
+                            raise PostgresCivicCaseConcurrencyError(
+                                f"Expected version {case.version}, "
+                                f"found {current_version} for {case.case_id}"
                             )
-                        else:
-                            current_version = int(current["version"])
-                            if case.version != current_version:
-                                raise PostgresCivicCaseConcurrencyError(
-                                    f"Expected version {case.version}, "
-                                    f"found {current_version} for {case.case_id}"
-                                )
-                            persisted_version = current_version + 1
-                            created_at = str(current["created_at"])
-                            self._update_case(
-                                cur,
-                                case,
-                                created_at,
-                                now,
-                                persisted_version,
-                                current_version,
-                            )
+                        persisted_version = current_version + 1
+                        created_at = str(current["created_at"])
+                        self._update_case(
+                            cur,
+                            case,
+                            created_at,
+                            now,
+                            persisted_version,
+                            current_version,
+                        )
 
-                        self._persist_events(cur, case)
-                        self._persist_refs(cur, case)
+                    self._persist_events(cur, case)
+                    self._persist_refs(cur, case)
 
             case.created_at = created_at
             case.updated_at = now
