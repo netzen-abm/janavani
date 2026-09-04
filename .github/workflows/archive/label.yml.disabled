@@ -1,0 +1,25 @@
+# ARCHIVED — intentionally disabled.
+#
+# Archived because the former active workflow referenced a missing
+# .github/labeler.yml configuration. Its action pin was also not the
+# verified actions/labeler v7.0.0 commit. No active workflow depends on this
+# file. Restore only after a real label taxonomy and configuration are defined
+# and verified.
+
+# Original workflow:
+# name: Labeler
+# on:
+#   pull_request_target:
+#     types: [opened, synchronize, reopened]
+# permissions:
+#   contents: read
+#   pull-requests: write
+# jobs:
+#   label:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Apply PR labels
+#         uses: actions/labeler@bf12e9b6c5e8d7f0c9b2a1e4f6d8c0b3a5e7f9d1
+#         with:
+#           repo-token: ${{ secrets.GITHUB_TOKEN }}
+#           configuration-path: .github/labeler.yml
