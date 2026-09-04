@@ -59,7 +59,8 @@ fn main() {
             capture_output=True,
             text=True,
         )
-        return json.loads(result.stdout)
+        matrix = json.loads(result.stdout)
+        return {status: sorted(targets) for status, targets in matrix.items()}
 
 
 def test_python_contract_contains_every_case_status():
