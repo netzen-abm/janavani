@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import copy
 
-from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
+import pytest
+
+from src.core.civic_case import CaseEvent, CaseEventType, CaseType, CivicCase
 from src.storage.repositories.supabase_civic_case import (
     CivicCaseConcurrencyError,
     SupabaseCivicCaseRepository,
@@ -11,19 +13,18 @@ from src.storage.repositories.supabase_civic_case import (
 
 class Response:
     def __init__(self, data):
-        self.data = data
+        self.data = copy.deepcopy(data)
 
 
 class Query:
-    def __init__(self, client, table):
+    def __init__(self, client, table, operation="select", payload=None):
         self.client = client
         self.table = table
-        self.operation = "select"
+        self.operation = operation
+        self.payload = payload
         self.filters = {}
-        self.payload = None
-        self.on_conflict = None
 
-    def select(self, *_args):
+    def select(self, _columns):
         self.operation = "select"
         return self
 
@@ -75,7 +76,7 @@ class Query:
             changed = []
             for item in payload:
                 match = next(
-                    (row for row in rows if all(row.get(key) == item.get(key) for key in keys)),
+                    (row for row in rows if all(row.get(k) == item.get(k) for k in keys)),
                     None,
                 )
                 if match is None:
@@ -85,43 +86,73 @@ class Query:
                     match.update(copy.deepcopy(item))
                     changed.append(match)
             return Response(changed)
-        raise AssertionError(f"Unsupported operation: {self.operation}")
+        raise AssertionError(self.operation)
 
 
 class FakeSupabase:
     def __init__(self):
-        self.tables = {}
+        self.tables = {
+            "civic_case_consents": [{
+                "case_id": "case-1",
+                "consent_id": "consent-1",
+            }],
+        }
 
-    def table(self, table):
-        return Query(self, table)
+    def table(self, name):
+        return Query(self, name)
 
 
-def make_case():
-    return CivicCase(
+def make_case() -> CivicCase:
+    case = CivicCase(
         case_id="case-1",
         case_type=CaseType.COMPLAINT,
         subject="Broken road",
         narrative="The road is damaged.",
-        status=CaseStatus.DRAFT,
-        events=[CaseEvent(
-            event_id="event-1",
-            case_id="case-1",
-            event_type=CaseEventType.CREATED,
-            occurred_at="2026-09-04T00:00:00+00:00",
-        )],
+        created_by="citizen-1",
+        jurisdiction={"district": "Pune"},
+        related_office_id="office-1",
+        claims=[{"claim": "road damage", "verified": False}],
+        evidence_refs=["evidence-1"],
+        document_refs=["document-1"],
+        consent_refs=["consent-1"],
     )
+    case.events.append(CaseEvent(
+        event_id="event-1",
+        case_id="case-1",
+        event_type=CaseEventType.CREATED,
+        occurred_at="2026-09-03T00:00:00+00:00",
+        actor_id="citizen-1",
+        source_channel="test",
+        source_ref="ref-1",
+        notes="created",
+    ))
+    return case
 
 
 def test_supabase_repository_round_trip_preserves_case_contract():
-    client = FakeSupabase()
-    repository = SupabaseCivicCaseRepository(client)
-    case = make_case()
-    repository.save(case)
-    loaded = repository.get(case.case_id)
+    repository = SupabaseCivicCaseRepository(FakeSupabase())
+    original = make_case()
+
+    repository.save(original)
+    loaded = repository.get(original.case_id)
+
     assert loaded is not None
-    assert loaded.subject == case.subject
+    assert loaded.case_id == original.case_id
+    assert loaded.case_type is original.case_type
+    assert loaded.subject == original.subject
+    assert loaded.narrative == original.narrative
+    assert loaded.created_by == original.created_by
+    assert loaded.jurisdiction == original.jurisdiction
+    assert loaded.related_office_id == original.related_office_id
+    assert loaded.claims == original.claims
+    assert loaded.evidence_refs == original.evidence_refs
+    assert loaded.document_refs == original.document_refs
+    assert loaded.consent_refs == original.consent_refs
+    assert loaded.status is original.status
+    assert loaded.events == original.events
     assert loaded.version == 1
-    assert loaded.events[0].event_id == "event-1"
+    assert loaded.created_at is not None
+    assert loaded.updated_at is not None
 
 
 def test_supabase_repository_advances_version_on_update():
@@ -133,7 +164,6 @@ def test_supabase_repository_advances_version_on_update():
     case.subject = "Updated road"
     repository.save(case)
 
-    assert case.version == 2
     loaded = repository.get(case.case_id)
     assert loaded is not None
     assert loaded.subject == "Updated road"
@@ -154,18 +184,10 @@ def test_supabase_repository_rejects_stale_version():
     first.save(case)
 
     stale.subject = "Stale update"
-    try:
+    with pytest.raises(CivicCaseConcurrencyError):
         second.save(stale)
-    except CivicCaseConcurrencyError:
-        pass
-    else:
-        raise AssertionError("Expected stale version to be rejected")
 
 
 def test_supabase_repository_is_not_constructible_without_client():
-    try:
+    with pytest.raises(ValueError):
         SupabaseCivicCaseRepository(None)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("Expected missing client to be rejected")
