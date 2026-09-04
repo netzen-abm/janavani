@@ -1,66 +1,76 @@
-name: Decentralized Stack Verification (CI)
+name: Decentralized Capability Verification
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/lib.rs"
+      - ".github/workflows/verify-decentralized-stack.yml"
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/lib.rs"
+      - ".github/workflows/verify-decentralized-stack.yml"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   validate-independent-features:
-    name: Verify Independent Protocol Features
+    name: Verify Independent Capability Features
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code Repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-    - name: Setup Stable Rust Toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy, rustfmt
-        targets: wasm32-unknown-unknown
+      - name: Set up stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
 
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libssl-dev pkg-config libclang-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev pkg-config libclang-dev
 
-    - name: Cache Cargo Dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-    - name: Verify Code Formatting
-      run: cargo fmt --check
+      - name: Verify Rust formatting
+        run: cargo fmt --check
 
-    # Test each feature entirely independently to prevent overlap bugs
-    - name: Verify Nostr Feature
-      run: cargo test --features nostr
+      # These are capability scaffolds. Validation proves the feature contracts
+      # remain buildable; it does not claim production protocol guarantees.
+      - name: Verify Nostr capability scaffold
+        run: cargo test --features nostr
 
-    - name: Verify Nym Feature
-      run: cargo test --features nym
+      - name: Verify Nym capability scaffold
+        run: cargo test --features nym
 
-    - name: Verify Reticulum Feature
-      run: cargo test --features reticulum
+      - name: Verify Reticulum capability scaffold
+        run: cargo test --features reticulum
 
-    - name: Verify ZKP Feature
-      run: cargo test --features zkp
+      - name: Verify ZKP capability scaffold
+        run: cargo test --features zkp
 
-    - name: Verify Blockchain Feature
-      run: cargo test --features blockchain
+      - name: Verify blockchain capability scaffold
+        run: cargo test --features blockchain
 
-    - name: Verify Freenet Feature (WASM Compilation)
-      run: cargo build --target wasm32-unknown-unknown --features freenet
-
+      - name: Verify Freenet capability scaffold
+        run: cargo build --target wasm32-unknown-unknown --features freenet
