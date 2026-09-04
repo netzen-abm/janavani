@@ -22,6 +22,7 @@ from storage.artifact_blob_factory import create_artifact_blob_store
 from storage.repositories.artifact_provider import create_document_artifact_repository
 from storage.repositories.civic_case import CivicCaseRepository
 from storage.repositories.document_artifact import DocumentArtifactRepository
+from storage.repositories.provider import create_civic_case_repository
 
 
 @dataclass(frozen=True)
@@ -33,12 +34,13 @@ class TelegramGenerationDependencies:
     blob_store: ArtifactBlobStore
 
 
-def create_telegram_generation_dependencies() -> TelegramGenerationDependencies:
-    """Compose the default adapters once at the Telegram application boundary."""
-    from services.case_migration import get_case_repository
-
+def create_telegram_generation_dependencies(
+    *,
+    case_repository: CivicCaseRepository,
+) -> TelegramGenerationDependencies:
+    """Compose Telegram generation dependencies from an explicit case repository."""
     return TelegramGenerationDependencies(
-        case_repository=get_case_repository(),
+        case_repository=case_repository,
         artifact_repository=create_document_artifact_repository(),
         blob_store=create_artifact_blob_store(),
     )
