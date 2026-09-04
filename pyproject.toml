@@ -30,5 +30,8 @@ s3 = [
     "boto3>=1.35.0",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [tool.vercel]
 entrypoint = "src.web.app:app"
