@@ -6,6 +6,7 @@ Surface routers are adapters. Shared civic-case lifecycle semantics live in
 
 from fastapi import FastAPI
 
+from src.config.runtime import validate_runtime_configuration
 from src.web.constitutional_router import router as constitutional_router
 from src.web.civic_case_router import router as civic_case_router
 from src.web.feedback_router import router as feedback_router
@@ -15,6 +16,7 @@ from src.web.legislative_router import router as legislative_router
 
 def create_canonical_app() -> FastAPI:
     """Create the canonical FastAPI application."""
+    validate_runtime_configuration()
     app = FastAPI(title="Janavani Platform API", version="canonical-m3")
 
     app.include_router(feedback_router)
