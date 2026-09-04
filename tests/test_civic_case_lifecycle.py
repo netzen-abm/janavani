@@ -1,15 +1,31 @@
-from src.core.civic_case import CaseEventType, CaseStatus, CivicCase, validate_event_chain
+import pytest
+
+from src.core.case_lifecycle import CASE_STATUS_TRANSITIONS, can_transition, require_transition
+from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase, validate_event_chain
 
 
-def _case(status=CaseStatus.DRAFT, *, consent=True):
+def _case(*, consent=True) -> CivicCase:
     return CivicCase(
         case_id="case-1",
-        case_type="complaint",
+        case_type=CaseType.COMPLAINT,
         subject="Road damage",
         narrative="Road is damaged",
-        status=status,
         consent_refs=["consent-1"] if consent else [],
     )
+
+
+def test_canonical_transition_contract_has_all_statuses():
+    assert set(CASE_STATUS_TRANSITIONS) == set(CaseStatus)
+
+
+def test_transition_helpers_fail_closed():
+    assert can_transition(CaseStatus.DRAFT, CaseStatus.REVIEW)
+    assert can_transition(CaseStatus.SUBMITTED, CaseStatus.ACKNOWLEDGED)
+    assert not can_transition(CaseStatus.DRAFT, CaseStatus.SUBMITTED)
+    assert not can_transition(CaseStatus.CLOSED, CaseStatus.REVIEW)
+    require_transition(CaseStatus.READY, CaseStatus.SUBMITTING)
+    with pytest.raises(ValueError):
+        require_transition(CaseStatus.READY, CaseStatus.ACKNOWLEDGED)
 
 
 def test_transition_matrix_happy_path():
@@ -31,39 +47,25 @@ def test_transition_matrix_happy_path():
 def test_ready_requires_explicit_consent():
     case = _case(consent=False)
     case.start_review(event_id="e1", occurred_at="2026-01-01T00:00:00Z")
-    try:
+    with pytest.raises(PermissionError):
         case.mark_ready(event_id="e2", occurred_at="2026-01-01T00:01:00Z")
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError("READY must require explicit consent")
 
 
 def test_invalid_transitions_fail_closed():
     case = _case()
-    for method, kwargs in [
-        (case.begin_submission, dict(event_id="e1", occurred_at="now")),
-        (case.submit, dict(event_id="e2", occurred_at="now")),
-        (case.acknowledge, dict(event_id="e3", occurred_at="now")),
-        (case.resolve, dict(event_id="e4", occurred_at="now")),
-        (case.close, dict(event_id="e5", occurred_at="now")),
-    ]:
-        try:
-            method(**kwargs)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("invalid transition was accepted")
+    with pytest.raises(ValueError):
+        case.begin_submission(event_id="e1", occurred_at="now")
+    with pytest.raises(ValueError):
+        case.submit(event_id="e2", occurred_at="now")
+    with pytest.raises(ValueError):
+        case.acknowledge(event_id="e3", occurred_at="now")
+    with pytest.raises(ValueError):
+        case.resolve(event_id="e4", occurred_at="now")
+    with pytest.raises(ValueError):
+        case.close(event_id="e5", occurred_at="now")
 
 
 def test_event_chain_rejects_events_after_closed():
-    case = _case(status=CaseStatus.CLOSED)
-    case.events = [
-        case._record.__self__.events[0]
-    ] if False else []
-    # validate_event_chain's closed-state guard is represented by the event sequence;
-    # construct a minimal valid prefix followed by a post-close event.
-    from src.core.civic_case import CaseEvent
     events = [
         CaseEvent("e1", "case-1", CaseEventType.CREATED, "now"),
         CaseEvent("e2", "case-1", CaseEventType.CLOSED, "now"),
