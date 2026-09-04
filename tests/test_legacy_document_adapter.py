@@ -1,8 +1,8 @@
+from src.documents.artifact_service import generate_artifact
 from src.documents.document_contract import DocumentFormat
 from src.documents.legacy_complaint_adapter import complaint_to_document_draft
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
-from src.documents.artifact_service import generate_artifact
 
 
 def test_legacy_complaint_becomes_canonical_draft(tmp_path):
@@ -21,14 +21,13 @@ def test_legacy_complaint_becomes_canonical_draft(tmp_path):
         authority_repository=repo,
     )
     assert draft.document_id == "JV1"
-    assert draft.to.name == "Edathala Panchayat"
+    assert draft.to.name == "Secretary"
     assert draft.sender is not None
     assert draft.legal_ground == "Test Act - 1 - Ground"
 
 
 def test_artifact_has_content_hash(tmp_path):
     repo = InMemoryAuthorityRepository()
-    # Keep this test independent of the CSV provider.
     from src.core.authority import AuthorityContact, AuthorityRecord
 
     repo.save(AuthorityRecord(

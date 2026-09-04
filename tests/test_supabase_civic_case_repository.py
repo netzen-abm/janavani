@@ -62,10 +62,11 @@ class Query:
             rows.extend(copy.deepcopy(payload))
             return Response(payload)
         if self.operation == "update":
+            update_payload = payload[0]
             changed = []
             for row in rows:
                 if all(row.get(k) == v for k, v in self.filters.items()):
-                    row.update(copy.deepcopy(payload))
+                    row.update(copy.deepcopy(update_payload))
                     changed.append(row)
             return Response(changed)
         if self.operation == "upsert":

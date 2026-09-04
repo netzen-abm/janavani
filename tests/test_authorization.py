@@ -3,9 +3,8 @@ from src.access.authorization import (
     AuthorizationPolicy,
     AuthorizationRequest,
 )
-from src.identity.context import anonymous_context
+from src.identity.context import IdentityContext, anonymous_context
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
-from src.identity.context import IdentityContext
 
 
 def context_with_capabilities(*capabilities: str) -> IdentityContext:
@@ -39,7 +38,7 @@ def test_missing_capability_denies_access():
 
 
 def test_anonymous_context_cannot_access_protected_capability():
-    decision = AuthorizationPolicy().evaluate(request(anonymous_context()))
+    decision = AuthorizationPolicy().evaluate(request(anonymous_context("anonymous")))
     assert decision is AuthorizationDecision.DENY
 
 
