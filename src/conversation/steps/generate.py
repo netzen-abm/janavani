@@ -22,7 +22,6 @@ from storage.artifact_blob_factory import create_artifact_blob_store
 from storage.repositories.artifact_provider import create_document_artifact_repository
 from storage.repositories.civic_case import CivicCaseRepository
 from storage.repositories.document_artifact import DocumentArtifactRepository
-from storage.repositories.provider import create_civic_case_repository
 
 
 @dataclass(frozen=True)
