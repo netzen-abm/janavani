@@ -19,10 +19,7 @@ from documents.complaint_builder import build_complaint
 from services.authority_service import find_authority
 from services.case_migration import get_case_repository, persist_generated_complaint
 from storage.artifact_blob_factory import create_artifact_blob_store
-from storage.repositories.document_artifact import InMemoryDocumentArtifactRepository
-
-
-_ARTIFACT_REPOSITORY = InMemoryDocumentArtifactRepository()
+from storage.repositories.artifact_provider import create_document_artifact_repository
 
 
 def _document_format(value: str) -> DocumentFormat:
@@ -72,7 +69,8 @@ def build_canonical_complaint_artifact(session: dict):
         output_dir,
         blob_store=create_artifact_blob_store(),
     )
-    _ARTIFACT_REPOSITORY.save(artifact.reference)
+    artifact_repository = create_document_artifact_repository()
+    artifact_repository.save(artifact.reference)
 
     case = repository.get(case.case_id) or case
     artifact_id = artifact.reference.artifact_id
@@ -115,7 +113,8 @@ async def handle_generate(
                 filename=Path(artifact.path).name,
             )
 
-        _ARTIFACT_REPOSITORY.save(artifact.reference.mark_downloaded())
+        artifact_repository = create_document_artifact_repository()
+        artifact_repository.save(artifact.reference.mark_downloaded())
         set_state(user_id, COMPLETED)
         await message.reply_text(
             "✅ Document generated and provided for your review, printing, "
