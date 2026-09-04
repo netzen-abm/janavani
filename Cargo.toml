@@ -4,6 +4,16 @@ version = "0.1.0"
 edition = "2021"
 description = "A citizen-governance bridge with modular decentralized capability scaffolding"
 
+[workspace]
+members = [
+    "crates/janavani-core",
+    "crates/janavani-application",
+]
+exclude = [
+    "src/web_dioxus",
+]
+resolver = "2"
+
 [features]
 default = []
 # Feature switches remain independent. Current implementations are scaffolds.

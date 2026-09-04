@@ -51,7 +51,10 @@ impl CaseStatus {
         if self.can_transition(target) {
             Ok(())
         } else {
-            Err(LifecycleError::InvalidTransition { from: self, to: target })
+            Err(LifecycleError::InvalidTransition {
+                from: self,
+                to: target,
+            })
         }
     }
 
@@ -113,7 +116,13 @@ mod tests {
 
     #[test]
     fn serde_uses_contract_values() {
-        assert_eq!(serde_json::to_string(&CaseStatus::FollowUp).unwrap(), "\"follow_up\"");
-        assert_eq!(serde_json::to_string(&CaseStatus::InProgress).unwrap(), "\"in_progress\"");
+        assert_eq!(
+            serde_json::to_string(&CaseStatus::FollowUp).unwrap(),
+            "\"follow_up\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CaseStatus::InProgress).unwrap(),
+            "\"in_progress\""
+        );
     }
 }

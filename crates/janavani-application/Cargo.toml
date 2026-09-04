@@ -1,0 +1,9 @@
+[package]
+name = "janavani-application"
+version = "0.1.0"
+edition = "2021"
+description = "Provider-neutral application use-case boundary for Janavani"
+license = "MIT"
+
+[dependencies]
+janavani-core = { path = "../janavani-core" }
