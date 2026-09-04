@@ -15,6 +15,11 @@ class PostgresUnitOfWork(UnitOfWork):
         self.resource: Any | None = None
         self._transaction: Any | None = None
 
+    @property
+    def connection(self) -> Any | None:
+        """Compatibility alias for PostgreSQL-specific repository code."""
+        return self.resource
+
     def __enter__(self) -> Self:
         self.resource = self._connection_factory()
         self._transaction = self.resource.transaction()
