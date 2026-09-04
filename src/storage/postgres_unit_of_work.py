@@ -1,7 +1,8 @@
 """PostgreSQL implementation of the shared Unit-of-Work contract."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, Self
 
 from src.storage.unit_of_work import UnitOfWork
 
@@ -14,7 +15,7 @@ class PostgresUnitOfWork(UnitOfWork):
         self.connection: Any | None = None
         self._transaction: Any | None = None
 
-    def __enter__(self) -> "PostgresUnitOfWork":
+    def __enter__(self) -> Self:
         self.connection = self._connection_factory()
         self._transaction = self.connection.transaction()
         self._transaction.__enter__()
@@ -28,7 +29,9 @@ class PostgresUnitOfWork(UnitOfWork):
         finally:
             self._transaction = None
             if self.connection is not None:
-                self.connection.close()
+                close = getattr(self.connection, "close", None)
+                if close is not None:
+                    close()
                 self.connection = None
 
 
