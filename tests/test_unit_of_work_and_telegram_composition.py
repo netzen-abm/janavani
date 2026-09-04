@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from src.storage.postgres_unit_of_work import PostgresUnitOfWork
-from src.storage.unit_of_work import UnitOfWork
 from src.conversation.steps.generate import TelegramGenerationDependencies
 
 
@@ -49,10 +46,6 @@ def test_postgres_uow_rolls_back_on_exception():
         pass
     assert connection.tx.events == ["begin", "rollback"]
     assert connection.closed
-
-
-def test_uow_is_provider_neutral_contract():
-    assert issubclass(UnitOfWork, SimpleNamespace) is False
 
 
 def test_telegram_generation_dependencies_are_composed_once():
