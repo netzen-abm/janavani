@@ -4,8 +4,8 @@
 # JANAVANI — CANONICAL SYSTEM TEST ORCHESTRATOR
 # ============================================================================
 # Purpose:
-#   Run the repository's current Python and Rust/Dioxus validation suites from
-#   one deterministic entry point.
+#   Run the repository's Python domain/application tests and Rust validation
+#   suites from one deterministic entry point.
 #
 # Rules:
 #   - Fail fast on test/build failure.
@@ -33,20 +33,26 @@ printf '\n'
 # --------------------------------------------------------------------------
 # 1. Python test suite
 # --------------------------------------------------------------------------
-printf '%s\n' "[1/2] Running complete Python test suite..."
+printf '%s\n' "[1/3] Running complete Python test suite..."
 python -m pytest tests -v
 
 # --------------------------------------------------------------------------
-# 2. Rust/Dioxus package tests (only when the package is present)
+# 2. Canonical Rust domain kernel
 # --------------------------------------------------------------------------
+printf '%s\n' "[2/3] Running canonical Rust domain-kernel tests..."
+cargo test --manifest-path "$ROOT_DIR/crates/janavani-core/Cargo.toml" -- --nocapture
+
+# --------------------------------------------------------------------------
+# 3. Rust/Dioxus client package (only when the package is present)
+# --------------------------------------------------------------------------
+printf '%s\n' "[3/3] Running Rust/Dioxus package tests..."
 if [[ -f "$ROOT_DIR/src/web_dioxus/Cargo.toml" ]]; then
-    printf '%s\n' "[2/2] Running Rust/Dioxus package tests..."
     (
         cd "$ROOT_DIR/src/web_dioxus"
         cargo test -- --nocapture
     )
 else
-    printf '%s\n' "[2/2] Rust/Dioxus package not present; skipping Rust suite."
+    printf '%s\n' "Rust/Dioxus package not present; skipping client suite."
 fi
 
 printf '\n======================================================================\n'
