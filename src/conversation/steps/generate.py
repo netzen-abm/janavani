@@ -33,12 +33,13 @@ class TelegramGenerationDependencies:
     blob_store: ArtifactBlobStore
 
 
-def create_telegram_generation_dependencies() -> TelegramGenerationDependencies:
-    """Compose the default adapters once at the Telegram application boundary."""
-    from services.case_migration import get_case_repository
-
+def create_telegram_generation_dependencies(
+    *,
+    case_repository: CivicCaseRepository,
+) -> TelegramGenerationDependencies:
+    """Compose Telegram generation dependencies from an explicit case repository."""
     return TelegramGenerationDependencies(
-        case_repository=get_case_repository(),
+        case_repository=case_repository,
         artifact_repository=create_document_artifact_repository(),
         blob_store=create_artifact_blob_store(),
     )

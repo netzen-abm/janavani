@@ -5,6 +5,7 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_GENERATE
 from services.case_migration import record_submission_consent
+from conversation.steps.generate import TelegramGenerationDependencies
 
 
 async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -25,8 +26,15 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     session = get_session(user_id)
+    dependencies = context.application.bot_data.get("telegram_generation_dependencies")
+    if not isinstance(dependencies, TelegramGenerationDependencies):
+        raise RuntimeError("Telegram generation dependencies were not composed")
+
     try:
-        record_submission_consent(session)
+        record_submission_consent(
+            session,
+            repository=dependencies.case_repository,
+        )
     except Exception as exc:
         print("ERROR in handle_consent:", exc)
         await update.message.reply_text(
