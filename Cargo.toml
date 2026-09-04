@@ -9,6 +9,9 @@ members = [
     "crates/janavani-core",
     "crates/janavani-application",
 ]
+exclude = [
+    "src/web_dioxus",
+]
 resolver = "2"
 
 [features]
