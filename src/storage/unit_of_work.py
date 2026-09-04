@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager
-from typing import Protocol, Self
+from typing import Any, Protocol, Self
 
 
 class UnitOfWork(AbstractContextManager, Protocol):
     """Transaction boundary shared by storage providers.
 
-    A Unit of Work begins one provider-owned transaction and yields a transaction
-    context that coordinated repositories can use. The provider commits only
-    when the context exits successfully; exceptions cause rollback.
+    A Unit of Work owns one provider resource and its transaction lifecycle.
+    Coordinated provider adapters use ``resource`` for transaction-scoped
+    persistence without exposing a database-specific type in this contract.
     """
+
+    resource: Any
 
     def __enter__(self) -> Self:
         ...
