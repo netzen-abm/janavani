@@ -11,7 +11,6 @@ from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
 
-from documents.artifact_ref import ArtifactState
 from documents.artifact_service import generate_artifact
 from documents.document_contract import DocumentFormat
 from documents.legacy_complaint_adapter import complaint_to_document_draft
@@ -63,11 +62,12 @@ def build_canonical_complaint_artifact(session: dict):
 
     document_format = _document_format(str(session.get("format", "pdf")))
     output_dir = Path("/tmp") / "janavani-artifacts" / "rendered"
+    blob_store = create_artifact_blob_store()
     artifact = generate_artifact(
         draft,
         document_format,
         output_dir,
-        blob_store=create_artifact_blob_store(),
+        blob_store=blob_store,
     )
     artifact_repository = create_document_artifact_repository()
     artifact_repository.save(artifact.reference)
@@ -83,7 +83,7 @@ def build_canonical_complaint_artifact(session: dict):
         )
         repository.save(case)
 
-    return artifact
+    return artifact, blob_store
 
 
 async def handle_generate(
@@ -105,12 +105,12 @@ async def handle_generate(
 
     try:
         await message.reply_text("Generating document for your review...")
-        artifact = build_canonical_complaint_artifact(session)
+        artifact, blob_store = build_canonical_complaint_artifact(session)
 
-        with open(artifact.path, "rb") as handle:
+        with blob_store.open(artifact.reference.storage_ref) as handle:
             await message.reply_document(
                 document=handle,
-                filename=Path(artifact.path).name,
+                filename=Path(artifact.reference.storage_ref).name,
             )
 
         artifact_repository = create_document_artifact_repository()
