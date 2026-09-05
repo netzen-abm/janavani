@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify cross-language architecture contracts without mutating the repository."""
+"""Verify cross-language architecture contracts without mutation."""
 from __future__ import annotations
 
 import ast
@@ -18,7 +18,7 @@ def python_enum_members(path: pathlib.Path, name: str) -> set[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef) and node.name == name:
             return {
-                item.name
+                target.id
                 for item in node.body
                 if isinstance(item, ast.Assign)
                 for target in item.targets
@@ -31,28 +31,38 @@ def rust_enum_members(text: str, name: str) -> set[str]:
     match = re.search(rf"pub enum {name} \{{(.*?)\n\}}", text, re.S)
     if not match:
         raise ValueError(f"missing Rust enum: {name}")
-    return {
-        item.strip()
-        for item in re.findall(r"^\s*([A-Z][A-Za-z0-9_]*)\s*,", match.group(1), re.M)
-    }
+    return set(re.findall(r"^\s*([A-Z][A-Za-z0-9_]*)\s*,", match.group(1), re.M))
 
 
 def rust_name(python_name: str) -> str:
     return "".join(part.title() for part in python_name.split("_"))
 
 
+def attr_name(node: ast.AST) -> str:
+    if not isinstance(node, ast.Attribute):
+        raise ValueError("lifecycle key is not an enum member")
+    return node.attr
+
+
 def lifecycle_pairs() -> set[tuple[str, str]]:
     tree = ast.parse(PY_LIFECYCLE.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "CASE_STATUS_TRANSITIONS":
-                    value = ast.literal_eval(node.value)
-                    return {
-                        (key.value, item.value)
-                        for key, values in value.items()
-                        for item in values
-                    }
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "CASE_STATUS_TRANSITIONS" for t in node.targets):
+            continue
+        if not isinstance(node.value, ast.Dict):
+            raise ValueError("lifecycle contract is not a dictionary")
+        pairs = set()
+        for key, value in zip(node.value.keys, node.value.values):
+            if not isinstance(value, ast.Call) or not value.args:
+                raise ValueError("lifecycle targets are not statically represented")
+            source = attr_name(key)
+            targets = value.args[0]
+            if not isinstance(targets, ast.Set):
+                raise ValueError("lifecycle targets are not a set")
+            pairs.update((source, attr_name(target)) for target in targets.elts)
+        return pairs
     raise ValueError("missing CASE_STATUS_TRANSITIONS")
 
 
@@ -60,18 +70,18 @@ def rust_lifecycle_pairs(text: str) -> set[tuple[str, str]]:
     match = re.search(r"pub fn can_transition\(self, target: Self\).*?\n    \}\n", text, re.S)
     if not match:
         raise ValueError("missing Rust can_transition")
+    body = match.group(0)
     pairs: set[tuple[str, str]] = set()
-    for source, targets in re.findall(
-        r"\n            (\w+) => matches!\(target, ([^\n]+)\),", match.group(0)
-    ):
-        for target in re.findall(r"\b(\w+)\b", targets):
-            pairs.add((source, target))
+    for source, targets in re.findall(r"\n            (\w+) => matches!\(target, ([^\n]+)\),", body):
+        pairs.update((source, target) for target in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b", targets))
     block = re.search(
-        r"Acknowledged => \{\s*matches!\(target, ([^\n]+)\)\s*\}",
-        match.group(0),
+        r"Acknowledged => \{\s*matches!\(target, ([^\n]+)\)\s*\}", body
     )
     if block:
-        pairs.update(("Acknowledged", target) for target in re.findall(r"\b(\w+)\b", block.group(1)))
+        pairs.update(
+            ("Acknowledged", target)
+            for target in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b", block.group(1))
+        )
     return pairs
 
 
@@ -80,9 +90,9 @@ def check_enum_parity() -> list[str]:
     failures = []
     for name in ("CaseStatus", "CaseEventType"):
         python = python_enum_members(PY_DOMAIN, name)
-        rust_members = rust_enum_members(rust, name)
+        actual = rust_enum_members(rust, name)
         expected = {rust_name(item) for item in python}
-        if expected != rust_members:
+        if expected != actual:
             failures.append(f"enum parity mismatch: {name}")
     return failures
 
@@ -96,10 +106,12 @@ def check_lifecycle_parity() -> list[str]:
 
 def check_legacy_references() -> list[str]:
     failures = []
+    suffixes = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh"}
+    skipped = {".git", "target", "node_modules", "__pycache__", "archive"}
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh"}:
+        if not path.is_file() or path.suffix not in suffixes:
             continue
-        if any(part in {".git", "target", "node_modules", "__pycache__", "archive"} for part in path.parts):
+        if any(part in skipped for part in path.parts):
             continue
         if path.name == "architecture_conformance.py":
             continue
@@ -110,7 +122,12 @@ def check_legacy_references() -> list[str]:
 
 
 def main() -> int:
-    failures = check_enum_parity() + check_lifecycle_parity() + check_legacy_references()
+    try:
+        failures = check_enum_parity() + check_lifecycle_parity() + check_legacy_references()
+    except (OSError, SyntaxError, ValueError) as exc:
+        print("ARCHITECTURE CONFORMANCE FAILED")
+        print(f"unable to evaluate contract: {exc}")
+        return 1
     if failures:
         print("ARCHITECTURE CONFORMANCE FAILED")
         print("\n".join(failures))
