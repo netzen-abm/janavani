@@ -1,5 +1,6 @@
 name: Architecture Guard
 
+# Deterministic architecture validation; no mutation or automatic merge.
 on:
   push:
     branches: [main]
