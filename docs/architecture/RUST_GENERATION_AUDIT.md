@@ -1,60 +1,60 @@
-# Rust Generation Audit
+# Rust and Dioxus Generation Audit
 
-**Date:** 2026-09-04  
-**Status:** Baseline audit for canonical Rust/Web convergence
+## Purpose
 
-## Finding
+This audit records the architectural disposition of the legacy Rust/Dioxus generations before any consolidation or archival action.
 
-Janavani already contains multiple historical Rust/Dioxus generations. The repository search confirms active `src/web_dioxus` and historical `janavani_v2` / `janavani_v3` application trees. These are not to be treated as competing canonical runtimes.
+## Canonical direction
 
-## Canonical decision
+`crates/janavani-core` is the canonical Rust domain kernel.
 
-| Asset | Disposition | Reason |
-|---|---|---|
-| `crates/janavani-core` | **Canonical / active** | Shared domain kernel; language/runtime-neutral from surfaces and free of transport/storage/UI dependencies |
-| `crates/janavani-application` | **Canonical / active** | Shared use-case boundary for Web, Telegram and future surfaces |
-| `src/web_dioxus` | **Existing Web implementation / migration source** | Real Dioxus client already exists; audit and reuse incrementally rather than recreate |
-| `janavani_v2` | **Historical / archive candidate** | Generation-specific application tree; do not extend as a new canonical root |
-| `janavani_v3` | **Historical / archive candidate** | Generation-specific application tree; do not extend as a new canonical root |
-| root Rust package | **Compatibility/scaffolding** | Existing decentralized capability scaffolding; not the canonical domain kernel |
+`crates/janavani-application` is the provider-neutral application boundary.
 
-## Important constraint
+Legacy Dioxus generations are not canonical domain implementations and remain outside the active Cargo workspace unless deliberately migrated.
 
-This audit does **not** delete or archive any generation yet. Archive eligibility must be established from dependency/reference/build evidence first. This preserves the archive-first rule.
+## Generation findings
 
-## Target Rust layering
+### `src/web_dioxus`
 
-```text
-Surface adapters
-  Web/Dioxus | Telegram | WhatsApp | future mobile
-          |
-          v
-janavani-application
-  use cases / application contracts
-          |
-          v
-janavani-core
-  domain entities / invariants / lifecycle / events
-          |
-          v
-provider adapters
-  PostgreSQL | Supabase | memory | external systems
-```
+Older standalone Dioxus web application named `janavani-dioxus-web`, version `1.0.0`, with direct browser/runtime dependencies.
 
-The application crate must not become a second domain model. It orchestrates use cases and ports; canonical invariants remain in `janavani-core`.
+Disposition: **legacy candidate; do not merge into canonical workspace yet**.
 
-## Web implication
+Reason: it is a presentation/runtime generation and does not consume the canonical `janavani-core` or `janavani-application` contracts.
 
-The existing Dioxus Web client is a migration asset, not a reason to replace the public static website. The intended hybrid model is:
+### `janavani_v2`
 
-- public/SEO website remains independently deployable;
-- citizen workspace evolves as a Dioxus/WASM surface;
-- both consume the same ecosystem/application contracts where appropriate;
-- no UI surface owns CivicCase lifecycle rules.
+Separate Dioxus package named `janavani_v2`, version `2.0.0`, targeting web and mobile. It contains experimental SOS, protocol-overlay, accountability, and related capabilities.
 
-## Next audit gates before archival
+Disposition: **legacy experimental generation; preserve for evidence, do not make canonical**.
 
-1. Identify imports/references from active code, scripts and CI into `janavani_v2`, `janavani_v3`, and `src/web_dioxus`.
-2. Determine which historical capabilities have no equivalent in the canonical kernel/application boundary.
-3. Preserve any unique capability as migration evidence before archiving.
-4. Archive only after evidence and CI/build checks show the active path no longer depends on it.
+Reason: capability ideas may be reusable, but the implementation is coupled to an independent application state and module structure rather than the current canonical boundaries.
+
+### `janavani_v3`
+
+Separate Dioxus package named `janavani_v3`, version `3.0.0`, targeting web, mobile, and desktop. It contains experimental transport, privacy-audit, capability, and legal-shield modules.
+
+Disposition: **legacy experimental generation; preserve for evidence, do not make canonical**.
+
+Reason: it contains architectural and security-sensitive experiments that require independent validation. It must not be promoted merely because it is newer by version number.
+
+## Consolidation rule
+
+Do not create `janavani_v4` or another generation label.
+
+Future Rust/Dioxus work must build against the canonical crates and capability contracts. Reusable ideas from legacy generations should be extracted as small, independently reviewed capabilities rather than copied wholesale.
+
+## Archive rule
+
+No legacy generation is deleted by this audit. Archive or remove only after an evidence review confirms that required behavior, documentation, tests, and historical context have been preserved elsewhere.
+
+## Immediate recommendation
+
+1. Keep all three generations outside the canonical Cargo workspace.
+2. Inventory reusable capabilities from each generation before archival.
+3. Prioritize migration by capability value and contract compatibility, not generation number.
+4. Address Python/Rust field-type parity in a dedicated change before relying on Rust as the full canonical case representation.
+
+## Important parity finding
+
+The Python canonical `CivicCase` represents `jurisdiction` as `dict[str, Any]` and `claims` as `list[dict[str, Any]]`. The Rust kernel currently uses narrower `BTreeMap<String, String>` representations. This is a known parity boundary and should be handled separately from legacy-generation cleanup.
