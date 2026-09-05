@@ -44,21 +44,38 @@ def attr_name(node: ast.AST) -> str:
     return node.attr
 
 
+def lifecycle_assignment(node: ast.AST) -> ast.Dict | None:
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+        value = node.value
+    elif isinstance(node, ast.AnnAssign):
+        targets = [node.target]
+        value = node.value
+    else:
+        return None
+    if not any(
+        isinstance(target, ast.Name)
+        and target.id == "CASE_STATUS_TRANSITIONS"
+        for target in targets
+    ):
+        return None
+    if not isinstance(value, ast.Dict):
+        raise ValueError("lifecycle contract is not a dictionary")
+    return value
+
+
 def lifecycle_pairs() -> set[tuple[str, str]]:
     tree = ast.parse(PY_LIFECYCLE.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        value = lifecycle_assignment(node)
+        if value is None:
             continue
-        if not any(isinstance(t, ast.Name) and t.id == "CASE_STATUS_TRANSITIONS" for t in node.targets):
-            continue
-        if not isinstance(node.value, ast.Dict):
-            raise ValueError("lifecycle contract is not a dictionary")
         pairs = set()
-        for key, value in zip(node.value.keys, node.value.values):
-            if not isinstance(value, ast.Call) or not value.args:
+        for key, target_value in zip(value.keys, value.values):
+            if not isinstance(target_value, ast.Call) or not target_value.args:
                 raise ValueError("lifecycle targets are not statically represented")
             source = attr_name(key)
-            targets = value.args[0]
+            targets = target_value.args[0]
             if not isinstance(targets, ast.Set):
                 raise ValueError("lifecycle targets are not a set")
             pairs.update((source, attr_name(target)) for target in targets.elts)
