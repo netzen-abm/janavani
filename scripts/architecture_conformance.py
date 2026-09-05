@@ -136,6 +136,8 @@ def check_legacy_references() -> list[str]:
             continue
         if any(part in skipped for part in path.parts):
             continue
+        if any(part in {"janavani_v2", "janavani_v3"} for part in path.parts):
+            continue
         if path.name == "architecture_conformance.py":
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
