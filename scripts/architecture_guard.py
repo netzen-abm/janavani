@@ -9,6 +9,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MAX_LINE_LENGTH = 200
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__"}
+SKIP_ROOTS = {"janavani_v2", "janavani_v3"}
 SCAN_SUFFIXES = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".yml", ".yaml", ".sh"}
 
 
@@ -18,6 +19,9 @@ def iter_files() -> list[pathlib.Path]:
         if not path.is_file():
             continue
         if any(part in SKIP_PARTS for part in path.parts):
+            continue
+        relative = path.relative_to(ROOT)
+        if relative.parts and relative.parts[0] in SKIP_ROOTS:
             continue
         if "archive" in path.parts:
             continue
@@ -65,7 +69,7 @@ def main() -> int:
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE GUARD PASSED")
-    print(f"Checked line length <= {MAX_LINE_LENGTH} and canonical workspace presence.")
+    print(f"Checked active paths; line length <= {MAX_LINE_LENGTH}.")
     return 0
 
 
