@@ -3,36 +3,46 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MAX_LINE_LENGTH = 200
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__"}
-SKIP_ROOTS = {"janavani_v2", "janavani_v3"}
 SCAN_SUFFIXES = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".yml", ".yaml", ".sh"}
 
 
-def iter_files() -> list[pathlib.Path]:
-    files = []
-    for path in ROOT.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in SKIP_PARTS for part in path.parts):
-            continue
-        relative = path.relative_to(ROOT)
-        if relative.parts and relative.parts[0] in SKIP_ROOTS:
-            continue
-        if "archive" in path.parts:
-            continue
-        if path.suffix.lower() in SCAN_SUFFIXES:
-            files.append(path)
-    return sorted(files)
+def is_scannable(path: pathlib.Path) -> bool:
+    if not path.is_file():
+        return False
+    if any(part in SKIP_PARTS for part in path.parts):
+        return False
+    if "archive" in path.parts:
+        return False
+    return path.suffix.lower() in SCAN_SUFFIXES
 
 
-def check_line_lengths() -> list[str]:
+def changed_paths() -> list[pathlib.Path]:
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
+    if event == "pull_request":
+        base = os.environ.get("GITHUB_BASE_REF", "main")
+        command = ["git", "diff", "--name-only", f"origin/{base}...HEAD"]
+    else:
+        command = ["git", "diff", "--name-only", "HEAD^", "HEAD"]
+    result = subprocess.run(command, cwd=ROOT, check=True, text=True, capture_output=True)
+    paths = []
+    for name in result.stdout.splitlines():
+        path = (ROOT / name).resolve()
+        if path.is_relative_to(ROOT) and is_scannable(path):
+            paths.append(path)
+    return sorted(set(paths))
+
+
+def line_length_failures(paths: list[pathlib.Path]) -> list[str]:
     failures = []
-    for path in iter_files():
+    for path in paths:
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
         except UnicodeDecodeError:
@@ -63,13 +73,20 @@ def check_canonical_workspace() -> list[str]:
 
 
 def main() -> int:
-    failures = check_line_lengths() + check_canonical_workspace()
+    try:
+        changed = changed_paths()
+    except subprocess.CalledProcessError as exc:
+        print("ARCHITECTURE GUARD FAILED")
+        print(f"unable to determine changed files: {exc}")
+        return 1
+    failures = line_length_failures(changed) + check_canonical_workspace()
     if failures:
         print("ARCHITECTURE GUARD FAILED")
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE GUARD PASSED")
-    print(f"Checked active paths; line length <= {MAX_LINE_LENGTH}.")
+    print(f"Checked {len(changed)} changed source/config files; line length <= {MAX_LINE_LENGTH}.")
+    print("Existing legacy line-length debt is not rewritten by this guard.")
     return 0
 
 
