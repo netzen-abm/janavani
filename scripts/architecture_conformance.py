@@ -11,6 +11,28 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY_LIFECYCLE = ROOT / "src/core/case_lifecycle.py"
 PY_DOMAIN = ROOT / "src/core/civic_case.py"
 RUST_CORE = ROOT / "crates/janavani-core/src/lib.rs"
+RUST_APP = ROOT / "crates/janavani-application/src"
+
+
+PROVIDER_IMPORTS = (
+    "src.storage",
+    "src.database",
+    "src.web",
+    "src.bot",
+    "src.services",
+)
+RUST_PROVIDER_TOKENS = (
+    "sqlx",
+    "diesel",
+    "reqwest",
+    "axum",
+    "actix",
+    "teloxide",
+    "dioxus",
+    "wasm_bindgen",
+    "aws_sdk",
+    "redis",
+)
 
 
 def python_enum_members(path: pathlib.Path, name: str) -> set[str]:
@@ -127,6 +149,31 @@ def check_lifecycle_parity() -> list[str]:
     return [] if expected == actual else ["lifecycle transition parity mismatch"]
 
 
+def check_provider_boundaries() -> list[str]:
+    failures = []
+    for path in sorted((ROOT / "src/core").rglob("*.py")):
+        text = path.read_text(encoding="utf-8", errors="strict")
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if re.match(r"\s*(?:from|import)\s+", line):
+                if any(token in line for token in PROVIDER_IMPORTS):
+                    failures.append(
+                        f"domain imports provider layer: {path.relative_to(ROOT)}:{line_no}"
+                    )
+    for root in (RUST_CORE, RUST_APP):
+        if not root.exists():
+            raise ValueError(f"missing canonical Rust source: {root}")
+        paths = [root] if root.is_file() else sorted(root.rglob("*.rs"))
+        for path in paths:
+            text = path.read_text(encoding="utf-8", errors="strict")
+            for token in RUST_PROVIDER_TOKENS:
+                if re.search(rf"\b{re.escape(token)}\b", text):
+                    failures.append(
+                        f"canonical Rust layer references provider: "
+                        f"{path.relative_to(ROOT)}:{token}"
+                    )
+    return failures
+
+
 def check_legacy_references() -> list[str]:
     failures = []
     suffixes = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh"}
@@ -148,7 +195,12 @@ def check_legacy_references() -> list[str]:
 
 def main() -> int:
     try:
-        failures = check_enum_parity() + check_lifecycle_parity() + check_legacy_references()
+        failures = (
+            check_enum_parity()
+            + check_lifecycle_parity()
+            + check_provider_boundaries()
+            + check_legacy_references()
+        )
     except (OSError, SyntaxError, ValueError) as exc:
         print("ARCHITECTURE CONFORMANCE FAILED")
         print(f"unable to evaluate contract: {exc}")
@@ -158,7 +210,7 @@ def main() -> int:
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE CONFORMANCE PASSED")
-    print("Rust/Python enum and lifecycle parity verified; no active legacy references found.")
+    print("Rust/Python parity, provider boundaries, and legacy references verified.")
     return 0
 
 
