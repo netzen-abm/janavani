@@ -72,9 +72,15 @@ def lifecycle_pairs() -> set[tuple[str, str]]:
             continue
         pairs = set()
         for key, target_value in zip(value.keys, value.values):
-            if not isinstance(target_value, ast.Call) or not target_value.args:
+            if not isinstance(target_value, ast.Call):
                 raise ValueError("lifecycle targets are not statically represented")
             source = attr_name(key)
+            if not target_value.args:
+                if not isinstance(target_value.func, ast.Name):
+                    raise ValueError("lifecycle targets are not statically represented")
+                if target_value.func.id != "frozenset":
+                    raise ValueError("lifecycle targets are not statically represented")
+                continue
             targets = target_value.args[0]
             if not isinstance(targets, ast.Set):
                 raise ValueError("lifecycle targets are not a set")
