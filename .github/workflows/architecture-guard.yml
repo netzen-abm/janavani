@@ -24,3 +24,6 @@ jobs:
 
       - name: Run deterministic architecture guard
         run: python scripts/architecture_guard.py
+
+      - name: Run cross-language architecture conformance
+        run: python scripts/architecture_conformance.py
