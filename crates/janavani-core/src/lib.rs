@@ -5,7 +5,10 @@
 //! dependencies.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap;
+
+pub type JsonObject = BTreeMap<String, Value>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -103,12 +106,12 @@ pub struct CivicCase {
     pub subject: String,
     pub narrative: String,
     pub created_by: Option<String>,
-    pub jurisdiction: BTreeMap<String, String>,
+    pub jurisdiction: JsonObject,
     pub related_organisation_id: Option<String>,
     pub related_office_id: Option<String>,
     pub related_official_id: Option<String>,
     pub related_representative_id: Option<String>,
-    pub claims: Vec<BTreeMap<String, String>>,
+    pub claims: Vec<JsonObject>,
     pub evidence_refs: Vec<String>,
     pub document_refs: Vec<String>,
     pub consent_refs: Vec<String>,
@@ -741,6 +744,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn make_case() -> CivicCase {
         let mut case = CivicCase::new(
@@ -761,7 +765,7 @@ mod tests {
     fn aggregate_preserves_canonical_fields_and_lifecycle() {
         let mut case = make_case();
         case.jurisdiction
-            .insert("district".into(), "Bengaluru Urban".into());
+            .insert("district".into(), json!("Bengaluru Urban"));
         case.related_official_id = Some("official-1".into());
         case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None)
             .unwrap();
@@ -779,6 +783,28 @@ mod tests {
         assert_eq!(case.status, CaseStatus::Acknowledged);
         assert!(case.confirmed_delivery());
         assert_eq!(case.events.len(), 5);
+    }
+
+    #[test]
+    fn json_domain_values_round_trip_without_narrowing() {
+        let mut case = make_case();
+        case.jurisdiction.insert(
+            "district".into(),
+            json!({"name": "Pune", "rank": 3, "active": true}),
+        );
+        case.jurisdiction
+            .insert("levels".into(), json!(["state", "district"]));
+        case.claims.push(BTreeMap::from([
+            ("claim".into(), json!("road damage")),
+            ("verified".into(), json!(false)),
+            ("confidence".into(), json!(0.75)),
+            ("tags".into(), json!(["road", "public-service"])),
+            ("metadata".into(), json!({"source": null})),
+        ]));
+
+        let encoded = serde_json::to_string(&case).unwrap();
+        let decoded: CivicCase = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, case);
     }
 
     #[test]
