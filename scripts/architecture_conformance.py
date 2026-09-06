@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -33,6 +34,33 @@ RUST_PROVIDER_TOKENS = (
     "aws_sdk",
     "redis",
 )
+SURFACE_ROOTS = (
+    ROOT / "src/web",
+    ROOT / "src/adapters",
+    ROOT / "src/commands",
+    ROOT / "src/conversation",
+)
+SURFACE_FILES = {
+    ROOT / "src/bot_telegram.py",
+    ROOT / "src/bot_whatsapp.py",
+    ROOT / "src/bot_messenger.py",
+}
+LIFECYCLE_MUTATORS = {
+    "start_review",
+    "mark_ready",
+    "begin_submission",
+    "queue_submission",
+    "submit",
+    "acknowledge",
+    "follow_up",
+    "respond",
+    "resolve",
+    "escalate",
+    "close",
+    "add_evidence",
+    "add_document",
+    "correct",
+}
 
 
 def python_enum_members(path: pathlib.Path, name: str) -> set[str]:
@@ -174,6 +202,44 @@ def check_provider_boundaries() -> list[str]:
     return failures
 
 
+def changed_files() -> list[pathlib.Path]:
+    base = subprocess.run(
+        ["git", "diff", "--name-only", "origin/" + "main", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [ROOT / item for item in base.stdout.splitlines() if item]
+
+
+def is_surface(path: pathlib.Path) -> bool:
+    return path in SURFACE_FILES or any(
+        root == path or root in path.parents for root in SURFACE_ROOTS
+    )
+
+
+def check_surface_separation() -> list[str]:
+    failures = []
+    for path in changed_files():
+        if path.suffix != ".py" or not is_surface(path):
+            continue
+        text = path.read_text(encoding="utf-8", errors="strict")
+        tree = ast.parse(text, filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            function = node.func
+            if not isinstance(function, ast.Attribute):
+                continue
+            if function.attr in LIFECYCLE_MUTATORS:
+                failures.append(
+                    f"surface directly mutates CivicCase lifecycle: "
+                    f"{path.relative_to(ROOT)}:{node.lineno}"
+                )
+    return failures
+
+
 def check_legacy_references() -> list[str]:
     failures = []
     suffixes = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh"}
@@ -199,9 +265,10 @@ def main() -> int:
             check_enum_parity()
             + check_lifecycle_parity()
             + check_provider_boundaries()
+            + check_surface_separation()
             + check_legacy_references()
         )
-    except (OSError, SyntaxError, ValueError) as exc:
+    except (OSError, SyntaxError, ValueError, subprocess.CalledProcessError) as exc:
         print("ARCHITECTURE CONFORMANCE FAILED")
         print(f"unable to evaluate contract: {exc}")
         return 1
@@ -210,7 +277,7 @@ def main() -> int:
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE CONFORMANCE PASSED")
-    print("Rust/Python parity, provider boundaries, and legacy references verified.")
+    print("Rust/Python parity, provider boundaries, surface separation, and legacy references verified.")
     return 0
 
 
