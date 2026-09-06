@@ -32,6 +32,9 @@ s3 = [
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+markers = [
+    "integration: tests requiring an external integration service",
+]
 
 [tool.vercel]
 entrypoint = "src.web.app:app"
