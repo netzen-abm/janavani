@@ -1,7 +1,5 @@
-//! Canonical Janavani domain kernel entry point.
+include!("civic_case.rs");
 
 mod consent;
 
 pub use consent::{Consent, ConsentGrantType, ConsentStatus};
-
-include!("civic_case.rs");
