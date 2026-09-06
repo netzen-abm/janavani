@@ -6,7 +6,7 @@
 
 ## Executive decision
 
-The canonical PostgreSQL schema and provider boundaries are sufficiently defined for continued implementation, but neither durable provider is approved for production activation.
+The canonical PostgreSQL schema and provider boundaries are sufficiently defined for continued implementation, and the PostgreSQL provider now has disposable real-database integration evidence. Neither durable provider is approved for production activation.
 
 The direct PostgreSQL provider has a stronger transaction boundary than the Supabase adapter. The Supabase adapter explicitly does not claim multi-table atomicity. Both providers still require production evidence for authorization, RLS, restart durability, backup/restore, outage behavior, and full submission consistency.
 
@@ -15,8 +15,10 @@ The direct PostgreSQL provider has a stronger transaction boundary than the Supa
 - Canonical `CivicCase` fields are represented in the Rust and Python domain models.
 - Heterogeneous JSON values are represented through the canonical Rust JSON object type.
 - Serialization/schema conformance is enforced automatically.
-- A shared cross-language JSON fixture now exercises Python and Rust round-trip compatibility.
+- A shared cross-language JSON fixture exercises Python and Rust round-trip compatibility.
 - PostgreSQL persistence uses injected connection construction and an explicit unit-of-work boundary.
+- Disposable PostgreSQL 16 integration tests now exercise clean schema creation and real save/get behavior.
+- Real integration tests exercise heterogeneous JSON, event notes, evidence/document references, concurrency rejection and rollback.
 - Optimistic concurrency is represented through the case `version` field.
 - Event identifiers are treated as idempotency keys by the persistence implementation.
 - Binary evidence is represented as references rather than ordinary case-row payloads.
@@ -26,17 +28,17 @@ The direct PostgreSQL provider has a stronger transaction boundary than the Supa
 
 ### 1. Production schema is still a draft
 
-`POSTGRESQL_MIGRATION_DRAFT.sql` is explicitly review-only. It excludes RLS and production configuration and requires clean-database testing before execution.
+`POSTGRESQL_MIGRATION_DRAFT.sql` is explicitly review-only. It excludes RLS and production configuration and has only been exercised as a disposable integration schema. It is not a production migration approval.
 
-### 2. Supabase provider lacks verified multi-table atomicity
+### 2. Consent persistence is not yet lossless
+
+The runtime `CivicCase` contains `consent_refs`, and the PostgreSQL provider hydrates those references from `civic_case_consents`, but the current provider does not persist consent records during `save()`. A case containing consent references can therefore lose those references after a durable round-trip.
+
+This must not be "fixed" by manufacturing consent rows with invented purpose, scope or grant semantics. The next design slice must establish the canonical consent object/repository boundary before durable consent persistence is activated.
+
+### 3. Supabase provider lacks verified multi-table atomicity
 
 The Supabase adapter performs case, event and reference writes through separate API operations. Its own implementation documentation states that multi-table atomicity is not claimed. It must not replace the PostgreSQL provider as a production write path until a verified transaction/RPC boundary exists.
-
-### 3. PostgreSQL provider needs live integration evidence
-
-The current repository tests use a fake connection/database. They establish provider mechanics and concurrency behavior but do not prove behavior against a real PostgreSQL instance.
-
-Required next evidence includes clean schema creation, save/get round-trip, rollback behavior, duplicate-event behavior, stale-version rejection and restart durability against an actual disposable PostgreSQL database.
 
 ### 4. Authorization and RLS are not activated
 
@@ -46,7 +48,11 @@ The database contract requires application authorization plus database-level pol
 
 Case persistence is not the same as external submission. Submission attempt, external result and acknowledgement require their own consistency model and idempotency boundary. No database write may manufacture acknowledgement.
 
-### 6. Canonical contract reconciliation remains a gate
+### 6. Restart, outage and recovery evidence remains outstanding
+
+The current real-database gate proves disposable clean-schema behavior, round-trip, concurrency rejection and rollback. It does not yet prove process restart durability, database outage degradation, backup/restore or production recovery procedures.
+
+### 7. Canonical contract reconciliation remains a gate
 
 The database contract requires runtime/canonical enum alignment before production activation. The implementation must continue to treat this as an explicit verification gate rather than infer approval from schema compatibility alone.
 
@@ -62,11 +68,12 @@ The following should remain deterministic CI checks where practical:
 - archive safety evidence;
 - migration schema linting;
 - migration-to-model field coverage;
+- real PostgreSQL disposable integration;
 - line-length ratchet;
 - secret/dependency checks;
 - repository test suite.
 
-Automation must detect and report. It must not silently activate providers, execute production migrations, enable RLS, delete legacy data, or retire surfaces.
+Automation must detect and report. It must not silently activate providers, execute production migrations, enable RLS, create synthetic consent records, delete legacy data, or retire surfaces.
 
 ## Required production evidence before activation
 
@@ -93,4 +100,4 @@ Automation must detect and report. It must not silently activate providers, exec
 
 **Continue with controlled provider verification. Do not activate durable production persistence yet.**
 
-The next implementation slice should establish real PostgreSQL integration tests on a disposable database and validate the draft schema against the canonical provider contract. RLS and production activation remain separate gated decisions.
+The PostgreSQL provider has now passed a disposable real-database integration gate. The next implementation slice should establish the canonical consent object/repository boundary and then extend durable-provider integration evidence without inventing consent semantics. RLS, production migration and provider activation remain separate gated decisions.

@@ -1,6 +1,6 @@
 # Janavani — PostgreSQL Implementation Specification
 
-**Status:** IMPLEMENTATION SPECIFICATION — migration not yet authorized
+**Status:** IMPLEMENTATION SPECIFICATION — production activation not authorized
 **Scope:** Durable Civic Case persistence
 **Source contracts:** `src/core/civic_case.py`, `docs/DATA_CONTRACTS.md`, `docs/architecture/CANONICAL_CASE_POSTGRES_SCHEMA.md`, `docs/architecture/CIVIC_CASE_DATABASE_CONTRACT.md`, `docs/architecture/CANONICAL_CASE_RLS_AUTHORIZATION_MATRIX.md`
 
@@ -100,6 +100,8 @@ proof_ref
 
 Submission authorization must evaluate current consent state. A historical consent reference alone must not bypass expiry or revocation.
 
+**Implementation gate:** the current `CivicCase` aggregate stores only `consent_refs`, not the canonical consent object. The PostgreSQL provider hydrates consent references but does not currently persist consent records. Durable consent persistence must wait for a canonical consent object/repository contract; synthetic consent rows are prohibited.
+
 ## 6. Evidence boundary
 
 `civic_case_evidence_refs` stores relationships only:
@@ -194,6 +196,8 @@ The production implementation must also provide, directly or through a compatibl
 - atomic case-version/event persistence where one domain operation changes both;
 - deterministic database failure behavior.
 
+The current PostgreSQL provider implements the case, event, evidence-reference and document-reference portions of this contract. Consent persistence, submission persistence and security audit persistence are separate readiness gates.
+
 ## 11. Serialization contract
 
 Every currently represented runtime field must round-trip without loss:
@@ -240,7 +244,7 @@ The provider must:
 2. atomically reject stale versions;
 3. treat `event_id` as an idempotency key;
 4. prevent duplicate lifecycle events from retrying the same operation;
-5. use a separate submission idempotency boundary for external delivery attempts;
+5. use a separate submission idempotency boundary for external delivery;
 6. preserve attempt history rather than overwriting previous submission attempts.
 
 ## 13. Transaction boundaries
@@ -351,10 +355,12 @@ The durable provider remains non-production until all of the following are demon
 - retention/archive behavior;
 - authority provenance/correction behavior;
 - document print/download-only invariant;
-- runtime/canonical enum alignment.
+- runtime/canonical enum alignment;
+- canonical consent persistence and authorization semantics;
+- submission and audit persistence where those capabilities are activated.
 
 ## 19. Current decision
 
-**APPROVED FOR SPECIFICATION ONLY.**
+**APPROVED FOR CONTROLLED IMPLEMENTATION ONLY.**
 
-The next implementation may create a migration in a controlled reviewable change, but production activation and RLS remain separately gated. No legacy data may be deleted or silently migrated without validation evidence.
+A direct PostgreSQL provider exists and has passed a disposable real-database integration gate. Production activation and RLS remain separately gated. Consent, submission, audit, authorization, recovery and migration evidence are not yet sufficient for production activation. No legacy data may be deleted or silently migrated without validation evidence.
