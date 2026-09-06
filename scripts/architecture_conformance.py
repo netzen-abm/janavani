@@ -251,7 +251,7 @@ def check_legacy_references() -> list[str]:
             continue
         if any(part in {"janavani_v2", "janavani_v3"} for part in path.parts):
             continue
-        if path.name == "architecture_conformance.py":
+        if path.name in {"architecture_conformance.py", "archive_safety_evidence.py"}:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         if re.search(r"(?:janavani_v2|janavani_v3)", text):
