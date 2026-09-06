@@ -63,5 +63,5 @@ jobs:
           REDIS_PORT: "6379"
           OPENROUTER_API_KEY: mock-verification-token
           HF_TOKEN: mock-verification-token
-          JANAVANI_POSTGRES_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
         run: bash ./run_all_tests.sh
