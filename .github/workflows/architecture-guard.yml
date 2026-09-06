@@ -28,3 +28,6 @@ jobs:
 
       - name: Run cross-language architecture conformance
         run: python scripts/architecture_conformance.py
+
+      - name: Run archive safety evidence
+        run: python scripts/archive_safety_evidence.py
