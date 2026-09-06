@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 LEGACY_DIRS = ("janavani_v2", "janavani_v3")
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__", "archive"}
 SCANNABLE = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh", ".toml"}
+EVIDENCE_SCRIPTS = {
+    "archive_safety_evidence.py",
+    "architecture_conformance.py",
+}
 
 
 def git_files() -> list[Path]:
@@ -30,7 +34,7 @@ def active_files(files: list[Path]) -> list[Path]:
         if path.suffix in SCANNABLE
         and not any(part in SKIP_PARTS for part in path.parts)
         and not any(part in LEGACY_DIRS for part in path.parts)
-        and path.name not in {"archive_safety_evidence.py"}
+        and path.name not in EVIDENCE_SCRIPTS
     ]
 
 
@@ -40,13 +44,12 @@ def legacy_files(files: list[Path], legacy: str) -> list[Path]:
 
 def active_references(files: list[Path], legacy: str) -> list[str]:
     matches: list[str] = []
-    token = legacy.replace("_", "_")
     for path in active_files(files):
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        if token in text:
+        if legacy in text:
             matches.append(path.relative_to(ROOT).as_posix())
     return matches
 
