@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PY_CASE = ROOT / "src/core/civic_case.py"
-RUST_CASE = ROOT / "crates/janavani-core/src/lib.rs"
+RUST_CASE = ROOT / "crates/janavani-core/src/civic_case.rs"
 DB_CONTRACT = ROOT / "docs/architecture/CIVIC_CASE_DATABASE_CONTRACT.md"
 
 CASE_FIELDS = (
@@ -81,7 +81,13 @@ def rust_struct_fields(source: str, struct_name: str) -> set[str]:
     )
     if not match:
         raise ValueError(f"Missing Rust struct: {struct_name}")
-    return set(re.findall(r"^    pub ([A-Za-z0-9_]+):", match.group("body"), re.MULTILINE))
+    return set(
+        re.findall(
+            r"^    pub ([A-Za-z0-9_]+):",
+            match.group("body"),
+            re.MULTILINE,
+        )
+    )
 
 
 def assert_equal(label: str, actual: set[str], expected: tuple[str, ...]) -> None:
@@ -106,10 +112,26 @@ def main() -> None:
     rust_source = RUST_CASE.read_text(encoding="utf-8")
     contract = DB_CONTRACT.read_text(encoding="utf-8")
 
-    assert_equal("Python CivicCase", dataclass_fields(py_source, "CivicCase"), CASE_FIELDS)
-    assert_equal("Python CaseEvent", dataclass_fields(py_source, "CaseEvent"), EVENT_FIELDS)
-    assert_equal("Rust CivicCase", rust_struct_fields(rust_source, "CivicCase"), CASE_FIELDS)
-    assert_equal("Rust CaseEvent", rust_struct_fields(rust_source, "CaseEvent"), EVENT_FIELDS)
+    assert_equal(
+        "Python CivicCase",
+        dataclass_fields(py_source, "CivicCase"),
+        CASE_FIELDS,
+    )
+    assert_equal(
+        "Python CaseEvent",
+        dataclass_fields(py_source, "CaseEvent"),
+        EVENT_FIELDS,
+    )
+    assert_equal(
+        "Rust CivicCase",
+        rust_struct_fields(rust_source, "CivicCase"),
+        CASE_FIELDS,
+    )
+    assert_equal(
+        "Rust CaseEvent",
+        rust_struct_fields(rust_source, "CaseEvent"),
+        EVENT_FIELDS,
+    )
     check_db_mapping(contract)
     print("Serialization/schema conformance: PASS")
 
