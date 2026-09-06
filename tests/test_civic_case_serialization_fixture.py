@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from src.core.civic_case import CaseEventType, CaseStatus, CaseType, CivicCase
+from src.core.civic_case import (
+    CaseEvent,
+    CaseEventType,
+    CaseStatus,
+    CaseType,
+    CivicCase,
+)
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "civic_case_serialization.json"
@@ -32,7 +38,7 @@ def test_canonical_fixture_round_trips_through_python_model():
     )
     for event in payload["events"]:
         case.events.append(
-            __import__("src.core.civic_case", fromlist=["CaseEvent"]).CaseEvent(
+            CaseEvent(
                 event_id=event["event_id"],
                 case_id=event["case_id"],
                 event_type=CaseEventType(event["event_type"]),
