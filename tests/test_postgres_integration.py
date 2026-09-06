@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 
 from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
-from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+from src.storage.repositories.postgres_civic_case import (
+    PostgresCivicCasePersistenceError,
+    PostgresCivicCaseRepository,
+)
 
 
 pytestmark = pytest.mark.integration
@@ -117,7 +120,7 @@ def test_real_postgres_stale_version_is_rejected(repository):
     current.subject = "Newer committed subject"
     repository.save(current)
 
-    with pytest.raises(Exception):
+    with pytest.raises(PostgresCivicCasePersistenceError):
         repository.save(stale)
 
 
@@ -133,8 +136,10 @@ def test_real_postgres_transaction_rolls_back_on_provider_failure(repository):
         raise RuntimeError("forced integration rollback")
 
     repository._persist_refs = fail_after_case_and_event
-    with pytest.raises(RuntimeError):
-        repository.save(case)
-    repository._persist_refs = original
+    try:
+        with pytest.raises(PostgresCivicCasePersistenceError):
+            repository.save(case)
+    finally:
+        repository._persist_refs = original
 
     assert repository.get(case.case_id) is None
