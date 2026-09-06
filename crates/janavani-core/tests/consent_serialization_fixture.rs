@@ -1,4 +1,7 @@
-use janavani_core::consent::Consent;
+#[path = "../src/consent.rs"]
+mod consent;
+
+use consent::Consent;
 use serde_json::Value;
 use std::fs;
 
@@ -6,7 +9,8 @@ use std::fs;
 fn rust_consent_round_trips_canonical_fixture() {
     let path = "../../tests/fixtures/consent_serialization.json";
     let text = fs::read_to_string(path).expect("consent fixture must exist");
-    let expected: Value = serde_json::from_str(&text).expect("fixture must be valid JSON");
+    let expected: Value = serde_json::from_str(&text)
+        .expect("fixture must be valid JSON");
     let consent: Consent = serde_json::from_value(expected.clone())
         .expect("fixture must deserialize as canonical Consent");
     assert!(consent.validate().is_ok());
