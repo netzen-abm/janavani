@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
-from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+from src.storage.repositories.postgres_civic_case import (
+    PostgresCivicCaseConcurrencyError,
+    PostgresCivicCaseRepository,
+)
 
 
 pytestmark = pytest.mark.integration
@@ -14,9 +17,9 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture(scope="module")
 def repository():
-    dsn = os.getenv("JANAVANI_POSTGRES_DSN")
+    dsn = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
     if not dsn:
-        pytest.skip("JANAVANI_POSTGRES_DSN is not configured")
+        pytest.skip("JANAVANI_POSTGRES_TEST_DSN is not configured")
     import psycopg
 
     schema = Path("docs/architecture/POSTGRESQL_MIGRATION_DRAFT.sql").read_text(
@@ -122,10 +125,6 @@ def test_real_postgres_stale_version_is_rejected(repository):
 
     current.subject = "Newer committed subject"
     repository.save(current)
-
-    from src.storage.repositories.postgres_civic_case import (
-        PostgresCivicCaseConcurrencyError,
-    )
 
     with pytest.raises(PostgresCivicCaseConcurrencyError):
         repository.save(stale)
