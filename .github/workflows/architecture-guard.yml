@@ -31,3 +31,6 @@ jobs:
 
       - name: Run archive safety evidence
         run: python scripts/archive_safety_evidence.py
+
+      - name: Run serialization schema conformance
+        run: python scripts/serialization_schema_conformance.py
