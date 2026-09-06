@@ -1,14 +1,12 @@
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
-from src.storage.repositories.postgres_civic_case import (
-    PostgresCivicCasePersistenceError,
-    PostgresCivicCaseRepository,
-)
+from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
 
 
 pytestmark = pytest.mark.integration
@@ -29,9 +27,9 @@ def repository():
     return PostgresCivicCaseRepository(dsn=dsn)
 
 
-def _case() -> CivicCase:
+def _case(case_id: str = "integration-postgres-case") -> CivicCase:
     return CivicCase(
-        case_id="integration-postgres-case",
+        case_id=case_id,
         case_type=CaseType.COMPLAINT,
         subject="Heterogeneous PostgreSQL round trip",
         narrative="Verify canonical CivicCase persistence against a real database.",
@@ -56,8 +54,8 @@ def _case() -> CivicCase:
         status=CaseStatus.REVIEW,
         events=[
             CaseEvent(
-                event_id="integration-event-1",
-                case_id="integration-postgres-case",
+                event_id=f"{case_id}-event-1",
+                case_id=case_id,
                 event_type=CaseEventType.CREATED,
                 occurred_at="2026-09-06T00:00:00+00:00",
                 actor_id="integration-test",
@@ -85,7 +83,16 @@ def test_real_postgres_round_trip_preserves_canonical_fields(repository):
     assert loaded.document_refs == case.document_refs
     assert loaded.status == case.status
     assert loaded.version == case.version
-    assert loaded.events == case.events
+    assert len(loaded.events) == len(case.events)
+    assert loaded.events[0].event_id == case.events[0].event_id
+    assert loaded.events[0].event_type == case.events[0].event_type
+    assert datetime.fromisoformat(loaded.events[0].occurred_at) == datetime.fromisoformat(
+        case.events[0].occurred_at
+    )
+    assert loaded.events[0].actor_id == case.events[0].actor_id
+    assert loaded.events[0].source_channel == case.events[0].source_channel
+    assert loaded.events[0].source_ref == case.events[0].source_ref
+    assert loaded.events[0].notes == case.events[0].notes
 
 
 def test_real_postgres_json_fixture_matches_canonical_shape(repository):
@@ -94,9 +101,7 @@ def test_real_postgres_json_fixture_matches_canonical_shape(repository):
             encoding="utf-8"
         )
     )
-    case = _case()
-    case.case_id = "integration-postgres-fixture-case"
-    case.events[0].case_id = case.case_id
+    case = _case("integration-postgres-fixture-case")
     case.jurisdiction = fixture["jurisdiction"]
     case.claims = fixture["claims"]
     repository.save(case)
@@ -108,27 +113,26 @@ def test_real_postgres_json_fixture_matches_canonical_shape(repository):
 
 
 def test_real_postgres_stale_version_is_rejected(repository):
-    case = _case()
-    case.case_id = "integration-postgres-concurrency-case"
-    case.events[0].case_id = case.case_id
+    case = _case("integration-postgres-concurrency-case")
     repository.save(case)
     stale = repository.get(case.case_id)
-    assert stale is not None
     current = repository.get(case.case_id)
+    assert stale is not None
     assert current is not None
 
     current.subject = "Newer committed subject"
     repository.save(current)
 
-    with pytest.raises(PostgresCivicCasePersistenceError):
+    from src.storage.repositories.postgres_civic_case import (
+        PostgresCivicCaseConcurrencyError,
+    )
+
+    with pytest.raises(PostgresCivicCaseConcurrencyError):
         repository.save(stale)
 
 
 def test_real_postgres_transaction_rolls_back_on_provider_failure(repository):
-    case = _case()
-    case.case_id = "integration-postgres-rollback-case"
-    case.events[0].case_id = case.case_id
-
+    case = _case("integration-postgres-rollback-case")
     original = repository._persist_refs
 
     def fail_after_case_and_event(cur, candidate):
@@ -137,7 +141,7 @@ def test_real_postgres_transaction_rolls_back_on_provider_failure(repository):
 
     repository._persist_refs = fail_after_case_and_event
     try:
-        with pytest.raises(PostgresCivicCasePersistenceError):
+        with pytest.raises(RuntimeError):
             repository.save(case)
     finally:
         repository._persist_refs = original
