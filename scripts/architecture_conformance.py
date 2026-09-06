@@ -11,9 +11,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY_LIFECYCLE = ROOT / "src/core/case_lifecycle.py"
 PY_DOMAIN = ROOT / "src/core/civic_case.py"
-RUST_CORE = ROOT / "crates/janavani-core/src/lib.rs"
+RUST_CORE = ROOT / "crates/janavani-core/src/civic_case.rs"
+RUST_CONSENT = ROOT / "crates/janavani-core/src/consent.rs"
 RUST_APP = ROOT / "crates/janavani-application/src"
-
 
 PROVIDER_IMPORTS = (
     "src.storage",
@@ -145,15 +145,22 @@ def rust_lifecycle_pairs(text: str) -> set[tuple[str, str]]:
         raise ValueError("missing Rust can_transition")
     body = match.group(0)
     pairs: set[tuple[str, str]] = set()
-    for source, targets in re.findall(r"\n            (\w+) => matches!\(target, ([^\n]+)\),", body):
-        pairs.update((source, target) for target in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b", targets))
+    for source, targets in re.findall(
+        r"\n            (\w+) => matches!\(target, ([^\n]+)\),", body
+    ):
+        pairs.update(
+            (source, target)
+            for target in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b", targets)
+        )
     block = re.search(
         r"Acknowledged => \{\s*matches!\(target, ([^\n]+)\)\s*\}", body
     )
     if block:
         pairs.update(
             ("Acknowledged", target)
-            for target in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b", block.group(1))
+            for target in re.findall(
+                r"\b([A-Z][A-Za-z0-9_]*)\b", block.group(1)
+            )
         )
     return pairs
 
@@ -187,7 +194,7 @@ def check_provider_boundaries() -> list[str]:
                     failures.append(
                         f"domain imports provider layer: {path.relative_to(ROOT)}:{line_no}"
                     )
-    for root in (RUST_CORE, RUST_APP):
+    for root in (RUST_CORE, RUST_CONSENT, RUST_APP):
         if not root.exists():
             raise ValueError(f"missing canonical Rust source: {root}")
         paths = [root] if root.is_file() else sorted(root.rglob("*.rs"))
@@ -255,7 +262,9 @@ def check_legacy_references() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         if re.search(r"(?:janavani_v2|janavani_v3)", text):
-            failures.append(f"active legacy-generation reference: {path.relative_to(ROOT)}")
+            failures.append(
+                f"active legacy-generation reference: {path.relative_to(ROOT)}"
+            )
     return failures
 
 
@@ -277,7 +286,10 @@ def main() -> int:
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE CONFORMANCE PASSED")
-    print("Rust/Python parity, provider boundaries, surface separation, and legacy references verified.")
+    print(
+        "Rust/Python parity, provider boundaries, surface separation, "
+        "and legacy references verified."
+    )
     return 0
 
 
