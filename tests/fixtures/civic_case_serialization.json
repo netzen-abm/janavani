@@ -1,0 +1,58 @@
+{
+  "case_id": "case-serialization-001",
+  "case_type": "complaint",
+  "subject": "Road defect",
+  "narrative": "A road needs repair near the public school.",
+  "created_by": "citizen-001",
+  "jurisdiction": {
+    "state": "Kerala",
+    "district": "Ernakulam",
+    "ward": 12,
+    "coordinates": {
+      "latitude": 9.9816,
+      "longitude": 76.2999
+    },
+    "tags": ["road", "public-safety"]
+  },
+  "related_organisation_id": "org-001",
+  "related_office_id": "office-001",
+  "related_official_id": null,
+  "related_representative_id": "rep-001",
+  "claims": [
+    {
+      "statement": "The road surface is damaged.",
+      "verified": false,
+      "severity": 3,
+      "observations": ["potholes", "standing-water"]
+    }
+  ],
+  "evidence_refs": ["evidence-001", "evidence-002"],
+  "document_refs": ["document-001"],
+  "consent_refs": ["consent-001"],
+  "status": "review",
+  "events": [
+    {
+      "event_id": "event-001",
+      "case_id": "case-serialization-001",
+      "event_type": "created",
+      "occurred_at": "2026-09-06T00:00:00+00:00",
+      "actor_id": "citizen-001",
+      "source_channel": "web",
+      "source_ref": "web-session-001",
+      "notes": "Initial case creation."
+    },
+    {
+      "event_id": "event-002",
+      "case_id": "case-serialization-001",
+      "event_type": "review_started",
+      "occurred_at": "2026-09-06T00:05:00+00:00",
+      "actor_id": null,
+      "source_channel": "telegram",
+      "source_ref": null,
+      "notes": null
+    }
+  ],
+  "created_at": "2026-09-06T00:00:00+00:00",
+  "updated_at": "2026-09-06T00:05:00+00:00",
+  "version": 2
+}
