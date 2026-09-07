@@ -10,57 +10,36 @@ from documents.complaint_builder import build_complaint
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Capture the issue and bind the conversation to the Telegram principal."""
+    user = update.effective_user
+    if user is None or update.message is None:
+        return
 
-    # --------------------------------------------------
-    # 🔐 USER + INPUT
-    # --------------------------------------------------
-
-    user_id = update.effective_user.id
+    user_id = user.id
     user_input = update.message.text.strip()
-
     session = get_session(user_id)
-
-    # --------------------------------------------------
-    # 📝 SAVE ISSUE
-    # --------------------------------------------------
+    session["telegram_user_id"] = user_id
 
     session["issue"] = user_input
 
-    # --------------------------------------------------
-    # 🧠 CLASSIFY ISSUE
-    # --------------------------------------------------
-
     classification = classify_issue(user_input)
-
     session["category"] = classification["category"]
     session["department"] = classification["department"]
-
-    # --------------------------------------------------
-    # 📤 FEEDBACK TO USER
-    # --------------------------------------------------
 
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
         f"🏛 Department: {session['department']}"
     )
 
-    # --------------------------------------------------
-    # 📝 BUILD COMPLAINT (PREVIEW)
-    # --------------------------------------------------
-
+    # Keep the historical preview for compatibility, but the canonical Case
+    # and authority workflow remains authoritative for generation.
     complaint = build_complaint(
         user_name="Anonymous",
         user_address="Not Provided",
-        office_id="1",  # temporary
-        issue_text=user_input
+        office_id="1",
+        issue_text=user_input,
     )
-
-    # Save complaint in session (important for next step)
     session["complaint"] = complaint
-
-    # --------------------------------------------------
-    # 📄 SHOW PREVIEW
-    # --------------------------------------------------
 
     preview = f"""
 📝 *Complaint Preview*
@@ -81,9 +60,4 @@ Choose next:
 """
 
     await update.message.reply_text(preview, parse_mode="Markdown")
-
-    # --------------------------------------------------
-    # 🔄 NEXT STEP
-    # --------------------------------------------------
-
     set_state(user_id, WAITING_FOR_DOCUMENT)
