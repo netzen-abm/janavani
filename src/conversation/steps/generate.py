@@ -1,8 +1,7 @@
-"""Generate user-owned complaint artifacts through canonical capabilities."""
+"""Generate user-owned civic document artifacts through shared capabilities."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 from telegram import Update
@@ -11,17 +10,15 @@ from telegram.ext import ContextTypes
 from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
-from documents.artifact_service import generate_artifact
-from documents.complaint_builder import build_complaint
-from documents.document_contract import DocumentFormat
-from documents.legacy_complaint_adapter import complaint_to_document_draft
-from services.authority_service import find_authority
-from services.case_migration import persist_generated_complaint
-from storage.artifact_blob import ArtifactBlobStore
-from storage.artifact_blob_factory import create_artifact_blob_store
-from storage.repositories.artifact_provider import create_document_artifact_repository
-from storage.repositories.civic_case import CivicCaseRepository
-from storage.repositories.document_artifact import DocumentArtifactRepository
+from src.capabilities.civic_action_capability import CivicActionCapability
+from src.core.evidence import EvidenceRepository
+from src.documents.document_contract import DocumentFormat
+from src.identity.context import IdentityContext
+from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
+from src.storage.artifact_blob import ArtifactBlobStore
+from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.document_artifact import DocumentArtifactRepository
 
 
 @dataclass(frozen=True)
@@ -29,6 +26,7 @@ class TelegramGenerationDependencies:
     """Composition-level dependencies for Telegram generation."""
 
     case_repository: CivicCaseRepository
+    civic_action_capability: CivicActionCapability
     artifact_repository: DocumentArtifactRepository
     blob_store: ArtifactBlobStore
 
@@ -36,12 +34,33 @@ class TelegramGenerationDependencies:
 def create_telegram_generation_dependencies(
     *,
     case_repository: CivicCaseRepository,
+    civic_action_capability: CivicActionCapability,
 ) -> TelegramGenerationDependencies:
-    """Compose Telegram generation dependencies from an explicit case repository."""
+    """Compose Telegram dependencies from the canonical shared capability."""
     return TelegramGenerationDependencies(
         case_repository=case_repository,
+        civic_action_capability=civic_action_capability,
         artifact_repository=create_document_artifact_repository(),
-        blob_store=create_artifact_blob_store(),
+        blob_store=_create_blob_store(),
+    )
+
+
+def _create_blob_store() -> ArtifactBlobStore:
+    from storage.artifact_blob_factory import create_artifact_blob_store
+    return create_artifact_blob_store()
+
+
+def _identity(user_id: int) -> IdentityContext:
+    """Map a Telegram session to an opaque capability principal."""
+    return IdentityContext(
+        principal=Principal(
+            principal_id=f"tg-session-{user_id}",
+            identity_mode=IdentityMode.ANONYMOUS,
+            interface="telegram",
+            authentication_method=AuthenticationMethod.NONE,
+            session_id=str(user_id),
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
+        )
     )
 
 
@@ -53,57 +72,20 @@ def build_canonical_complaint_artifact(
     session: dict,
     *,
     dependencies: TelegramGenerationDependencies,
+    user_id: int,
 ):
-    """Build a canonical draft and artifact using injected repositories/providers."""
-    complaint_id = str(session["complaint_id"])
-    case = persist_generated_complaint(session, repository=dependencies.case_repository)
-    case = dependencies.case_repository.get(case.case_id) or case
+    """Build a canonical artifact through Case → Evidence → Authority → Document."""
+    case_id = str(session.get("case_id") or "")
+    if not case_id:
+        raise ValueError("No canonical case is associated with this Telegram session")
 
-    office_id = str(case.related_office_id or "")
-    authority = find_authority(office_id)
-    if authority is None:
-        raise ValueError("Selected office cannot be resolved")
-
-    complaint = build_complaint(
-        user_name=str(session.get("name") or session.get("citizen_name") or "Not Provided"),
-        user_address=str(session.get("address") or "Not Provided"),
-        office_id=office_id,
-        issue_text=str(session.get("issue") or ""),
+    artifact = dependencies.civic_action_capability.generate_reviewable_artifact(
+        case_id,
+        identity=_identity(user_id),
+        document_format=_document_format(str(session.get("format", "pdf"))),
+        output_dir=Path("/tmp") / "janavani-artifacts" / "rendered",
+        document_id=str(session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"),
     )
-    complaint["complaint_id"] = complaint_id
-
-    class SingleAuthorityRepository:
-        def get(self, authority_id: str):
-            return authority if authority.authority_id == authority_id else None
-
-    draft = complaint_to_document_draft(
-        complaint,
-        document_id=complaint_id,
-        case_id=case.case_id,
-        authority_repository=SingleAuthorityRepository(),
-    )
-
-    document_format = _document_format(str(session.get("format", "pdf")))
-    output_dir = Path("/tmp") / "janavani-artifacts" / "rendered"
-    artifact = generate_artifact(
-        draft,
-        document_format,
-        output_dir,
-        blob_store=dependencies.blob_store,
-    )
-    dependencies.artifact_repository.save(artifact.reference)
-
-    case = dependencies.case_repository.get(case.case_id) or case
-    artifact_id = artifact.reference.artifact_id
-    if artifact_id not in case.document_refs:
-        case.add_document(
-            artifact_id,
-            event_id=f"{case.case_id}:document:{document_format.value}",
-            occurred_at=datetime.now(timezone.utc).isoformat(),
-            source_channel="telegram",
-        )
-        dependencies.case_repository.save(case)
-
     return artifact
 
 
@@ -116,17 +98,17 @@ async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = update.message
 
     session = get_session(user_id)
-    if "complaint_id" not in session:
-        from services.id_generator import generate_complaint_id
-        session["complaint_id"] = generate_complaint_id()
-
     dependencies = context.application.bot_data.get("telegram_generation_dependencies")
     if dependencies is None:
         raise RuntimeError("Telegram generation dependencies were not composed")
 
     try:
         await message.reply_text("Generating document for your review...")
-        artifact = build_canonical_complaint_artifact(session, dependencies=dependencies)
+        artifact = build_canonical_complaint_artifact(
+            session,
+            dependencies=dependencies,
+            user_id=user_id,
+        )
         with dependencies.blob_store.open(artifact.reference.storage_ref) as handle:
             await message.reply_document(
                 document=handle,
