@@ -7,4 +7,6 @@ services:
 
     buildCommand: pip install -r requirements.txt
 
-    startCommand: python3 src/web.py
+    # Canonical production API runtime. Telegram is an independent surface
+    # and must not be spawned as a child process of the web runtime.
+    startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
