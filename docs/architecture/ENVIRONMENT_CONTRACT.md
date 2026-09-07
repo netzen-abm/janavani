@@ -18,6 +18,7 @@ In particular:
 - AI provider credentials belong only to the runtime that directly invokes the corresponding provider.
 - Database and artifact-storage credentials belong to the canonical persistence runtime that uses them.
 - Interface tokens are service-to-service credentials, not citizen identity credentials.
+- `JANAVANI_IDENTITY_ASSERTION_SECRET` is a service-to-service trust credential for the temporary signed-assertion gateway boundary; it is **not** a citizen credential and must never be exposed to browsers, Telegram clients, or other untrusted interfaces.
 
 ## Canonical provider credentials
 
@@ -57,6 +58,7 @@ Configure only where the corresponding interface or internal service is enabled:
 - `WEB_INTERFACE_TOKEN` — server-side Web/API interface credential where required.
 - `JANAVANI_INTERFACE_TOKENS` — configured interface-token set for protected API endpoints.
 - `ADMIN_INTERFACE_SECRET_TOKEN` — internal admin interface credential.
+- `JANAVANI_IDENTITY_ASSERTION_SECRET` — temporary trusted-gateway signing secret used by the Web/API identity assertion verifier. This must be generated and stored only in the server-side secret store.
 
 These values must never be hard-coded, committed, or reused as citizen identity.
 
@@ -81,6 +83,7 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `WEB_INTERFACE_TOKEN` | If protected server adapter/health check is enabled | No | If calling Web/API | No | Fixture | Service credential |
 | `JANAVANI_INTERFACE_TOKENS` | If protected API endpoints are enabled | If interface calls them | If interface calls them | No | Fixture | Service credential |
 | `ADMIN_INTERFACE_SECRET_TOKEN` | No | No | No | Yes | Fixture | Service credential |
+| `JANAVANI_IDENTITY_ASSERTION_SECRET` | If Web/API identity gateway is enabled | No | No | No | Test-only fixture | Service trust secret |
 | `JANAVANI_AI_BASE_URL` | If server-side AI adapter is used | No | Yes | No | Fixture | Non-secret URL |
 | `JANAVANI_INTERNAL_API_URL` | No | No | No | Yes | Fixture | Internal URL |
 | `JANAVANI_INTERNAL_FEEDBACK_URL` | No | No | No | Yes | Fixture | Internal URL |
