@@ -6,58 +6,57 @@ from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
 
 from services.issue_classifier import classify_issue
-from documents.complaint_builder import build_complaint
+from src.commands.shared_case_capability import create_case_from_telegram
+from src.identity.context import IdentityContext
+from src.identity.principal import Principal, IdentityMode, AuthMethod, Interface
+from src.storage.repositories.provider import create_civic_case_repository
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Capture the issue and bind the conversation to the Telegram principal."""
+    """Capture the issue and create the canonical Case through shared infrastructure."""
     user = update.effective_user
     if user is None or update.message is None:
         return
 
     user_id = user.id
     user_input = update.message.text.strip()
+    if not user_input:
+        await update.message.reply_text("Please describe the civic issue you want to report.")
+        return
+
     session = get_session(user_id)
     session["telegram_user_id"] = user_id
-
     session["issue"] = user_input
 
     classification = classify_issue(user_input)
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
+    # Telegram's platform identity is mapped to an opaque Janavani principal;
+    # the raw Telegram ID is never used as the canonical case owner.
+    principal = Principal(
+        principal_id=f"telegram-session:{user_id}",
+        identity_mode=IdentityMode.ANONYMOUS,
+        interface=Interface.TELEGRAM,
+        auth_method=AuthMethod.PLATFORM_ASSERTION,
+        session_id=str(user_id),
+        capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
+    )
+    identity = IdentityContext(principal=principal)
+    repository = create_civic_case_repository("memory")
+    case = create_case_from_telegram(
+        repository,
+        identity=identity,
+        subject=session["category"],
+        narrative=user_input,
+    )
+    session["case_id"] = case.case_id
+
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
-        f"🏛 Department: {session['department']}"
+        f"🏛 Department: {session['department']}\n"
+        f"🆔 Case: {case.case_id}\n\n"
+        "Your issue is now a Janavani case. You can continue to evidence, document, review and consent steps."
     )
 
-    # Keep the historical preview for compatibility, but the canonical Case
-    # and authority workflow remains authoritative for generation.
-    complaint = build_complaint(
-        user_name="Anonymous",
-        user_address="Not Provided",
-        office_id="1",
-        issue_text=user_input,
-    )
-    session["complaint"] = complaint
-
-    preview = f"""
-📝 *Complaint Preview*
-
-*Issue:*
-{complaint['issue']}
-
-*Legal Ground:*
-{complaint['law']['law']} - {complaint['law']['section']}
-
-{complaint['law']['explanation']}
-
----
-
-Choose next:
-1️⃣ Download PDF
-2️⃣ Download DOCX
-"""
-
-    await update.message.reply_text(preview, parse_mode="Markdown")
     set_state(user_id, WAITING_FOR_DOCUMENT)
