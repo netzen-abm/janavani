@@ -1,0 +1,10 @@
+"""Archived superseded capability workflow.
+
+Source: src/capabilities/case_flow.py on feat/shared-civic-capability-spine-3
+Archived after lifecycle operations were consolidated into
+src/capabilities/civic_case.py.
+"""
+
+# Original source retained in git history; this archive marker preserves the
+# explicit archive-before-delete policy.
+
