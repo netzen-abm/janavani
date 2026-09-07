@@ -1,8 +1,8 @@
 # Janavani — Canonical Capability × Surface Matrix
 
-**Status:** ACTIVE CONVERGENCE CONTROL DOCUMENT  
-**Baseline:** `main` at `79c21bfdf76bc4c8b4c16170391cf8e4f8f863b8`  
-**Purpose:** Track which canonical capabilities are consumed by the first product surfaces without allowing channel-specific business logic to become a second implementation.
+**Status:** ACTIVE ECOSYSTEM CONVERGENCE CONTROL DOCUMENT  
+**Baseline:** `main`  
+**Purpose:** Track how canonical capabilities are consumed by all Janavani product surfaces without allowing channel-specific business logic to become a second implementation.
 
 ## Governing rule
 
@@ -12,6 +12,8 @@
 
 A surface may expose a capability differently because of platform constraints, but it must not create a parallel domain implementation.
 
+This is a **full-product ecosystem control document**, not an MVP completion checklist. A vertical slice is a verification sequence inside the larger product, not the product boundary.
+
 ## Status vocabulary
 
 - **CANONICAL:** authoritative implementation/contract identified.
@@ -19,24 +21,27 @@ A surface may expose a capability differently because of platform constraints, b
 - **PARTIAL:** useful implementation exists but the complete lifecycle is not verified.
 - **MISSING:** capability is registered/designed but no verified active implementation is mapped.
 - **BLOCKED:** implementation depends on an unresolved security, identity, persistence, provider, or platform contract.
-- **PARKED:** intentionally deferred; not part of the current vertical slice.
+- **PARKED:** intentionally deferred because its prerequisite/value/risk case is not yet satisfied; it remains part of the ecosystem architecture unless explicitly retired.
 
-## Current product surfaces
+## Product surfaces
 
 | Surface | Current role | Current state | Rule |
 |---|---|---|---|
-| WebApp / Dioxus | Primary product surface | PARTIAL | Consume shared capabilities; no business logic duplication |
+| Public Website | Public information/discoverability surface | ACTIVE | Never become the platform business-logic owner |
+| WebApp / Dioxus | Primary interactive product surface | PARTIAL | Consume shared capabilities; no business logic duplication |
 | Telegram Bot | Messaging access surface | PARTIAL | Adapter only; consume the same Case/Authority/Document capabilities |
-| Telegram Mini App | Rich Telegram UI | MISSING | Build after WebApp capability contracts are verified |
-| Android | Future native surface | PARKED | Consume shared contracts |
-| iOS | Future native surface | PARKED | Consume shared contracts |
-| WhatsApp | Future messaging surface | PARKED | Consume shared contracts |
-| Messenger | Future messaging surface | PARKED | Consume shared contracts |
-| DApp | Future decentralized surface | PARKED | Consume shared contracts |
+| Telegram Mini App | Rich Telegram UI | MISSING | Consume the same shared capability contracts |
+| Android | Native product surface | ARCHITECTURE | Consume shared contracts; own only native UX/integration |
+| iOS | Native product surface | ARCHITECTURE | Consume shared contracts; own only native UX/integration |
+| WhatsApp | Messaging access surface | ARCHITECTURE | Adapter only |
+| Messenger | Messaging access surface | ARCHITECTURE | Adapter only |
+| DApp / decentralized interfaces | Optional product/access surface | ARCHITECTURE | Capability-driven, never a mandatory dependency |
+| API / institutional integrations | Integration surface | IN PROGRESS | Expose canonical capabilities, policy and provenance |
+| Future partner/third-party clients | Ecosystem extension surface | ARCHITECTURE | Contract-governed access only |
 
 ## First complete vertical slice
 
-The immediate product target is:
+The immediate verification sequence is:
 
 ```text
 Citizen problem
@@ -60,18 +65,18 @@ Submission preparation
 Acknowledgement / truthful tracking
 ```
 
-For the first demonstrable slice, actual external submission remains out of scope until identity, authorization, consent, destination verification, and submission adapters are production-ready.
+This is **not an MVP boundary**. It is the first end-to-end capability chain used to prove that the shared platform can support the broader ecosystem. External submission remains gated until identity, authorization, consent, destination verification, and submission adapters are production-ready.
 
 ## Capability matrix
 
 | Canonical capability | Canonical owner currently mapped | WebApp | Telegram Bot | Mini App | Current blocker / next action |
 |---|---|---|---|---|---|
-| `JNV-CIVIC-COMPLAINT` | `src/core/civic_case.py` + civic-action composition | PARTIAL | PARTIAL | MISSING | Connect UI workflow to Case capability and verify lifecycle |
+| `JNV-CIVIC-COMPLAINT` | `src/core/civic_case.py` + civic-action composition | PARTIAL | PARTIAL | MISSING | Connect both surfaces to the canonical Case capability and verify lifecycle |
 | `JNV-CIVIC-GRIEVANCE` | Case capability (design) | MISSING | MISSING | MISSING | Reuse Case; add purpose-specific workflow |
-| `JNV-CIVIC-RTI` | Case + Document (design) | MISSING | MISSING | MISSING | Add RTI workflow after complaint slice |
-| `JNV-CIVIC-PETITION` | Case + Document (design) | MISSING | MISSING | MISSING | Add after first slice |
-| `JNV-CIVIC-OBJECTION` | Case + Document (design) | MISSING | MISSING | MISSING | Add after first slice |
-| `JNV-CIVIC-APPEAL` | Case + Document (design) | MISSING | MISSING | MISSING | Add after tracking/response lifecycle |
+| `JNV-CIVIC-RTI` | Case + Document (design) | MISSING | MISSING | MISSING | Add reusable RTI workflow |
+| `JNV-CIVIC-PETITION` | Case + Document (design) | MISSING | MISSING | MISSING | Add reusable petition workflow |
+| `JNV-CIVIC-OBJECTION` | Case + Document (design) | MISSING | MISSING | MISSING | Add reusable objection workflow |
+| `JNV-CIVIC-APPEAL` | Case + Document (design) | MISSING | MISSING | MISSING | Add response/tracking lifecycle first |
 | `JNV-GOV-OFFICE-SEARCH` | `src/services/authority_service.py` + AuthorityRepository | PARTIAL | ADAPTER | MISSING | Replace text-only rendering with structured capability response |
 | `JNV-GOV-OFFICER-SEARCH` | Authority design | MISSING | MISSING | MISSING | Define lawful/public-data contract |
 | `JNV-GOV-SCHEME-SEARCH` | Design | MISSING | MISSING | MISSING | Define authoritative source registry |
@@ -88,12 +93,12 @@ For the first demonstrable slice, actual external submission remains out of scop
 | `JNV-DOC-EXPORT` | Existing artifact providers | PARTIAL | PARTIAL | MISSING | Verify browser-safe export and artifact lifecycle |
 | `JNV-EVIDENCE-CAPTURE` | Evidence contract | MISSING | MISSING | MISSING | Local-first capture boundary before upload |
 | `JNV-EVIDENCE-PROVENANCE` | Evidence contract | PARTIAL | PARTIAL | MISSING | Implement source/time/transformation metadata |
-| `JNV-EVIDENCE-BLOCKCHAIN-ANCHOR` | Design | PARKED | PARKED | PARKED | Optional provider; not required for first slice |
+| `JNV-EVIDENCE-BLOCKCHAIN-ANCHOR` | Design | PARKED | PARKED | PARKED | Optional provider; activate only with capability-level justification |
 | `JNV-EVIDENCE-ARCHIVE` | Architecture | PARTIAL | PARTIAL | MISSING | Formalize retention/archive operations |
-| `JNV-WB-SUBMIT` | Design | PARKED | PARKED | PARKED | High-risk security milestone |
-| `JNV-WB-CASE` | Design | PARKED | PARKED | PARKED | High-risk security milestone |
-| `JNV-EXPERT-REGISTER` | Design | PARKED | PARKED | PARKED | Later ecosystem expansion |
-| `JNV-EXPERT-REVIEW` | Design | PARKED | PARKED | PARKED | Later ecosystem expansion |
+| `JNV-WB-SUBMIT` | Design | BLOCKED | BLOCKED | BLOCKED | Identity, authorization, consent, destination and submission adapter gates |
+| `JNV-WB-CASE` | Design | BLOCKED | BLOCKED | BLOCKED | Real identity/ownership boundary before broad surface exposure |
+| `JNV-EXPERT-REGISTER` | Design | ARCHITECTURE | ARCHITECTURE | ARCHITECTURE | Later ecosystem expansion with verification safeguards |
+| `JNV-EXPERT-REVIEW` | Design | ARCHITECTURE | ARCHITECTURE | ARCHITECTURE | Review/provenance/conflict controls first |
 | `JNV-AI-OCR` | Design | MISSING | MISSING | MISSING | Add governed AI capability after deterministic path |
 | `JNV-AI-VISION` | Design | MISSING | MISSING | MISSING | Add only for concrete product need |
 | `JNV-AI-RAG` | Design | MISSING | MISSING | MISSING | Build source/version/citation contract first |
@@ -107,11 +112,11 @@ For the first demonstrable slice, actual external submission remains out of scop
 | `JNV-SOS-ROUTER` | Architecture | PARKED | PARKED | PARKED | Transport health/policy implementation |
 | `JNV-SOS-DELIVERY` | Architecture | PARKED | PARKED | PARKED | Truthful delivery state implementation |
 
-## Surface contract
+## Surface contracts
 
 ### WebApp
 
-The current Dioxus application is a **product shell**, not yet the complete civic-action workspace. It currently sends free-form text to a legacy `/agent/draft` path and contains a hard-coded example location plus a simulated decentralized result. That behavior must not become the canonical Case implementation.
+The current Dioxus application is a **product surface under convergence**, not a disposable MVP shell. It currently sends free-form text to a legacy `/agent/draft` path and contains a hard-coded example location plus a simulated decentralized result. That behavior must not become the canonical Case implementation.
 
 Target:
 
@@ -127,18 +132,29 @@ Shared infrastructure
 
 ### Telegram Bot
 
-The existing bot already has a useful adapter boundary and composes generation dependencies at startup. Its remaining legacy paths are:
+The bot is an independent access surface and now uses the canonical CivicCase repository for `/check` and generated-case persistence. Remaining legacy areas include conversation preview/generation compatibility and legacy rating storage. These must converge into shared capabilities without making Telegram the owner of them.
 
-- `/check` reads legacy `database/complaints.jsonl`.
-- `/rate` writes legacy `database/ratings.jsonl`.
-- conversation session state remains process-local.
-- generation still contains a migration bridge into the Case model.
+Target:
 
-Immediate convergence work is to remove the Case tracking dependency on JSONL and make the Case repository authoritative.
+```text
+Telegram adapter
+   ↓
+Conversation / capability orchestration
+   ↓
+Canonical Case / Authority / Evidence / Document capabilities
+   ↓
+Shared infrastructure
+```
 
 ### Telegram Mini App
 
-No implementation is promoted to canonical status yet. It should consume the same API/capability contracts as WebApp and Telegram Bot and must not become another business-logic implementation.
+No implementation is promoted to canonical status yet. It must consume the same API/capability contracts as WebApp and Telegram Bot and must not become another business-logic implementation.
+
+## Parallel product development rule
+
+WebApp and Telegram are explicitly developed **in parallel** when they consume the same canonical capability contract. Parallel development means parallel adapters and UX, not parallel domain implementations.
+
+The same rule applies when Android, iOS, WhatsApp, Messenger, DApp or partner integrations become active.
 
 ## Security and privacy gates
 
