@@ -13,6 +13,18 @@ def test_canonical_app_imports() -> None:
 def test_canonical_platform_endpoints() -> None:
     client = TestClient(app)
 
+    root = client.get("/")
+    assert root.status_code == 200
+    assert root.json() == {
+        "service": "janavani-platform-api",
+        "version": "canonical-m3",
+        "status": "available",
+        "health": "/liveness",
+        "version_endpoint": "/version",
+        "openapi": "/openapi.json",
+        "docs": "/docs",
+    }
+
     assert client.get("/liveness").status_code == 200
     assert client.get("/liveness").json() == {"status": "alive"}
 
@@ -36,6 +48,7 @@ def test_canonical_domain_route_prefixes() -> None:
     assert "/api/v1/constitutional/bill/{bill_code}" in paths
     assert "/api/v1/constitutional/generate-objection" in paths
     assert "/api/v1/land/compile-kml" in paths
+    assert "/civic/cases" in paths
 
 
 def test_legacy_app_is_not_imported_by_canonical_assembly() -> None:
