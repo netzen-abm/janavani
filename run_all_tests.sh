@@ -15,8 +15,8 @@ cd "$ROOT_DIR"
 
 export REDIS_HOST="${REDIS_HOST:-localhost}"
 export REDIS_PORT="${REDIS_PORT:-6379}"
-export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-mock-verification-token}"
-export HF_TOKEN="${HF_TOKEN:-mock-verification-token}"
+export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-test-fixture-token}"
+export HF_TOKEN="${HF_TOKEN:-test-fixture-token}"
 
 printf '\n======================================================================\n'
 printf 'JANAVANI CANONICAL VALIDATION SUITE\n'
