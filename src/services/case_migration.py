@@ -1,4 +1,9 @@
-"""Compatibility bridge from legacy complaint sessions to CivicCase."""
+"""Compatibility bridge from legacy Telegram sessions to CivicCase.
+
+The bridge remains temporarily because the conversation state machine is
+still being migrated. The canonical CivicCase repository is authoritative;
+legacy JSONL complaint persistence is no longer written by this bridge.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -10,7 +15,6 @@ from core.civic_case import (
     CaseType,
     CivicCase,
 )
-from services.storage_service import save_complaint
 from storage.repositories import CivicCaseRepository
 
 
@@ -18,8 +22,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _telegram_actor_id(session: dict) -> str:
+    telegram_user_id = session.get("telegram_user_id")
+    if telegram_user_id is None:
+        raise ValueError("telegram_user_id is required for CivicCase ownership")
+    return f"telegram:{telegram_user_id}"
+
+
 def session_to_civic_case(session: dict) -> CivicCase:
-    """Translate a legacy Telegram session into a new CivicCase."""
+    """Translate a legacy Telegram session into a new owned CivicCase."""
     case_id = session.get("complaint_id")
     if not case_id:
         raise ValueError("complaint_id is required for CivicCase migration")
@@ -28,12 +39,14 @@ def session_to_civic_case(session: dict) -> CivicCase:
     office = session.get("office") or {}
     office_id = office.get("office_id") or office.get("id")
     now = _now()
+    actor_id = _telegram_actor_id(session)
 
     event = CaseEvent(
         event_id=f"{case_id}:created",
         case_id=case_id,
         event_type=CaseEventType.CREATED,
         occurred_at=now,
+        actor_id=actor_id,
         source_channel="telegram",
         source_ref=str(case_id),
     )
@@ -43,7 +56,7 @@ def session_to_civic_case(session: dict) -> CivicCase:
         case_type=CaseType.COMPLAINT,
         subject=issue[:120] or "Citizen complaint",
         narrative=issue,
-        created_by=None,
+        created_by=actor_id,
         jurisdiction={
             "district": session.get("district"),
             "department": session.get("department"),
@@ -67,15 +80,12 @@ def persist_generated_complaint(
     *,
     repository: CivicCaseRepository,
 ) -> CivicCase:
-    """Persist without ever downgrading an already-reviewed/ready case."""
+    """Persist a Telegram complaint in the canonical Case repository."""
     case_id = session.get("complaint_id")
     case = repository.get(case_id) if case_id else None
     if case is None:
         case = session_to_civic_case(session)
         repository.save(case)
-
-    # Preserve the existing JSONL record during migration.
-    save_complaint(session)
     return case
 
 
@@ -84,7 +94,7 @@ def record_submission_consent(
     *,
     repository: CivicCaseRepository,
 ) -> CivicCase:
-    """Record explicit consent and move the case to READY."""
+    """Record explicit consent and move the owned case to READY."""
     case_id = session.get("complaint_id")
     if not case_id:
         raise ValueError("complaint_id is required for consent")
@@ -97,18 +107,20 @@ def record_submission_consent(
     if consent_id not in case.consent_refs:
         case.consent_refs.append(consent_id)
 
+    actor_id = _telegram_actor_id(session)
+
     if case.status is CaseStatus.DRAFT:
         case.start_review(
             event_id=f"{case_id}:review",
             occurred_at=_now(),
-            actor_id=f"telegram:{session.get('telegram_user_id', 'unknown')}",
+            actor_id=actor_id,
         )
 
     if case.status is CaseStatus.REVIEW:
         case.mark_ready(
             event_id=f"{case_id}:approved",
             occurred_at=_now(),
-            actor_id=f"telegram:{session.get('telegram_user_id', 'unknown')}",
+            actor_id=actor_id,
         )
     elif case.status is not CaseStatus.READY:
         raise ValueError(
