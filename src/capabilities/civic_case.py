@@ -32,21 +32,17 @@ class CivicCaseCapability:
     def __init__(self, repository: CivicCaseRepository) -> None:
         self._repository = repository
 
-    def create(self, request: CivicCaseCreateRequest, *, identity: IdentityContext,
-               source_channel: str | None = None) -> CivicCaseResult:
+    def create(self, request: CivicCaseCreateRequest, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
         subject, narrative = request.subject.strip(), request.narrative.strip()
         if not subject or not narrative:
             raise ValueError("A case requires a subject and narrative")
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=CAPABILITY_ID, action="create"))
+        decision = authorize(AuthorizationRequest(context=identity, capability=CAPABILITY_ID, action="create"))
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to create a civic case")
         now = datetime.now(timezone.utc).isoformat()
         case_id = f"case-{uuid4().hex}"
-        case = CivicCase(case_id=case_id, case_type=request.case_type,
-                         subject=subject, narrative=narrative,
-                         created_by=identity.principal.principal_id,
-                         created_at=now, updated_at=now)
+        case = CivicCase(case_id=case_id, case_type=request.case_type, subject=subject, narrative=narrative,
+                         created_by=identity.principal.principal_id, created_at=now, updated_at=now)
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case)
         return CivicCaseResult(case, decision)
@@ -57,25 +53,42 @@ class CivicCaseCapability:
             return None
         return case
 
-    def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
-                     source_channel: str | None = None) -> CivicCaseResult:
+    def enrich_metadata(self, case_id: str, *, identity: IdentityContext,
+                        jurisdiction: dict[str, object] | None = None,
+                        related_organisation_id: str | None = None,
+                        related_office_id: str | None = None,
+                        related_official_id: str | None = None,
+                        related_representative_id: str | None = None,
+                        claims: list[dict[str, object]] | None = None) -> CivicCaseResult:
+        """Apply non-lifecycle case metadata through the shared capability."""
         case = self._owned(case_id, identity)
-        self._require(identity, "case:evidence", "case:add_evidence")
-        now = datetime.now(timezone.utc).isoformat()
-        case.add_evidence(evidence_id, event_id=f"event-{uuid4().hex}",
-                          occurred_at=now, actor_id=identity.principal.principal_id,
-                          source_channel=source_channel)
+        self._require(identity, "case:write", "case:enrich_metadata", resource_id=case.case_id)
+        if jurisdiction is not None:
+            case.jurisdiction = dict(jurisdiction)
+        case.related_organisation_id = related_organisation_id
+        case.related_office_id = related_office_id
+        case.related_official_id = related_official_id
+        case.related_representative_id = related_representative_id
+        if claims is not None:
+            case.claims = [dict(claim) for claim in claims]
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def add_document(self, case_id: str, document_id: str, *, identity: IdentityContext,
-                     source_channel: str | None = None) -> CivicCaseResult:
+    def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
+        case = self._owned(case_id, identity)
+        self._require(identity, "case:evidence", "case:add_evidence")
+        now = datetime.now(timezone.utc).isoformat()
+        case.add_evidence(evidence_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
+                          actor_id=identity.principal.principal_id, source_channel=source_channel)
+        self._repository.save(case)
+        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
+
+    def add_document(self, case_id: str, document_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
         case = self._owned(case_id, identity)
         self._require(identity, "case:write", "case:add_document")
         now = datetime.now(timezone.utc).isoformat()
-        case.add_document(document_id, event_id=f"event-{uuid4().hex}",
-                          occurred_at=now, actor_id=identity.principal.principal_id,
-                          source_channel=source_channel)
+        case.add_document(document_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
+                          actor_id=identity.principal.principal_id, source_channel=source_channel)
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
@@ -94,8 +107,7 @@ class CivicCaseCapability:
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def transition(self, case_id: str, *, action: str, identity: IdentityContext,
-                   source_channel: str | None = None,
-                   source_ref: str | None = None,
+                   source_channel: str | None = None, source_ref: str | None = None,
                    notes: str | None = None) -> CivicCaseResult:
         """Execute an allowed lifecycle command with shared auth and persistence."""
         transitions = {
@@ -110,20 +122,16 @@ class CivicCaseCapability:
             raise ValueError(f"Unsupported civic case transition: {action}")
         capability, transition_fn, high_risk = transitions[action]
         case = self._owned(case_id, identity)
-        self._require(identity, capability, action, resource_id=case.case_id,
-                      high_risk=high_risk)
+        self._require(identity, capability, action, resource_id=case.case_id, high_risk=high_risk)
         now = datetime.now(timezone.utc).isoformat()
-        kwargs: dict[str, object] = {
-            "event_id": f"event-{uuid4().hex}",
-            "occurred_at": now,
-            "actor_id": identity.principal.principal_id,
-        }
+        kwargs: dict[str, object] = {"event_id": f"event-{uuid4().hex}", "occurred_at": now,
+                                     "actor_id": identity.principal.principal_id}
         if action in {"case:begin_submission", "case:queue_submission", "case:submit", "case:acknowledge"}:
             kwargs["source_channel"] = source_channel
         if action == "case:acknowledge":
             kwargs["source_ref"] = source_ref
             kwargs["notes"] = notes
-        event = transition_fn(case, **kwargs)
+        transition_fn(case, **kwargs)
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
@@ -136,22 +144,16 @@ class CivicCaseCapability:
     @staticmethod
     def _require(identity: IdentityContext, capability: str, action: str,
                  resource_id: str | None = None, high_risk: bool = False) -> None:
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=capability, action=action,
-            resource_id=resource_id,
-            risk_level="high" if high_risk else "normal",
-            requires_approval=high_risk,
-        ))
+        decision = authorize(AuthorizationRequest(context=identity, capability=capability, action=action,
+                                                  resource_id=resource_id, risk_level="high" if high_risk else "normal",
+                                                  requires_approval=high_risk))
         if decision is AuthorizationDecision.DENY:
             raise PermissionError("Capability is not authorized")
         if decision is AuthorizationDecision.REQUIRE_APPROVAL:
             raise PermissionError("Explicit approval required")
 
     @staticmethod
-    def _event(case_id: str, event_type: CaseEventType, identity: IdentityContext,
-               occurred_at: str, source_channel: str | None):
+    def _event(case_id: str, event_type: CaseEventType, identity: IdentityContext, occurred_at: str, source_channel: str | None):
         from src.core.civic_case import CaseEvent
-        return CaseEvent(event_id=f"event-{uuid4().hex}", case_id=case_id,
-                         event_type=event_type, occurred_at=occurred_at,
-                         actor_id=identity.principal.principal_id,
-                         source_channel=source_channel)
+        return CaseEvent(event_id=f"event-{uuid4().hex}", case_id=case_id, event_type=event_type,
+                         occurred_at=occurred_at, actor_id=identity.principal.principal_id, source_channel=source_channel)
