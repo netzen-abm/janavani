@@ -25,7 +25,7 @@ def create_canonical_app() -> FastAPI:
     app.include_router(land_router)
     app.include_router(civic_case_router)
 
-    @app.get("/", tags=["Platform"])
+    @app.api_route("/", methods=["GET", "HEAD"], tags=["Platform"])
     async def root() -> dict[str, object]:
         """Return a truthful service landing response instead of a root 404."""
         return {
