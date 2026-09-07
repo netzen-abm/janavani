@@ -25,6 +25,19 @@ def create_canonical_app() -> FastAPI:
     app.include_router(land_router)
     app.include_router(civic_case_router)
 
+    @app.get("/", tags=["Platform"])
+    async def root() -> dict[str, object]:
+        """Return a truthful service landing response instead of a root 404."""
+        return {
+            "service": "janavani-platform-api",
+            "version": "canonical-m3",
+            "status": "available",
+            "health": "/liveness",
+            "version_endpoint": "/version",
+            "openapi": "/openapi.json",
+            "docs": "/docs",
+        }
+
     @app.get("/liveness", tags=["Platform"])
     async def liveness() -> dict[str, str]:
         return {"status": "alive"}
