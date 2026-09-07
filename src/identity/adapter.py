@@ -44,5 +44,7 @@ class DefaultIdentityAdapter:
             identity_mode=IdentityMode.AUTHENTICATED,
             interface=identity.provider,
             authentication_method=method,
+            scopes=identity.scopes,
+            capabilities=identity.capabilities,
         )
         return IdentityContext(principal=principal)
