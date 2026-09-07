@@ -50,21 +50,19 @@ class EventRequest(BaseModel):
 async def create_case(request: CaseCreateRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         result = _CAPABILITY.create(
-            CivicCaseCreateRequest(request.case_type, request.subject, request.narrative),
+            CivicCaseCreateRequest(
+                case_type=request.case_type,
+                subject=request.subject,
+                narrative=request.narrative,
+                jurisdiction=request.jurisdiction,
+                related_organisation_id=request.related_organisation_id,
+                related_office_id=request.related_office_id,
+                related_official_id=request.related_official_id,
+                related_representative_id=request.related_representative_id,
+                claims=request.claims,
+            ),
             identity=context,
             source_channel="webapp",
-        )
-        # Metadata enrichment is performed through the capability boundary rather
-        # than mutating the aggregate in this HTTP adapter.
-        result = _CAPABILITY.enrich_metadata(
-            result.case.case_id,
-            identity=context,
-            jurisdiction=request.jurisdiction,
-            related_organisation_id=request.related_organisation_id,
-            related_office_id=request.related_office_id,
-            related_official_id=request.related_official_id,
-            related_representative_id=request.related_representative_id,
-            claims=request.claims,
         )
         return {"case_id": result.case.case_id, "status": result.case.status.value}
     except ValueError as exc:
