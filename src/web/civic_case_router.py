@@ -1,10 +1,12 @@
 """Thin HTTP adapter for the shared civic case contract.
 
-The adapter depends on the canonical repository boundary. The default
-repository is process-local until a production durable provider is verified.
+The adapter depends on the canonical repository boundary. Development and
+unit tests may use process-local memory; production configuration must select
+a durable provider through the runtime configuration contract.
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -12,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from src.core.civic_case import CaseType, CivicCase
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.storage.repositories.provider import create_civic_case_repository
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 
@@ -51,8 +54,19 @@ class EventRequest(BaseModel):
     notes: str | None = None
 
 
+# Stable memory fixture for tests/development. Production configuration is
+# validated before canonical app assembly and requires a durable provider.
 _CASES: dict[str, CivicCase] = {}
-_REPOSITORY = InMemoryCivicCaseRepository(_CASES)
+
+
+def _create_repository():
+    provider = os.getenv("JANAVANI_CASE_REPOSITORY_PROVIDER", "memory").strip().lower()
+    if provider == "memory":
+        return InMemoryCivicCaseRepository(_CASES)
+    return create_civic_case_repository(provider)
+
+
+_REPOSITORY = _create_repository()
 
 
 @router.post("")
@@ -93,11 +107,7 @@ async def add_consent(case_id: str, request: ConsentRequest) -> dict[str, object
 @router.post("/{case_id}/review")
 async def start_review(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.start_review(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-    )
+    event = case.start_review(event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -105,11 +115,7 @@ async def start_review(case_id: str, request: EventRequest) -> dict[str, object]
 @router.post("/{case_id}/ready")
 async def mark_ready(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.mark_ready(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-    )
+    event = case.mark_ready(event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -117,13 +123,7 @@ async def mark_ready(case_id: str, request: EventRequest) -> dict[str, object]:
 @router.post("/{case_id}/evidence")
 async def add_evidence(case_id: str, request: EvidenceRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.add_evidence(
-        request.evidence_id,
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-        source_channel=request.source_channel,
-    )
+    event = case.add_evidence(request.evidence_id, event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id, source_channel=request.source_channel)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -131,12 +131,7 @@ async def add_evidence(case_id: str, request: EvidenceRequest) -> dict[str, obje
 @router.post("/{case_id}/submitting")
 async def begin_submission(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.begin_submission(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-        source_channel=request.source_channel,
-    )
+    event = case.begin_submission(event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id, source_channel=request.source_channel)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -144,12 +139,7 @@ async def begin_submission(case_id: str, request: EventRequest) -> dict[str, obj
 @router.post("/{case_id}/queued")
 async def queue_submission(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.queue_submission(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-        source_channel=request.source_channel,
-    )
+    event = case.queue_submission(event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id, source_channel=request.source_channel)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -157,12 +147,7 @@ async def queue_submission(case_id: str, request: EventRequest) -> dict[str, obj
 @router.post("/{case_id}/submit")
 async def submit_case(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.submit(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=request.actor_id,
-        source_channel=request.source_channel,
-    )
+    event = case.submit(event_id=request.event_id, occurred_at=request.occurred_at, actor_id=request.actor_id, source_channel=request.source_channel)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -170,13 +155,7 @@ async def submit_case(case_id: str, request: EventRequest) -> dict[str, object]:
 @router.post("/{case_id}/acknowledge")
 async def acknowledge_case(case_id: str, request: EventRequest) -> dict[str, object]:
     case = _get_case(case_id)
-    event = case.acknowledge(
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        source_channel=request.source_channel,
-        source_ref=request.source_ref,
-        notes=request.notes,
-    )
+    event = case.acknowledge(event_id=request.event_id, occurred_at=request.occurred_at, source_channel=request.source_channel, source_ref=request.source_ref, notes=request.notes)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
@@ -189,11 +168,7 @@ def _get_case(case_id: str) -> CivicCase:
 
 
 def _event_result(case: CivicCase, event_type: str) -> dict[str, object]:
-    return {
-        "case_id": case.case_id,
-        "status": case.status.value,
-        "event": event_type,
-    }
+    return {"case_id": case.case_id, "status": case.status.value, "event": event_type}
 
 
 def _serialize(case: CivicCase) -> dict[str, object]:
