@@ -14,7 +14,7 @@ def _identity(*capabilities: str) -> IdentityContext:
     return IdentityContext(
         principal=Principal(
             principal_id="citizen:test",
-            mode=IdentityMode.AUTHENTICATED,
+            identity_mode=IdentityMode.AUTHENTICATED,
             capabilities=frozenset(capabilities),
         ),
         request_id="request-test",
