@@ -9,7 +9,6 @@ from services.issue_classifier import classify_issue
 from src.commands.shared_case_capability import create_case_from_telegram
 from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
-from src.storage.repositories.provider import create_civic_case_repository
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -43,7 +42,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
     )
     identity = IdentityContext(principal=principal)
-    repository = create_civic_case_repository("memory")
+    repository = context.bot_data["case_repository"]
     case = create_case_from_telegram(
         repository,
         identity=identity,
