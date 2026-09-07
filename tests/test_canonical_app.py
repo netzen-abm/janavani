@@ -25,6 +25,8 @@ def test_canonical_platform_endpoints() -> None:
         "docs": "/docs",
     }
 
+    assert client.head("/").status_code == 200
+
     assert client.get("/liveness").status_code == 200
     assert client.get("/liveness").json() == {"status": "alive"}
 
