@@ -226,6 +226,19 @@ def is_surface(path: pathlib.Path) -> bool:
     )
 
 
+def is_capability_receiver(node: ast.AST) -> bool:
+    """Recognize calls through an explicit capability variable.
+
+    Surface code may invoke capability commands such as
+    ``_CAPABILITY.add_evidence(...)``. Those are the required boundary.
+    The guard must instead reject direct aggregate calls such as
+    ``case.add_evidence(...)`` or ``result.case.add_evidence(...)``.
+    """
+    return isinstance(node, ast.Name) and (
+        node.id == "_CAPABILITY" or node.id.endswith("_CAPABILITY")
+    )
+
+
 def check_surface_separation() -> list[str]:
     failures = []
     for path in changed_files():
@@ -239,7 +252,7 @@ def check_surface_separation() -> list[str]:
             function = node.func
             if not isinstance(function, ast.Attribute):
                 continue
-            if function.attr in LIFECYCLE_MUTATORS:
+            if function.attr in LIFECYCLE_MUTATORS and not is_capability_receiver(function.value):
                 failures.append(
                     f"surface directly mutates CivicCase lifecycle: "
                     f"{path.relative_to(ROOT)}:{node.lineno}"

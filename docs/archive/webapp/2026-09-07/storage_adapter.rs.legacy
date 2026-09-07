@@ -1,3 +1,7 @@
+// Archived 2026-09-07 during WebApp convergence.
+// Superseded by the canonical WebApp storage/repository boundary.
+// This legacy adapter used plaintext localStorage and referenced the removed DraftResponse API.
+
 use crate::api_client::DraftResponse;
 use gloo_utils::window;
 use serde_json;
@@ -5,7 +9,6 @@ use serde_json;
 pub struct LocalBrowserStorage;
 
 impl LocalBrowserStorage {
-    /// Stores Janavani document data locally for offline continuity.
     pub fn cache_document_locally(
         tracking_id: &str,
         data: &DraftResponse,
@@ -17,13 +20,11 @@ impl LocalBrowserStorage {
         let serialized = serde_json::to_string(data)
             .map_err(|e| format!("Serialization error: {e}"))?;
         let key = format!("local_doc:{tracking_id}");
-
         storage
             .set_item(&key, &serialized)
             .map_err(|_| "Browser storage limit reached.".to_string())
     }
 
-    /// Retrieves a Janavani document from local browser storage.
     pub fn retrieve_document_locally(tracking_id: &str) -> Option<DraftResponse> {
         let storage = window().local_storage().ok()??;
         let key = format!("local_doc:{tracking_id}");
