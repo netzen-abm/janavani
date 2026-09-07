@@ -113,6 +113,38 @@ def test_shared_capability_fails_closed_without_authority_destination() -> None:
         action.build_document(case.case_id, identity=identity())
 
 
+def test_shared_capability_rejects_unverified_authority() -> None:
+    cases = InMemoryCivicCaseRepository()
+    authorities = InMemoryAuthorityRepository([
+        AuthorityRecord(
+            authority_id="office-unverified",
+            name="Unverified Office",
+            authority_type="office",
+            primary_contact=AuthorityContact(
+                name="Unverified Contact",
+                address="Unverified Address",
+                email="unverified@example.gov.in",
+                verified=False,
+            ),
+            verification_status="UNVERIFIED",
+        )
+    ])
+    case = CivicCaseCapability(cases).create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Unverified destination",
+            narrative="This must not become an authoritative document destination.",
+            related_office_id="office-unverified",
+        ),
+        identity=identity(),
+        source_channel="test",
+    ).case
+    with pytest.raises(ValueError, match="not verified"):
+        action_capability(cases, authorities=authorities).build_document(
+            case.case_id, identity=identity()
+        )
+
+
 def test_evidence_repository_normalizes_sha256() -> None:
     evidence = InMemoryEvidenceRepository()
     evidence.save(EvidenceObject(
