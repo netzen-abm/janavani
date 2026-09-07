@@ -6,7 +6,6 @@ mod api_client;
 mod capability_checker;
 mod decentralized_drivers;
 mod sos_interface;
-mod storage_adapter;
 
 use api_client::{CaseDocument, JanavaniDioxusBridge};
 use sos_interface::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
@@ -82,14 +81,12 @@ fn App() -> Element {
         main {
             class: "container",
             style: "margin: 2rem auto; max-width: 900px; padding: 1rem;",
-
             header {
                 style: "text-align: center; margin-bottom: 2rem;",
                 h1 { "JANAVANI" }
                 p { "The Infrastructure of Citizen Voice" }
                 p { style: "font-size: 0.85rem;", "WebApp — shared Civic Case capability" }
             }
-
             section {
                 style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px;",
                 h2 { "Civic action" }
@@ -106,7 +103,6 @@ fn App() -> Element {
                     if *is_loading.read() { "Creating case…" } else { "Create civic case" }
                 }
             }
-
             if let Some(error) = runtime_error.read().as_ref() {
                 section {
                     style: "padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #d66; border-radius: 8px;",
@@ -115,7 +111,6 @@ fn App() -> Element {
                     p { "No browser-side identity secret is embedded. The production WebApp must obtain a server-issued authenticated session/assertion before case operations." }
                 }
             }
-
             if let Some(result) = case_result.read().as_ref() {
                 section {
                     style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #aaa; border-radius: 8px;",
@@ -132,7 +127,6 @@ fn App() -> Element {
                     button { onclick: on_refresh_case, "Refresh case" }
                 }
             }
-
             section {
                 style: "padding: 1.25rem; border: 1px solid #ecc; border-radius: 8px;",
                 h2 { "Emergency capability" }
