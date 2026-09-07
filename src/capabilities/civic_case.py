@@ -18,6 +18,12 @@ class CivicCaseCreateRequest:
     case_type: CaseType
     subject: str
     narrative: str
+    jurisdiction: dict[str, object] | None = None
+    related_organisation_id: str | None = None
+    related_office_id: str | None = None
+    related_official_id: str | None = None
+    related_representative_id: str | None = None
+    claims: list[dict[str, object]] | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,14 @@ class CivicCaseCapability:
         case_id = f"case-{uuid4().hex}"
         case = CivicCase(case_id=case_id, case_type=request.case_type, subject=subject, narrative=narrative,
                          created_by=identity.principal.principal_id, created_at=now, updated_at=now)
+        if request.jurisdiction is not None:
+            case.jurisdiction = dict(request.jurisdiction)
+        case.related_organisation_id = request.related_organisation_id
+        case.related_office_id = request.related_office_id
+        case.related_official_id = request.related_official_id
+        case.related_representative_id = request.related_representative_id
+        if request.claims is not None:
+            case.claims = [dict(claim) for claim in request.claims]
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case)
         return CivicCaseResult(case, decision)
@@ -52,27 +66,6 @@ class CivicCaseCapability:
         if case is None or case.created_by != identity.principal.principal_id:
             return None
         return case
-
-    def enrich_metadata(self, case_id: str, *, identity: IdentityContext,
-                        jurisdiction: dict[str, object] | None = None,
-                        related_organisation_id: str | None = None,
-                        related_office_id: str | None = None,
-                        related_official_id: str | None = None,
-                        related_representative_id: str | None = None,
-                        claims: list[dict[str, object]] | None = None) -> CivicCaseResult:
-        """Apply non-lifecycle case metadata through the shared capability."""
-        case = self._owned(case_id, identity)
-        self._require(identity, "case:write", "case:enrich_metadata", resource_id=case.case_id)
-        if jurisdiction is not None:
-            case.jurisdiction = dict(jurisdiction)
-        case.related_organisation_id = related_organisation_id
-        case.related_office_id = related_office_id
-        case.related_official_id = related_official_id
-        case.related_representative_id = related_representative_id
-        if claims is not None:
-            case.claims = [dict(claim) for claim in claims]
-        self._repository.save(case)
-        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
         case = self._owned(case_id, identity)
