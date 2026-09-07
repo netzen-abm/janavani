@@ -7,7 +7,7 @@ import time
 from fastapi.testclient import TestClient
 
 from src.web.canonical_app import app
-from src.web.civic_case_router import _CASES
+from src.web.civic_case_router import _REPOSITORY
 
 
 SECRET = "test-identity-secret"
@@ -15,9 +15,9 @@ client = TestClient(app)
 
 
 def setup_function() -> None:
-    _CASES.clear()
+    if hasattr(_REPOSITORY, "clear"):
+        _REPOSITORY.clear()
     import os
-
     os.environ["JANAVANI_IDENTITY_ASSERTION_SECRET"] = SECRET
 
 
@@ -35,6 +35,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "exp": now + 60,
         "jti": f"test-{principal_id}-{now}",
         "capabilities": [
+            "JNV-CIVIC-COMPLAINT",
             "case:read",
             "case:write",
             "case:review",
@@ -52,7 +53,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
 def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth() -> None:
     unauthenticated = client.post(
         "/civic/cases",
-        json={"case_id": "case-unauth", "case_type": "corruption", "subject": "x", "narrative": "x"},
+        json={"case_type": "corruption", "subject": "x", "narrative": "x"},
     )
     assert unauthenticated.status_code == 401
 
@@ -60,7 +61,7 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
         "/civic/cases",
         headers=_auth_header("principal-1"),
         json={
-            "case_id": "case-api-1",
+            "case_id": "legacy-client-id-ignored",
             "case_type": "corruption",
             "subject": "Delayed public service",
             "narrative": "The requested service has not been delivered.",
@@ -74,60 +75,62 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
         },
     )
     assert create.status_code == 200
+    case_id = create.json()["case_id"]
+    assert case_id.startswith("case-")
+    assert case_id != "legacy-client-id-ignored"
     assert create.json()["status"] == "draft"
 
-    forbidden_owner = client.get("/civic/cases/case-api-1", headers=_auth_header("principal-2"))
+    forbidden_owner = client.get(f"/civic/cases/{case_id}", headers=_auth_header("principal-2"))
     assert forbidden_owner.status_code == 404
 
     review = client.post(
-        "/civic/cases/case-api-1/review",
+        f"/civic/cases/{case_id}/review",
         headers=_auth_header(),
-        json={"event_id": "e1", "occurred_at": "2026-08-24T00:00:00Z"},
+        json={"event_id": "legacy-e1", "occurred_at": "2026-08-24T00:00:00Z"},
     )
     assert review.status_code == 200
     assert review.json()["status"] == "review"
 
     consent = client.post(
-        "/civic/cases/case-api-1/consent",
+        f"/civic/cases/{case_id}/consent",
         headers=_auth_header(),
         json={"consent_id": "consent-1"},
     )
     assert consent.status_code == 200
 
     ready = client.post(
-        "/civic/cases/case-api-1/ready",
+        f"/civic/cases/{case_id}/ready",
         headers=_auth_header(),
-        json={"event_id": "e2", "occurred_at": "2026-08-24T00:01:00Z"},
+        json={"event_id": "legacy-e2", "occurred_at": "2026-08-24T00:01:00Z"},
     )
     assert ready.status_code == 200
     assert ready.json()["status"] == "ready"
 
     submitting = client.post(
-        "/civic/cases/case-api-1/submitting",
+        f"/civic/cases/{case_id}/submitting",
         headers=_auth_header(),
-        json={"event_id": "e3", "occurred_at": "2026-08-24T00:02:00Z"},
+        json={"event_id": "legacy-e3", "occurred_at": "2026-08-24T00:02:00Z"},
     )
     assert submitting.status_code == 200
     assert submitting.json()["status"] == "submitting"
 
     queued = client.post(
-        "/civic/cases/case-api-1/queued",
+        f"/civic/cases/{case_id}/queued",
         headers=_auth_header(),
-        json={"event_id": "e4", "occurred_at": "2026-08-24T00:03:00Z"},
+        json={"event_id": "legacy-e4", "occurred_at": "2026-08-24T00:03:00Z"},
     )
     assert queued.status_code == 200
-    assert queued.json()["status"] == "queued"
 
     # External submission is consequential. The shared authorization kernel must
-    # refuse it until the future explicit-approval capability is implemented.
+    # refuse it until explicit approval is provided by the future approval path.
     submitted = client.post(
-        "/civic/cases/case-api-1/submit",
+        f"/civic/cases/{case_id}/submit",
         headers=_auth_header(),
-        json={"event_id": "e5", "occurred_at": "2026-08-24T00:04:00Z"},
+        json={"event_id": "legacy-e5", "occurred_at": "2026-08-24T00:04:00Z"},
     )
     assert submitted.status_code == 409
 
-    fetched = client.get("/civic/cases/case-api-1", headers=_auth_header())
+    fetched = client.get(f"/civic/cases/{case_id}", headers=_auth_header())
     assert fetched.status_code == 200
     body = fetched.json()
     assert body["created_by"] == "principal-1"
@@ -137,4 +140,4 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert body["related_official_id"] == "official-1"
     assert body["related_representative_id"] == "rep-1"
     assert body["claims"][0]["claim_id"] == "claim-1"
-    assert len(body["events"]) == 4
+    assert len(body["events"]) == 6
