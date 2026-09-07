@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from src.capabilities.civic_case import CivicCaseCapability
@@ -18,6 +19,7 @@ from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat, DocumentParty
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
 
 
@@ -37,12 +39,14 @@ class CivicActionCapability:
         self,
         *,
         case_capability: CivicCaseCapability,
+        case_repository: CivicCaseRepository,
         authority_repository: AuthorityRepository,
         evidence_repository: EvidenceRepository | None = None,
         artifact_repository: DocumentArtifactRepository | None = None,
         blob_store: ArtifactBlobStore | None = None,
     ) -> None:
         self._case_capability = case_capability
+        self._case_repository = case_repository
         self._authority_repository = authority_repository
         self._evidence_repository = evidence_repository
         self._artifact_repository = artifact_repository
@@ -52,7 +56,7 @@ class CivicActionCapability:
         self,
         case_id: str,
         *,
-        identity,
+        identity: Any,
         document_id: str | None = None,
         date: str | None = None,
     ) -> CivicActionBuildResult:
@@ -105,7 +109,7 @@ class CivicActionCapability:
         self,
         case_id: str,
         *,
-        identity,
+        identity: Any,
         document_format: DocumentFormat = DocumentFormat.PDF,
         output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
         document_id: str | None = None,
@@ -131,5 +135,5 @@ class CivicActionCapability:
                 occurred_at=datetime.now(timezone.utc).isoformat(),
                 source_channel=None,
             )
-            self._case_capability._repository.save(result.case)
+            self._case_repository.save(result.case)
         return artifact
