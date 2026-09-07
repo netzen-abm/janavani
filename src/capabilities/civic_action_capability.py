@@ -60,7 +60,7 @@ class CivicActionCapability:
         document_id: str | None = None,
         date: str | None = None,
     ) -> CivicActionBuildResult:
-        """Build a document only from an owned canonical Case and resolvable authority."""
+        """Build a document only from an owned Case and verified authority destination."""
         case = self._case_capability.get_owned(case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
@@ -78,6 +78,8 @@ class CivicActionCapability:
         authority = self._authority_repository.get(authority_id)
         if authority is None:
             raise ValueError("Case has no resolvable authority destination")
+        if not authority.verified:
+            raise ValueError("Authority destination is not verified")
         destination = require_destination(authority)
 
         draft = DocumentDraft(
