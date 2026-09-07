@@ -8,7 +8,7 @@ from conversation.constants import WAITING_FOR_DOCUMENT
 from services.issue_classifier import classify_issue
 from src.commands.shared_case_capability import create_case_from_telegram
 from src.identity.context import IdentityContext
-from src.identity.principal import Principal, IdentityMode, AuthMethod, Interface
+from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.storage.repositories.provider import create_civic_case_repository
 
 
@@ -32,13 +32,13 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
-    # Telegram's platform identity is mapped to an opaque Janavani principal;
-    # the raw Telegram ID is never used as the canonical case owner.
+    # Channel identifiers are mapped to an opaque principal. The raw Telegram
+    # identifier is kept only in the channel session, never as case ownership.
     principal = Principal(
-        principal_id=f"telegram-session:{user_id}",
+        principal_id=f"tg-session-{user_id}",
         identity_mode=IdentityMode.ANONYMOUS,
-        interface=Interface.TELEGRAM,
-        auth_method=AuthMethod.PLATFORM_ASSERTION,
+        interface="telegram",
+        authentication_method=AuthenticationMethod.NONE,
         session_id=str(user_id),
         capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
     )
