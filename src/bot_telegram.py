@@ -7,7 +7,6 @@ from telegram.ext import (
 )
 
 from core.config import Config
-
 from commands.check import check
 from commands.start import start
 from commands.search import search
@@ -16,7 +15,7 @@ from commands.complaint import complaint
 from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
-from src.platform.composition import create_case_repository
+from src.platform.composition import create_case_repository, create_civic_action_capability, create_authority_repository
 
 
 def main():
@@ -30,17 +29,23 @@ def main():
     print("=" * 60)
 
     application = (
-        Application
-        .builder()
-        .token(Config.TELEGRAM_BOT_TOKEN)
-        .build()
+        Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
     )
 
     # Compose shared dependencies once at the bot application boundary.
     case_repository = create_case_repository()
+    authority_repository = create_authority_repository()
+    civic_action_capability = create_civic_action_capability(
+        case_repository=case_repository,
+        authority_repository=authority_repository,
+    )
     application.bot_data["case_repository"] = case_repository
+    application.bot_data["civic_action_capability"] = civic_action_capability
     application.bot_data["telegram_generation_dependencies"] = (
-        create_telegram_generation_dependencies(case_repository=case_repository)
+        create_telegram_generation_dependencies(
+            case_repository=case_repository,
+            civic_action_capability=civic_action_capability,
+        )
     )
 
     application.add_handler(CallbackQueryHandler(handle_format))
@@ -49,9 +54,7 @@ def main():
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
     application.add_handler(CommandHandler("check", check))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, route)
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route))
 
     print("✅ Bot Started Successfully")
     print("=" * 60)

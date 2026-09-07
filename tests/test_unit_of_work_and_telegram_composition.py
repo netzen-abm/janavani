@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from src.conversation.steps.generate import TelegramGenerationDependencies
 from src.core.civic_case import CaseType, CivicCase
 from src.storage.postgres_unit_of_work import PostgresUnitOfWork
 from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
-from src.conversation.steps.generate import TelegramGenerationDependencies
 
 
 class FakeTransaction:
@@ -123,9 +123,11 @@ def test_civic_case_repository_uses_injected_unit_of_work():
 def test_telegram_generation_dependencies_are_composed_once():
     deps = TelegramGenerationDependencies(
         case_repository=object(),
+        civic_action_capability=object(),
         artifact_repository=object(),
         blob_store=object(),
     )
     assert deps.case_repository is not None
+    assert deps.civic_action_capability is not None
     assert deps.artifact_repository is not None
     assert deps.blob_store is not None
