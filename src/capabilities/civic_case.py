@@ -1,8 +1,7 @@
 """Provider- and surface-neutral Civic Case capability.
 
-This module composes the canonical domain model, identity/authorization and
-persistence contracts. Web, Telegram and future surfaces invoke this shared
-capability instead of implementing case creation independently.
+Web, Telegram and future access surfaces use this capability instead of
+implementing their own case-creation business logic.
 """
 from __future__ import annotations
 
@@ -21,8 +20,6 @@ CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
 
 @dataclass(frozen=True)
 class CivicCaseCreateRequest:
-    """Surface-neutral input for creating a civic complaint case."""
-
     case_type: CaseType
     subject: str
     narrative: str
@@ -30,14 +27,12 @@ class CivicCaseCreateRequest:
 
 @dataclass(frozen=True)
 class CivicCaseResult:
-    """Stable result returned to any access surface."""
-
     case: CivicCase
     authorization: AuthorizationDecision
 
 
 class CivicCaseCapability:
-    """Shared composition boundary for CivicCase creation."""
+    """Canonical create/read boundary shared by WebApp, Telegram and other surfaces."""
 
     def __init__(self, repository: CivicCaseRepository) -> None:
         self._repository = repository
@@ -49,6 +44,12 @@ class CivicCaseCapability:
         identity: IdentityContext,
         source_channel: str | None = None,
     ) -> CivicCaseResult:
+        subject = request.subject.strip()
+        narrative = request.narrative.strip()
+        if not subject or not narrative:
+            raise ValueError("A case requires a subject and narrative")
+
+        principal_id = identity.principal.principal_id
         decision = authorize(
             AuthorizationRequest(
                 context=identity,
@@ -59,21 +60,17 @@ class CivicCaseCapability:
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to create a civic case")
 
-        principal_id = identity.principal.principal_id
         now = datetime.now(timezone.utc).isoformat()
         case_id = f"case-{uuid4().hex}"
         case = CivicCase(
             case_id=case_id,
             case_type=request.case_type,
-            subject=request.subject.strip(),
-            narrative=request.narrative.strip(),
+            subject=subject,
+            narrative=narrative,
             created_by=principal_id,
             created_at=now,
             updated_at=now,
         )
-        if not case.subject or not case.narrative:
-            raise ValueError("A case requires a subject and narrative")
-
         case.events.append(
             CaseEvent(
                 event_id=f"event-{uuid4().hex}",
@@ -86,3 +83,9 @@ class CivicCaseCapability:
         )
         self._repository.save(case)
         return CivicCaseResult(case=case, authorization=decision)
+
+    def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
+        case = self._repository.get(case_id)
+        if case is None or case.created_by != identity.principal.principal_id:
+            return None
+        return case
