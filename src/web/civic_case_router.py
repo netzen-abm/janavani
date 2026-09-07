@@ -7,7 +7,7 @@ kernel, and persistence is delegated to the canonical case repository.
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -58,8 +58,6 @@ class EventRequest(BaseModel):
     notes: str | None = None
 
 
-# Stable memory fixture for tests/development. Production configuration is
-# validated before canonical app assembly and requires a durable provider.
 _CASES: dict[str, CivicCase] = {}
 
 
@@ -82,6 +80,7 @@ def _authorize(
     high_risk: bool = False,
 ) -> None:
     if case is not None and case.created_by != context.principal.principal_id:
+        # Do not reveal the existence of another principal's case.
         raise HTTPException(status_code=404, detail="Case not found")
 
     decision = authorize(
@@ -212,7 +211,15 @@ async def submit_case(
     request: EventRequest,
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, object]:
-    return _transition(context, case_id, request, "case:submit", "case:submit", CivicCase.submit, high_risk=True)
+    return _transition(
+        context,
+        case_id,
+        request,
+        "case:submit",
+        "case:submit",
+        CivicCase.submit,
+        high_risk=True,
+    )
 
 
 @router.post("/{case_id}/acknowledge")
@@ -226,6 +233,7 @@ async def acknowledge_case(
     event = case.acknowledge(
         event_id=request.event_id,
         occurred_at=request.occurred_at,
+        actor_id=context.principal.principal_id,
         source_channel=request.source_channel,
         source_ref=request.source_ref,
         notes=request.notes,
@@ -234,16 +242,28 @@ async def acknowledge_case(
     return _event_result(case, event.event_type.value)
 
 
-def _transition(context: IdentityContext, case_id: str, request: EventRequest, capability: str, action: str, transition: Any, *, high_risk: bool = False) -> dict[str, object]:
+def _transition(
+    context: IdentityContext,
+    case_id: str,
+    request: EventRequest,
+    capability: str,
+    action: str,
+    transition: Callable[..., Any],
+    *,
+    high_risk: bool = False,
+) -> dict[str, object]:
     case = _get_case(case_id)
     _authorize(context, capability=capability, action=action, case=case, high_risk=high_risk)
-    event = transition(
-        case,
-        event_id=request.event_id,
-        occurred_at=request.occurred_at,
-        actor_id=context.principal.principal_id,
-        source_channel=request.source_channel,
-    )
+
+    kwargs: dict[str, object] = {
+        "event_id": request.event_id,
+        "occurred_at": request.occurred_at,
+        "actor_id": context.principal.principal_id,
+    }
+    if action in {"case:begin_submission", "case:queue_submission", "case:submit"}:
+        kwargs["source_channel"] = request.source_channel
+
+    event = transition(case, **kwargs)
     _REPOSITORY.save(case)
     return _event_result(case, event.event_type.value)
 
