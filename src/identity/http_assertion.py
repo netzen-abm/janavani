@@ -28,7 +28,10 @@ from .external import ExternalIdentity
 @dataclass(frozen=True)
 class IdentityAssertionVerifier:
     secret: bytes
+    expected_issuer: str | None = None
+    expected_audience: str | None = None
     max_clock_skew_seconds: int = 30
+    max_lifetime_seconds: int = 300
 
     def verify(self, assertion: str) -> ExternalIdentity:
         try:
@@ -46,20 +49,31 @@ class IdentityAssertionVerifier:
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
             raise ValueError("invalid identity assertion") from exc
 
-        required = ("principal_id", "provider", "subject", "authentication_method", "exp")
+        required = ("principal_id", "provider", "subject", "authentication_method", "iat", "exp", "jti")
         if any(not payload.get(key) for key in required):
             raise ValueError("identity assertion is missing required fields")
 
-        if not isinstance(payload["principal_id"], str):
+        if not isinstance(payload["principal_id"], str) or not payload["principal_id"]:
             raise ValueError("principal_id must be opaque text")
 
         try:
+            issued_at = int(payload["iat"])
             expires_at = int(payload["exp"])
         except (TypeError, ValueError) as exc:
-            raise ValueError("identity assertion expiry is invalid") from exc
+            raise ValueError("identity assertion lifetime is invalid") from exc
 
-        if time.time() > expires_at + self.max_clock_skew_seconds:
+        now = int(time.time())
+        if issued_at > now + self.max_clock_skew_seconds:
+            raise ValueError("identity assertion is issued in the future")
+        if expires_at < now - self.max_clock_skew_seconds:
             raise ValueError("identity assertion has expired")
+        if expires_at <= issued_at or expires_at - issued_at > self.max_lifetime_seconds:
+            raise ValueError("identity assertion lifetime is invalid")
+
+        if self.expected_issuer is not None and payload.get("iss") != self.expected_issuer:
+            raise ValueError("identity assertion issuer is invalid")
+        if self.expected_audience is not None and payload.get("aud") != self.expected_audience:
+            raise ValueError("identity assertion audience is invalid")
 
         return ExternalIdentity(
             provider=str(payload["provider"]),
@@ -89,7 +103,12 @@ def require_authenticated_identity(
 
     assertion = authorization.removeprefix("Bearer ").strip()
     try:
-        identity = IdentityAssertionVerifier(secret_value.encode("utf-8")).verify(assertion)
+        verifier = IdentityAssertionVerifier(
+            secret=secret_value.encode("utf-8"),
+            expected_issuer=os.getenv("JANAVANI_IDENTITY_ASSERTION_ISSUER") or None,
+            expected_audience=os.getenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE") or None,
+        )
+        identity = verifier.verify(assertion)
         context = DefaultIdentityAdapter().resolve(identity)
     except ValueError as exc:
         raise HTTPException(status_code=401, detail="Invalid authenticated identity") from exc
@@ -105,4 +124,7 @@ def _b64decode(value: str) -> bytes:
 def _string_values(values: Iterable[object]) -> list[str]:
     if isinstance(values, (str, bytes)):
         raise ValueError("identity assertion collections must be arrays")
-    return [value for value in values if isinstance(value, str) and value]
+    try:
+        return [value for value in values if isinstance(value, str) and value]
+    except TypeError as exc:
+        raise ValueError("identity assertion collections must be arrays") from exc
