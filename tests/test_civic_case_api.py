@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import time
 
 from fastapi.testclient import TestClient
@@ -17,7 +18,6 @@ client = TestClient(app)
 def setup_function() -> None:
     if hasattr(_REPOSITORY, "clear"):
         _REPOSITORY.clear()
-    import os
     os.environ["JANAVANI_IDENTITY_ASSERTION_SECRET"] = SECRET
 
 
@@ -28,7 +28,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "provider": "test-identity", "subject": principal_id, "principal_id": principal_id,
         "authentication_method": "passkey", "iat": now, "exp": now + 60,
         "jti": f"test-{principal_id}-{now}",
-        "capabilities": ["case:read", "case:write", "case:review", "case:evidence", "case:submit"],
+        "capabilities": ["JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review", "case:evidence", "case:submit"],
     }
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
     encoded = base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
