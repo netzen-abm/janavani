@@ -7,6 +7,6 @@ global:
 scrape_configs:
   - job_name: 'janavani-platform-telemetry'
     metrics_path: /api/v1/agent/metrics
-    bearer_token: 'web-mvp-token-abc' # Enforces security context validation requirements
+    bearer_token_file: /etc/prometheus/secrets/janavani_interface_token
     static_configs:
       - targets: ['ai-agent-service:8000']
