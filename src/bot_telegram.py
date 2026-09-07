@@ -16,7 +16,7 @@ from commands.complaint import complaint
 from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
-from storage.repositories.provider import create_civic_case_repository
+from src.platform.composition import create_case_repository
 
 
 def main():
@@ -36,8 +36,9 @@ def main():
         .build()
     )
 
-    # Compose shared repositories/providers once at the application boundary.
-    case_repository = create_civic_case_repository()
+    # Compose shared dependencies once at the bot application boundary.
+    case_repository = create_case_repository()
+    application.bot_data["case_repository"] = case_repository
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(case_repository=case_repository)
     )
