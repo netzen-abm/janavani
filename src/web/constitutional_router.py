@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.core.civic_case import CaseType
 from src.core.legislative_monitor import fetch_active_bill_profile
 from src.core.vernacular_headers import fetch_localized_header_map
@@ -38,10 +39,8 @@ _ARTIFACT_BLOB_STORE = create_artifact_blob_store()
 _CIVIC_ACTION_CAPABILITY = create_civic_action_capability(
     case_repository=_REPOSITORY,
     authority_repository=_AUTHORITY_REPOSITORY,
+    blob_store=_ARTIFACT_BLOB_STORE,
 )
-# The action capability receives the same blob store used by this adapter so
-# the returned artifact can be opened without introducing another storage path.
-_CIVIC_ACTION_CAPABILITY._blob_store = _ARTIFACT_BLOB_STORE
 
 
 class ObjectionDispatchPayload(BaseModel):
@@ -71,11 +70,7 @@ async def get_bill_compliance_report(bill_code: str):
 
 
 def _build_objection_body(bill_data: dict[str, Any], citizen_comments: str) -> str:
-    """Convert the legislative profile into citizen-reviewable document prose.
-
-    The evaluation is retained as source analysis, not promoted here into a
-    verified legal determination.
-    """
+    """Convert legislative source data into citizen-reviewable document prose."""
     evaluation = bill_data["constitutional_evaluation"]
     lang_tags = fetch_localized_header_map(bill_data["state"])
     return (
@@ -128,45 +123,46 @@ async def generate_objection(
     if not bill_data:
         raise HTTPException(status_code=404, detail="Target bill profile data missing.")
 
-    selected_format = payload.requested_file_format.strip().lower()
     try:
-        document_format = DocumentFormat(selected_format)
+        document_format = DocumentFormat(payload.requested_file_format.strip().lower())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Unsupported file format. Use PDF or DOCX.") from exc
 
-    case_result = _CAPABILITY.create(
-        request=__import__("src.capabilities.civic_case", fromlist=["CivicCaseCreateRequest"]).CivicCaseCreateRequest(
-            case_type=CaseType.OBJECTION,
-            subject=f"Formal Constitutional Objection Against '{bill_data['title']}'",
-            narrative=_build_objection_body(bill_data, payload.citizen_comments),
-            jurisdiction={"state": bill_data["state"], "region": bill_data.get("region", "")},
-            related_office_id=payload.authority_id,
-            claims=[
-                {
-                    "claim_type": "legislative_source",
-                    "bill_code": payload.bill_code,
-                    "title": bill_data["title"],
-                    "status": bill_data.get("status"),
-                    "source": "src.core.legislative_monitor.LIVE_LEGISLATIVE_BILL_REGISTRY",
-                },
-                {
-                    "claim_type": "constitutional_evaluation",
-                    "provenance": "legislative_profile_analysis",
-                    "verified": False,
-                    "evaluation": bill_data["constitutional_evaluation"],
-                },
-            ],
-        ),
-        identity=context,
-        source_channel="webapp",
-    )
+    try:
+        case_result = _CAPABILITY.create(
+            CivicCaseCreateRequest(
+                case_type=CaseType.OBJECTION,
+                subject=f"Formal Constitutional Objection Against '{bill_data['title']}'",
+                narrative=_build_objection_body(bill_data, payload.citizen_comments),
+                jurisdiction={"state": bill_data["state"], "region": bill_data.get("region", "")},
+                related_office_id=payload.authority_id,
+                claims=[
+                    {
+                        "claim_type": "legislative_source",
+                        "bill_code": payload.bill_code,
+                        "title": bill_data["title"],
+                        "status": bill_data.get("status"),
+                        "source": "src.core.legislative_monitor.LIVE_LEGISLATIVE_BILL_REGISTRY",
+                    },
+                    {
+                        "claim_type": "constitutional_evaluation",
+                        "provenance": "legislative_profile_analysis",
+                        "verified": False,
+                        "evaluation": bill_data["constitutional_evaluation"],
+                    },
+                ],
+            ),
+            identity=context,
+            source_channel="webapp",
+        )
+    except (PermissionError, ValueError) as exc:
+        raise HTTPException(status_code=403 if isinstance(exc, PermissionError) else 422, detail=str(exc)) from exc
 
     try:
         artifact = _CIVIC_ACTION_CAPABILITY.generate_reviewable_artifact(
             case_result.case.case_id,
             identity=context,
             document_format=document_format,
-            blob_store=_ARTIFACT_BLOB_STORE,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
@@ -174,13 +170,12 @@ async def generate_objection(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     stored = _ARTIFACT_BLOB_STORE.open(artifact.reference.storage_ref)
-    extension = document_format.value
     media_type = (
         "application/pdf"
         if document_format is DocumentFormat.PDF
         else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
-    filename = f"objection_{payload.bill_code}_{artifact.reference.artifact_id.split(':')[0]}.{extension}"
+    filename = f"objection_{payload.bill_code}_{artifact.reference.document_id}.{document_format.value}"
     return StreamingResponse(
         stored,
         media_type=media_type,
