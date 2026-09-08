@@ -1,62 +1,30 @@
-"""Compatibility service for canonical document generation.
+"""Legacy document-service boundary.
 
-New consumers should use the canonical document and artifact capabilities.
-This adapter preserves the legacy function signature during migration.
-It never emails, submits, or otherwise transmits a generated document.
+This module is retained only as migration evidence/compatibility surface.
+Canonical civic document generation must flow through the shared
+``CivicActionCapability`` so Case ownership, evidence references, authority
+verification, consent and lifecycle policy are enforced before an artifact is
+produced.
+
+The old API accepts free-form user/office data and therefore cannot establish
+those invariants. It is deliberately fail-closed rather than silently creating
+a second document-generation path.
 """
 from __future__ import annotations
 
-from src.documents.artifact_service import DocumentArtifact, generate_artifact
-from src.documents.document_contract import DocumentFormat
-from src.documents.legacy_complaint_adapter import complaint_to_document_draft
-from src.documents.complaint_builder import build_complaint
-from src.storage.repositories.authority_csv import CsvAuthorityRepository
+
+_LEGACY_MIGRATION_MESSAGE = (
+    "Legacy document_service is not an authoritative Janavani document path. "
+    "Use CivicActionCapability.generate_reviewable_artifact with an owned "
+    "canonical Case and verified authority."
+)
 
 
-def generate_complaint_document(
-    user_name: str,
-    user_address: str,
-    office_id: str,
-    issue_text: str,
-    format_type: str = "pdf",
-) -> str:
-    """Generate a printable/downloadable complaint artifact and return its path."""
-    return generate_complaint_artifact(
-        user_name=user_name,
-        user_address=user_address,
-        office_id=office_id,
-        issue_text=issue_text,
-        format_type=format_type,
-    ).path
+def generate_complaint_document(*args: object, **kwargs: object) -> str:
+    """Reject the retired legacy document API instead of bypassing policy."""
+    raise RuntimeError(_LEGACY_MIGRATION_MESSAGE)
 
 
-def generate_complaint_artifact(
-    user_name: str,
-    user_address: str,
-    office_id: str,
-    issue_text: str,
-    format_type: str = "pdf",
-) -> DocumentArtifact:
-    """Build a canonical complaint draft and render it through shared capability."""
-    try:
-        document_format = DocumentFormat(format_type.strip().lower())
-    except ValueError as exc:
-        raise ValueError(f"Unsupported document format: {format_type}") from exc
-
-    complaint = build_complaint(
-        user_name=user_name,
-        user_address=user_address,
-        office_id=office_id,
-        issue_text=issue_text,
-    )
-    draft = complaint_to_document_draft(
-        complaint,
-        document_id=str(complaint["complaint_id"]),
-        case_id=str(complaint["complaint_id"]),
-        authority_repository=CsvAuthorityRepository(),
-    )
-    return generate_artifact(
-        draft,
-        document_format,
-        "/tmp/janavani-artifacts/rendered",
-    )
+def generate_complaint_artifact(*args: object, **kwargs: object) -> object:
+    """Reject the retired legacy artifact API instead of bypassing policy."""
+    raise RuntimeError(_LEGACY_MIGRATION_MESSAGE)
