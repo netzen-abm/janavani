@@ -5,6 +5,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -24,13 +25,15 @@ def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapabili
 
 def create_civic_action_capability(*, case_repository: CivicCaseRepository,
                                    authority_repository: AuthorityRepository,
-                                   evidence_repository: EvidenceRepository | None = None) -> CivicActionCapability:
+                                   evidence_repository: EvidenceRepository | None = None,
+                                   blob_store: ArtifactBlobStore | None = None) -> CivicActionCapability:
     """Compose the canonical Case → Evidence → Authority → Document boundary."""
     return CivicActionCapability(
         case_capability=create_case_capability(case_repository),
         case_repository=case_repository,
         authority_repository=authority_repository,
         evidence_repository=evidence_repository,
+        blob_store=blob_store,
     )
 
 
