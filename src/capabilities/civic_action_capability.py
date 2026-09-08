@@ -115,6 +115,7 @@ class CivicActionCapability:
         document_format: DocumentFormat = DocumentFormat.PDF,
         output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
         document_id: str | None = None,
+        blob_store: ArtifactBlobStore | None = None,
     ) -> DocumentArtifact:
         """Generate an artifact for review/download; never submit or transmit it."""
         result = self.build_document(
@@ -126,7 +127,7 @@ class CivicActionCapability:
             result.draft,
             document_format,
             output_dir,
-            blob_store=self._blob_store,
+            blob_store=blob_store or self._blob_store,
         )
         repository = self._artifact_repository or create_document_artifact_repository()
         repository.save(artifact.reference)
