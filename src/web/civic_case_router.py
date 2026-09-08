@@ -10,19 +10,15 @@ from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.core.civic_case import CaseType, CivicCase
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_capability,
-    create_case_repository,
-    create_civic_action_capability,
-)
+from src.platform.composition import create_case_capability, create_civic_action_capability
+from src.platform.runtime import AUTHORITY_REPOSITORY, CASE_REPOSITORY
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
-_REPOSITORY = create_case_repository()
+_REPOSITORY = CASE_REPOSITORY
 _CAPABILITY = create_case_capability(_REPOSITORY)
 _CIVIC_ACTION_CAPABILITY = create_civic_action_capability(
     case_repository=_REPOSITORY,
-    authority_repository=create_authority_repository(),
+    authority_repository=AUTHORITY_REPOSITORY,
 )
 
 
