@@ -16,19 +16,16 @@ from src.core.legislative_monitor import fetch_active_bill_profile
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_repository,
-    create_constitutional_objection_capability,
-)
+from src.platform.composition import create_constitutional_objection_capability
+from src.platform.runtime import AUTHORITY_REPOSITORY, CASE_REPOSITORY
 
 router = APIRouter(
     prefix="/api/v1/constitutional",
     tags=["Constitutional Oversight Engine"],
 )
 
-_REPOSITORY = create_case_repository()
-_AUTHORITY_REPOSITORY = create_authority_repository()
+_REPOSITORY = CASE_REPOSITORY
+_AUTHORITY_REPOSITORY = AUTHORITY_REPOSITORY
 _CAPABILITY: ConstitutionalObjectionCapability = create_constitutional_objection_capability(
     case_repository=_REPOSITORY,
     authority_repository=_AUTHORITY_REPOSITORY,
