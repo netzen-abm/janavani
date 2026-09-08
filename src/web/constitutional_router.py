@@ -14,7 +14,8 @@ from pydantic import BaseModel, Field
 
 from src.core.legislative_monitor import fetch_active_bill_profile
 from src.core.vernacular_headers import fetch_localized_header_map
-from src.services.document_generator import MultiFormatDocumentEngine
+from src.documents.document_contract import DocumentDraft, DocumentFormat, DocumentParty
+from src.documents.renderers import render_document
 
 router = APIRouter(
     prefix="/api/v1/constitutional",
@@ -103,18 +104,14 @@ async def generate_objection(payload: ObjectionDispatchPayload):
 
     selected_format = payload.requested_file_format.strip().upper()
     if selected_format == "DOCX":
-        document_stream = MultiFormatDocumentEngine.generate_docx_stream(
-            formal_letter_body
-        )
+        document_format = DocumentFormat.DOCX
         media_type = (
             "application/vnd.openxmlformats-officedocument."
             "wordprocessingml.document"
         )
         filename = f"objection_{payload.bill_code}.docx"
     elif selected_format == "PDF":
-        document_stream = MultiFormatDocumentEngine.generate_pdf_stream(
-            formal_letter_body
-        )
+        document_format = DocumentFormat.PDF
         media_type = "application/pdf"
         filename = f"objection_{payload.bill_code}.pdf"
     else:
@@ -123,8 +120,35 @@ async def generate_objection(payload: ObjectionDispatchPayload):
             detail="Unsupported file format. Use PDF or DOCX.",
         )
 
+    draft = DocumentDraft(
+        document_id=f"objection-{payload.bill_code}",
+        document_type="constitutional-objection",
+        case_id=f"constitutional-objection-{payload.bill_code}",
+        date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        subject=f"Formal Constitutional Objection Against '{bill_data['title']}'",
+        body=formal_letter_body,
+        to=DocumentParty(
+            name="The Legislative Assembly Secretariat / Standing Committee Board",
+            address=f"Government of {bill_data['state']}",
+            role="Public Authority",
+        ),
+        sender=DocumentParty(
+            name="A Concerned Citizen of India",
+            role="Citizen",
+        ),
+    )
+
+    # This route is intentionally a renderer-only compatibility surface.
+    # Canonical case/evidence/policy composition must be introduced before
+    # this legacy route is promoted into the shared civic-action workflow.
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory(prefix="janavani-constitutional-") as directory:
+        output_path = render_document(draft, document_format, directory)
+        document_stream = output_path.read_bytes()
+
     return StreamingResponse(
-        document_stream,
+        iter([document_stream]),
         media_type=media_type,
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
