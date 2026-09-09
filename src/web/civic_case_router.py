@@ -150,7 +150,12 @@ async def queue_submission(case_id: str, request: EventRequest, context: Identit
 
 @router.post("/{case_id}/submit")
 async def submit_case(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:submit", request)
+    """Reject direct lifecycle submission; external delivery belongs to SubmissionCapability."""
+    _ = case_id, request, context
+    raise HTTPException(
+        status_code=409,
+        detail="Direct case submission is disabled; use the canonical SubmissionCapability with explicit approval, consent, and a delivery transport.",
+    )
 
 
 @router.post("/{case_id}/acknowledge")
