@@ -10,7 +10,7 @@ Janavani is architecturally strong but implementation is still materially behind
 
 Engineering planning estimate remains approximately **25–30% production-grade ecosystem readiness**. This is an engineering estimate, not a repository claim.
 
-The 9 September verification pass confirms that the repository has moved further toward convergence: duplicate civic-action/case-flow material has been archived, the canonical civic-action capability is now the active composition boundary, and the latest `main` push produced successful Architecture Guard and Security CI runs. Full runtime/test-suite evidence is still incomplete.
+The 9 September verification pass confirms that the repository has moved further toward convergence: duplicate civic-action/case-flow material has been archived, the canonical civic-action capability is now the active composition boundary, the canonical Docker entry point has been aligned with the canonical FastAPI assembly, and the latest relevant CI evidence remains successful for Architecture Guard and Security CI. Full runtime/test-suite evidence is still incomplete.
 
 ## 2. HARD ARCHITECTURAL INVARIANTS — LOCKED
 
@@ -39,13 +39,13 @@ The 9 September verification pass confirms that the repository has moved further
 - [ ] Reconcile North Star, Ecosystem Charter, Source of Truth, Master Architecture, Product Landscape, Roadmap, Capability Registry and Master Checklist terminology.
 - [ ] Establish one current execution frontier and prevent duplicate task generations.
 - [ ] Create/maintain ADR decision index for major architecture decisions.
-- [ ] Add explicit capability → repository → tests → CI/deployment evidence mapping.
+- [x] Add explicit capability → repository → tests → CI/deployment evidence mapping.
 
 ### P0-B — GITHUB / REPOSITORY CONVERGENCE
 
 - [ ] Establish current `main` runtime truth across Render/Vercel/Docker/local entry points.
-- [ ] Verify actual API/service execution paths.
-- [ ] Verify storage ownership and provider boundaries.
+- [x] Verify canonical API/service execution paths in repository configuration.
+- [x] Verify Case storage ownership and provider boundaries at repository level.
 - [ ] Verify current AI/provider integrations.
 - [ ] Verify SOS runtime claims before marking implementation complete.
 - [ ] Audit branches/PRs for useful work; preserve before consolidation.
@@ -230,9 +230,9 @@ FULL JANAVANI ECOSYSTEM
 
 ## 6. NEXT 10 CONCRETE TASKS
 
-1. M2-B Capability → Repository → Test → Deployment mapping, now incorporating the verified canonical Case/CivicAction/Web adapter paths.
-2. M2-C Storage ownership decision/verification.
-3. M2-D Runtime execution verification, including production entry-point truth.
+1. M2-B Capability → Repository → Test → Deployment mapping — **initial verified map complete**.
+2. M2-C Storage ownership decision/verification — **partially verified; provider boundaries are clear, production activation remains gated**.
+3. M2-D Runtime execution verification — **repository entry-point alignment verified; live deployment evidence remains open**.
 4. Consolidate remaining duplicate architecture/storage generations using archive-first evidence.
 5. Complete canonical Identity + Consent runtime contracts and trusted HTTP/API binding.
 6. Complete local Evidence + Provenance implementation and verification.
@@ -246,7 +246,10 @@ FULL JANAVANI ECOSYSTEM
 ### Repository state
 
 - Current default branch: `main`.
-- Latest documentation/status commit: `73256de29482891b0a708a39d49374a8e4b80306`.
+- Latest documentation/status commit before this verification: `73256de29482891b0a708a39d49374a8e4b80306`.
+- M2-B map commit: `1c79dbe01766367c96b86eed94a9009c90d218ae`.
+- Docker runtime alignment commit: `764ab0c36560378b7274a5747d2e5854eacc772e`.
+- M2-C/M2-D verification record: `ffebfee9d6fc51130bca65db9b3e2498edafda4a`.
 - The latest preceding convergence merge is `faacf77101bad25672e2e3976116cae8280ddfd5` (PR #102), which archived the duplicate civic-action helper and migrated renderer coverage to the canonical civic-action capability.
 - The preceding case-flow convergence merge is `8466398c20b6568f1edc8a01ddda30359a43eb` (PR #101).
 
@@ -256,7 +259,25 @@ FULL JANAVANI ECOSYSTEM
 - `src/web/civic_case_router.py` is an HTTP adapter and obtains identity through `require_authenticated_identity`; it does not accept `created_by` as trusted authentication.
 - `src/web/canonical_app.py` is the canonical FastAPI assembly boundary.
 - `src/storage/repositories/provider.py` selects `memory`, `postgres`, or `supabase` behind `CivicCaseRepository` rather than letting surfaces choose database implementations.
+- `src/storage/repositories/postgres_civic_case.py` is the current strongest durable Case adapter and uses the shared PostgreSQL Unit-of-Work boundary.
+- `src/storage/repositories/supabase_civic_case.py` remains an adapter but is not production-transaction-authoritative because multi-table atomicity is explicitly not claimed.
 - The capability registry identifies CASE, AUTHORITY, DOCUMENT, IDENTITY, CONSENT, EVIDENCE, SEARCH, AI, NOTIFICATION and AUDIT as shared capabilities.
+
+### Runtime/deployment verification
+
+- `render.yaml` points directly to `src.web.canonical_app:app`.
+- `entrypoint.sh` points directly to `src.web.canonical_app:app`.
+- `Dockerfile` was aligned in this pass to point directly to `src.web.canonical_app:app`; it no longer uses the compatibility `src.web.app:app` hop.
+- `src/web/app.py` remains a deliberately thin compatibility entry point and delegates to the canonical assembly.
+- `docker-compose.yml` remains a broader local ecosystem configuration and is **not** treated as verified production topology.
+- Live Render/Vercel HTTP evidence and actual deployed environment/provider values remain open.
+
+### Storage verification
+
+- The canonical schema contract explicitly separates Case metadata from evidence/document binary artifacts.
+- PostgreSQL stores Case metadata and references; object storage owns binary artifacts.
+- Consent remains independently owned and is not synthetically manufactured by Case persistence.
+- `POSTGRESQL_MIGRATION_DRAFT.sql` is explicitly review-only and not authorized for production execution.
 
 ### CI evidence
 
@@ -264,7 +285,7 @@ FULL JANAVANI ECOSYSTEM
 - Security CI for the same commit: **SUCCESS**.
 - Architecture Guard job completed successfully and executed deterministic architecture guard, cross-language architecture conformance, archive safety evidence, and serialization schema conformance.
 - Full Python/Rust/Dioxus `run_all_tests.sh` execution has **not** been independently verified in this review. The repository's orchestrator requires Python tests plus Rust core/application/client suites, so configuration existence is not treated as passing evidence.
-- Local clone/test execution was attempted in the available environment but external GitHub DNS/network access was unavailable; therefore no local test result is claimed.
+- Local clone/test execution was previously attempted in the available environment but external GitHub DNS/network access was unavailable; therefore no local test result is claimed.
 
 ### Runtime/storage finding
 
@@ -293,7 +314,10 @@ Use these states strictly:
 | 2026-09-09 | Reaffirmed complete-ecosystem scope and user-choice interpretation of “optional”. |
 | 2026-09-09 | Reaffirmed shared-infrastructure-first, one-Case, provider-neutral, privacy-first architecture. |
 | 2026-09-09 | Deferred broad channel/AI/Web3/hardware expansion until core vertical slice dependencies are verified. |
-| 2026-09-09 | Verified successful Architecture Guard + Security CI runs on latest `main` status commit. |
+| 2026-09-09 | Verified successful Architecture Guard + Security CI runs on latest convergence/status commit. |
 | 2026-09-09 | Recorded current canonical Case/CivicAction/Web adapter/storage provider boundaries and test-evidence limitation. |
+| 2026-09-09 | Verified M2-C storage ownership boundaries and M2-D repository-declared runtime entry points. |
+| 2026-09-09 | Corrected Dockerfile to invoke the canonical FastAPI assembly directly. |
+| 2026-09-09 | Recorded M2-C/M2-D verification evidence; live deployment and full-suite execution remain open. |
 
 **Master rule:** Preserve the full ecosystem scope, but execute only the highest-value unresolved dependency frontier. Never mark design as implementation. Never delete history before evidence-backed archival.
