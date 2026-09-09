@@ -87,6 +87,10 @@ class CivicActionVerticalSlice:
         """Apply an owner-authorized correction and record a revision."""
         return self._deps.document_review_capability.edit(request, identity=identity)
 
+    def start_review(self, case_id: str, *, identity: IdentityContext) -> CivicCaseResult:
+        """Enter the canonical Case review state before approval."""
+        return self._deps.case_capability.start_review(case_id, identity=identity)
+
     def approve(self, case_id: str, *, identity: IdentityContext) -> CivicCaseResult:
         """Mark the Case ready only through the canonical Case lifecycle."""
         return self._deps.case_capability.approve(case_id, identity=identity)
