@@ -1,12 +1,12 @@
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
-from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
-from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
-from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.capabilities.civic_action_vertical_slice import (
     CivicActionVerticalSlice,
     CivicActionVerticalSliceDependencies,
 )
+from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
+from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
+from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.civic_case import CaseType
@@ -128,6 +128,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
     assert edited.body == "Corrected citizen narrative."
     assert prepared.document_id == "doc-1"
 
+    slice_.start_review(case.case_id, identity=actor)
     ready = slice_.approve(case.case_id, identity=actor)
     assert ready.case.status.value == "READY"
 
@@ -158,6 +159,7 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
     ))
     slice_.add_consent(case.case_id, "consent-1", identity=actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-1")
+    slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
 
     import pytest
