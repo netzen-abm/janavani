@@ -69,7 +69,7 @@ class SubmissionCapability:
         identity: IdentityContext,
         explicit_user_approval: bool,
     ) -> CivicCaseResult:
-        """Submit a reviewed document only after every consequential-action gate."""
+        """Submit an attached document only after every consequential-action gate."""
         case = self._cases.get_owned(request.case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
@@ -113,9 +113,9 @@ class SubmissionCapability:
                 destination_ref=request.destination_ref,
             )
         except Exception:
-            # Leave the case in SUBMITTING. No external acknowledgement means
-            # Janavani must not claim that submission succeeded.
-            self._cases._repository.save(case)
+            # Persist SUBMITTING. Without a destination acknowledgement Janavani
+            # must not claim that submission succeeded.
+            self._cases.save_owned(case, identity=identity)
             raise
 
         self._cases.transition(
@@ -123,7 +123,6 @@ class SubmissionCapability:
             action="case:submit",
             identity=identity,
             source_channel=request.source_channel,
-            explicit_user_approval=True,
         )
         if receipt.acknowledgement_ref:
             self._cases.transition(
@@ -134,7 +133,4 @@ class SubmissionCapability:
                 source_ref=receipt.acknowledgement_ref,
                 notes=receipt.notes,
             )
-        return self._cases.get_owned(request.case_id, identity=identity) and CivicCaseResult(
-            self._cases.get_owned(request.case_id, identity=identity),
-            AuthorizationDecision.ALLOW,
-        )
+        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
