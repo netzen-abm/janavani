@@ -41,7 +41,10 @@ class PostgresConsentRepository:
                         proof_ref TEXT
                     )
                 """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_consents_subject_idx ON civic_case_consents(subject_id, created_at)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS civic_case_consents_subject_idx "
+                    "ON civic_case_consents(subject_id, created_at)"
+                )
 
     def save(self, consent: Consent) -> None:
         with self._connect() as connection:
@@ -72,14 +75,25 @@ class PostgresConsentRepository:
     def get(self, consent_id: str) -> Consent | None:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT consent_id, subject_id, purpose, scope, grant_type, status, created_at, expires_at, revoked_at, proof_ref FROM civic_case_consents WHERE consent_id=%s", (consent_id,))
+                cursor.execute(
+                    "SELECT consent_id, subject_id, purpose, scope, grant_type, "
+                    "status, created_at, expires_at, revoked_at, proof_ref "
+                    "FROM civic_case_consents WHERE consent_id=%s",
+                    (consent_id,),
+                )
                 row = cursor.fetchone()
         return self._hydrate(row) if row else None
 
     def list_for_subject(self, subject_id: str) -> list[Consent]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT consent_id, subject_id, purpose, scope, grant_type, status, created_at, expires_at, revoked_at, proof_ref FROM civic_case_consents WHERE subject_id=%s ORDER BY created_at, consent_id", (subject_id,))
+                cursor.execute(
+                    "SELECT consent_id, subject_id, purpose, scope, grant_type, "
+                    "status, created_at, expires_at, revoked_at, proof_ref "
+                    "FROM civic_case_consents WHERE subject_id=%s "
+                    "ORDER BY created_at, consent_id",
+                    (subject_id,),
+                )
                 rows = cursor.fetchall()
         return [self._hydrate(row) for row in rows]
 
