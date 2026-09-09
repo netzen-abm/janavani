@@ -1,4 +1,21 @@
-"""Small composition boundary for the first canonical civic-action slice."""
+"""Archived legacy civic-action composition helper.
+
+ARCHIVE NOTICE
+==============
+This file is retained for historical/provenance purposes only.
+It is not part of the active Janavani runtime and must not be imported by
+new code. Canonical civic-action composition belongs to
+``src.capabilities.civic_action_capability.CivicActionCapability``.
+
+Archived during repository convergence after verification that this smaller
+helper duplicated the active shared capability. The canonical capability
+adds owned-Case enforcement and an explicit verified-authority gate and is
+the surface-neutral composition boundary for WebApp, Telegram and future
+access surfaces.
+
+Original implementation preserved below for provenance.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
