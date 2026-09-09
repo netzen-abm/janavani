@@ -15,11 +15,13 @@ from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
 from src.core.evidence import EvidenceRepository
-from src.documents.artifact_service import DocumentArtifact
+from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
 from src.identity.context import IdentityContext
 from src.storage.artifact_blob import ArtifactBlobStore
+from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.document_artifact import DocumentArtifactRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
 
 
@@ -33,8 +35,9 @@ class CivicActionVerticalSliceDependencies:
     submission_capability: SubmissionCapability
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
-    evidence_repository: EvidenceRepository | None = None
+    artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
+    evidence_repository: EvidenceRepository | None = None
 
 
 @dataclass(frozen=True)
@@ -72,18 +75,22 @@ class CivicActionVerticalSlice:
         """Mark the Case ready only through the canonical Case lifecycle."""
         return self._deps.case_capability.approve(case_id, identity=identity)
 
-    def generate_artifact(self, case_id: str, *, identity: IdentityContext,
+    def generate_artifact(self, document_id: str, *, identity: IdentityContext,
                           document_format: DocumentFormat = DocumentFormat.PDF,
-                          output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
-                          document_id: str | None = None) -> DocumentArtifact:
-        """Render the reviewed document for user inspection/download only."""
-        # The current artifact service regenerates from Case data. Therefore the
-        # orchestration requires callers to use the canonical review contract for
-        # review semantics and keeps this operation explicitly non-submitting.
-        return self._deps.civic_action_capability.generate_reviewable_artifact(
-            case_id, identity=identity, document_format=document_format,
-            output_dir=output_dir, document_id=document_id
+                          output_dir: str | Path = "/tmp/janavani-artifacts/rendered") -> DocumentArtifact:
+        """Render the latest owned reviewed draft; never submit or transmit it."""
+        draft = self._deps.document_review_capability.get_owned(document_id, identity=identity)
+        if draft is None:
+            raise LookupError("Document draft not found")
+        artifact = generate_artifact(
+            draft, document_format, output_dir, blob_store=self._deps.blob_store
         )
+        repository = self._deps.artifact_repository or create_document_artifact_repository()
+        repository.save(artifact.reference)
+        self._deps.case_capability.add_document(
+            draft.case_id, artifact.reference.artifact_id, identity=identity, source_channel="shared"
+        )
+        return artifact
 
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool) -> CivicCaseResult:
