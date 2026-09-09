@@ -1,8 +1,5 @@
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.civic_action_vertical_slice import (
-    CivicActionVerticalSlice,
-    CivicActionVerticalSliceDependencies,
-)
+from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
@@ -13,6 +10,7 @@ from src.core.civic_case import CaseType
 from src.core.evidence import EvidenceSource
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
+from src.platform.composition import create_civic_action_vertical_slice
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
@@ -64,25 +62,15 @@ def build_slice():
 
     case_capability = CivicCaseCapability(cases)
     evidence_capability = EvidenceCapability(evidence, case_capability)
-    civic_action = CivicActionCapability(
-        case_capability=case_capability,
+    slice_ = create_civic_action_vertical_slice(
         case_repository=cases,
         authority_repository=authorities,
+        consent_repository=consents,
+        submission_transport=transport,
         evidence_repository=evidence,
-        artifact_repository=artifacts,
-    )
-    review = DocumentReviewCapability(reviews, case_capability=case_capability)
-    submission = SubmissionCapability(case_capability, consents, transport)
-    slice_ = CivicActionVerticalSlice(CivicActionVerticalSliceDependencies(
-        case_capability=case_capability,
-        civic_action_capability=civic_action,
-        document_review_capability=review,
-        submission_capability=submission,
-        case_repository=cases,
         document_review_repository=reviews,
         artifact_repository=artifacts,
-        evidence_repository=evidence,
-    ))
+    )
 
     case = case_capability.create(
         CivicCaseCreateRequest(
