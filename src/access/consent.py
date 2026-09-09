@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
-from src.core.consent import ConsentRepository  # type: ignore[attr-defined]
-from src.core.consent import ConsentStatus
+from src.core.consent import Consent, ConsentStatus
+
+
+class ConsentRepositoryReader(Protocol):
+    """Minimal repository contract required by consent enforcement."""
+
+    def list_for_subject(self, subject_id: str) -> list[Consent]:
+        ...
 
 
 class ConsentRequiredError(PermissionError):
@@ -21,7 +28,7 @@ class ConsentRequirement:
 
 
 def require_consent(
-    repository: ConsentRepository,
+    repository: ConsentRepositoryReader,
     requirement: ConsentRequirement,
 ) -> None:
     """Fail closed unless a granted consent authorizes the requested operation."""
