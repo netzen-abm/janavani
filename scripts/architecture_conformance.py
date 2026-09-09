@@ -226,16 +226,21 @@ def is_surface(path: pathlib.Path) -> bool:
     )
 
 
-def is_capability_receiver(node: ast.AST) -> bool:
-    """Recognize calls through an explicit capability variable.
+def is_boundary_receiver(node: ast.AST) -> bool:
+    """Recognize explicit capability or canonical orchestration boundaries.
 
     Surface code may invoke capability commands such as
-    ``_CAPABILITY.add_evidence(...)``. Those are the required boundary.
-    The guard must instead reject direct aggregate calls such as
-    ``case.add_evidence(...)`` or ``result.case.add_evidence(...)``.
+    ``_CAPABILITY.add_evidence(...)`` or canonical civic-action orchestration
+    commands such as ``_CIVIC_ACTION.start_review(...)``. Both are approved
+    architecture boundaries. The guard must still reject direct aggregate
+    calls such as ``case.add_evidence(...)`` or ``result.case.add_evidence(...)``.
     """
-    return isinstance(node, ast.Name) and (
-        node.id == "_CAPABILITY" or node.id.endswith("_CAPABILITY")
+    if not isinstance(node, ast.Name):
+        return False
+    return (
+        node.id == "_CAPABILITY"
+        or node.id.endswith("_CAPABILITY")
+        or node.id == "_CIVIC_ACTION"
     )
 
 
@@ -252,7 +257,7 @@ def check_surface_separation() -> list[str]:
             function = node.func
             if not isinstance(function, ast.Attribute):
                 continue
-            if function.attr in LIFECYCLE_MUTATORS and not is_capability_receiver(function.value):
+            if function.attr in LIFECYCLE_MUTATORS and not is_boundary_receiver(function.value):
                 failures.append(
                     f"surface directly mutates CivicCase lifecycle: "
                     f"{path.relative_to(ROOT)}:{node.lineno}"
@@ -262,7 +267,7 @@ def check_surface_separation() -> list[str]:
 
 def check_legacy_references() -> list[str]:
     failures = []
-    suffixes = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh"}
+    suffixes = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh", ".toml"}
     skipped = {".git", "target", "node_modules", "__pycache__", "archive"}
     for path in ROOT.rglob("*"):
         if not path.is_file() or path.suffix not in suffixes:
