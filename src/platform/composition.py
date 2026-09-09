@@ -3,13 +3,24 @@ from __future__ import annotations
 
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.civic_action_vertical_slice import (
+    CivicActionVerticalSlice,
+    CivicActionVerticalSliceDependencies,
+)
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.consent import ConsentRepository
+from src.storage.repositories.document_review import (
+    DocumentReviewRepository,
+    InMemoryDocumentReviewRepository,
+)
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
 
@@ -32,11 +43,62 @@ def create_civic_action_capability(
     authority_repository: AuthorityRepository,
     evidence_repository: EvidenceRepository | None = None,
 ) -> CivicActionCapability:
+    case_capability = create_case_capability(case_repository)
     return CivicActionCapability(
-        case_capability=create_case_capability(case_repository),
+        case_capability=case_capability,
         case_repository=case_repository,
         authority_capability=create_authority_capability(authority_repository),
         evidence_repository=evidence_repository,
+    )
+
+
+def create_civic_action_vertical_slice(
+    *,
+    case_repository: CivicCaseRepository,
+    authority_repository: AuthorityRepository,
+    consent_repository: ConsentRepository,
+    submission_transport: SubmissionTransport,
+    evidence_repository: EvidenceRepository | None = None,
+    document_review_repository: DocumentReviewRepository | None = None,
+    artifact_repository=None,
+    blob_store=None,
+) -> CivicActionVerticalSlice:
+    """Compose one canonical civic-action slice with shared capability instances.
+
+    Access surfaces should receive this object from their composition root rather
+    than constructing parallel Case, review, or submission paths. Durable provider
+    choices are injected by the caller; no provider is selected by this factory.
+    """
+    case_capability = create_case_capability(case_repository)
+    authority_capability = create_authority_capability(authority_repository)
+    civic_action_capability = CivicActionCapability(
+        case_capability=case_capability,
+        case_repository=case_repository,
+        authority_capability=authority_capability,
+        evidence_repository=evidence_repository,
+    )
+    review_repository = document_review_repository or InMemoryDocumentReviewRepository()
+    document_review_capability = DocumentReviewCapability(
+        review_repository,
+        case_capability=case_capability,
+    )
+    submission_capability = SubmissionCapability(
+        case_capability,
+        consent_repository,
+        submission_transport,
+    )
+    return CivicActionVerticalSlice(
+        CivicActionVerticalSliceDependencies(
+            case_capability=case_capability,
+            civic_action_capability=civic_action_capability,
+            document_review_capability=document_review_capability,
+            submission_capability=submission_capability,
+            case_repository=case_repository,
+            document_review_repository=review_repository,
+            artifact_repository=artifact_repository,
+            blob_store=blob_store,
+            evidence_repository=evidence_repository,
+        )
     )
 
 
