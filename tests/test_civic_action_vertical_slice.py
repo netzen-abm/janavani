@@ -92,11 +92,11 @@ def build_slice():
             related_office_id="office-1",
         ), identity=identity(), source_channel="test",
     ).case
-    return slice_, evidence_capability, evidence, consents, transport, case
+    return slice_, evidence_capability, consents, transport, case
 
 
 def test_complete_civic_action_path_uses_shared_boundaries():
-    slice_, evidence_capability, _, consents, transport, case = build_slice()
+    slice_, evidence_capability, consents, transport, case = build_slice()
     actor = identity()
 
     evidence = evidence_capability.register(EvidenceCreateRequest(
@@ -104,7 +104,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
         storage_ref="local://photo-1",
         sha256="a" * 64,
         received_at="2026-09-09T10:00:00Z",
-        provenance=(EvidenceSource(source_type="citizen", source_ref="capture-1"),),
+        provenance=(EvidenceSource(source_id="capture-1", source_type="citizen"),),
     ), identity=actor)
     slice_.attach_evidence(case.case_id, evidence.evidence_id, identity=actor)
 
@@ -149,7 +149,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
 
 
 def test_vertical_slice_cannot_submit_without_explicit_approval():
-    slice_, _, _, consents, _, case = build_slice()
+    slice_, _, consents, _, case = build_slice()
     actor = identity()
     consents.save(Consent(
         consent_id="consent-1", subject_id="citizen-1", purpose="case_submission",
