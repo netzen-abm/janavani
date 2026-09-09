@@ -8,11 +8,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
+from src.capabilities.authority import AuthorityCapability
 from src.capabilities.civic_case import CivicCaseCapability
-from src.core.authority import AuthorityRepository, require_destination
 from src.core.civic_case import CivicCase
 from src.core.evidence import EvidenceRepository
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
@@ -40,14 +39,19 @@ class CivicActionCapability:
         *,
         case_capability: CivicCaseCapability,
         case_repository: CivicCaseRepository,
-        authority_repository: AuthorityRepository,
+        authority_repository=None,
+        authority_capability: AuthorityCapability | None = None,
         evidence_repository: EvidenceRepository | None = None,
         artifact_repository: DocumentArtifactRepository | None = None,
         blob_store: ArtifactBlobStore | None = None,
     ) -> None:
         self._case_capability = case_capability
         self._case_repository = case_repository
-        self._authority_repository = authority_repository
+        if authority_capability is None:
+            if authority_repository is None:
+                raise ValueError("An authority capability or repository is required")
+            authority_capability = AuthorityCapability(authority_repository)
+        self._authority_capability = authority_capability
         self._evidence_repository = evidence_repository
         self._artifact_repository = artifact_repository
         self._blob_store = blob_store
@@ -56,7 +60,7 @@ class CivicActionCapability:
         self,
         case_id: str,
         *,
-        identity: Any,
+        identity,
         document_id: str | None = None,
         date: str | None = None,
     ) -> CivicActionBuildResult:
@@ -75,12 +79,12 @@ class CivicActionCapability:
                 raise ValueError("Case references missing evidence: " + ", ".join(missing))
 
         authority_id = str(case.related_office_id or "")
-        authority = self._authority_repository.get(authority_id)
+        authority = self._authority_capability.get(authority_id)
         if authority is None:
             raise ValueError("Case has no resolvable authority destination")
         if not authority.verified:
             raise ValueError("Authority destination is not verified")
-        destination = require_destination(authority)
+        destination = self._authority_capability.require_verified_destination(authority_id)
 
         draft = DocumentDraft(
             document_id=document_id or f"doc-{uuid4().hex}",
@@ -111,17 +115,13 @@ class CivicActionCapability:
         self,
         case_id: str,
         *,
-        identity: Any,
+        identity,
         document_format: DocumentFormat = DocumentFormat.PDF,
         output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
         document_id: str | None = None,
     ) -> DocumentArtifact:
         """Generate an artifact for review/download; never submit or transmit it."""
-        result = self.build_document(
-            case_id,
-            identity=identity,
-            document_id=document_id,
-        )
+        result = self.build_document(case_id, identity=identity, document_id=document_id)
         artifact = generate_artifact(
             result.draft,
             document_format,
