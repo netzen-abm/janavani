@@ -55,6 +55,22 @@ class CivicActionVerticalSlice:
     def __init__(self, dependencies: CivicActionVerticalSliceDependencies) -> None:
         self._deps = dependencies
 
+    def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
+                        source_channel: str | None = None) -> CivicCaseResult:
+        """Attach already-registered evidence through the canonical Case boundary."""
+        if self._deps.evidence_repository is None:
+            raise RuntimeError("Evidence repository is required for the civic-action slice")
+        evidence = self._deps.evidence_repository.get(evidence_id)
+        if evidence is None:
+            raise LookupError("Evidence not found")
+        return self._deps.case_capability.add_evidence(
+            case_id, evidence.evidence_id, identity=identity, source_channel=source_channel or "shared"
+        )
+
+    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
+        """Attach a previously recorded consent through the canonical Case boundary."""
+        return self._deps.case_capability.add_consent(case_id, consent_id, identity=identity)
+
     def prepare_document(self, case_id: str, *, identity: IdentityContext,
                          document_id: str | None = None) -> PreparedDocument:
         """Resolve Case → Evidence → Authority and persist the reviewable draft."""
@@ -67,7 +83,7 @@ class CivicActionVerticalSlice:
         )
         return PreparedDocument(case_id=case_id, document_id=result.draft.document_id, draft=result.draft)
 
-    def review_document(self, request: DocumentReviewRequest, *, identity: IdentityContext):
+    def review_document(self, request: DocumentReviewRequest, *, identity: IdentityContext) -> DocumentDraft:
         """Apply an owner-authorized correction and record a revision."""
         return self._deps.document_review_capability.edit(request, identity=identity)
 
