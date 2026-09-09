@@ -199,7 +199,7 @@ async def mark_ready(case_id: str, request: EventRequest, context: IdentityConte
         raise HTTPException(status_code=404, detail=message) from exc
     except PermissionError as exc:
         message = str(exc)
-        raise HTTPException(status_code=409 if "approval" in message.lower() else 403, detail=message) from exc
+        raise HTTPException(status_code=409 if "approval" in message.lower() or "consent" in message.lower() else 403, detail=message) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _event_result(result.case, result.case.events[-1].event_type.value)
@@ -239,7 +239,7 @@ def _transition(context: IdentityContext, case_id: str, action: str, request: Ev
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
         message = str(exc)
-        raise HTTPException(status_code=409 if "approval" in message.lower() else 403, detail=message) from exc
+        raise HTTPException(status_code=409 if "approval" in message.lower() or "consent" in message.lower() else 403, detail=message) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _event_result(result.case, result.case.events[-1].event_type.value)
@@ -257,10 +257,8 @@ def _serialize_draft(draft, *, case_id: str, submission: str) -> dict[str, objec
         "date": draft.date,
         "subject": draft.subject,
         "body": draft.body,
-        "to": {"name": draft.to.name, "address": draft.to.address,
-               "email": draft.to.email, "role": draft.to.role},
-        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role}
-               for p in draft.cc],
+        "to": {"name": draft.to.name, "address": draft.to.address, "email": draft.to.email, "role": draft.to.role},
+        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in draft.cc],
         "submission": submission,
     }
 
