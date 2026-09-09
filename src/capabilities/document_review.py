@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.capabilities.civic_case import CivicCaseCapability
 from src.core.document_review import DocumentRevision
 from src.documents.document_contract import DocumentDraft
 from src.identity.context import IdentityContext
@@ -25,19 +26,21 @@ class DocumentReviewRequest:
 class DocumentReviewCapability:
     """Canonical owner-scoped edit boundary shared by all access surfaces."""
 
-    def __init__(self, repository: DocumentReviewRepository) -> None:
+    def __init__(self, repository: DocumentReviewRepository, *, case_capability: CivicCaseCapability) -> None:
         self._repository = repository
+        self._case_capability = case_capability
 
     def get_owned(self, document_id: str, *, identity: IdentityContext) -> DocumentDraft | None:
         draft = self._repository.get(document_id)
         if draft is None:
             return None
-        # DocumentDraft does not yet carry an owner field; ownership is established
-        # by the owning Case at the application composition boundary.
+        case = self._case_capability.get_owned(draft.case_id, identity=identity)
+        if case is None or document_id not in case.document_refs:
+            return None
         return draft
 
     def edit(self, request: DocumentReviewRequest, *, identity: IdentityContext) -> DocumentDraft:
-        draft = self._repository.get(request.document_id)
+        draft = self.get_owned(request.document_id, identity=identity)
         if draft is None:
             raise LookupError("Document draft not found")
         decision = authorize(AuthorizationRequest(
