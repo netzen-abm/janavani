@@ -39,36 +39,22 @@ class SubmissionReceipt:
 class SubmissionTransport(Protocol):
     """External transport adapter; it is never the domain authority."""
 
-    def send(
-        self,
-        *,
-        case: CivicCase,
-        document_id: str,
-        destination_ref: str,
-    ) -> SubmissionReceipt:
+    def send(self, *, case: CivicCase, document_id: str, destination_ref: str) -> SubmissionReceipt:
         ...
 
 
 class SubmissionCapability:
     """Shared submission boundary consumed by every access surface."""
 
-    def __init__(
-        self,
-        case_capability: CivicCaseCapability,
-        consent_repository: ConsentRepositoryReader,
-        transport: SubmissionTransport,
-    ) -> None:
+    def __init__(self, case_capability: CivicCaseCapability,
+                 consent_repository: ConsentRepositoryReader,
+                 transport: SubmissionTransport) -> None:
         self._cases = case_capability
         self._consents = consent_repository
         self._transport = transport
 
-    def submit(
-        self,
-        request: SubmissionRequest,
-        *,
-        identity: IdentityContext,
-        explicit_user_approval: bool,
-    ) -> CivicCaseResult:
+    def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
+               explicit_user_approval: bool) -> CivicCaseResult:
         """Submit an attached document only after every consequential-action gate."""
         case = self._cases.get_owned(request.case_id, identity=identity)
         if case is None:
@@ -80,57 +66,36 @@ class SubmissionCapability:
         if not explicit_user_approval:
             raise PermissionError("Explicit user approval is required for submission")
 
-        decision = authorize(
-            AuthorizationRequest(
-                context=identity,
-                capability=CAPABILITY_ID,
-                action="case:submit",
-                resource_id=case.case_id,
-            )
-        )
+        decision = authorize(AuthorizationRequest(
+            context=identity, capability=CAPABILITY_ID, action="case:submit", resource_id=case.case_id
+        ))
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to submit this case")
 
-        require_consent(
-            self._consents,
-            ConsentRequirement(
-                subject_id=identity.principal.principal_id,
-                purpose=CONSENT_PURPOSE,
-                scope=request.consent_scope,
-            ),
-        )
+        require_consent(self._consents, ConsentRequirement(
+            subject_id=identity.principal.principal_id,
+            purpose=CONSENT_PURPOSE,
+            scope=request.consent_scope,
+        ))
 
+        # This transition is persisted before external I/O. If transport fails,
+        # the durable Case remains SUBMITTING and no false success is claimed.
         self._cases.transition(
-            request.case_id,
-            action="case:begin_submission",
-            identity=identity,
+            request.case_id, action="case:begin_submission", identity=identity,
             source_channel=request.source_channel,
         )
-        try:
-            receipt = self._transport.send(
-                case=case,
-                document_id=request.document_id,
-                destination_ref=request.destination_ref,
-            )
-        except Exception:
-            # Persist SUBMITTING. Without a destination acknowledgement Janavani
-            # must not claim that submission succeeded.
-            self._cases.save_owned(case, identity=identity)
-            raise
+        receipt = self._transport.send(
+            case=case, document_id=request.document_id, destination_ref=request.destination_ref
+        )
 
         self._cases.transition(
-            request.case_id,
-            action="case:submit",
-            identity=identity,
+            request.case_id, action="case:submit", identity=identity,
             source_channel=request.source_channel,
         )
         if receipt.acknowledgement_ref:
             self._cases.transition(
-                request.case_id,
-                action="case:acknowledge",
-                identity=identity,
-                source_channel=request.source_channel,
-                source_ref=receipt.acknowledgement_ref,
+                request.case_id, action="case:acknowledge", identity=identity,
+                source_channel=request.source_channel, source_ref=receipt.acknowledgement_ref,
                 notes=receipt.notes,
             )
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
