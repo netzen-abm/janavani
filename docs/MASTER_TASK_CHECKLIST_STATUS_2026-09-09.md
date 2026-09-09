@@ -1,7 +1,7 @@
 # 🇮🇳 JANAVANI — MASTER TASK CHECKLIST STATUS REGISTER
 
-**Date:** 9 September 2026
-**Purpose:** Reconcile the canonical Master Task Checklist against the latest Janavani architecture, repository-audit evidence, and project decisions.
+**Date:** 9 September 2026  
+**Purpose:** Reconcile the canonical Master Task Checklist against the latest Janavani architecture, repository-audit evidence, and project decisions.  
 **Authority:** `docs/MASTER_TASK_CHECKLIST.md` remains the canonical task inventory. This dated register updates execution priority/status; it does not replace the canonical checklist.
 
 ## 1. EXECUTIVE AUDIT
@@ -9,6 +9,8 @@
 Janavani is architecturally strong but implementation is still materially behind the full ecosystem scope. The current priority is **convergence + verification + one complete civic-action vertical slice**, not creation of additional architectural generations.
 
 Engineering planning estimate remains approximately **25–30% production-grade ecosystem readiness**. This is an engineering estimate, not a repository claim.
+
+The 9 September verification pass confirms that the repository has moved further toward convergence: duplicate civic-action/case-flow material has been archived, the canonical civic-action capability is now the active composition boundary, and the latest `main` push produced successful Architecture Guard and Security CI runs. Full runtime/test-suite evidence is still incomplete.
 
 ## 2. HARD ARCHITECTURAL INVARIANTS — LOCKED
 
@@ -49,7 +51,9 @@ Engineering planning estimate remains approximately **25–30% production-grade 
 - [ ] Audit branches/PRs for useful work; preserve before consolidation.
 - [ ] Consolidate duplicate generations of lifecycle, consent, WebApp, storage, architecture guards and provider adapters.
 - [ ] Archive superseded work with evidence; delete only after archive-readiness checks.
-- [ ] Record GitHub SHA/PR/CI evidence for each completed convergence item.
+- [x] Latest `main` Architecture Guard run succeeded on commit `73256de29482891b0a708a39d49374a8e4b80306`.
+- [x] Latest `main` Security CI run succeeded on commit `73256de29482891b0a708a39d49374a8e4b80306`.
+- [ ] Record full Python/Rust/Dioxus test execution evidence for the current `main` commit.
 
 ### P0-C — CANONICAL CORE
 
@@ -81,24 +85,29 @@ Engineering planning estimate remains approximately **25–30% production-grade 
 
 **Target:** one complete, deterministic, reusable civic journey before broad interface expansion.
 
-- [ ] Create Case.
+- [x] Canonical Case creation capability exists with identity/authorization boundary.
+- [x] Canonical civic-action composition boundary exists and is used by the current Web civic-case adapter.
+- [ ] Create Case — complete end-to-end persistence/runtime evidence.
 - [ ] Understand/structure citizen issue.
 - [ ] Determine jurisdiction.
 - [ ] Resolve responsible authority from verified sources.
 - [ ] Collect/register local evidence.
 - [ ] Preserve provenance/integrity metadata.
 - [ ] Select civic action type.
-- [ ] Generate document from canonical template.
+- [x] Generate reviewable document draft through canonical civic-action capability.
 - [ ] Allow user editing/correction.
 - [ ] User explicitly approves final document.
-- [ ] Generate PDF.
-- [ ] Generate editable document where supported.
+- [x] PDF + DOCX renderer contract has focused coverage.
+- [ ] Generate PDF — end-to-end runtime evidence.
+- [ ] Generate editable document — end-to-end runtime evidence.
 - [ ] Provide print/download/submission instructions.
-- [ ] Keep submission as a separate explicit capability.
+- [x] Submission is represented as a separate explicit Case lifecycle capability; external delivery is not implicit.
 - [ ] Record acknowledgement/tracking when a submission mechanism exists.
 
 ### P0-F — WEBAPP REFERENCE CLIENT
 
+- [x] Canonical FastAPI assembly boundary exists at `src/web/canonical_app.py`.
+- [x] Web civic-case HTTP adapter consumes shared Case/CivicAction capabilities and authenticated identity dependency.
 - [ ] Canonical WebApp shell consumes shared contracts only.
 - [ ] Case workspace.
 - [ ] Evidence workspace.
@@ -112,7 +121,8 @@ Engineering planning estimate remains approximately **25–30% production-grade 
 ### P1-A — TELEGRAM CONVERGENCE
 
 - [x] Telegram conversation foundation exists.
-- [ ] Migrate Telegram business logic to shared capability contracts.
+- [x] Telegram composition imports shared case/civic-action repository/capability factories.
+- [ ] Migrate remaining Telegram business logic to shared capability contracts.
 - [ ] Complete capability parity matrix against the canonical ecosystem inventory.
 - [ ] Preserve Telegram failure isolation.
 - [ ] Establish Bot ↔ Mini App continuity without accidental identity linking.
@@ -220,18 +230,49 @@ FULL JANAVANI ECOSYSTEM
 
 ## 6. NEXT 10 CONCRETE TASKS
 
-1. M2-B Capability → Repository → Test → Deployment mapping.
+1. M2-B Capability → Repository → Test → Deployment mapping, now incorporating the verified canonical Case/CivicAction/Web adapter paths.
 2. M2-C Storage ownership decision/verification.
 3. M2-D Runtime execution verification, including production entry-point truth.
-4. Consolidate duplicate architecture/storage generations using archive-first evidence.
-5. Complete canonical Identity + Consent runtime contracts.
+4. Consolidate remaining duplicate architecture/storage generations using archive-first evidence.
+5. Complete canonical Identity + Consent runtime contracts and trusted HTTP/API binding.
 6. Complete local Evidence + Provenance implementation and verification.
 7. Implement Authority/Jurisdiction provider with source freshness/provenance.
 8. Implement canonical Document/template engine with PDF + editable output and user correction.
 9. Connect Case → Evidence → Authority → Document → Review into one tested vertical slice.
-10. Build/verify the WebApp reference client against shared contracts, then converge Telegram.
+10. Build/verify the WebApp reference client against shared contracts, then complete Telegram convergence.
 
-## 7. STATUS INTERPRETATION
+## 7. CURRENT VERIFICATION EVIDENCE — 2026-09-09
+
+### Repository state
+
+- Current default branch: `main`.
+- Latest documentation/status commit: `73256de29482891b0a708a39d49374a8e4b80306`.
+- The latest preceding convergence merge is `faacf77101bad25672e2e3976116cae8280ddfd5` (PR #102), which archived the duplicate civic-action helper and migrated renderer coverage to the canonical civic-action capability.
+- The preceding case-flow convergence merge is `8466398c20b6568f1edc8a01ddda30359a43eb` (PR #101).
+
+### Confirmed active implementation boundaries
+
+- `src/capabilities/civic_case.py` is the provider/surface-neutral Case command/query boundary and performs authorization before persistence.
+- `src/web/civic_case_router.py` is an HTTP adapter and obtains identity through `require_authenticated_identity`; it does not accept `created_by` as trusted authentication.
+- `src/web/canonical_app.py` is the canonical FastAPI assembly boundary.
+- `src/storage/repositories/provider.py` selects `memory`, `postgres`, or `supabase` behind `CivicCaseRepository` rather than letting surfaces choose database implementations.
+- The capability registry identifies CASE, AUTHORITY, DOCUMENT, IDENTITY, CONSENT, EVIDENCE, SEARCH, AI, NOTIFICATION and AUDIT as shared capabilities.
+
+### CI evidence
+
+- Architecture Guard for `73256de29482891b0a708a39d49374a8e4b80306`: **SUCCESS**.
+- Security CI for the same commit: **SUCCESS**.
+- Architecture Guard job completed successfully and executed deterministic architecture guard, cross-language architecture conformance, archive safety evidence, and serialization schema conformance.
+- Full Python/Rust/Dioxus `run_all_tests.sh` execution has **not** been independently verified in this review. The repository's orchestrator requires Python tests plus Rust core/application/client suites, so configuration existence is not treated as passing evidence.
+- Local clone/test execution was attempted in the available environment but external GitHub DNS/network access was unavailable; therefore no local test result is claimed.
+
+### Runtime/storage finding
+
+The repository deliberately defaults the Case repository to `memory` outside production. Production configuration fails closed unless durable Case/artifact/evidence providers and required storage settings are supplied. Therefore **Render/free-tier development should not be confused with production persistence readiness**.
+
+The production contract documents `JANAVANI_RUNTIME_MODE=production`, `JANAVANI_CASE_REPOSITORY_PROVIDER=postgres`, `JANAVANI_ARTIFACT_REPOSITORY_PROVIDER=postgres`, `JANAVANI_EVIDENCE_REPOSITORY_PROVIDER=postgres`, `JANAVANI_ARTIFACT_BLOB_PROVIDER=s3`, `JANAVANI_POSTGRES_DSN`, and the artifact bucket as production requirements. These remain deployment-time configuration items, not something to force prematurely while the product slice is still under construction.
+
+## 8. STATUS INTERPRETATION
 
 Use these states strictly:
 
@@ -243,7 +284,7 @@ Use these states strictly:
 - **BLOCKED:** dependency prevents execution.
 - **ARCHIVED:** superseded material preserved with reason/evidence.
 
-## 8. CHANGE LOG
+## 9. CHANGE LOG
 
 | Date | Change |
 |---|---|
@@ -252,5 +293,7 @@ Use these states strictly:
 | 2026-09-09 | Reaffirmed complete-ecosystem scope and user-choice interpretation of “optional”. |
 | 2026-09-09 | Reaffirmed shared-infrastructure-first, one-Case, provider-neutral, privacy-first architecture. |
 | 2026-09-09 | Deferred broad channel/AI/Web3/hardware expansion until core vertical slice dependencies are verified. |
+| 2026-09-09 | Verified successful Architecture Guard + Security CI runs on latest `main` status commit. |
+| 2026-09-09 | Recorded current canonical Case/CivicAction/Web adapter/storage provider boundaries and test-evidence limitation. |
 
 **Master rule:** Preserve the full ecosystem scope, but execute only the highest-value unresolved dependency frontier. Never mark design as implementation. Never delete history before evidence-backed archival.
