@@ -17,7 +17,6 @@ from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
 
-
 CASE_CAPABILITY = "JNV-CIVIC-COMPLAINT"
 SUBMIT_CAPABILITY = "case:submit"
 
@@ -50,7 +49,7 @@ def _prepared_case() -> tuple[CivicCaseCapability, InMemoryConsentRepository, Id
     case_capability = CivicCaseCapability(case_repo)
     consent_repo = InMemoryConsentRepository()
     consent_repo.save(_consent())
-    identity = _identity(CASE_CAPABILITY, SUBMIT_CAPABILITY)
+    identity = _identity(CASE_CAPABILITY, "case:write", "case:review", SUBMIT_CAPABILITY)
     case = case_capability.create(
         CivicCaseCreateRequest(
             case_type=CaseType.COMPLAINT,
@@ -102,7 +101,7 @@ def test_submission_requires_explicit_user_approval() -> None:
 
 
 def test_submission_requires_matching_consent() -> None:
-    cases, consents, identity, case_id = _prepared_case()
+    cases, _, identity, case_id = _prepared_case()
     consents = InMemoryConsentRepository()
     capability = SubmissionCapability(cases, consents, FakeTransport())
 
