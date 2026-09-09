@@ -67,6 +67,14 @@ class CivicCaseCapability:
             return None
         return case
 
+    def save_owned(self, case: CivicCase, *, identity: IdentityContext) -> CivicCaseResult:
+        """Persist a previously authorized owned case after an adapter-side operation."""
+        owned = self.get_owned(case.case_id, identity=identity)
+        if owned is None or owned is not case:
+            raise LookupError("Case not found")
+        self._repository.save(case)
+        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
+
     def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
         case = self._owned(case_id, identity)
         self._require(identity, "case:evidence", "case:add_evidence")
@@ -108,7 +116,7 @@ class CivicCaseCapability:
             "case:mark_ready": ("case:write", CivicCase.mark_ready, False),
             "case:begin_submission": ("case:submit", CivicCase.begin_submission, False),
             "case:queue_submission": ("case:submit", CivicCase.queue_submission, False),
-            "case:submit": ("case:submit", CivicCase.submit, True),
+            "case:submit": ("case:submit", CivicCase.submit, False),
             "case:acknowledge": ("case:write", CivicCase.acknowledge, False),
         }
         if action not in transitions:
