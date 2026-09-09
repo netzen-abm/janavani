@@ -15,11 +15,11 @@ class FakeCursor:
 
     def execute(self, sql, params=()):
         upper = sql.upper()
-        if "SELECT CONSENT_ID" in upper:
+        if "WHERE SUBJECT_ID" in upper:
+            self.rows = [item for item in self.db.items.values() if item[1] == params[0]]
+        elif "SELECT CONSENT_ID" in upper:
             item = self.db.items.get(params[0])
             self.rows = [item] if item else []
-        elif "WHERE SUBJECT_ID" in upper:
-            self.rows = [item for item in self.db.items.values() if item[1] == params[0]]
         elif "INSERT INTO CIVIC_CASE_CONSENTS" in upper:
             self.db.items[params[0]] = tuple(params)
 
