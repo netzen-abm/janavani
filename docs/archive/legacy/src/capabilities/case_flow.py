@@ -1,4 +1,19 @@
-"""Shared civic case workflow operations for all access surfaces."""
+"""Archived legacy case-flow implementation.
+
+ARCHIVE NOTICE
+==============
+This file is retained for historical/provenance purposes only.
+It is not part of the active Janavani runtime and must not be imported by
+new code. Canonical case lifecycle behavior belongs to the shared
+CivicCaseCapability and canonical domain model.
+
+Archived during the repository convergence work after verification that the
+active implementation was duplicated elsewhere and this module had no active
+runtime consumers.
+"""
+
+# Original implementation preserved verbatim below for provenance.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
