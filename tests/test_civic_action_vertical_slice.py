@@ -128,9 +128,10 @@ def test_complete_civic_action_path_uses_shared_boundaries():
     assert edited.body == "Corrected citizen narrative."
     assert prepared.document_id == "doc-1"
 
-    slice_.start_review(case.case_id, identity=actor)
+    review_result = slice_.start_review(case.case_id, identity=actor)
+    assert review_result.case.status.value == "review"
     ready = slice_.approve(case.case_id, identity=actor)
-    assert ready.case.status.value == "READY"
+    assert ready.case.status.value == "ready"
 
     result = slice_.submit(
         SubmissionRequest(
@@ -144,7 +145,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
         explicit_user_approval=True,
     )
 
-    assert result.case.status.value == "ACKNOWLEDGED"
+    assert result.case.status.value == "acknowledged"
     assert result.case.events[-1].source_ref == "ACK-1"
     assert transport.calls == [(case.case_id, "doc-1", "office:office-1")]
 
