@@ -39,6 +39,13 @@ from src.storage.repositories.sqlite_document_artifact import (
     SqliteDocumentArtifactRepository,
 )
 from src.storage.repositories.sqlite_evidence import SqliteEvidenceRepository
+from src.storage.repositories.submission import InMemorySubmissionRepository
+from src.storage.repositories.submission_provider import (
+    SUPPORTED_SUBMISSION_PROVIDERS,
+    SubmissionProviderConfigurationError,
+    create_submission_repository,
+)
+from src.storage.repositories.postgres_submission import PostgresSubmissionRepository
 from src.storage.repositories.supabase_civic_case import (
     CivicCaseConcurrencyError,
     CivicCasePersistenceError,
@@ -63,6 +70,11 @@ __all__ = [
     "create_evidence_repository",
     "SUPPORTED_EVIDENCE_PROVIDERS",
     "EvidenceProviderConfigurationError",
+    "InMemorySubmissionRepository",
+    "PostgresSubmissionRepository",
+    "create_submission_repository",
+    "SUPPORTED_SUBMISSION_PROVIDERS",
+    "SubmissionProviderConfigurationError",
     "CivicCaseConcurrencyError",
     "CivicCasePersistenceError",
     "SupabaseCivicCaseRepository",
