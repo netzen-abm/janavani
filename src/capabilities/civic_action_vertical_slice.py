@@ -1,9 +1,9 @@
 """Canonical end-to-end civic-action orchestration boundary.
 
 This module composes existing provider- and surface-neutral capabilities. It does
-not own Case, Evidence, Authority, Document, Consent, or Submission semantics.
-Access surfaces should use this orchestration boundary rather than rebuilding
-the civic-action lifecycle themselves.
+not own Case, Evidence, Authority, Document, Consent, Submission, or Responsibility
+semantics. Access surfaces should use this orchestration boundary rather than
+rebuilding the civic-action lifecycle themselves.
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pathlib import Path
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
 from src.core.evidence import EvidenceRepository
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
@@ -38,6 +39,7 @@ class CivicActionVerticalSliceDependencies:
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
     evidence_repository: EvidenceRepository | None = None
+    responsibility_capability: ResponsibilityCapability | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,15 @@ class CivicActionVerticalSlice:
 
     def __init__(self, dependencies: CivicActionVerticalSliceDependencies) -> None:
         self._deps = dependencies
+
+    def resolve_responsibility(
+        self,
+        request: ResponsibilityResolutionRequest,
+    ):
+        """Resolve candidate responsibility before case action; never infer guilt."""
+        if self._deps.responsibility_capability is None:
+            raise RuntimeError("Responsibility capability is required for responsibility resolution")
+        return self._deps.responsibility_capability.resolve(request)
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
