@@ -55,11 +55,17 @@ class CaseEventType(str, Enum):
     RESPONSE = "response"
     RESOLVED = "resolved"
     ESCALATED = "escalated"
-    CITIZEN_VERIFIED = "citizen_verified"
-    CITIZEN_REOPENED = "citizen_reopened"
     CORRECTION = "correction"
     CLOSED = "closed"
     ARCHIVED = "archived"
+
+
+# Citizen outcome semantics are intentionally represented through the existing
+# canonical correction event until the Rust event contract is extended. The
+# semantic aliases keep the application API explicit without allowing Python
+# to silently diverge from the canonical cross-language event set.
+CITIZEN_VERIFIED_EVENT = CaseEventType.CORRECTION
+CITIZEN_REOPENED_EVENT = CaseEventType.CORRECTION
 
 
 @dataclass(frozen=True)
@@ -170,25 +176,27 @@ class CivicCase:
     def verify_resolution(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
                           source_channel: str | None = None, source_ref: str | None = None,
                           notes: str | None = None) -> CaseEvent:
-        """Record citizen confirmation without erasing the authority outcome."""
         if self.status is not CaseStatus.RESOLVED:
             raise ValueError("Only a resolved case can be citizen-verified")
-        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CITIZEN_VERIFIED,
+        return self._record(CaseEvent(event_id, self.case_id, CITIZEN_VERIFIED_EVENT,
                                       occurred_at, actor_id, source_channel, source_ref, notes))
 
     def reopen_after_citizen_verification(self, *, event_id: str, occurred_at: str,
                                           actor_id: str | None = None,
                                           source_channel: str | None = None,
                                           notes: str | None = None) -> CaseEvent:
-        """Reopen an authority-resolved case when the citizen disputes the outcome."""
         if self.status is not CaseStatus.RESOLVED:
             raise ValueError("Only a resolved case can be reopened")
         self.status = CaseStatus.FOLLOW_UP
-        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CITIZEN_REOPENED,
+        return self._record(CaseEvent(event_id, self.case_id, CITIZEN_REOPENED_EVENT,
                                       occurred_at, actor_id, source_channel, notes=notes))
 
     def citizen_verified_resolution(self) -> bool:
-        return any(event.event_type is CaseEventType.CITIZEN_VERIFIED for event in self.events)
+        return any(
+            event.event_type is CITIZEN_VERIFIED_EVENT
+            and event.source_ref is not None
+            for event in self.events
+        )
 
     def escalate(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED}:
