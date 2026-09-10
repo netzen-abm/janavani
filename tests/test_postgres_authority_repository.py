@@ -9,6 +9,7 @@ from src.storage.repositories.postgres_authority import PostgresAuthorityReposit
 
 def _repository() -> tuple[PostgresAuthorityRepository, MagicMock, MagicMock]:
     connection = MagicMock()
+    connection.__enter__.return_value = connection
     cursor = connection.cursor.return_value.__enter__.return_value
     connection.transaction.return_value.__enter__.return_value = connection
     repo = PostgresAuthorityRepository(connection_factory=lambda: connection)
