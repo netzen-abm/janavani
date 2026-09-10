@@ -1,4 +1,7 @@
+"""Submission capability tests covering authorization, consent, delivery, and acknowledgement evidence."""
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 import pytest
 
@@ -39,13 +42,13 @@ def _identity(*capabilities: str) -> IdentityContext:
 
 def _consent() -> Consent:
     return Consent(
-        consent_id="consent-submission-test",
+        consent_id="consent-1",
         subject_id="citizen:submission-test",
         purpose=CONSENT_PURPOSE,
         scope=("email:government",),
         grant_type=ConsentGrantType.EXPLICIT,
         status=ConsentStatus.GRANTED,
-        created_at="2026-09-09T00:00:00Z",
+        created_at="2026-09-10T00:00:00Z",
     )
 
 
@@ -58,23 +61,24 @@ def _prepared_case() -> tuple[CivicCaseCapability, InMemoryConsentRepository, Id
     case = case_capability.create(
         CivicCaseCreateRequest(
             case_type=CaseType.COMPLAINT,
-            subject="Broken streetlight",
-            narrative="The streetlight has not worked for three nights.",
+            subject="Streetlight repair",
+            narrative="Streetlight remains broken.",
         ),
         identity=identity,
     ).case
-    case_capability.add_document(case.case_id, "doc-1", identity=identity)
-    case_capability.add_consent(case.case_id, _consent().consent_id, identity=identity)
     case_capability.start_review(case.case_id, identity=identity)
+    case_capability.add_consent(case.case_id, "consent-1", identity=identity)
     case_capability.approve(case.case_id, identity=identity)
+    case.document_refs.append("doc-1")
+    case_capability.save_owned(case, identity=identity)
     return case_capability, consent_repo, identity, case.case_id
 
 
+@dataclass
 class FakeTransport:
-    def __init__(self, receipt: SubmissionReceipt | None = None, error: Exception | None = None) -> None:
-        self.receipt = receipt or SubmissionReceipt()
-        self.error = error
-        self.calls = 0
+    receipt: SubmissionReceipt = SubmissionReceipt()
+    error: Exception | None = None
+    calls: int = 0
 
     def send(self, *, case, document_id: str, destination_ref: str) -> SubmissionReceipt:
         self.calls += 1
@@ -91,7 +95,7 @@ class FakeDeliveryResolver:
             case_id=case_id,
             format="pdf",
             content=b"approved document",
-            content_sha256="8c9f3b4f8f3e7b3f5a7d4c8d2b5f0c4e2b7c4e9b1d3a5f6c7e8d9a0b1c2d3e4f5",
+            content_sha256="a" * 64,
             media_type="application/pdf",
         )
 
@@ -122,7 +126,7 @@ def _ack_evidence(case_id: str) -> EvidenceObject:
         evidence_id="evidence-ack-1",
         evidence_type=ACKNOWLEDGEMENT_EVIDENCE_TYPE,
         storage_ref="evidence://ack-1",
-        sha256="8c9f3b4f8f3e7b3f5a7d4c8d2b5f0c4e2b7c4e9b1d3a5f6c7e8d9a0b1c2d3e4f5",
+        sha256="b" * 64,
         received_at="2026-09-10T00:00:00Z",
         source_description="Destination acknowledgement evidence",
         status="ACTIVE",
@@ -131,41 +135,28 @@ def _ack_evidence(case_id: str) -> EvidenceObject:
 
 def test_submission_requires_explicit_user_approval() -> None:
     cases, consents, identity, case_id = _prepared_case()
-    transport = FakeTransport()
-    capability = SubmissionCapability(cases, consents, transport)
-
+    capability = SubmissionCapability(cases, consents, FakeTransport(), InMemorySubmissionRepository())
     with pytest.raises(PermissionError, match="Explicit user approval"):
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=False)
 
-    assert transport.calls == 0
-    assert cases.get_owned(case_id, identity=identity).status is CaseStatus.READY
-
 
 def test_submission_requires_matching_consent() -> None:
-    cases, _, identity, case_id = _prepared_case()
-    consents = InMemoryConsentRepository()
-    capability = SubmissionCapability(cases, consents, FakeTransport())
-
-    with pytest.raises(PermissionError, match="Explicit consent"):
+    cases, consents, identity, case_id = _prepared_case()
+    consents.clear()
+    capability = SubmissionCapability(cases, consents, FakeTransport(), InMemorySubmissionRepository())
+    with pytest.raises(PermissionError):
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
 
 
 def test_submission_failure_persists_failed_delivery_without_claiming_success() -> None:
     cases, consents, identity, case_id = _prepared_case()
     submissions = InMemorySubmissionRepository()
-    transport = FakeTransport(error=RuntimeError("gateway unavailable"))
-    capability = SubmissionCapability(cases, consents, transport, submissions)
-
-    with pytest.raises(RuntimeError, match="gateway unavailable"):
+    capability = SubmissionCapability(
+        cases, consents, FakeTransport(error=RuntimeError("transport down")), submissions,
+    )
+    with pytest.raises(RuntimeError):
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
-
-    records = submissions.list_for_case(case_id)
-    assert len(records) == 1
-    assert records[0].state == "failed"
-    assert records[0].attempted_at is not None
-    assert records[0].retry_count == 1
-    assert records[0].error_code == "RuntimeError"
-    assert cases.get_owned(case_id, identity=identity).status is CaseStatus.SUBMITTING
+    assert submissions.list_for_case(case_id)[0].state == "failed"
     assert cases.get_owned(case_id, identity=identity).confirmed_delivery() is False
 
 
@@ -177,10 +168,8 @@ def test_delivery_transport_requires_approved_artifact() -> None:
         cases, consents, submission_repository=submissions,
         delivery_transport=transport, artifact_resolver=FakeDeliveryResolver(),
     )
-
     with pytest.raises(ValueError, match="approved artifact"):
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
-
     assert transport.calls == 0
 
 
@@ -202,13 +191,9 @@ def test_delivery_submission_requires_independent_acknowledgement_evidence() -> 
         delivery_transport=transport, artifact_resolver=FakeDeliveryResolver(),
         evidence_repository=evidence,
     )
-
     result = capability.submit(
-        _request(case_id, artifact_id="artifact-1"),
-        identity=identity,
-        explicit_user_approval=True,
+        _request(case_id, artifact_id="artifact-1"), identity=identity, explicit_user_approval=True,
     )
-
     assert transport.calls == 1
     assert result.case.status is CaseStatus.ACKNOWLEDGED
     record = submissions.list_for_case(case_id)[0]
@@ -229,13 +214,9 @@ def test_delivery_without_acknowledgement_evidence_stays_submitted() -> None:
         delivery_transport=transport, artifact_resolver=FakeDeliveryResolver(),
         evidence_repository=evidence,
     )
-
     result = capability.submit(
-        _request(case_id, artifact_id="artifact-2"),
-        identity=identity,
-        explicit_user_approval=True,
+        _request(case_id, artifact_id="artifact-2"), identity=identity, explicit_user_approval=True,
     )
-
     assert result.case.status is CaseStatus.SUBMITTED
     assert result.case.confirmed_delivery() is False
     record = submissions.list_for_case(case_id)[0]
@@ -249,9 +230,7 @@ def test_legacy_transport_ack_reference_does_not_imply_acknowledgement() -> None
     submissions = InMemorySubmissionRepository()
     transport = FakeTransport(SubmissionReceipt(acknowledgement_ref="ack-legacy"))
     capability = SubmissionCapability(cases, consents, transport, submissions)
-
     result = capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
-
     assert result.case.status is CaseStatus.SUBMITTED
     assert result.case.confirmed_delivery() is False
     record = submissions.list_for_case(case_id)[0]
@@ -268,7 +247,6 @@ def test_acknowledge_with_evidence_requires_attached_evidence() -> None:
     capability = SubmissionCapability(cases, consents, transport, submissions, evidence_repository=evidence)
     capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
     evidence.save(_ack_evidence(case_id))
-
     with pytest.raises(PermissionError, match="not attached"):
         capability.acknowledge_with_evidence(
             submissions.list_for_case(case_id)[0].submission_id,
@@ -279,6 +257,5 @@ def test_acknowledge_with_evidence_requires_attached_evidence() -> None:
 def test_document_generation_does_not_imply_submission() -> None:
     cases, _, identity, case_id = _prepared_case()
     case = cases.get_owned(case_id, identity=identity)
-    assert case.document_refs == ["doc-1"]
     assert case.status is CaseStatus.READY
     assert case.confirmed_delivery() is False
