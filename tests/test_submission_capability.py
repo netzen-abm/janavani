@@ -16,6 +16,7 @@ from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
+from src.storage.repositories.submission import InMemorySubmissionRepository
 
 CASE_CAPABILITY = "JNV-CIVIC-COMPLAINT"
 SUBMIT_CAPABILITY = "case:submit"
@@ -109,31 +110,62 @@ def test_submission_requires_matching_consent() -> None:
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
 
 
-def test_submission_failure_never_claims_success() -> None:
+def test_submission_failure_persists_failed_delivery_without_claiming_success() -> None:
     cases, consents, identity, case_id = _prepared_case()
+    submissions = InMemorySubmissionRepository()
     transport = FakeTransport(error=RuntimeError("gateway unavailable"))
-    capability = SubmissionCapability(cases, consents, transport)
+    capability = SubmissionCapability(cases, consents, transport, submissions)
 
     with pytest.raises(RuntimeError, match="gateway unavailable"):
         capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
 
+    records = submissions.list_for_case(case_id)
+    assert len(records) == 1
+    assert records[0].state == "failed"
+    assert records[0].attempted_at is not None
+    assert records[0].retry_count == 1
+    assert records[0].error_code == "RuntimeError"
     assert cases.get_owned(case_id, identity=identity).status is CaseStatus.SUBMITTING
     assert cases.get_owned(case_id, identity=identity).confirmed_delivery() is False
 
 
-def test_successful_submission_records_acknowledgement_only_when_transport_confirms() -> None:
+def test_successful_submission_persists_submitted_and_acknowledged_states() -> None:
     cases, consents, identity, case_id = _prepared_case()
+    submissions = InMemorySubmissionRepository()
     transport = FakeTransport(SubmissionReceipt(acknowledgement_ref="ack-123", notes="Accepted by destination"))
-    capability = SubmissionCapability(cases, consents, transport)
+    capability = SubmissionCapability(cases, consents, transport, submissions)
 
     result = capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
 
     assert result.authorization is AuthorizationDecision.ALLOW
     assert result.case.status is CaseStatus.ACKNOWLEDGED
     assert result.case.confirmed_delivery() is True
+    records = submissions.list_for_case(case_id)
+    assert len(records) == 1
+    assert records[0].state == "acknowledged"
+    assert records[0].submitted_at is not None
+    assert records[0].acknowledged_at is not None
+    assert records[0].ack_ref == "ack-123"
+    assert records[0].external_reference == "ack-123"
+    assert records[0].error_code is None
     assert result.case.events[-2].event_type.value == "submitted"
     assert result.case.events[-1].event_type.value == "acknowledged"
     assert result.case.events[-1].source_ref == "ack-123"
+
+
+def test_successful_submission_without_acknowledgement_stays_submitted() -> None:
+    cases, consents, identity, case_id = _prepared_case()
+    submissions = InMemorySubmissionRepository()
+    capability = SubmissionCapability(cases, consents, FakeTransport(), submissions)
+
+    result = capability.submit(_request(case_id), identity=identity, explicit_user_approval=True)
+
+    assert result.case.status is CaseStatus.SUBMITTED
+    assert result.case.confirmed_delivery() is False
+    records = submissions.list_for_case(case_id)
+    assert len(records) == 1
+    assert records[0].state == "submitted"
+    assert records[0].ack_ref is None
 
 
 def test_document_generation_does_not_imply_submission() -> None:

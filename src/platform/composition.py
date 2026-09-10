@@ -13,6 +13,7 @@ from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.core.submission import SubmissionRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -23,6 +24,7 @@ from src.storage.repositories.document_review import (
 )
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
+from src.storage.repositories.submission_provider import create_submission_repository
 
 
 def create_case_repository() -> CivicCaseRepository:
@@ -58,6 +60,7 @@ def create_civic_action_vertical_slice(
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
     submission_transport: SubmissionTransport,
+    submission_repository: SubmissionRepository | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
     artifact_repository=None,
@@ -67,7 +70,8 @@ def create_civic_action_vertical_slice(
 
     Access surfaces should receive this object from their composition root rather
     than constructing parallel Case, review, or submission paths. Durable provider
-    choices are injected by the caller; no provider is selected by this factory.
+    choices are injected by the caller; when no submission repository is supplied,
+    the standard provider selector uses its configured development-safe default.
     """
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -82,10 +86,12 @@ def create_civic_action_vertical_slice(
         review_repository,
         case_capability=case_capability,
     )
+    submission_repo = submission_repository or create_submission_repository()
     submission_capability = SubmissionCapability(
         case_capability,
         consent_repository,
         submission_transport,
+        submission_repository=submission_repo,
     )
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(

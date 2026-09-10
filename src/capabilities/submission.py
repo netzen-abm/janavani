@@ -6,13 +6,16 @@ valid consent, and explicit user approval have all been satisfied.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 from typing import Protocol
+from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.access.consent import ConsentRepositoryReader, ConsentRequirement, require_consent
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.civic_case import CivicCase
+from src.core.submission import SubmissionRecord, SubmissionRepository
 from src.identity.context import IdentityContext
 
 CAPABILITY_ID = "case:submit"
@@ -48,10 +51,21 @@ class SubmissionCapability:
 
     def __init__(self, case_capability: CivicCaseCapability,
                  consent_repository: ConsentRepositoryReader,
-                 transport: SubmissionTransport) -> None:
+                 transport: SubmissionTransport,
+                 submission_repository: SubmissionRepository | None = None) -> None:
         self._cases = case_capability
         self._consents = consent_repository
         self._transport = transport
+        self._submissions = submission_repository
+
+    @staticmethod
+    def _now() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _save(self, record: SubmissionRecord) -> SubmissionRecord:
+        if self._submissions is not None:
+            self._submissions.save(record)
+        return record
 
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool) -> CivicCaseResult:
@@ -78,24 +92,75 @@ class SubmissionCapability:
             scope=request.consent_scope,
         ))
 
-        # This transition is persisted before external I/O. If transport fails,
-        # the durable Case remains SUBMITTING and no false success is claimed.
+        now = self._now()
+        submission = SubmissionRecord.new(
+            submission_id=f"sub_{uuid4().hex}",
+            case_id=case.case_id,
+            destination_ref=request.destination_ref,
+            document_ref=request.document_id,
+            channel=request.source_channel or "shared",
+        )
+        self._save(submission)
+
+        # Persist the attempt before external I/O. If transport fails, the
+        # durable record remains explicit and no false success is claimed.
+        submission = replace(
+            submission,
+            state="submitting",
+            attempted_at=now,
+            updated_at=now,
+        )
+        self._save(submission)
         self._cases.transition(
             request.case_id, action="case:begin_submission", identity=identity,
             source_channel=request.source_channel,
         )
-        receipt = self._transport.send(
-            case=case, document_id=request.document_id, destination_ref=request.destination_ref
-        )
 
+        try:
+            receipt = self._transport.send(
+                case=case, document_id=request.document_id, destination_ref=request.destination_ref
+            )
+        except Exception as exc:
+            failed = replace(
+                submission,
+                state="failed",
+                error_code=type(exc).__name__,
+                retry_count=submission.retry_count + 1,
+                updated_at=self._now(),
+            )
+            self._save(failed)
+            raise
+
+        submitted_at = self._now()
+        submission = replace(
+            submission,
+            state="submitted",
+            submitted_at=submitted_at,
+            external_reference=receipt.acknowledgement_ref,
+            updated_at=submitted_at,
+        )
+        self._save(submission)
         self._cases.transition(
             request.case_id, action="case:submit", identity=identity,
             source_channel=request.source_channel,
         )
+
         if receipt.acknowledgement_ref:
+            acknowledged_at = self._now()
+            self._save(replace(
+                submission,
+                state="acknowledged",
+                acknowledged_at=acknowledged_at,
+                ack_ref=receipt.acknowledgement_ref,
+                updated_at=acknowledged_at,
+            ))
             self._cases.transition(
                 request.case_id, action="case:acknowledge", identity=identity,
                 source_channel=request.source_channel, source_ref=receipt.acknowledgement_ref,
                 notes=receipt.notes,
             )
-        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
+
+        final_case = self._cases.get_owned(request.case_id, identity=identity)
+        if final_case is None:
+            raise LookupError("Case not found after submission")
+        return CivicCaseResult(final_case, AuthorizationDecision.ALLOW)
