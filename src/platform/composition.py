@@ -24,6 +24,7 @@ from src.storage.repositories.document_review import (
 )
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
+from src.storage.repositories.submission_provider import create_submission_repository
 
 
 def create_case_repository() -> CivicCaseRepository:
@@ -69,7 +70,8 @@ def create_civic_action_vertical_slice(
 
     Access surfaces should receive this object from their composition root rather
     than constructing parallel Case, review, or submission paths. Durable provider
-    choices are injected by the caller; no provider is selected by this factory.
+    choices are injected by the caller; when no submission repository is supplied,
+    the standard provider selector uses its configured development-safe default.
     """
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -84,11 +86,12 @@ def create_civic_action_vertical_slice(
         review_repository,
         case_capability=case_capability,
     )
+    submission_repo = submission_repository or create_submission_repository()
     submission_capability = SubmissionCapability(
         case_capability,
         consent_repository,
         submission_transport,
-        submission_repository=submission_repository,
+        submission_repository=submission_repo,
     )
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
