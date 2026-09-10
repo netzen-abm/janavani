@@ -37,9 +37,8 @@ def _resolved_case() -> tuple[CivicCaseCapability, IdentityContext, str]:
     capability.transition(case.case_id, action="case:begin_submission", identity=identity)
     capability.transition(case.case_id, action="case:submit", identity=identity)
     capability.transition(case.case_id, action="case:acknowledge", identity=identity, source_ref="ack-evidence-1")
-    capability.transition(case.case_id, action="case:responded", identity=identity) if False else None
     case = capability.get_owned(case.case_id, identity=identity)
-    case.status = CaseStatus.RESPONDED
+    case.respond(event_id="event-response", occurred_at="2026-09-10T09:00:00Z", actor_id="authority:example")
     capability.save_owned(case, identity=identity)
     case = capability.get_owned(case.case_id, identity=identity)
     case.resolve(event_id="event-authority-resolved", occurred_at="2026-09-10T10:00:00Z", actor_id="authority:example")
