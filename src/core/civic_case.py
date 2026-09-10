@@ -55,6 +55,8 @@ class CaseEventType(str, Enum):
     RESPONSE = "response"
     RESOLVED = "resolved"
     ESCALATED = "escalated"
+    CITIZEN_VERIFIED = "citizen_verified"
+    CITIZEN_REOPENED = "citizen_reopened"
     CORRECTION = "correction"
     CLOSED = "closed"
     ARCHIVED = "archived"
@@ -102,183 +104,131 @@ class CivicCase:
             self.subject = subject.strip()
         if narrative is not None:
             self.narrative = narrative.strip()
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.EDITED, occurred_at, actor_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.EDITED, occurred_at, actor_id))
 
-    def start_review(self, *, event_id: str, occurred_at: str,
-                     actor_id: str | None = None) -> CaseEvent:
+    def start_review(self, *, event_id: str, occurred_at: str, actor_id: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.DRAFT:
             raise ValueError("Only a draft case can enter review")
         self._ensure_content()
         self.status = CaseStatus.REVIEW
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.REVIEW_STARTED, occurred_at, actor_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.REVIEW_STARTED, occurred_at, actor_id))
 
-    def mark_ready(self, *, event_id: str, occurred_at: str,
-                   actor_id: str | None = None) -> CaseEvent:
+    def mark_ready(self, *, event_id: str, occurred_at: str, actor_id: str | None = None) -> CaseEvent:
         if self.status not in {CaseStatus.REVIEW, CaseStatus.READY}:
             raise ValueError(f"Cannot approve {self.status.value} case")
         self._ensure_content()
         if not self.consent_refs:
             raise PermissionError("Explicit submission consent is required")
         self.status = CaseStatus.READY
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.APPROVED, occurred_at, actor_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.APPROVED, occurred_at, actor_id))
 
-    def begin_submission(self, *, event_id: str, occurred_at: str,
-                         actor_id: str | None = None,
-                         source_channel: str | None = None) -> CaseEvent:
+    def begin_submission(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.READY:
             raise ValueError("Only a ready case can begin submission")
         self.status = CaseStatus.SUBMITTING
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.SUBMITTING, occurred_at,
-            actor_id, source_channel,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTING, occurred_at, actor_id, source_channel))
 
-    def queue_submission(self, *, event_id: str, occurred_at: str,
-                         actor_id: str | None = None,
-                         source_channel: str | None = None) -> CaseEvent:
+    def queue_submission(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.SUBMITTING:
             raise ValueError("Only a submitting case can be queued")
         self.status = CaseStatus.QUEUED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.QUEUED, occurred_at,
-            actor_id, source_channel,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.QUEUED, occurred_at, actor_id, source_channel))
 
-    def submit(self, *, event_id: str, occurred_at: str,
-               actor_id: str | None = None,
-               source_channel: str | None = None) -> CaseEvent:
+    def submit(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status not in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
             raise ValueError("Only a submitting or queued case can be submitted")
         self.status = CaseStatus.SUBMITTED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.SUBMITTED, occurred_at,
-            actor_id, source_channel,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTED, occurred_at, actor_id, source_channel))
 
-    def acknowledge(self, *, event_id: str, occurred_at: str,
-                    actor_id: str | None = None,
-                    source_channel: str | None = None,
-                    source_ref: str | None = None,
+    def acknowledge(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
+                    source_channel: str | None = None, source_ref: str | None = None,
                     notes: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.SUBMITTED:
             raise ValueError("Only a submitted case can be acknowledged")
         self.status = CaseStatus.ACKNOWLEDGED
-        return self._record(CaseEvent(
-            event_id=event_id, case_id=self.case_id,
-            event_type=CaseEventType.ACKNOWLEDGED, occurred_at=occurred_at,
-            actor_id=actor_id, source_channel=source_channel,
-            source_ref=source_ref, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.ACKNOWLEDGED, occurred_at,
+                                      actor_id, source_channel, source_ref, notes))
 
-    def follow_up(self, *, event_id: str, occurred_at: str,
-                  actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
-        if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
-        }:
+    def follow_up(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED}:
             raise ValueError("Case is not ready for follow-up")
         self.status = CaseStatus.FOLLOW_UP
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.FOLLOW_UP, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.FOLLOW_UP, occurred_at, actor_id, notes=notes))
 
-    def respond(self, *, event_id: str, occurred_at: str,
-                actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
-        if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
-            CaseStatus.IN_PROGRESS, CaseStatus.ESCALATED,
-        }:
+    def respond(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS, CaseStatus.ESCALATED}:
             raise ValueError("Case is not ready for a response")
         self.status = CaseStatus.RESPONDED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.RESPONSE, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.RESPONSE, occurred_at, actor_id, notes=notes))
 
-    def resolve(self, *, event_id: str, occurred_at: str,
-                actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+    def resolve(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.RESPONDED:
             raise ValueError("Only a responded case can be resolved")
         self.status = CaseStatus.RESOLVED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.RESOLVED, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.RESOLVED, occurred_at, actor_id, notes=notes))
 
-    def escalate(self, *, event_id: str, occurred_at: str,
-                 actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
-        if self.status not in {
-            CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
-            CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED,
-        }:
+    def verify_resolution(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
+                          source_channel: str | None = None, source_ref: str | None = None,
+                          notes: str | None = None) -> CaseEvent:
+        """Record citizen confirmation without erasing the authority outcome."""
+        if self.status is not CaseStatus.RESOLVED:
+            raise ValueError("Only a resolved case can be citizen-verified")
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CITIZEN_VERIFIED,
+                                      occurred_at, actor_id, source_channel, source_ref, notes))
+
+    def reopen_after_citizen_verification(self, *, event_id: str, occurred_at: str,
+                                          actor_id: str | None = None,
+                                          source_channel: str | None = None,
+                                          notes: str | None = None) -> CaseEvent:
+        """Reopen an authority-resolved case when the citizen disputes the outcome."""
+        if self.status is not CaseStatus.RESOLVED:
+            raise ValueError("Only a resolved case can be reopened")
+        self.status = CaseStatus.FOLLOW_UP
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CITIZEN_REOPENED,
+                                      occurred_at, actor_id, source_channel, notes=notes))
+
+    def citizen_verified_resolution(self) -> bool:
+        return any(event.event_type is CaseEventType.CITIZEN_VERIFIED for event in self.events)
+
+    def escalate(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED}:
             raise ValueError("Case is not ready for escalation")
         self.status = CaseStatus.ESCALATED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.ESCALATED, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.ESCALATED, occurred_at, actor_id, notes=notes))
 
-    def close(self, *, event_id: str, occurred_at: str,
-              actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+    def close(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status not in {CaseStatus.RESOLVED, CaseStatus.ESCALATED}:
             raise ValueError("Only resolved or escalated cases can be closed")
         self.status = CaseStatus.CLOSED
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.CLOSED, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CLOSED, occurred_at, actor_id, notes=notes))
 
-    def add_evidence(self, evidence_id: str, *, event_id: str,
-                     occurred_at: str, actor_id: str | None = None,
-                     source_channel: str | None = None) -> CaseEvent:
+    def add_evidence(self, evidence_id: str, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status in {CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
             raise ValueError("Cannot add evidence to a closed or archived case")
         if evidence_id not in self.evidence_refs:
             self.evidence_refs.append(evidence_id)
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.EVIDENCE_ADDED, occurred_at,
-            actor_id, source_channel, evidence_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.EVIDENCE_ADDED, occurred_at, actor_id, source_channel, evidence_id))
 
-    def add_document(self, document_id: str, *, event_id: str,
-                     occurred_at: str, actor_id: str | None = None,
-                     source_channel: str | None = None) -> CaseEvent:
-        """Attach a canonical document reference to this case."""
+    def add_document(self, document_id: str, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is CaseStatus.ARCHIVED:
             raise ValueError("Cannot add a document to an archived case")
         if document_id not in self.document_refs:
             self.document_refs.append(document_id)
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.DOCUMENT_ADDED, occurred_at,
-            actor_id, source_channel, document_id,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.DOCUMENT_ADDED, occurred_at, actor_id, source_channel, document_id))
 
-    def correct(self, *, event_id: str, occurred_at: str,
-                actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
+    def correct(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, notes: str | None = None) -> CaseEvent:
         if self.status in {CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
             raise ValueError("Closed or archived cases cannot be corrected")
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.CORRECTION, occurred_at,
-            actor_id, notes=notes,
-        ))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.CORRECTION, occurred_at, actor_id, notes=notes))
 
     def _ensure_content(self) -> None:
         if not self.subject.strip() or not self.narrative.strip():
             raise ValueError("A case requires a subject and narrative")
 
     def _ensure_editable(self) -> None:
-        if self.status in {
-            CaseStatus.SUBMITTING, CaseStatus.QUEUED, CaseStatus.SUBMITTED,
-            CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS,
-            CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
-            CaseStatus.CLOSED, CaseStatus.ARCHIVED,
-        }:
+        if self.status in {CaseStatus.SUBMITTING, CaseStatus.QUEUED, CaseStatus.SUBMITTED, CaseStatus.ACKNOWLEDGED,
+                           CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
+                           CaseStatus.CLOSED, CaseStatus.ARCHIVED}:
             raise ValueError("Case is no longer editable")
 
     def _record(self, event: CaseEvent) -> CaseEvent:
@@ -294,16 +244,11 @@ class CivicCase:
 
 
 def confirmed_delivery(status: CaseStatus) -> bool:
-    """Return true only when destination acknowledgement has occurred."""
-    return status in {
-        CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS,
-        CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED,
-        CaseStatus.CLOSED,
-    }
+    return status in {CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS,
+                      CaseStatus.RESPONDED, CaseStatus.RESOLVED, CaseStatus.ESCALATED, CaseStatus.CLOSED}
 
 
 def validate_event_chain(events: Iterable[CaseEvent]) -> bool:
-    """Validate basic lifecycle ordering without becoming a persistence engine."""
     previous: CaseEventType | None = None
     seen: set[str] = set()
     case_id: str | None = None
