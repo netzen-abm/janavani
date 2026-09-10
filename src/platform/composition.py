@@ -13,6 +13,7 @@ from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.core.submission import SubmissionRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -58,6 +59,7 @@ def create_civic_action_vertical_slice(
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
     submission_transport: SubmissionTransport,
+    submission_repository: SubmissionRepository | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
     artifact_repository=None,
@@ -86,6 +88,7 @@ def create_civic_action_vertical_slice(
         case_capability,
         consent_repository,
         submission_transport,
+        submission_repository=submission_repository,
     )
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
