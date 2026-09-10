@@ -10,9 +10,11 @@ from src.capabilities.civic_action_vertical_slice import (
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.responsibility import ResponsibilityCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
@@ -24,6 +26,7 @@ from src.storage.repositories.document_review import (
 )
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
+from src.storage.repositories.responsibility import InMemoryResponsibilityResolver
 from src.storage.repositories.submission_provider import create_submission_repository
 
 
@@ -37,6 +40,12 @@ def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapabili
 
 def create_authority_capability(repository: AuthorityRepository) -> AuthorityCapability:
     return AuthorityCapability(repository)
+
+
+def create_responsibility_capability(
+    resolver: ResponsibilityResolver,
+) -> ResponsibilityCapability:
+    return ResponsibilityCapability(resolver)
 
 
 def create_civic_action_capability(
@@ -63,16 +72,11 @@ def create_civic_action_vertical_slice(
     submission_repository: SubmissionRepository | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
+    responsibility_resolver: ResponsibilityResolver | None = None,
     artifact_repository=None,
     blob_store=None,
 ) -> CivicActionVerticalSlice:
-    """Compose one canonical civic-action slice with shared capability instances.
-
-    Access surfaces should receive this object from their composition root rather
-    than constructing parallel Case, review, or submission paths. Durable provider
-    choices are injected by the caller; when no submission repository is supplied,
-    the standard provider selector uses its configured development-safe default.
-    """
+    """Compose one canonical civic-action slice with shared capability instances."""
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
     civic_action_capability = CivicActionCapability(
@@ -93,6 +97,12 @@ def create_civic_action_vertical_slice(
         submission_transport,
         submission_repository=submission_repo,
     )
+    # Responsibility resolution is composed as a shared capability. The reference
+    # resolver is intentionally local/development-only; production callers must
+    # inject a provider that preserves source provenance and verification boundaries.
+    responsibility_capability = create_responsibility_capability(
+        responsibility_resolver or InMemoryResponsibilityResolver()
+    )
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
             case_capability=case_capability,
@@ -104,6 +114,7 @@ def create_civic_action_vertical_slice(
             artifact_repository=artifact_repository,
             blob_store=blob_store,
             evidence_repository=evidence_repository,
+            responsibility_capability=responsibility_capability,
         )
     )
 

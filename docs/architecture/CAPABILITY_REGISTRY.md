@@ -4,20 +4,17 @@
 
 **Canonical registry — initial version.**
 
-This registry identifies reusable capabilities that belong to shared JanaVani
-infrastructure rather than to an individual surface.
+This registry identifies reusable capabilities that belong to shared JanaVani infrastructure rather than to an individual surface.
 
 ## Rules
 
 1. A reusable capability is defined once behind a provider-neutral contract.
 2. Surface adapters may invoke capabilities but do not own their business logic.
 3. Provider-specific SDKs remain inside provider adapters.
-4. A capability must be independently testable without Telegram, WebApp,
-   WhatsApp, or another surface.
+4. A capability must be independently testable without Telegram, WebApp, WhatsApp, or another surface.
 5. Optional capabilities must remain optional at runtime.
 6. No capability may silently perform an external action on behalf of a user.
-7. New capabilities require a contract, ownership boundary, conformance tests,
-   and an identified provider/adaptor boundary before becoming canonical.
+7. New capabilities require a contract, ownership boundary, conformance tests, and an identified provider/adaptor boundary before becoming canonical.
 
 ## Registry
 
@@ -25,6 +22,7 @@ infrastructure rather than to an individual surface.
 |---|---|---:|---:|---|
 | CASE | Case creation, lifecycle, persistence contract, evidence/document links | Yes | No | Implemented |
 | AUTHORITY | Authority discovery, jurisdiction, authority relationships, escalation graph | Yes | No | Partial |
+| RESPONSIBILITY | Resolve traceable candidate responsibility relationships from observations | Yes | No | Contract + reference resolver |
 | DOCUMENT | Draft, review, correction, PDF/DOCX artifact generation | Yes | No | Contract implemented |
 | RTI | RTI request/response workflow and assessment | Yes | No | Partial |
 | FOLLOW_UP | Matter-aware next-action recommendation and reminders | Yes | No | Initial implementation |
@@ -36,73 +34,67 @@ infrastructure rather than to an individual surface.
 | NOTIFICATION | User reminders and status notifications | Yes | No | Partial |
 | AUDIT | Immutable/append-oriented operational and governance evidence | Yes | No | Partial |
 
+## RESPONSIBILITY
+
+Owns the provider-neutral contract for connecting a citizen observation to traceable candidate entities such as assets, jurisdictions, authorities, projects, contracts, vendors, obligations, warranties, remedies, or action channels.
+
+It does **not** establish guilt, corruption, misconduct, contractual breach, criminality, or final legal responsibility. Each relationship carries confidence, basis, source references, and verification state. Untraceable results fail closed.
+
+AI may assist with extraction, matching, classification, geolocation, record discovery, duplicate detection, and candidate ranking. AI output is not itself the authoritative source for responsibility.
+
+Production data sources must enter through provider-neutral adapters. The resolver informs CASE; it does not bypass review, consent, submission, acknowledgement, or citizen outcome verification.
+
 ## Capability boundaries
 
 ### CASE
 
 Owns the canonical civic-case lifecycle and case-level relationships.
 
-Does not own Telegram conversations, HTTP transport, database vendor APIs,
-or document delivery.
+Does not own Telegram conversations, HTTP transport, database vendor APIs, or document delivery.
 
 ### AUTHORITY
 
 Owns authority identity, jurisdiction and procedural relationships.
 
-It must become the source used by document generation for verified To/CC
-metadata rather than allowing individual generators to read office CSV files
-or hard-code addresses.
+It must become the source used by document generation for verified To/CC metadata rather than allowing individual generators to read office CSV files or hard-code addresses.
 
 ### DOCUMENT
 
 Owns document drafts and artifact generation.
 
 Outputs may include PDF and DOCX. A generated artifact is not a submission.
-JanaVani does not send the artifact to an authority.
 
 ### RTI
 
-Owns reusable RTI-specific case capabilities, including response review and
-procedural next-action classification.
-
-RTI may coexist with or precede/follow other civic actions.
+Owns reusable RTI-specific case capabilities, including response review and procedural next-action classification.
 
 ### FOLLOW_UP
 
-Owns adaptive next-action recommendations based on case history, matter
-nature, documents, elapsed time, responses and user-reported outcomes.
-
-The recommendation is not an automated external action.
+Owns adaptive next-action recommendations based on case history, matter nature, documents, elapsed time, responses and user-reported outcomes.
 
 ### IDENTITY / CONSENT
 
-These capabilities are cross-surface concerns and must not be implemented as
-Telegram-only state or provider-specific records.
+These capabilities are cross-surface concerns and must not be implemented as Telegram-only state or provider-specific records.
 
 ### EVIDENCE
 
-Owns references and provenance/integrity metadata. Evidence must distinguish
-user-reported information from externally verified information.
+Owns references and provenance/integrity metadata. Evidence must distinguish user-reported information from externally verified information.
 
 ### SEARCH
 
-Provides reusable search contracts. Search providers may vary without
-changing consumers.
+Provides reusable search contracts. Search providers may vary without changing consumers.
 
 ### AI
 
-AI is an optional capability provider. Core deterministic workflows must not
-require a particular AI vendor or model.
+AI is an optional capability provider. Core deterministic workflows must not require a particular AI vendor or model.
 
 ### NOTIFICATION
 
-Notifications are user-facing reminders/status signals. They do not imply
-submission, delivery, acknowledgement, or government response.
+Notifications are user-facing reminders/status signals. They do not imply submission, delivery, acknowledgement, or government response.
 
 ### AUDIT
 
-Audit evidence records important capability operations and governance facts
-without becoming a second source of truth for domain state.
+Audit evidence records important capability operations and governance facts without becoming a second source of truth for domain state.
 
 ## Adapter examples
 
@@ -138,9 +130,7 @@ These are replaceable implementations, not architectural commitments.
 
 ## Conformance requirement
 
-Every implementation of a capability contract must pass the same core
-contract suite. Provider-specific tests may be added in addition to the core
-suite.
+Every implementation of a capability contract must pass the same core contract suite. Provider-specific tests may be added in addition to the core suite.
 
 ## Anti-patterns
 
@@ -151,8 +141,7 @@ Do not create:
 - Supabase-specific domain models;
 - Langflow-specific case state;
 - Cloud Run-specific lifecycle semantics;
-- provider-specific identifiers as domain identifiers unless explicitly
-  represented as external references;
+- provider-specific identifiers as domain identifiers unless explicitly represented as external references;
 - any `send_document()` capability.
 
 ## Evolution rule
@@ -161,5 +150,4 @@ Before adding a new function, ask:
 
 > Could another JanaVani surface or future provider reasonably need this?
 
-If yes, place it behind shared infrastructure. If no, keep it local to the
-adapter and document why.
+If yes, place it behind shared infrastructure. If no, keep it local to the adapter and document why.
