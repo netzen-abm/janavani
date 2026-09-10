@@ -41,6 +41,12 @@ class ResponsibilityObservation:
     asset_ref: str | None = None
     evidence_refs: tuple[str, ...] = field(default_factory=tuple)
 
+    def __post_init__(self) -> None:
+        if not self.observation_id.strip():
+            raise ValueError("Observation id is required")
+        if not self.description.strip():
+            raise ValueError("Observation description is required")
+
 
 @dataclass(frozen=True)
 class ResponsibilityLink:
@@ -76,7 +82,7 @@ class ResponsibilityResolution:
 
     def require_source(self) -> None:
         """Fail closed if the result contains no traceable source references."""
-        if not self.links or not any(link.source_refs for link in self.links):
+        if not self.links or not all(link.source_refs for link in self.links):
             raise ValueError("Responsibility resolution requires traceable source references")
 
 
