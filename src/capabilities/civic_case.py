@@ -68,7 +68,6 @@ class CivicCaseCapability:
         return case
 
     def save_owned(self, case: CivicCase, *, identity: IdentityContext) -> CivicCaseResult:
-        """Persist a previously authorized owned case after an adapter-side operation."""
         owned = self.get_owned(case.case_id, identity=identity)
         if owned is None or owned is not case:
             raise LookupError("Case not found")
@@ -110,7 +109,6 @@ class CivicCaseCapability:
     def transition(self, case_id: str, *, action: str, identity: IdentityContext,
                    source_channel: str | None = None, source_ref: str | None = None,
                    notes: str | None = None) -> CivicCaseResult:
-        """Execute an allowed lifecycle command with shared auth and persistence."""
         transitions = {
             "case:start_review": ("case:review", CivicCase.start_review, False),
             "case:mark_ready": ("case:write", CivicCase.mark_ready, False),
@@ -118,6 +116,8 @@ class CivicCaseCapability:
             "case:queue_submission": ("case:submit", CivicCase.queue_submission, False),
             "case:submit": ("case:submit", CivicCase.submit, False),
             "case:acknowledge": ("case:write", CivicCase.acknowledge, False),
+            "case:verify_resolution": ("case:write", CivicCase.verify_resolution, False),
+            "case:reopen_resolution": ("case:write", CivicCase.reopen_after_citizen_verification, False),
         }
         if action not in transitions:
             raise ValueError(f"Unsupported civic case transition: {action}")
@@ -127,10 +127,13 @@ class CivicCaseCapability:
         now = datetime.now(timezone.utc).isoformat()
         kwargs: dict[str, object] = {"event_id": f"event-{uuid4().hex}", "occurred_at": now,
                                      "actor_id": identity.principal.principal_id}
-        if action in {"case:begin_submission", "case:queue_submission", "case:submit", "case:acknowledge"}:
+        if action in {"case:begin_submission", "case:queue_submission", "case:submit", "case:acknowledge",
+                      "case:verify_resolution", "case:reopen_resolution"}:
             kwargs["source_channel"] = source_channel
-        if action == "case:acknowledge":
+        if action in {"case:acknowledge", "case:verify_resolution"}:
             kwargs["source_ref"] = source_ref
+            kwargs["notes"] = notes
+        if action == "case:reopen_resolution":
             kwargs["notes"] = notes
         transition_fn(case, **kwargs)
         self._repository.save(case)
