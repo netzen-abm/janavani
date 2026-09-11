@@ -11,6 +11,7 @@ from src.access.consent import ConsentRepositoryReader, ConsentRequirement, requ
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.civic_case import CivicCase
 from src.core.evidence import EvidenceRepository
+from src.core.execution import CapabilityExecutionContext
 from src.core.submission import SubmissionRecord, SubmissionRepository
 from src.delivery.contract import DeliveryArtifactResolver, DeliveryRequest, DeliveryTransport
 from src.identity.context import IdentityContext
@@ -33,14 +34,12 @@ class SubmissionRequest:
 @dataclass(frozen=True)
 class SubmissionReceipt:
     """Legacy transport result; acknowledgement requires independent evidence."""
-
     acknowledgement_ref: str | None = None
     notes: str | None = None
 
 
 class SubmissionTransport(Protocol):
     """Legacy external transport adapter; it is never the domain authority."""
-
     def send(self, *, case: CivicCase, document_id: str, destination_ref: str) -> SubmissionReceipt:
         ...
 
@@ -91,24 +90,24 @@ class SubmissionCapability:
 
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord,
                      evidence_id: str, identity: IdentityContext,
-                     source_channel: str | None, notes: str | None) -> None:
+                     source_channel: str | None, notes: str | None,
+                     execution_context: CapabilityExecutionContext | None = None) -> None:
         self._acknowledgement_evidence(case, evidence_id)
         acknowledged_at = self._now()
-        self._save(replace(
-            submission,
-            state="acknowledged",
-            acknowledged_at=acknowledged_at,
-            ack_ref=evidence_id,
-            updated_at=acknowledged_at,
-        ))
-        self._cases.transition(
-            case.case_id, action="case:acknowledge", identity=identity,
-            source_channel=source_channel, source_ref=evidence_id, notes=notes,
+        self._save(replace(submission, state="acknowledged", acknowledged_at=acknowledged_at,
+                           ack_ref=evidence_id, updated_at=acknowledged_at))
+        case_context = self._child_case_context(
+            execution_context, identity, case.case_id, "case:acknowledge"
         )
+        self._cases.transition(case.case_id, action="case:acknowledge", identity=identity,
+                               source_channel=source_channel, source_ref=evidence_id,
+                               notes=notes, execution_context=case_context)
 
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
-               explicit_user_approval: bool) -> CivicCaseResult:
+               explicit_user_approval: bool,
+               execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         """Submit an attached document only after every consequential-action gate."""
+        self._validate_execution_context(execution_context, identity, action="case:submit", resource_id=request.case_id)
         case = self._cases.get_owned(request.case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
@@ -133,19 +132,16 @@ class SubmissionCapability:
 
         now = self._now()
         submission = SubmissionRecord.new(
-            submission_id=f"sub_{uuid4().hex}",
-            case_id=case.case_id,
-            destination_ref=request.destination_ref,
-            document_ref=request.document_id,
+            submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
+            destination_ref=request.destination_ref, document_ref=request.document_id,
             channel=request.source_channel or "shared",
         )
         self._save(submission)
         submission = replace(submission, state="submitting", attempted_at=now, updated_at=now)
         self._save(submission)
-        self._cases.transition(
-            request.case_id, action="case:begin_submission", identity=identity,
-            source_channel=request.source_channel,
-        )
+        begin_context = self._child_case_context(execution_context, identity, request.case_id, "case:begin_submission")
+        self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
+                               source_channel=request.source_channel, execution_context=begin_context)
 
         try:
             if self._delivery_transport is not None:
@@ -153,17 +149,12 @@ class SubmissionCapability:
                     raise ValueError("An approved artifact is required for delivery")
                 assert self._artifact_resolver is not None
                 artifact = self._artifact_resolver.resolve(
-                    artifact_id=request.artifact_id,
-                    case_id=case.case_id,
-                    document_id=request.document_id,
+                    artifact_id=request.artifact_id, case_id=case.case_id, document_id=request.document_id
                 )
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
-                    submission_id=submission.submission_id,
-                    case_id=case.case_id,
-                    document_id=request.document_id,
-                    destination_ref=request.destination_ref,
-                    channel=request.source_channel or "shared",
-                    artifact=artifact,
+                    submission_id=submission.submission_id, case_id=case.case_id,
+                    document_id=request.document_id, destination_ref=request.destination_ref,
+                    channel=request.source_channel or "shared", artifact=artifact,
                 ))
                 external_reference = delivery_receipt.external_reference
                 evidence_id = delivery_receipt.acknowledgement_evidence_ref
@@ -177,32 +168,23 @@ class SubmissionCapability:
                 evidence_id = None
                 notes = receipt.notes
         except Exception as exc:
-            failed = replace(
-                submission, state="failed", error_code=type(exc).__name__,
-                retry_count=submission.retry_count + 1, updated_at=self._now(),
-            )
+            failed = replace(submission, state="failed", error_code=type(exc).__name__,
+                             retry_count=submission.retry_count + 1, updated_at=self._now())
             self._save(failed)
             raise
 
         submitted_at = self._now()
-        submission = replace(
-            submission,
-            state="submitted",
-            submitted_at=submitted_at,
-            external_reference=external_reference,
-            updated_at=submitted_at,
-        )
+        submission = replace(submission, state="submitted", submitted_at=submitted_at,
+                             external_reference=external_reference, updated_at=submitted_at)
         self._save(submission)
-        self._cases.transition(
-            request.case_id, action="case:submit", identity=identity,
-            source_channel=request.source_channel,
-        )
+        submit_context = self._child_case_context(execution_context, identity, request.case_id, "case:submit")
+        self._cases.transition(request.case_id, action="case:submit", identity=identity,
+                               source_channel=request.source_channel, execution_context=submit_context)
 
         if evidence_id:
-            self._acknowledge(
-                case=case, submission=submission, evidence_id=evidence_id,
-                identity=identity, source_channel=request.source_channel, notes=notes,
-            )
+            self._acknowledge(case=case, submission=submission, evidence_id=evidence_id,
+                              identity=identity, source_channel=request.source_channel, notes=notes,
+                              execution_context=execution_context)
 
         final_case = self._cases.get_owned(request.case_id, identity=identity)
         if final_case is None:
@@ -211,8 +193,10 @@ class SubmissionCapability:
 
     def acknowledge_with_evidence(self, submission_id: str, *, evidence_id: str,
                                   identity: IdentityContext, notes: str | None = None,
-                                  source_channel: str | None = None) -> CivicCaseResult:
+                                  source_channel: str | None = None,
+                                  execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         """Record acknowledgement only when independently stored evidence exists."""
+        self._validate_execution_context(execution_context, identity, action="case:acknowledge")
         if self._submissions is None:
             raise RuntimeError("Submission repository is required")
         submission = self._submissions.get(submission_id)
@@ -223,11 +207,41 @@ class SubmissionCapability:
             raise LookupError("Case not found")
         if submission.state != "submitted":
             raise ValueError("Only a submitted submission can be acknowledged")
-        self._acknowledge(
-            case=case, submission=submission, evidence_id=evidence_id,
-            identity=identity, source_channel=source_channel, notes=notes,
-        )
+        self._acknowledge(case=case, submission=submission, evidence_id=evidence_id,
+                          identity=identity, source_channel=source_channel, notes=notes,
+                          execution_context=execution_context)
         final_case = self._cases.get_owned(case.case_id, identity=identity)
         if final_case is None:
             raise LookupError("Case not found after acknowledgement")
         return CivicCaseResult(final_case, AuthorizationDecision.ALLOW)
+
+    @staticmethod
+    def _validate_execution_context(execution_context: CapabilityExecutionContext | None,
+                                    identity: IdentityContext, *, action: str,
+                                    resource_id: str | None = None) -> None:
+        if execution_context is None:
+            return
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        if execution_context.capability_id != CAPABILITY_ID:
+            raise ValueError("Execution capability does not match the Submission capability")
+        if execution_context.action != action:
+            raise ValueError("Execution action does not match the Submission operation")
+        if resource_id is not None and execution_context.resource_id != resource_id:
+            raise ValueError("Execution resource does not match the Submission resource")
+
+    @staticmethod
+    def _child_case_context(parent: CapabilityExecutionContext | None,
+                            identity: IdentityContext, case_id: str,
+                            action: str) -> CapabilityExecutionContext | None:
+        if parent is None:
+            return None
+        return CapabilityExecutionContext.for_capability(
+            identity, capability_id="JNV-CIVIC-COMPLAINT", action=action,
+            surface=parent.surface, resource_id=case_id,
+            correlation_id=parent.correlation_id, parent_operation_id=parent.operation_id,
+            authorization_ref=parent.authorization_ref, consent_refs=parent.consent_refs,
+            policy_ref=parent.policy_ref, risk_level=parent.risk_level,
+            side_effect_class=parent.side_effect_class, provenance=parent.provenance,
+            metadata=parent.metadata,
+        )
