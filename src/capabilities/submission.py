@@ -6,8 +6,14 @@ from datetime import datetime, timezone
 from typing import Protocol
 from uuid import uuid4
 
-from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
-from src.access.consent import ConsentRepositoryReader, ConsentRequirement, require_consent
+from src.access.authorization import AuthorizationDecision, AuthorizationRequest
+from src.access.consequential import (
+    ConsequentialDecision,
+    ConsequentialOperationRequest,
+    gate_consequential_operation,
+)
+from src.access.consent import ConsentRepositoryReader, ConsentRequirement
+from src.access.execution_consent import ExecutionConsentRequirement, require_execution_consent
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.civic_case import CivicCase
 from src.core.evidence import EvidenceRepository
@@ -20,7 +26,6 @@ CAPABILITY_ID = "case:submit"
 CONSENT_PURPOSE = "case_submission"
 ACKNOWLEDGEMENT_EVIDENCE_TYPE = "submission_acknowledgement"
 
-
 @dataclass(frozen=True)
 class SubmissionRequest:
     case_id: str
@@ -30,23 +35,19 @@ class SubmissionRequest:
     source_channel: str | None = None
     artifact_id: str | None = None
 
-
 @dataclass(frozen=True)
 class SubmissionReceipt:
     """Legacy transport result; acknowledgement requires independent evidence."""
     acknowledgement_ref: str | None = None
     notes: str | None = None
 
-
 class SubmissionTransport(Protocol):
     """Legacy external transport adapter; it is never the domain authority."""
     def send(self, *, case: CivicCase, document_id: str, destination_ref: str) -> SubmissionReceipt:
         ...
 
-
 class SubmissionCapability:
     """Shared submission boundary consumed by every access surface."""
-
     def __init__(self, case_capability: CivicCaseCapability,
                  consent_repository: ConsentRepositoryReader,
                  transport: SubmissionTransport | None = None,
@@ -96,17 +97,35 @@ class SubmissionCapability:
         acknowledged_at = self._now()
         self._save(replace(submission, state="acknowledged", acknowledged_at=acknowledged_at,
                            ack_ref=evidence_id, updated_at=acknowledged_at))
-        case_context = self._child_case_context(
-            execution_context, identity, case.case_id, "case:acknowledge"
-        )
+        case_context = self._child_case_context(execution_context, identity, case.case_id, "case:acknowledge")
         self._cases.transition(case.case_id, action="case:acknowledge", identity=identity,
                                source_channel=source_channel, source_ref=evidence_id,
                                notes=notes, execution_context=case_context)
 
+    def _consequential_submission_decision(self, *, identity: IdentityContext, case_id: str,
+                                           consent_scope: str, explicit_user_approval: bool,
+                                           execution_context: CapabilityExecutionContext | None) -> ConsequentialDecision:
+        if execution_context is None:
+            execution_context = CapabilityExecutionContext.for_capability(
+                identity, capability_id=CAPABILITY_ID, action="case:submit", surface="shared",
+                resource_id=case_id, side_effect_class="external_side_effect",
+                idempotency_key=f"submission-{uuid4().hex}")
+        requirement = ConsentRequirement(identity.principal.principal_id, CONSENT_PURPOSE, consent_scope)
+        request = ConsequentialOperationRequest(
+            authorization=AuthorizationRequest(context=identity, capability=CAPABILITY_ID,
+                action="case:submit", resource_id=case_id, requires_approval=True,
+                execution_context=execution_context),
+            execution_context=execution_context, consent_requirement=requirement,
+            explicit_user_approval=explicit_user_approval)
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        require_execution_consent(self._consents, ExecutionConsentRequirement(requirement), execution_context)
+        return gate_consequential_operation(request, consent_repository=self._consents)
+
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool,
                execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
-        """Submit an attached document only after every consequential-action gate."""
+        """Submit an attached document only after the shared consequential gate."""
         self._validate_execution_context(execution_context, identity, action="case:submit", resource_id=request.case_id)
         case = self._cases.get_owned(request.case_id, identity=identity)
         if case is None:
@@ -115,77 +134,62 @@ class SubmissionCapability:
             raise ValueError("Document is not attached to the case")
         if not request.destination_ref.strip():
             raise ValueError("A submission destination is required")
-        if not explicit_user_approval:
-            raise PermissionError("Explicit user approval is required for submission")
-
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=CAPABILITY_ID, action="case:submit", resource_id=case.case_id
-        ))
-        if decision is not AuthorizationDecision.ALLOW:
+        decision = self._consequential_submission_decision(identity=identity, case_id=case.case_id,
+            consent_scope=request.consent_scope, explicit_user_approval=explicit_user_approval,
+            execution_context=execution_context)
+        if decision is ConsequentialDecision.DENY:
             raise PermissionError("Identity is not authorized to submit this case")
-
-        require_consent(self._consents, ConsentRequirement(
-            subject_id=identity.principal.principal_id,
-            purpose=CONSENT_PURPOSE,
-            scope=request.consent_scope,
-        ))
-
+        if decision is ConsequentialDecision.CONSENT_REQUIRED:
+            raise PermissionError("Explicit consent is required for submission")
+        if decision is ConsequentialDecision.REQUIRE_APPROVAL:
+            raise PermissionError("Explicit user approval is required for submission")
         now = self._now()
-        submission = SubmissionRecord.new(
-            submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
+        submission = SubmissionRecord.new(submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
             destination_ref=request.destination_ref, document_ref=request.document_id,
-            channel=request.source_channel or "shared",
-        )
+            channel=request.source_channel or "shared")
         self._save(submission)
         submission = replace(submission, state="submitting", attempted_at=now, updated_at=now)
         self._save(submission)
         begin_context = self._child_case_context(execution_context, identity, request.case_id, "case:begin_submission")
         self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
                                source_channel=request.source_channel, execution_context=begin_context)
-
         try:
             if self._delivery_transport is not None:
                 if request.artifact_id is None:
                     raise ValueError("An approved artifact is required for delivery")
                 assert self._artifact_resolver is not None
-                artifact = self._artifact_resolver.resolve(
-                    artifact_id=request.artifact_id, case_id=case.case_id, document_id=request.document_id
-                )
+                artifact = self._artifact_resolver.resolve(artifact_id=request.artifact_id,
+                    case_id=case.case_id, document_id=request.document_id)
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
                     submission_id=submission.submission_id, case_id=case.case_id,
                     document_id=request.document_id, destination_ref=request.destination_ref,
-                    channel=request.source_channel or "shared", artifact=artifact,
-                ))
+                    channel=request.source_channel or "shared", artifact=artifact))
                 external_reference = delivery_receipt.external_reference
                 evidence_id = delivery_receipt.acknowledgement_evidence_ref
                 notes = delivery_receipt.notes
             else:
                 assert self._transport is not None
-                receipt = self._transport.send(
-                    case=case, document_id=request.document_id, destination_ref=request.destination_ref
-                )
+                receipt = self._transport.send(case=case, document_id=request.document_id,
+                    destination_ref=request.destination_ref)
                 external_reference = receipt.acknowledgement_ref
                 evidence_id = None
                 notes = receipt.notes
         except Exception as exc:
             failed = replace(submission, state="failed", error_code=type(exc).__name__,
-                             retry_count=submission.retry_count + 1, updated_at=self._now())
+                retry_count=submission.retry_count + 1, updated_at=self._now())
             self._save(failed)
             raise
-
         submitted_at = self._now()
         submission = replace(submission, state="submitted", submitted_at=submitted_at,
-                             external_reference=external_reference, updated_at=submitted_at)
+            external_reference=external_reference, updated_at=submitted_at)
         self._save(submission)
         submit_context = self._child_case_context(execution_context, identity, request.case_id, "case:submit")
         self._cases.transition(request.case_id, action="case:submit", identity=identity,
                                source_channel=request.source_channel, execution_context=submit_context)
-
         if evidence_id:
             self._acknowledge(case=case, submission=submission, evidence_id=evidence_id,
-                              identity=identity, source_channel=request.source_channel, notes=notes,
-                              execution_context=execution_context)
-
+                identity=identity, source_channel=request.source_channel, notes=notes,
+                execution_context=execution_context)
         final_case = self._cases.get_owned(request.case_id, identity=identity)
         if final_case is None:
             raise LookupError("Case not found after submission")
@@ -208,8 +212,8 @@ class SubmissionCapability:
         if submission.state != "submitted":
             raise ValueError("Only a submitted submission can be acknowledged")
         self._acknowledge(case=case, submission=submission, evidence_id=evidence_id,
-                          identity=identity, source_channel=source_channel, notes=notes,
-                          execution_context=execution_context)
+            identity=identity, source_channel=source_channel, notes=notes,
+            execution_context=execution_context)
         final_case = self._cases.get_owned(case.case_id, identity=identity)
         if final_case is None:
             raise LookupError("Case not found after acknowledgement")
@@ -232,16 +236,13 @@ class SubmissionCapability:
 
     @staticmethod
     def _child_case_context(parent: CapabilityExecutionContext | None,
-                            identity: IdentityContext, case_id: str,
-                            action: str) -> CapabilityExecutionContext | None:
+                            identity: IdentityContext, case_id: str, action: str) -> CapabilityExecutionContext | None:
         if parent is None:
             return None
-        return CapabilityExecutionContext.for_capability(
-            identity, capability_id="JNV-CIVIC-COMPLAINT", action=action,
-            surface=parent.surface, resource_id=case_id,
+        return CapabilityExecutionContext.for_capability(identity, capability_id="JNV-CIVIC-COMPLAINT",
+            action=action, surface=parent.surface, resource_id=case_id,
             correlation_id=parent.correlation_id, parent_operation_id=parent.operation_id,
             authorization_ref=parent.authorization_ref, consent_refs=parent.consent_refs,
             policy_ref=parent.policy_ref, risk_level=parent.risk_level,
             side_effect_class=parent.side_effect_class, provenance=parent.provenance,
-            metadata=parent.metadata,
-        )
+            metadata=parent.metadata)
