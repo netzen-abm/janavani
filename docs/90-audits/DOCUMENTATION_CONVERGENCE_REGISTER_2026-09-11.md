@@ -12,7 +12,7 @@ Track documentation convergence without destroying historical work or creating a
 | Former location | Disposition | Current owner |
 |---|---|---|
 | `planning/DATABASE_CONTRACT.md` | Archived as superseded MVP contract | `docs/ARCHITECTURE.md` + `docs/ARCHITECTURE_DATA_BOUNDARY.md` |
-| `planning/DATABASE_DESIGN.md` | Archived as superseded MVP database design | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
+| `planning/DATABASE_DESIGN.md` | Archived/superseded MVP database design; active-path presence must remain verified before relying on this disposition | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
 | `planning/OFFICE_SCHEMA.md` | Archived as superseded MVP schema | Current authority/office capability documentation and implementation |
 | `planning/DOCUMENT_CONTRACT.md` | Archived as superseded MVP contract | Active architecture/capability contracts |
 | `planning/WORKFLOW_CONTRACT.md` | Archived as superseded MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow contracts |
@@ -24,6 +24,7 @@ Track documentation convergence without destroying historical work or creating a
 | `planning/ENGINEERING_PRINCIPLES.md` | Removed because file was empty | `docs/ARCHITECTURE_PRINCIPLES.md` |
 | `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
 | `planning/IDENTITY_ACCESS_TRUST_IMPLEMENTATION_MAP.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
+| `planning/PRIVACY_ARCHITECTURE.md` | Archived as superseded planning architecture after content review | `docs/PRIVACY_ARCHITECTURE.md` |
 
 ## Content review findings
 
@@ -50,6 +51,10 @@ The old session schema and system domain model encode useful MVP concepts, but t
 ### Identity/access/trust
 
 The former contract and implementation map overlapped substantially. They are now represented by one canonical active contract with implementation status kept explicit. `docs/AUTHENTICATION.md` remains a current repository-state note and must not become a competing architecture specification.
+
+### Privacy architecture
+
+The former planning privacy architecture substantially overlapped with the new canonical `docs/PRIVACY_ARCHITECTURE.md`. Its historical text is preserved in the archive; the active planning path has been removed to eliminate competing privacy authorities.
 
 ## Remaining review queue
 
