@@ -55,11 +55,9 @@ A delegated operation must still pass the canonical authorization kernel. Delega
 
 Consent remains independent from authorization.
 
-When a composed request declares a consent purpose/scope requirement, a granted consent must match:
+For ordinary execution, when a composed request declares a consent purpose/scope requirement, a granted consent must match the executing principal as subject, the exact purpose, and the exact requested scope.
 
-- the executing principal as subject;
-- the exact purpose;
-- the exact requested scope.
+For delegated execution, the consent subject may be the delegation grantor/resource owner. The request must identify that consent subject explicitly, and the subject must equal the validated delegation grantor. A delegate cannot select consent belonging to an unrelated principal.
 
 Denied, revoked, expired, or otherwise non-granted consent cannot satisfy the gate.
 
@@ -79,6 +77,7 @@ Database/RLS policy remains an independent enforcement layer.
 - revoked/expired delegation → `DENY`;
 - delegation outside declared capability/action/resource → `DENY`;
 - missing or mismatched required consent → `DENY`;
+- delegated consent subject different from the validated grantor → `DENY`;
 - service credential without explicit service policy → `DENY`;
 - service action outside the allow-list → `DENY`;
 - base authorization denial → terminal `DENY`;
@@ -108,6 +107,7 @@ Before PostgreSQL RLS activation, the implementation must add repository-backed 
 - delegates cannot cross resource boundaries;
 - consent cannot authorize a different purpose or scope;
 - revoked/expired consent cannot authorize consequential action;
+- delegated consent is attributable to the grantor/resource owner;
 - service identities cannot perform unlisted actions;
 - destination services cannot access unrelated cases;
 - kernel denial remains terminal;
