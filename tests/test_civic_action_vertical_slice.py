@@ -133,8 +133,8 @@ def test_complete_civic_action_path_uses_shared_boundaries():
         explicit_user_approval=True,
     )
 
-    assert result.case.status.value == "acknowledged"
-    assert result.case.events[-1].source_ref == "ACK-1"
+    assert result.case.status.value == "submitted"
+    assert result.case.confirmed_delivery() is False
     assert transport.calls == [(case.case_id, "doc-1", "office:office-1")]
 
 
