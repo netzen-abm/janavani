@@ -7,7 +7,13 @@ from typing import Protocol
 from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.access.consequential import (
+    ConsequentialDecision,
+    ConsequentialOperationRequest,
+    gate_consequential_operation,
+)
 from src.access.consent import ConsentRepositoryReader, ConsentRequirement, require_consent
+from src.access.execution_consent import ExecutionConsentRequirement, require_execution_consent
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.civic_case import CivicCase
 from src.core.evidence import EvidenceRepository
@@ -103,10 +109,57 @@ class SubmissionCapability:
                                source_channel=source_channel, source_ref=evidence_id,
                                notes=notes, execution_context=case_context)
 
+    def _consequential_submission_decision(
+        self,
+        *,
+        identity: IdentityContext,
+        case_id: str,
+        consent_scope: str,
+        explicit_user_approval: bool,
+        execution_context: CapabilityExecutionContext | None,
+    ) -> ConsequentialDecision:
+        if execution_context is None:
+            execution_context = CapabilityExecutionContext.for_capability(
+                identity,
+                capability_id=CAPABILITY_ID,
+                action="case:submit",
+                surface="shared",
+                resource_id=case_id,
+                side_effect_class="external_side_effect",
+                idempotency_key=f"submission-{uuid4().hex}",
+            )
+        requirement = ConsentRequirement(
+            subject_id=identity.principal.principal_id,
+            purpose=CONSENT_PURPOSE,
+            scope=consent_scope,
+        )
+        request = ConsequentialOperationRequest(
+            authorization=AuthorizationRequest(
+                context=identity,
+                capability=CAPABILITY_ID,
+                action="case:submit",
+                resource_id=case_id,
+                requires_approval=True,
+                execution_context=execution_context,
+            ),
+            execution_context=execution_context,
+            consent_requirement=requirement,
+            explicit_user_approval=explicit_user_approval,
+        )
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        if execution_context is not None:
+            require_execution_consent(
+                self._consents,
+                ExecutionConsentRequirement(requirement),
+                execution_context,
+            ) if execution_context else None
+        return gate_consequential_operation(request, consent_repository=self._consents)
+
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool,
                execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
-        """Submit an attached document only after every consequential-action gate."""
+        """Submit an attached document only after the shared consequential gate."""
         self._validate_execution_context(execution_context, identity, action="case:submit", resource_id=request.case_id)
         case = self._cases.get_owned(request.case_id, identity=identity)
         if case is None:
@@ -115,20 +168,20 @@ class SubmissionCapability:
             raise ValueError("Document is not attached to the case")
         if not request.destination_ref.strip():
             raise ValueError("A submission destination is required")
-        if not explicit_user_approval:
-            raise PermissionError("Explicit user approval is required for submission")
 
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=CAPABILITY_ID, action="case:submit", resource_id=case.case_id
-        ))
-        if decision is not AuthorizationDecision.ALLOW:
+        decision = self._consequential_submission_decision(
+            identity=identity,
+            case_id=case.case_id,
+            consent_scope=request.consent_scope,
+            explicit_user_approval=explicit_user_approval,
+            execution_context=execution_context,
+        )
+        if decision is ConsequentialDecision.DENY:
             raise PermissionError("Identity is not authorized to submit this case")
-
-        require_consent(self._consents, ConsentRequirement(
-            subject_id=identity.principal.principal_id,
-            purpose=CONSENT_PURPOSE,
-            scope=request.consent_scope,
-        ))
+        if decision is ConsequentialDecision.CONSENT_REQUIRED:
+            raise PermissionError("Explicit consent is required for submission")
+        if decision is ConsequentialDecision.REQUIRE_APPROVAL:
+            raise PermissionError("Explicit user approval is required for submission")
 
         now = self._now()
         submission = SubmissionRecord.new(
