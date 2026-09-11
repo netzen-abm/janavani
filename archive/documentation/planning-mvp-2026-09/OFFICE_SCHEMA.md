@@ -1,3 +1,11 @@
+# Archived: Janavani Office Schema (MVP v0.1)
+
+> **ARCHIVED / HISTORICAL** — preserved verbatim from `planning/OFFICE_SCHEMA.md` during the 2026-09 documentation convergence pass.
+>
+> The current authority/office model must be derived from the active architecture and capability contracts, not this MVP schema.
+
+---
+
 # Janavani Office Schema (MVP v0.1)
 
 ## Purpose

@@ -55,7 +55,7 @@ Cryptographic identities such as Nostr keys or blockchain keys are separate capa
 
 ## Authentication versus authorization
 
-The future shared Identity, Access & Trust contract separates:
+The shared Identity, Access & Trust contract separates:
 
 ```text
 Identity
@@ -126,8 +126,8 @@ Personal information should remain on the citizen device whenever practical and 
 ## Related canonical documents
 
 - `docs/SOURCE_OF_TRUTH.md`
-- `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md`
-- `planning/PRIVACY_ARCHITECTURE.md`
+- `docs/IDENTITY_ACCESS_TRUST.md`
+- `docs/PRIVACY_ARCHITECTURE.md`
 - `SECURITY.md`
 
 ## Rule

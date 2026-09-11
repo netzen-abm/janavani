@@ -1,3 +1,11 @@
+# Archived: Janavani Workflows (MVP-era)
+
+> **ARCHIVED / HISTORICAL** — preserved from `planning/WORKFLOWS.md` during the 2026-09 documentation convergence pass.
+>
+> This Telegram-centric complaint/PDF workflow is historical implementation context. The current citizen-governance lifecycle and shared workflow architecture are defined by the active canonical documentation.
+
+---
+
 # 🇮🇳 JANAVANI
 # WORKFLOWS
 Version 1.0

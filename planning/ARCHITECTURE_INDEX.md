@@ -1,22 +1,20 @@
-# Janavani Architecture
+# JANAVANI — PLANNING DIRECTORY INDEX
 
-## Constitution
+**Status:** SUPERSEDED AS AN ARCHITECTURE AUTHORITY
+**Date:** 11 September 2026
 
-- MVP_CONSTITUTION.md
+The previous planning architecture index mixed historical MVP contracts with current architecture and could be mistaken for a competing source of truth.
 
-## Contracts
+Use instead:
 
-- OFFICE_SCHEMA.md
-- SESSION_SCHEMA.md
-- DOCUMENT_CONTRACT.md
-- PRIVACY_CONTRACT.md
-- WORKFLOW_CONTRACT.md
-- SERVICE_CONTRACT.md
+- `docs/DOCUMENTATION_INDEX.md` — documentation authority and organization
+- `docs/SOURCE_OF_TRUTH.md` — canonical architectural rules
+- `docs/JANAVANI_MASTER_ARCHITECTURE.md` — detailed ecosystem architecture
+- `docs/ARCHITECTURE.md` — system-layer architecture
+- `docs/ARCHITECTURE_PRINCIPLES.md` — engineering invariants
+- `docs/CAPABILITY_REGISTRY.md` — capability inventory
+- `docs/MASTER_TASK_CHECKLIST.md` — task inventory
 
-## Existing Documents
+Planning contracts remain active only when they have a current owner and are consistent with the canonical documents. MVP-labelled contracts require content review before adoption, reconciliation or archival.
 
-- DATABASE_DESIGN.md
-- PRODUCT_REQUIREMENTS.md
-- SYSTEM_DOMAIN_MODEL.md
-- PRIVACY_ARCHITECTURE.md
-- WORKFLOWS.md
+Do not use this file as an architecture specification.

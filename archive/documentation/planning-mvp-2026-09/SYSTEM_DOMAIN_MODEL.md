@@ -1,3 +1,11 @@
+# Archived: Janavani System Domain Model (MVP-era)
+
+> **ARCHIVED / HISTORICAL** — preserved from `planning/SYSTEM_DOMAIN_MODEL.md` during the 2026-09 documentation convergence pass.
+>
+> The current canonical domain model is governed by the active architecture and source-of-truth documents. This document must not be treated as the current domain authority.
+
+---
+
 # 🇮🇳 JANAVANI
 # SYSTEM DOMAIN MODEL
 Version 1.0

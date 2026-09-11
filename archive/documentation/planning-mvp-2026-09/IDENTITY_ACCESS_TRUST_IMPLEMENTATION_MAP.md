@@ -1,3 +1,13 @@
+# ARCHIVED — Janavani IDENTITY_ACCESS_TRUST_IMPLEMENTATION_MAP.md
+
+**Historical version:** 31 August 2026
+**Archived:** 11 September 2026
+**Reason:** Consolidated into the canonical `docs/IDENTITY_ACCESS_TRUST.md`.
+
+This historical implementation map is preserved for traceability. It is **not** a current architecture authority.
+
+---
+
 # JANAVANI — IDENTITY, ACCESS & TRUST IMPLEMENTATION MAP
 
 **Status:** AUDITED / IMPLEMENTATION PLAN

@@ -1,3 +1,13 @@
+# ARCHIVED — Janavani IDENTITY_ACCESS_TRUST_CONTRACT.md
+
+**Historical version:** 1.0
+**Archived:** 11 September 2026
+**Reason:** Consolidated into the canonical `docs/IDENTITY_ACCESS_TRUST.md`.
+
+This historical contract is preserved verbatim below. It is **not** a current architecture authority.
+
+---
+
 # JANAVANI — IDENTITY, ACCESS & TRUST CONTRACT
 
 **Status:** DESIGNED

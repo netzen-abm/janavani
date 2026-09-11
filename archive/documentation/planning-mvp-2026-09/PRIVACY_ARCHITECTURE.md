@@ -1,3 +1,11 @@
+# Archived Planning Document
+
+> Archived from `planning/PRIVACY_ARCHITECTURE.md` during documentation convergence on 11 September 2026.
+>
+> The substantive privacy architecture has been consolidated into the canonical `docs/PRIVACY_ARCHITECTURE.md`. This file is retained for historical traceability and must not be treated as an active architecture authority.
+
+---
+
 # 🇮🇳 JANAVANI
 # PRIVACY ARCHITECTURE
 
