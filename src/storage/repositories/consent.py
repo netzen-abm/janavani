@@ -36,3 +36,7 @@ class InMemoryConsentRepository:
         return [
             item for item in self._items.values() if item.subject_id == subject_id
         ]
+
+    def clear(self) -> None:
+        """Clear the in-memory test/development repository."""
+        self._items.clear()
