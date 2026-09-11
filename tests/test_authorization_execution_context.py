@@ -8,7 +8,7 @@ def _identity(principal_id: str = "citizen-1", *, capabilities=None) -> Identity
     return IdentityContext(
         principal=Principal(
             principal_id=principal_id,
-            capabilities=frozenset(capabilities or {"case:submit"}),
+            capabilities=frozenset({"case:submit"} if capabilities is None else capabilities),
         ),
         request_id=f"req-{principal_id}",
     )
