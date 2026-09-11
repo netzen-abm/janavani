@@ -8,6 +8,7 @@ from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.capabilities.civic_case import CivicCaseCapability
 from src.core.document_review import DocumentRevision
+from src.core.execution import CapabilityExecutionContext
 from src.documents.document_contract import DocumentDraft
 from src.identity.context import IdentityContext
 from src.storage.repositories.document_review import DocumentReviewRepository
@@ -30,7 +31,14 @@ class DocumentReviewCapability:
         self._repository = repository
         self._case_capability = case_capability
 
-    def get_owned(self, document_id: str, *, identity: IdentityContext) -> DocumentDraft | None:
+    def get_owned(
+        self,
+        document_id: str,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> DocumentDraft | None:
+        self._validate_execution_context(execution_context, identity, action="document:read", resource_id=document_id)
         draft = self._repository.get(document_id)
         if draft is None:
             return None
@@ -39,7 +47,16 @@ class DocumentReviewCapability:
             return None
         return draft
 
-    def edit(self, request: DocumentReviewRequest, *, identity: IdentityContext) -> DocumentDraft:
+    def edit(
+        self,
+        request: DocumentReviewRequest,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> DocumentDraft:
+        self._validate_execution_context(
+            execution_context, identity, action="document:edit", resource_id=request.document_id
+        )
         draft = self.get_owned(request.document_id, identity=identity)
         if draft is None:
             raise LookupError("Document draft not found")
@@ -80,3 +97,22 @@ class DocumentReviewCapability:
         self._repository.save(edited)
         self._repository.save_revision(revision)
         return edited
+
+    @staticmethod
+    def _validate_execution_context(
+        execution_context: CapabilityExecutionContext | None,
+        identity: IdentityContext,
+        *,
+        action: str,
+        resource_id: str,
+    ) -> None:
+        if execution_context is None:
+            return
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        if execution_context.capability_id != CAPABILITY_ID:
+            raise ValueError("Execution capability does not match the Document Review capability")
+        if execution_context.action != action:
+            raise ValueError("Execution action does not match the Document Review operation")
+        if execution_context.resource_id != resource_id:
+            raise ValueError("Execution resource does not match the Document Review resource")
