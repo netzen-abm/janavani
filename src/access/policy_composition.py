@@ -6,7 +6,7 @@ It does not replace identity, authentication, the kernel, repositories, or datab
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.access.authorization import AuthorizationDecision, AuthorizationPolicy, AuthorizationRequest
 from src.core.consent import Consent
@@ -40,8 +40,8 @@ class DelegationGrant:
         except ValueError:
             return False
         if expiry.tzinfo is None:
-            expiry = expiry.replace(tzinfo=timezone.utc)
-        current = now or datetime.now(timezone.utc)
+            expiry = expiry.replace(tzinfo=UTC)
+        current = now or datetime.now(UTC)
         return current < expiry
 
     def authorizes(
@@ -87,6 +87,7 @@ class ComposedAuthorizationRequest:
     consents: tuple[Consent, ...] = ()
     consent_purpose: str | None = None
     consent_scope: str | None = None
+    consent_subject_id: str | None = None
     service_policy: ServiceIdentityPolicy | None = None
 
 
@@ -102,6 +103,7 @@ class ComposedAuthorizationPolicy:
             return decision
 
         principal = request.request.context.principal
+        grantor_id: str | None = None
         if request.delegation is not None:
             grantor_id = request.delegation_grantor_id or request.request.resource_owner_id
             if grantor_id is None or not request.delegation.authorizes(
@@ -116,8 +118,11 @@ class ComposedAuthorizationPolicy:
         if request.consent_purpose is not None or request.consent_scope is not None:
             if not request.consent_purpose or not request.consent_scope:
                 return AuthorizationDecision.DENY
+            consent_subject_id = request.consent_subject_id or principal.principal_id
+            if grantor_id is not None and consent_subject_id != grantor_id:
+                return AuthorizationDecision.DENY
             if not any(
-                consent.subject_id == principal.principal_id
+                consent.subject_id == consent_subject_id
                 and consent.authorizes(request.consent_purpose, request.consent_scope)
                 for consent in request.consents
             ):
