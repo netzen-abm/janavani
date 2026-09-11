@@ -1,40 +1,56 @@
 # JANAVANI — DOCUMENTATION INDEX & AUTHORITY MAP
 
 **Status:** LOCKED — DOCUMENTATION ORGANISATION STANDARD
-**Date:** 23 August 2026
+**Version:** 2.0
+**Date:** 11 September 2026
 
-This index exists to prevent contradictory documents, duplicate audits and accidental use of historical material.
+This index prevents contradictory documents, duplicate audits, stale implementation instructions and accidental use of historical material.
 
-## 1. Current authority hierarchy
+## 1. Authority hierarchy
 
 When documents conflict, use this order:
 
 1. `docs/JANAVANI_NORTH_STAR.md` — strategic destination and civic purpose
 2. `docs/JANAVANI_ECOSYSTEM_CHARTER.md` — locked identity and ecosystem scope
 3. `docs/SOURCE_OF_TRUTH.md` — canonical architectural rules
-4. `docs/JANAVANI_MASTER_ARCHITECTURE.md` — detailed system architecture
-5. `docs/JANAVANI_PRODUCT_LANDSCAPE.md` — capability/product landscape
-6. `ROADMAP.md` — construction sequence and workstreams
-7. `docs/CAPABILITY_REGISTRY.md` + `planning/` contracts — capability/data/engineering specifications
-8. `docs/MASTER_TASK_CHECKLIST.md` — master tasks and subtasks
-9. `docs/MASTER_TASK_CHECKLIST_STATUS_2026-08-23.md` — current status/evidence register
-10. Implementation, tests, CI and deployment evidence — what is actually verified
+4. `docs/JANAVANI_MASTER_ARCHITECTURE.md` — detailed ecosystem architecture
+5. `docs/ARCHITECTURE.md` — canonical system-layer architecture
+6. `docs/ARCHITECTURE_PRINCIPLES.md` — testable engineering invariants
+7. `docs/JANAVANI_PRODUCT_LANDSCAPE.md` — capability/product landscape
+8. `ROADMAP.md` — construction sequence
+9. `docs/CAPABILITY_REGISTRY.md` + active `planning/` contracts — capability/data specifications
+10. `docs/MASTER_TASK_CHECKLIST.md` — canonical task inventory
+11. Latest dated status register — current execution status/evidence
+12. Implementation, tests, CI and deployment evidence — what is actually verified
+13. `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` — concise orientation across all of the above; it does not override them
 
-A dated audit is evidence of what was observed at a point in time. It does not override a current canonical document unless explicitly adopted.
+Dated audits preserve historical evidence. They do not override current canonical documents unless explicitly adopted.
 
-## 2. Directory responsibilities
+## 2. Documentation roles
 
 ### Root
 
-Only project-level entry documents and operational configuration should remain here. Historical design notes must not compete with canonical architecture.
+Keep only project entry documents and operational configuration. Avoid new architecture notes at root.
 
 ### `docs/`
 
-Current architecture, product, governance, audit, deployment, security and evidence documentation.
+Active canonical architecture, product, governance, security, operations, audits and evidence references.
+
+### `docs/architecture/`
+
+Focused active architecture specifications that have a distinct technical owner and do not duplicate `SOURCE_OF_TRUTH.md` or `JANAVANI_MASTER_ARCHITECTURE.md`.
+
+### `docs/research/`
+
+Research and external-system learning. Research is not product specification unless adopted into canonical documentation.
+
+### `docs/90-audits/`
+
+Current audit registers and audit-specific evidence.
 
 ### `planning/`
 
-Active engineering contracts and detailed specifications that support the canonical architecture.
+Active detailed engineering contracts/specifications. Planning material must have a clear relationship to canonical architecture. Historical/MVP-only planning documents must not remain active merely because they are technically detailed.
 
 ### `archive/`
 
@@ -42,73 +58,69 @@ Historical, superseded or deprecated documentation retained for traceability. Ar
 
 ### `janavani_v2/` and `janavani_v3/`
 
-Historical/parallel implementation trees. Their documentation must not be interpreted as current canonical architecture without evidence from the master checklist and runtime verification.
+Historical/parallel implementation trees. Their documentation is historical unless current repository/runtime evidence explicitly adopts a component.
 
 ## 3. Naming standard
 
-- Canonical documents: stable descriptive names.
-- Dated audits/status records: `NAME_YYYY-MM-DD.md`.
-- Historical documents: move under `archive/` and label them ARCHIVED/SUPERSEDED.
-- Avoid duplicate documents whose only difference is wording or date unless the date records a meaningful audit snapshot.
+- Canonical: stable descriptive names.
+- Current status/audit: `NAME_YYYY-MM-DD.md`.
+- Focused architecture: descriptive responsibility-based name under `docs/architecture/`.
+- Research: descriptive topic under `docs/research/`.
+- Historical: archive under the appropriate `archive/` subtree.
+- Avoid multiple files that are merely alternate versions of the same architecture, roadmap or contract.
 
-## 4. Document status vocabulary
+## 4. Required status vocabulary
 
 Use one of:
 
 `CANONICAL / ACTIVE / LOCKED / IN PROGRESS / DESIGN COMPLETE / VERIFYING / EVIDENCE / HISTORICAL / SUPERSEDED / ARCHIVED`
 
-Do not use phrases such as “fully implemented”, “production ready”, or “complete” merely because a file exists.
+Do not use `complete`, `fully implemented` or `production ready` merely because source or documentation exists.
 
-## 5. Audit non-duplication rule
+## 5. Non-duplication workflow
 
-Before beginning an audit:
+Before creating or renaming a Markdown document:
 
 1. Read this index.
-2. Read the master checklist.
-3. Read the latest status register.
-4. Read the relevant dated audits.
-5. Identify the unresolved delta.
-6. Audit only that delta.
-7. Record new evidence and update the checklist.
+2. Search the repository for the subject and key terms.
+3. Identify all competing documents.
+4. Read the relevant candidates before deciding.
+5. Select one canonical owner.
+6. Merge useful unique content into the owner where appropriate.
+7. Archive superseded documents with historical value preserved.
+8. Update links/references.
+9. Record the change in the documentation cleanup register.
 
-## 6. MVP terminology rule
+## 6. Historical evidence rule
 
-“MVP” is not a current Janavani product boundary. Historical MVP documents may remain in `archive/` for traceability. Current documentation must describe Janavani as the full ecosystem.
+Do not rewrite a dated audit to make the past appear consistent with the present. Correct current guidance separately and preserve the historical record.
 
-An incremental implementation milestone may be called a milestone, phase, construction unit, pilot, or verified capability — never a product boundary that reduces ecosystem scope.
+## 7. MVP terminology rule
 
-## 7. Technology language rule
+Janavani is a complete ecosystem. MVP-era documents are historical unless explicitly retained as a current construction milestone. The word `MVP` must not be used to shrink ecosystem scope.
 
-Web, Android, iOS, Telegram Bot, Telegram Mini App, WhatsApp, Messenger, API, DApp/Web3, AI, decentralized storage, mesh, Reticulum, Nym, satellite-capable transport and similar technologies are capabilities/interfaces/tools. Their presence in documentation or code does not by itself establish functional completion.
+## 8. Current convergence finding
 
-## 8. Source-of-truth rule
+The repository currently contains several overlapping architecture/documentation generations, including root-level canonical documents, focused architecture documents, historical planning contracts and legacy trees. This is manageable but requires continued convergence.
 
-If a document disagrees with the actual repository implementation, record the discrepancy. Do not silently rewrite historical evidence to make it appear correct.
+Examples requiring controlled reconciliation include:
 
-The current direction and the actual implementation state are separate facts and must remain distinguishable.
+- `docs/ARCHITECTURE.md` and `docs/JANAVANI_MASTER_ARCHITECTURE.md` — both active, with distinct detail levels;
+- `docs/ARCHITECTURE_DECISIONS.md` — retained as an ADR index and should grow rather than duplicate architecture prose;
+- `planning/ARCHITECTURE_INDEX.md` — legacy planning index that still references MVP-era contracts;
+- `planning/*_CONTRACT.md` files labelled MVP-era — candidates for reconciliation into active contracts or archive after content review;
+- `docs/architecture/` — active focused specifications; must not become a second uncontrolled source of truth;
+- `docs/audits/` and `docs/90-audits/` — must be consolidated by purpose over time;
+- `docs/archive/`, `docs/legacy/` and root `archive/documentation/legacy/` — archive locations should be rationalised without losing historical evidence.
 
-## 9. Cleanup rule
+## 9. Current active orientation
 
-Documentation cleanup may:
+For AI agents and developers, start with `docs/AI_HUMAN_DEVELOPER_CONTEXT.md`, then follow the authority hierarchy above.
 
-- consolidate duplicates;
-- correct obsolete terminology;
-- move superseded documents to `archive/`;
-- update links and authority references;
-- create missing indexes;
-- clarify ownership and status.
+The core invariant is:
 
-It must not delete historical evidence merely because it is outdated.
+> **Build Janavani as one coherent ecosystem with shared infrastructure, reusable capabilities and independent interfaces. Let citizens choose capabilities and surfaces; never confuse user choice with ecosystem omission.**
 
-## 10. Current documentation cleanup baseline
+## 10. Cleanup rule
 
-As of 23 August 2026, the following root-level historical notes were moved to `archive/documentation/legacy/` because they contained obsolete architecture or MVP-era framing:
-
-- `Complete Platform Architecture Index.md`
-- `Complete Platform Architecture Blueprint Index.md`
-- `Hybrid Janavani WebSite.md`
-- `The dynamic architecture.md`
-- `Multi-Service Stack Orchestration.md`
-- `Step-by-Step Production Launch Runbook.md`
-
-The current architecture is represented by the canonical documents listed in Section 1.
+No destructive documentation cleanup is complete until links, references, repository navigation and historical traceability have been checked. Archive first. Delete only after replacement, dependency/reference and historical-value evidence.
