@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.civic_case import CaseEventType, CaseType, CivicCase
+from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.civic_case import CivicCaseRepository
 
@@ -38,7 +39,15 @@ class CivicCaseCapability:
     def __init__(self, repository: CivicCaseRepository) -> None:
         self._repository = repository
 
-    def create(self, request: CivicCaseCreateRequest, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
+    def create(
+        self,
+        request: CivicCaseCreateRequest,
+        *,
+        identity: IdentityContext,
+        source_channel: str | None = None,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="create")
         subject, narrative = request.subject.strip(), request.narrative.strip()
         if not subject or not narrative:
             raise ValueError("A case requires a subject and narrative")
@@ -67,14 +76,30 @@ class CivicCaseCapability:
             return None
         return case
 
-    def save_owned(self, case: CivicCase, *, identity: IdentityContext) -> CivicCaseResult:
+    def save_owned(
+        self,
+        case: CivicCase,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="save")
         owned = self.get_owned(case.case_id, identity=identity)
         if owned is None or owned is not case:
             raise LookupError("Case not found")
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
+    def add_evidence(
+        self,
+        case_id: str,
+        evidence_id: str,
+        *,
+        identity: IdentityContext,
+        source_channel: str | None = None,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="case:add_evidence", resource_id=case_id)
         case = self._owned(case_id, identity)
         self._require(identity, "case:evidence", "case:add_evidence")
         now = datetime.now(timezone.utc).isoformat()
@@ -83,7 +108,16 @@ class CivicCaseCapability:
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def add_document(self, case_id: str, document_id: str, *, identity: IdentityContext, source_channel: str | None = None) -> CivicCaseResult:
+    def add_document(
+        self,
+        case_id: str,
+        document_id: str,
+        *,
+        identity: IdentityContext,
+        source_channel: str | None = None,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="case:add_document", resource_id=case_id)
         case = self._owned(case_id, identity)
         self._require(identity, "case:write", "case:add_document")
         now = datetime.now(timezone.utc).isoformat()
@@ -92,13 +126,23 @@ class CivicCaseCapability:
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def start_review(self, case_id: str, *, identity: IdentityContext) -> CivicCaseResult:
-        return self.transition(case_id, action="case:start_review", identity=identity)
+    def start_review(self, case_id: str, *, identity: IdentityContext,
+                     execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
+        return self.transition(case_id, action="case:start_review", identity=identity, execution_context=execution_context)
 
-    def approve(self, case_id: str, *, identity: IdentityContext) -> CivicCaseResult:
-        return self.transition(case_id, action="case:mark_ready", identity=identity)
+    def approve(self, case_id: str, *, identity: IdentityContext,
+                execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
+        return self.transition(case_id, action="case:mark_ready", identity=identity, execution_context=execution_context)
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
+    def add_consent(
+        self,
+        case_id: str,
+        consent_id: str,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="case:consent", resource_id=case_id)
         case = self._owned(case_id, identity)
         self._require(identity, "case:write", "case:consent")
         if consent_id not in case.consent_refs:
@@ -106,9 +150,17 @@ class CivicCaseCapability:
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def transition(self, case_id: str, *, action: str, identity: IdentityContext,
-                   source_channel: str | None = None, source_ref: str | None = None,
-                   notes: str | None = None) -> CivicCaseResult:
+    def transition(
+        self,
+        case_id: str,
+        *,
+        action: str,
+        identity: IdentityContext,
+        source_channel: str | None = None,
+        source_ref: str | None = None,
+        notes: str | None = None,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
         transitions = {
             "case:start_review": ("case:review", CivicCase.start_review, False),
             "case:mark_ready": ("case:write", CivicCase.mark_ready, False),
@@ -122,6 +174,7 @@ class CivicCaseCapability:
         if action not in transitions:
             raise ValueError(f"Unsupported civic case transition: {action}")
         capability, transition_fn, high_risk = transitions[action]
+        self._validate_execution_context(execution_context, identity, action=action, resource_id=case_id)
         case = self._owned(case_id, identity)
         self._require(identity, capability, action, resource_id=case.case_id, high_risk=high_risk)
         now = datetime.now(timezone.utc).isoformat()
@@ -144,6 +197,26 @@ class CivicCaseCapability:
         if case is None:
             raise LookupError("Case not found")
         return case
+
+    @staticmethod
+    def _validate_execution_context(
+        execution_context: CapabilityExecutionContext | None,
+        identity: IdentityContext,
+        *,
+        action: str,
+        resource_id: str | None = None,
+    ) -> None:
+        """Validate an envelope when a caller supplies one; legacy callers remain compatible."""
+        if execution_context is None:
+            return
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        if execution_context.capability_id != CAPABILITY_ID:
+            raise ValueError("Execution capability does not match the Civic Case capability")
+        if execution_context.action != action:
+            raise ValueError("Execution action does not match the Civic Case operation")
+        if resource_id is not None and execution_context.resource_id != resource_id:
+            raise ValueError("Execution resource does not match the Civic Case resource")
 
     @staticmethod
     def _require(identity: IdentityContext, capability: str, action: str,
