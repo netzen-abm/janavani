@@ -34,14 +34,15 @@ def _identity(
 
 
 def _request(identity: IdentityContext, **kwargs) -> AuthorizationRequest:
-    return AuthorizationRequest(
-        context=identity,
-        capability="case:submit",
-        action="case:submit",
-        resource_id="case-1",
-        resource_owner_id=identity.principal.principal_id,
-        **kwargs,
-    )
+    values = {
+        "context": identity,
+        "capability": "case:submit",
+        "action": "case:submit",
+        "resource_id": "case-1",
+        "resource_owner_id": identity.principal.principal_id,
+    }
+    values.update(kwargs)
+    return AuthorizationRequest(**values)
 
 
 def _consent(subject_id: str = "citizen-1") -> Consent:
@@ -113,7 +114,6 @@ def test_delegation_cannot_expand_capability() -> None:
 
 def test_delegation_cannot_escape_resource_scope() -> None:
     identity = _identity("delegate-1")
-    delegation = _delegation()
     request = AuthorizationRequest(
         context=identity,
         capability="case:submit",
@@ -122,7 +122,7 @@ def test_delegation_cannot_escape_resource_scope() -> None:
     )
     composed = ComposedAuthorizationRequest(
         request=request,
-        delegation=delegation,
+        delegation=_delegation(),
         delegation_grantor_id="citizen-1",
     )
     assert authorize_composed(composed) is AuthorizationDecision.DENY
