@@ -1,3 +1,11 @@
+# Archived: Janavani Session Schema (MVP-era)
+
+> **ARCHIVED / HISTORICAL** — preserved from `planning/SESSION_SCHEMA.md` during the 2026-09 documentation convergence pass.
+>
+> This schema describes the historical complaint-oriented conversation session. It is not the current canonical session, identity, case or domain contract.
+
+---
+
 # Janavani Session Schema (MVP v0.1)
 
 ## Purpose

@@ -1,3 +1,11 @@
+# Archived: Janavani Platform Service Contract (MVP-era)
+
+> **ARCHIVED / HISTORICAL** — preserved from `planning/SERVICE_CONTRACT.md` during the 2026-09 documentation convergence pass.
+>
+> The service boundaries below are historical MVP guidance. Current shared capability, application, domain, workflow, adapter and provider boundaries are governed by the active architecture and capability contracts.
+
+---
+
 # Janavani Platform Service Contract (MVP v0.1)
 
 ## Purpose

@@ -1,3 +1,9 @@
+# Archived: Janavani Engineering Constitution (MVP-era)
+
+> **ARCHIVED / HISTORICAL** — preserved from `planning/ENGINEERING_CONSTITUTION.md` during documentation convergence.
+>
+> The active engineering constitution is `planning/ECOSYSTEM_ENGINEERING_CONSTITUTION.md` and the canonical documentation chain identified by `docs/DOCUMENTATION_INDEX.md`.
+
 # Janavani Engineering Constitution
 
 Version 1.0

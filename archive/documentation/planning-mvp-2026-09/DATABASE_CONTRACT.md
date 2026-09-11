@@ -1,3 +1,11 @@
+# Archived: Janavani Database Contract (MVP v0.1)
+
+> **ARCHIVED / HISTORICAL** — preserved verbatim from `planning/DATABASE_CONTRACT.md` during the 2026-09 documentation convergence pass.
+>
+> Current architecture and data-boundary decisions live in the canonical documentation chain, especially `docs/ARCHITECTURE.md`, `docs/ARCHITECTURE_DATA_BOUNDARY.md`, and `docs/JANAVANI_MASTER_ARCHITECTURE.md`.
+
+---
+
 # Janavani Database Contract (MVP v0.1)
 
 ## Purpose

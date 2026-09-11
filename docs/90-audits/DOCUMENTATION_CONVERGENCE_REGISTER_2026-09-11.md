@@ -1,90 +1,91 @@
-# JANAVANI — DOCUMENTATION CONVERGENCE REGISTER
+# Janavani — Documentation Convergence Register
 
-**Date:** 11 September 2026
 **Status:** ACTIVE AUDIT REGISTER
-**Scope:** Markdown documentation in the Janavani repository
+**Date:** 11 September 2026
 
-## 1. Purpose
+## Purpose
 
-Record the documentation review and prevent duplicate architecture, planning, contract and audit documents from becoming competing instructions.
+Track documentation convergence without destroying historical work or creating a second source of truth.
 
-## 2. Findings
+## Convergence completed in this pass
 
-### Canonical documentation
+| Former location | Disposition | Current owner |
+|---|---|---|
+| `planning/DATABASE_CONTRACT.md` | Archived as superseded MVP contract | `docs/ARCHITECTURE.md` + `docs/ARCHITECTURE_DATA_BOUNDARY.md` |
+| `planning/DATABASE_DESIGN.md` | Archived/superseded MVP database design; active-path presence must remain verified before relying on this disposition | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
+| `planning/OFFICE_SCHEMA.md` | Archived as superseded MVP schema | Current authority/office capability documentation and implementation |
+| `planning/DOCUMENT_CONTRACT.md` | Archived as superseded MVP contract | Active architecture/capability contracts |
+| `planning/WORKFLOW_CONTRACT.md` | Archived as superseded MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow contracts |
+| `planning/WORKFLOWS.md` | Archived as superseded Telegram-centric MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow/capability contracts |
+| `planning/SERVICE_CONTRACT.md` | Archived as superseded MVP service contract | `docs/ARCHITECTURE.md` + active capability contracts |
+| `planning/SESSION_SCHEMA.md` | Archived as superseded MVP session schema | Current conversation/identity/case architecture and contracts |
+| `planning/SYSTEM_DOMAIN_MODEL.md` | Archived as superseded MVP domain model | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + current domain implementation/contracts |
+| `planning/ENGINEERING_CONSTITUTION.md` | Archived as superseded MVP constitution | `planning/ECOSYSTEM_ENGINEERING_CONSTITUTION.md` |
+| `planning/ENGINEERING_PRINCIPLES.md` | Removed because file was empty | `docs/ARCHITECTURE_PRINCIPLES.md` |
+| `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
+| `planning/IDENTITY_ACCESS_TRUST_IMPLEMENTATION_MAP.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
+| `planning/PRIVACY_ARCHITECTURE.md` | Archived as superseded planning architecture after content review | `docs/PRIVACY_ARCHITECTURE.md` |
 
-- `docs/JANAVANI_NORTH_STAR.md` — strategic destination.
-- `docs/JANAVANI_ECOSYSTEM_CHARTER.md` — ecosystem identity/scope.
-- `docs/SOURCE_OF_TRUTH.md` — canonical architectural rules.
-- `docs/JANAVANI_MASTER_ARCHITECTURE.md` — detailed ecosystem architecture.
-- `docs/ARCHITECTURE.md` — canonical system architecture.
-- `docs/ARCHITECTURE_PRINCIPLES.md` — testable engineering invariants.
-- `docs/JANAVANI_PRODUCT_LANDSCAPE.md` — product/capability landscape.
-- `docs/CAPABILITY_REGISTRY.md` — capability inventory.
-- `docs/DATA_CONTRACTS.md` — data contracts.
-- `docs/MASTER_TASK_CHECKLIST.md` — canonical task inventory.
-- latest dated status register — current execution evidence.
+## Content review findings
 
-These documents have distinct owners and should not be merged into one oversized file merely to reduce file count.
+### Database contract / database design
 
-### Consolidated in this pass
+The former MVP database documents correctly separated persistence from business logic, but their citizen/complaint scope was explicitly MVP-era. The current data-boundary architecture is broader and privacy-first. The old documents are therefore historical rather than active specifications.
 
-- `docs/DOCUMENTATION_INDEX.md` rewritten as the authority and organization map.
-- `docs/PROJECT_MAP.md` rewritten as the current repository ownership map and stripped of obsolete MVP framing.
-- `docs/DEVELOPER_GUIDE.md` rewritten as the current development entry guide.
-- `docs/ARCHITECTURE_DECISIONS.md` rewritten as a concise ADR register rather than a second architecture specification.
-- `planning/ARCHITECTURE_INDEX.md` converted into a deconfliction pointer; it no longer acts as an architecture authority.
-- `docs/README.md` added as the documentation entry point.
-- `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` added as the concise cross-role orientation document.
+### Office schema
 
-### Duplicate/legacy candidates requiring further content review
+The former office schema is a useful historical shape for the MVP office service, but it must not silently become the universal current authority model. Authority resolution now requires verified jurisdiction and destination semantics beyond a flat MVP office record.
 
-1. `planning/OFFICE_SCHEMA.md` — MVP-labelled schema; compare against `docs/DATA_CONTRACTS.md` and current Authority/office models before archive or promotion.
-2. `planning/DATABASE_CONTRACT.md` — MVP-labelled storage guidance; compare against current storage ownership/provider contracts before archive.
-3. `planning/DOCUMENT_CONTRACT.md` — useful historical separation of builder/PDF responsibilities, but compare with current document capability before archive or promotion.
-4. `planning/WORKFLOW_CONTRACT.md` — useful historical workflow model; compare with current workflow/civic-action contracts before archive.
-5. `planning/PRIVACY_ARCHITECTURE.md` — substantive privacy material; compare with `docs/ARCHITECTURE_DATA_BOUNDARY.md` and current privacy contracts before deciding whether it remains a detailed planning specification or is consolidated.
-6. `planning/SERVICE_CONTRACT.md` — MVP-labelled and potentially overlaps current service architecture; content review required.
-7. `planning/SESSION_SCHEMA.md` — MVP-labelled; content review against current conversation/session state implementation required.
-8. `planning/DATABASE_DESIGN.md` and related planning data documents — reconcile with current storage ownership and actual repositories.
-9. `janavani_v3/*.md` — historical implementation generation; do not treat as current authority without runtime evidence.
-10. `docs/archive/`, `docs/legacy/` and `archive/documentation/legacy/` — historical material; preserve unless demonstrably duplicate and safe to consolidate.
+### Document contract
 
-## 3. Dated evidence rule
+The separation between conversation, document composition and PDF rendering is architecturally useful. The MVP file itself is archived because current document generation must also remain separate from submission, evidence and provenance concerns.
 
-Dated audit/status documents are not duplicates merely because they describe the same subject. They preserve point-in-time evidence and should be retained or moved into audit/history areas rather than rewritten into present-tense architecture.
+### Workflow contract / workflows
 
-## 4. Naming/organization recommendation
+The state-driven workflow discipline remains useful, but the old complaint/RTI sequence is narrower than the current canonical civic Case lifecycle. The Telegram-centric workflow is also only one historical interface implementation. Both are archived rather than treated as the complete ecosystem workflow.
 
-Use responsibility-based names for active documents and date-stamped names for audits/status evidence. Avoid names such as `v2`, `v3`, `final`, `new`, `latest` unless the document is explicitly historical and the name is unavoidable.
+### Session schema / domain model
 
-## 5. Safe cleanup sequence
+The old session schema and system domain model encode useful MVP concepts, but they are too tightly coupled to the complaint workflow, flat office schema and personal-data fields to serve as current universal contracts. Their historical definitions are preserved in the archive for traceability.
+
+### Identity/access/trust
+
+The former contract and implementation map overlapped substantially. They are now represented by one canonical active contract with implementation status kept explicit. `docs/AUTHENTICATION.md` remains a current repository-state note and must not become a competing architecture specification.
+
+### Privacy architecture
+
+The former planning privacy architecture substantially overlapped with the new canonical `docs/PRIVACY_ARCHITECTURE.md`. Its historical text is preserved in the archive; the active planning path has been removed to eliminate competing privacy authorities.
+
+## Remaining review queue
+
+The following areas require individual content review before any further move, rename or deletion:
+
+- remaining `planning/*.md` files;
+- `docs/architecture/*.md`;
+- remaining non-archive `docs/*.md`;
+- `docs/audits/` versus `docs/90-audits/`;
+- `janavani_v2/` and `janavani_v3/` documentation;
+- `archive/documentation/legacy/`;
+- any root-level Markdown outside the canonical project entry set.
+
+## Mandatory cleanup sequence
 
 ```text
 Inventory
-  ↓
-Read content
-  ↓
-Classify owner/status
-  ↓
-Compare with canonical documents
-  ↓
-Merge unique current content
-  ↓
-Update references
-  ↓
-Archive superseded material
-  ↓
-Verify links/imports/navigation
-  ↓
-Delete only with evidence
+  → Read content
+  → Classify owner/status
+  → Compare competing documents
+  → Merge unique current content
+  → Update references
+  → Archive
+  → Verify
+  → Delete only with evidence
 ```
 
-## 6. Important current contradiction removed
+## Non-negotiable rule
 
-Older developer/project documents used MVP language that could be interpreted as shrinking Janavani's product boundary. The current documentation now consistently distinguishes the **complete ecosystem** from individual construction milestones.
+**Old does not mean useless. Duplicate does not mean identical. Archived does not mean deleted. Current documentation must be authoritative; historical documentation must remain traceable.**
 
-## 7. Remaining work
+## Verification requirement
 
-The next documentation pass should review the full `planning/` directory and every non-archive Markdown file in `docs/` against this register, then archive or consolidate only where content and dependency evidence justify it.
-
-**No historical document is to be deleted solely because it is old.**
+Before PR #127 is merged, the final diff must be checked for broken references, contradictory active guidance, accidental deletion of historical material, and documentation that claims implementation or verification without evidence.

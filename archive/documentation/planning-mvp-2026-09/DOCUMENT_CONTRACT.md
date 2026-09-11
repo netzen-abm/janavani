@@ -1,3 +1,11 @@
+# Archived: Janavani Document Contract (MVP v0.1)
+
+> **ARCHIVED / HISTORICAL** — preserved verbatim from `planning/DOCUMENT_CONTRACT.md` during the 2026-09 documentation convergence pass.
+>
+> The separation principles remain historically important; current document/evidence/submission boundaries are governed by the active canonical architecture and capability contracts.
+
+---
+
 # Janavani Document Contract (MVP v0.1)
 
 ## Purpose

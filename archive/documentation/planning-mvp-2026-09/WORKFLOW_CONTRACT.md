@@ -1,3 +1,11 @@
+# Archived: Janavani Workflow Contract (MVP v0.1)
+
+> **ARCHIVED / HISTORICAL** — preserved verbatim from `planning/WORKFLOW_CONTRACT.md` during the 2026-09 documentation convergence pass.
+>
+> The current civic lifecycle is broader than this MVP workflow and is governed by the active canonical architecture.
+
+---
+
 # Janavani Workflow Contract (MVP v0.1)
 
 ## Purpose
