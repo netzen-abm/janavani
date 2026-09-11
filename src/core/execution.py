@@ -1,9 +1,9 @@
 """Provider- and surface-neutral execution context for shared capabilities."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Mapping
 from uuid import uuid4
 
 from src.identity.context import IdentityContext
@@ -93,7 +93,7 @@ class CapabilityExecutionContext:
         side_effect_class: SideEffectClass = SideEffectClass.READ,
         provenance: tuple[ProvenanceRecord, ...] = (),
         metadata: Mapping[str, str] | None = None,
-    ) -> "CapabilityExecutionContext":
+    ) -> CapabilityExecutionContext:
         return cls(
             identity=identity,
             capability_id=capability_id,
