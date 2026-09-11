@@ -17,15 +17,17 @@ Principal
   + Capability
   + Action
   + Resource
+  + Resource ownership (when applicable)
   + Context
   + Risk / approval requirement
         ↓
 ALLOW / DENY / REQUIRE_APPROVAL
 ```
 
-The implementation currently enforces capability possession and explicit risk/
-approval gates. It does not implement database access, authentication, consent,
-delegation, or RLS.
+The implementation currently enforces capability possession, trusted resource-owner
+matching when an owner is supplied, execution-context consistency, and explicit
+risk/approval gates. It does not implement database access, authentication,
+consent, delegation, or RLS.
 
 ## Security boundary
 
@@ -48,17 +50,18 @@ PostgreSQL RLS
 ```
 
 Authentication alone must not be treated as authorization. A resource identifier
-also does not grant access by itself.
+also does not grant access by itself. Resource ownership supplied to the kernel
+must come from trusted domain/repository state, never from an untrusted caller field.
 
 ## Deliberate limitations
 
-This first implementation is intentionally small. It does **not** yet claim to
+This implementation remains intentionally bounded. It does **not** yet claim to
 solve:
 
-- resource ownership or delegation;
+- delegation and shared/representative access;
 - purpose-bound consent;
 - service-identity policy;
-- sensitive-case isolation;
+- sensitive-case isolation policy;
 - database RLS;
 - audit persistence;
 - policy configuration storage.
@@ -75,8 +78,12 @@ The accompanying tests cover:
 3. anonymous denial for protected capability;
 4. high-risk approval requirement;
 5. explicit approval requirement;
-6. denial taking precedence over an approval prompt when the capability is absent.
+6. denial taking precedence over an approval prompt when the capability is absent;
+7. execution identity consistency;
+8. execution capability/action/resource consistency;
+9. refusal to satisfy an approval request with a read-only execution context.
 
-Before PostgreSQL RLS activation, this kernel must be extended or composed with
-resource, delegation, consent, and service-identity policy and the negative-access
-matrix in `CANONICAL_CASE_RLS_AUTHORIZATION_MATRIX.md` must pass.
+Case/API tests additionally verify authenticated ownership boundaries and reject
+cross-principal access. Before PostgreSQL RLS activation, this kernel must be
+composed with resource/delegation, consent, and service-identity policy and the
+negative-access matrix in `CANONICAL_CASE_RLS_AUTHORIZATION_MATRIX.md` must pass.
