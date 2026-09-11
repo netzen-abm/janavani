@@ -1,9 +1,9 @@
 """Canonical end-to-end civic-action orchestration boundary.
 
 This module composes existing provider- and surface-neutral capabilities. It does
-not own Case, Evidence, Authority, Document, Consent, Submission, or Responsibility
-semantics. Access surfaces should use this orchestration boundary rather than
-rebuilding the civic-action lifecycle themselves.
+not own Case, Evidence, Authority, Document, Consent, Submission, Responsibility,
+or Obligation semantics. Access surfaces should use this orchestration boundary
+rather than rebuilding the civic-action lifecycle themselves.
 """
 from __future__ import annotations
 
@@ -13,9 +13,11 @@ from pathlib import Path
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
 from src.core.evidence import EvidenceRepository
+from src.core.obligation import ObligationResolution
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
@@ -36,6 +38,7 @@ class CivicActionVerticalSliceDependencies:
     document_review_capability: DocumentReviewCapability
     submission_capability: SubmissionCapability
     responsibility_capability: ResponsibilityCapability
+    obligation_capability: ObligationCapability
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
     artifact_repository: DocumentArtifactRepository | None = None
@@ -64,6 +67,13 @@ class CivicActionVerticalSlice:
     ) -> ResponsibilityResolution:
         """Resolve traceable responsibility candidates without asserting liability."""
         return self._deps.responsibility_capability.resolve(request)
+
+    def resolve_obligation(
+        self,
+        request: ObligationResolutionRequest,
+    ) -> ObligationResolution:
+        """Resolve source-backed obligations for an already identified authority."""
+        return self._deps.obligation_capability.resolve(request)
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:

@@ -10,10 +10,12 @@ from src.capabilities.civic_action_vertical_slice import (
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.obligation import ObligationCapability
 from src.capabilities.responsibility import ResponsibilityCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.core.obligation import ObligationResolver
 from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
@@ -26,6 +28,7 @@ from src.storage.repositories.document_review import (
 )
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.storage.repositories.submission_provider import create_submission_repository
 
@@ -44,6 +47,10 @@ def create_authority_capability(repository: AuthorityRepository) -> AuthorityCap
 
 def create_responsibility_capability(resolver: ResponsibilityResolver) -> ResponsibilityCapability:
     return ResponsibilityCapability(resolver)
+
+
+def create_obligation_capability(resolver: ObligationResolver) -> ObligationCapability:
+    return ObligationCapability(resolver)
 
 
 def create_civic_action_capability(
@@ -73,6 +80,8 @@ def create_civic_action_vertical_slice(
     artifact_repository=None,
     blob_store=None,
     responsibility_resolver: ResponsibilityResolver | None = None,
+    obligation_resolver: ObligationResolver | None = None,
+    obligation_records: dict[str, list[dict[str, object]]] | None = None,
 ) -> CivicActionVerticalSlice:
     """Compose one canonical civic-action slice with shared capability instances.
 
@@ -103,6 +112,8 @@ def create_civic_action_vertical_slice(
     )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     responsibility_capability = create_responsibility_capability(resolver)
+    obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
+    obligation_capability = create_obligation_capability(obligation)
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
             case_capability=case_capability,
@@ -110,6 +121,7 @@ def create_civic_action_vertical_slice(
             document_review_capability=document_review_capability,
             submission_capability=submission_capability,
             responsibility_capability=responsibility_capability,
+            obligation_capability=obligation_capability,
             case_repository=case_repository,
             document_review_repository=review_repository,
             artifact_repository=artifact_repository,
