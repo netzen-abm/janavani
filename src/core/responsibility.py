@@ -39,6 +39,7 @@ class ResponsibilityObservation:
     description: str
     location: dict[str, str] = field(default_factory=dict)
     asset_ref: str | None = None
+    authority_type_hint: str | None = None
     evidence_refs: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -46,6 +47,8 @@ class ResponsibilityObservation:
             raise ValueError("Observation id is required")
         if not self.description.strip():
             raise ValueError("Observation description is required")
+        if self.authority_type_hint is not None and not self.authority_type_hint.strip():
+            raise ValueError("Authority type hint cannot be blank")
 
 
 @dataclass(frozen=True)
