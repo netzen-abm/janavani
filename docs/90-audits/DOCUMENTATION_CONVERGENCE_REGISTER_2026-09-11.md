@@ -22,8 +22,8 @@ Track documentation convergence without destroying historical work or creating a
 | `planning/SYSTEM_DOMAIN_MODEL.md` | Archived as superseded MVP domain model | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + current domain implementation/contracts |
 | `planning/ENGINEERING_CONSTITUTION.md` | Archived as superseded MVP constitution | `planning/ECOSYSTEM_ENGINEERING_CONSTITUTION.md` |
 | `planning/ENGINEERING_PRINCIPLES.md` | Removed because file was empty | `docs/ARCHITECTURE_PRINCIPLES.md` |
-| `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
-| `planning/IDENTITY_ACCESS_TRUST_IMPLEMENTATION_MAP.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
+| `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md` | Consolidated and historically preserved in archive | `docs/IDENTITY_ACCESS_TRUST.md` |
+| `planning/IDENTITY_ACCESS_TRUST_IMPLEMENTATION_MAP.md` | Consolidated and historically preserved in archive | `docs/IDENTITY_ACCESS_TRUST.md` |
 | `planning/PRIVACY_ARCHITECTURE.md` | Archived as superseded planning architecture after content review | `docs/PRIVACY_ARCHITECTURE.md` |
 
 ## Content review findings
