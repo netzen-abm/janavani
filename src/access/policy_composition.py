@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Iterable
 
 from src.access.authorization import AuthorizationDecision, AuthorizationPolicy, AuthorizationRequest
 from src.core.consent import Consent
@@ -45,7 +44,15 @@ class DelegationGrant:
         current = now or datetime.now(timezone.utc)
         return current < expiry
 
-    def authorizes(self, *, delegate_id: str, grantor_id: str, capability: str, action: str, resource_id: str | None) -> bool:
+    def authorizes(
+        self,
+        *,
+        delegate_id: str,
+        grantor_id: str,
+        capability: str,
+        action: str,
+        resource_id: str | None,
+    ) -> bool:
         if not self.is_active():
             return False
         if self.delegate_id != delegate_id or self.grantor_id != grantor_id:
