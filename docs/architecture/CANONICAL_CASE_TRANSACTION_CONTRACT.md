@@ -155,7 +155,7 @@ Do not activate a production RPC/function until the actual target PostgreSQL/Sup
 - `docs/architecture/CANONICAL_CASE_POSTGRES_SCHEMA.md`;
 - `docs/architecture/CIVIC_CASE_DATABASE_CONTRACT.md`;
 - `docs/architecture/CANONICAL_CASE_RLS_AUTHORIZATION_MATRIX.md`;
-- `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md`;
+- `docs/IDENTITY_ACCESS_TRUST.md`;
 - `src/core/civic_case.py`.
 
 The repository provider may remain available for development/testing, but it must continue to document that its current multi-table writes are not atomic until this gate is passed.
