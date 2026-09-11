@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.identity.context import IdentityContext
 
 
@@ -25,16 +26,32 @@ class AuthorizationRequest:
     resource_id: Optional[str] = None
     risk_level: str = "normal"
     requires_approval: bool = False
+    execution_context: CapabilityExecutionContext | None = None
 
 
 class AuthorizationPolicy:
-    """Minimal shared authorization policy with explicit least privilege."""
+    """Canonical policy decision boundary with execution-context consistency checks."""
 
     def evaluate(self, request: AuthorizationRequest) -> AuthorizationDecision:
         principal = request.context.principal
 
         if not request.capability or not request.action:
             return AuthorizationDecision.DENY
+
+        if request.execution_context is not None:
+            envelope = request.execution_context
+            if envelope.identity.principal.principal_id != principal.principal_id:
+                return AuthorizationDecision.DENY
+            if envelope.capability_id != request.capability:
+                return AuthorizationDecision.DENY
+            if envelope.action != request.action:
+                return AuthorizationDecision.DENY
+            if request.resource_id is not None and envelope.resource_id != request.resource_id:
+                return AuthorizationDecision.DENY
+            if envelope.risk_level != request.risk_level:
+                return AuthorizationDecision.DENY
+            if request.requires_approval and envelope.side_effect_class is SideEffectClass.READ:
+                return AuthorizationDecision.DENY
 
         if not principal.has_capability(request.capability):
             return AuthorizationDecision.DENY
