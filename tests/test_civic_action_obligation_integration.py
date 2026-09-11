@@ -1,22 +1,43 @@
+from src.capabilities.civic_action_vertical_slice import (
+    CivicActionVerticalSlice,
+    CivicActionVerticalSliceDependencies,
+)
 from src.capabilities.obligation import ObligationResolutionRequest
 from src.core.obligation import ObligationObservation
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 
 
-def test_vertical_slice_exposes_obligation_resolution_with_injected_records():
-    from tests.helpers import build_vertical_slice
+def _vertical_slice_with_obligation_resolver(resolver):
+    dependencies = CivicActionVerticalSliceDependencies(
+        case_capability=None,
+        civic_action_capability=None,
+        document_review_capability=None,
+        submission_capability=None,
+        responsibility_capability=None,
+        obligation_capability=__import__(
+            "src.capabilities.obligation", fromlist=["ObligationCapability"]
+        ).ObligationCapability(resolver),
+        case_repository=None,
+        document_review_repository=None,
+    )
+    return CivicActionVerticalSlice(dependencies)
 
-    slice_ = build_vertical_slice(
-        obligation_records={
-            "authority-1": [
-                {
-                    "obligation_id": "obl-1",
-                    "title": "Maintain public road",
-                    "description": "Maintain the road in accordance with the applicable public service standard.",
-                    "source_refs": ("source:road-standard",),
-                    "verified": True,
-                }
-            ]
-        }
+
+def test_vertical_slice_exposes_obligation_resolution():
+    slice_ = _vertical_slice_with_obligation_resolver(
+        AuthorityBackedObligationResolver(
+            {
+                "authority-1": [
+                    {
+                        "obligation_id": "obl-1",
+                        "title": "Maintain public road",
+                        "description": "Maintain the road in accordance with the applicable public service standard.",
+                        "source_refs": ("source:road-standard",),
+                        "verified": True,
+                    }
+                ]
+            }
+        )
     )
     result = slice_.resolve_obligation(
         ObligationResolutionRequest(
@@ -35,8 +56,6 @@ def test_vertical_slice_exposes_obligation_resolution_with_injected_records():
 
 
 def test_obligation_resolution_does_not_imply_breach():
-    from src.storage.repositories.obligation import AuthorityBackedObligationResolver
-
     result = AuthorityBackedObligationResolver(
         {
             "authority-1": [
