@@ -2,7 +2,7 @@ from src.capabilities.civic_action_vertical_slice import (
     CivicActionVerticalSlice,
     CivicActionVerticalSliceDependencies,
 )
-from src.capabilities.obligation import ObligationResolutionRequest
+from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.core.obligation import ObligationObservation
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 
@@ -14,9 +14,7 @@ def _vertical_slice_with_obligation_resolver(resolver):
         document_review_capability=None,
         submission_capability=None,
         responsibility_capability=None,
-        obligation_capability=__import__(
-            "src.capabilities.obligation", fromlist=["ObligationCapability"]
-        ).ObligationCapability(resolver),
+        obligation_capability=ObligationCapability(resolver),
         case_repository=None,
         document_review_repository=None,
     )
