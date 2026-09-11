@@ -12,7 +12,7 @@ Track documentation convergence without destroying historical work or creating a
 | Former location | Disposition | Current owner |
 |---|---|---|
 | `planning/DATABASE_CONTRACT.md` | Archived as superseded MVP contract | `docs/ARCHITECTURE.md` + `docs/ARCHITECTURE_DATA_BOUNDARY.md` |
-| `planning/DATABASE_DESIGN.md` | Archived/superseded MVP database design; active-path presence must remain verified before relying on this disposition | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
+| `planning/DATABASE_DESIGN.md` | Archived/superseded MVP database design | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
 | `planning/OFFICE_SCHEMA.md` | Archived as superseded MVP schema | Current authority/office capability documentation and implementation |
 | `planning/DOCUMENT_CONTRACT.md` | Archived as superseded MVP contract | Active architecture/capability contracts |
 | `planning/WORKFLOW_CONTRACT.md` | Archived as superseded MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow contracts |
@@ -38,7 +38,7 @@ The former office schema is a useful historical shape for the MVP office service
 
 ### Document contract
 
-The separation between conversation, document composition and PDF rendering is architecturally useful. The MVP file itself is archived because current document generation must also remain separate from submission, evidence and provenance concerns.
+The separation between conversation, document composition and PDF rendering is architecturally useful. The MVP file is archived because current document generation must also remain separate from submission, evidence and provenance concerns.
 
 ### Workflow contract / workflows
 
@@ -88,4 +88,4 @@ Inventory
 
 ## Verification requirement
 
-Before PR #127 is merged, the final diff must be checked for broken references, contradictory active guidance, accidental deletion of historical material, and documentation that claims implementation or verification without evidence.
+Before the synchronized documentation PR is merged, the final diff must be checked for broken references, contradictory active guidance, accidental deletion of historical material, and documentation that claims implementation or verification without evidence.
