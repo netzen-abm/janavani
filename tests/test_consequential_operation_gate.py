@@ -57,6 +57,18 @@ def _request(*, approval=False, consent=None, side_effect=SideEffectClass.EXTERN
 
 def test_external_side_effect_requires_explicit_approval_when_policy_requires_it():
     request = _request(approval=True)
+    request = ConsequentialOperationRequest(
+        authorization=AuthorizationRequest(
+            context=request.authorization.context,
+            capability=CAPABILITY,
+            action=ACTION,
+            resource_id="case-1",
+            requires_approval=True,
+            execution_context=request.execution_context,
+        ),
+        execution_context=request.execution_context,
+        explicit_user_approval=False,
+    )
     assert gate_consequential_operation(request) is ConsequentialDecision.REQUIRE_APPROVAL
 
 
