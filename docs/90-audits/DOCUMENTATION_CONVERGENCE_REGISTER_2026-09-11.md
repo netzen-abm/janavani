@@ -12,9 +12,14 @@ Track documentation convergence without destroying historical work or creating a
 | Former location | Disposition | Current owner |
 |---|---|---|
 | `planning/DATABASE_CONTRACT.md` | Archived as superseded MVP contract | `docs/ARCHITECTURE.md` + `docs/ARCHITECTURE_DATA_BOUNDARY.md` |
+| `planning/DATABASE_DESIGN.md` | Archived as superseded MVP database design | `docs/ARCHITECTURE_DATA_BOUNDARY.md` + current storage architecture/contracts |
 | `planning/OFFICE_SCHEMA.md` | Archived as superseded MVP schema | Current authority/office capability documentation and implementation |
 | `planning/DOCUMENT_CONTRACT.md` | Archived as superseded MVP contract | Active architecture/capability contracts |
 | `planning/WORKFLOW_CONTRACT.md` | Archived as superseded MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow contracts |
+| `planning/WORKFLOWS.md` | Archived as superseded Telegram-centric MVP workflow | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + active workflow/capability contracts |
+| `planning/SERVICE_CONTRACT.md` | Archived as superseded MVP service contract | `docs/ARCHITECTURE.md` + active capability contracts |
+| `planning/SESSION_SCHEMA.md` | Archived as superseded MVP session schema | Current conversation/identity/case architecture and contracts |
+| `planning/SYSTEM_DOMAIN_MODEL.md` | Archived as superseded MVP domain model | `docs/JANAVANI_MASTER_ARCHITECTURE.md` + current domain implementation/contracts |
 | `planning/ENGINEERING_CONSTITUTION.md` | Archived as superseded MVP constitution | `planning/ECOSYSTEM_ENGINEERING_CONSTITUTION.md` |
 | `planning/ENGINEERING_PRINCIPLES.md` | Removed because file was empty | `docs/ARCHITECTURE_PRINCIPLES.md` |
 | `planning/IDENTITY_ACCESS_TRUST_CONTRACT.md` | Consolidated | `docs/IDENTITY_ACCESS_TRUST.md` |
@@ -34,9 +39,13 @@ The former office schema is a useful historical shape for the MVP office service
 
 The separation between conversation, document composition and PDF rendering is architecturally useful. The MVP file itself is archived because current document generation must also remain separate from submission, evidence and provenance concerns.
 
-### Workflow contract
+### Workflow contract / workflows
 
-The state-driven workflow discipline remains useful, but the old complaint/RTI sequence is narrower than the current canonical civic Case lifecycle. It is archived rather than treated as the complete ecosystem workflow.
+The state-driven workflow discipline remains useful, but the old complaint/RTI sequence is narrower than the current canonical civic Case lifecycle. The Telegram-centric workflow is also only one historical interface implementation. Both are archived rather than treated as the complete ecosystem workflow.
+
+### Session schema / domain model
+
+The old session schema and system domain model encode useful MVP concepts, but they are too tightly coupled to the complaint workflow, flat office schema and personal-data fields to serve as current universal contracts. Their historical definitions are preserved in the archive for traceability.
 
 ### Identity/access/trust
 
