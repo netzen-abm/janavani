@@ -81,6 +81,7 @@ def create_civic_action_vertical_slice(
     blob_store=None,
     responsibility_resolver: ResponsibilityResolver | None = None,
     obligation_resolver: ObligationResolver | None = None,
+    obligation_records: dict[str, list[dict[str, object]]] | None = None,
 ) -> CivicActionVerticalSlice:
     """Compose one canonical civic-action slice with shared capability instances.
 
@@ -111,7 +112,7 @@ def create_civic_action_vertical_slice(
     )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     responsibility_capability = create_responsibility_capability(resolver)
-    obligation = obligation_resolver or AuthorityBackedObligationResolver({})
+    obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
     obligation_capability = create_obligation_capability(obligation)
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
