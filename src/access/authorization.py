@@ -24,18 +24,22 @@ class AuthorizationRequest:
     capability: str
     action: str
     resource_id: Optional[str] = None
+    resource_owner_id: Optional[str] = None
     risk_level: str = "normal"
     requires_approval: bool = False
     execution_context: CapabilityExecutionContext | None = None
 
 
 class AuthorizationPolicy:
-    """Canonical policy decision boundary with execution-context consistency checks."""
+    """Canonical policy decision boundary with resource and execution consistency checks."""
 
     def evaluate(self, request: AuthorizationRequest) -> AuthorizationDecision:
         principal = request.context.principal
 
         if not request.capability or not request.action:
+            return AuthorizationDecision.DENY
+
+        if request.resource_owner_id is not None and request.resource_owner_id != principal.principal_id:
             return AuthorizationDecision.DENY
 
         if request.execution_context is not None:
