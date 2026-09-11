@@ -7,6 +7,7 @@ from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.evidence import EvidenceObject, EvidenceRepository, EvidenceSource, validate_sha256
+from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 
 CAPABILITY_ID = "case:evidence"
@@ -27,18 +28,20 @@ class EvidenceCreateRequest:
 
 
 class EvidenceCapability:
-    """Shared evidence registration and Case-linkage boundary.
-
-    The capability stores evidence metadata only. Binary content remains behind
-    a storage reference, and registration never uploads or transmits content.
-    """
+    """Shared evidence registration and Case-linkage boundary."""
 
     def __init__(self, repository: EvidenceRepository, case_capability: CivicCaseCapability) -> None:
         self._repository = repository
         self._cases = case_capability
 
-    def register(self, request: EvidenceCreateRequest, *, identity: IdentityContext) -> EvidenceObject:
-        """Register evidence metadata without uploading or transmitting content."""
+    def register(
+        self,
+        request: EvidenceCreateRequest,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> EvidenceObject:
+        self._validate_execution_context(execution_context, identity, action="evidence:register")
         self._authorize(identity, "evidence:register")
         evidence_type = request.evidence_type.strip()
         storage_ref = request.storage_ref.strip()
@@ -57,17 +60,36 @@ class EvidenceCapability:
         self._repository.save(evidence)
         return evidence
 
-    def attach(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
-               source_channel: str | None = None) -> CivicCaseResult:
-        """Attach registered evidence to an owned Case; never transmit it."""
+    def attach(
+        self,
+        case_id: str,
+        evidence_id: str,
+        *,
+        identity: IdentityContext,
+        source_channel: str | None = None,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> CivicCaseResult:
+        self._validate_execution_context(execution_context, identity, action="evidence:attach", resource_id=case_id)
         evidence = self._repository.get(evidence_id)
         if evidence is None:
             raise LookupError("Evidence not found")
-        return self._cases.add_evidence(case_id, evidence.evidence_id,
-                                        identity=identity, source_channel=source_channel)
+        case_context = self._child_case_context(execution_context, identity, case_id, "case:add_evidence")
+        return self._cases.add_evidence(
+            case_id,
+            evidence.evidence_id,
+            identity=identity,
+            source_channel=source_channel,
+            execution_context=case_context,
+        )
 
-    def get_for_case(self, case_id: str, *, identity: IdentityContext) -> tuple[EvidenceObject, ...]:
-        """Return evidence metadata only for an owned Case."""
+    def get_for_case(
+        self,
+        case_id: str,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> tuple[EvidenceObject, ...]:
+        self._validate_execution_context(execution_context, identity, action="evidence:read", resource_id=case_id)
         case = self._cases.get_owned(case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
@@ -75,6 +97,51 @@ class EvidenceCapability:
         return tuple(
             evidence for evidence_id in case.evidence_refs
             if (evidence := self._repository.get(evidence_id)) is not None
+        )
+
+    @staticmethod
+    def _validate_execution_context(
+        execution_context: CapabilityExecutionContext | None,
+        identity: IdentityContext,
+        *,
+        action: str,
+        resource_id: str | None = None,
+    ) -> None:
+        if execution_context is None:
+            return
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        if execution_context.capability_id != CAPABILITY_ID:
+            raise ValueError("Execution capability does not match the Evidence capability")
+        if execution_context.action != action:
+            raise ValueError("Execution action does not match the Evidence operation")
+        if resource_id is not None and execution_context.resource_id != resource_id:
+            raise ValueError("Execution resource does not match the Evidence resource")
+
+    @staticmethod
+    def _child_case_context(
+        parent: CapabilityExecutionContext | None,
+        identity: IdentityContext,
+        case_id: str,
+        action: str,
+    ) -> CapabilityExecutionContext | None:
+        if parent is None:
+            return None
+        return CapabilityExecutionContext.for_capability(
+            identity,
+            capability_id="JNV-CIVIC-COMPLAINT",
+            action=action,
+            surface=parent.surface,
+            resource_id=case_id,
+            correlation_id=parent.correlation_id,
+            parent_operation_id=parent.operation_id,
+            authorization_ref=parent.authorization_ref,
+            consent_refs=parent.consent_refs,
+            policy_ref=parent.policy_ref,
+            risk_level=parent.risk_level,
+            side_effect_class=parent.side_effect_class,
+            provenance=parent.provenance,
+            metadata=parent.metadata,
         )
 
     @staticmethod

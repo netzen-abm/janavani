@@ -6,6 +6,7 @@ from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequ
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
 from src.core.civic_case import CaseType
 from src.core.evidence import EvidenceSource
+from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
@@ -29,14 +30,10 @@ def test_register_preserves_canonical_hash_and_provenance() -> None:
     evidence_repo = InMemoryEvidenceRepository()
     evidence = EvidenceCapability(evidence_repo, CivicCaseCapability(cases)).register(
         EvidenceCreateRequest(
-            evidence_type="PHOTO",
-            storage_ref="local://evidence/photo-1",
-            sha256="A" * 64,
-            received_at="2026-09-09T00:00:00Z",
-            captured_at="2026-09-08T12:00:00Z",
+            evidence_type="PHOTO", storage_ref="local://evidence/photo-1", sha256="A" * 64,
+            received_at="2026-09-09T00:00:00Z", captured_at="2026-09-08T12:00:00Z",
             provenance=(EvidenceSource(source_id="device-1", source_type="LOCAL_DEVICE"),),
-        ),
-        identity=identity(),
+        ), identity=identity(),
     )
     assert evidence.sha256 == "a" * 64
     assert evidence_repo.get(evidence.evidence_id).provenance[0].source_type == "LOCAL_DEVICE"
@@ -48,10 +45,7 @@ def test_attach_requires_registered_evidence_and_owned_case() -> None:
     evidence_repo = InMemoryEvidenceRepository()
     capability = EvidenceCapability(evidence_repo, CivicCaseCapability(cases))
     case = create_case(cases)
-    evidence = capability.register(
-        EvidenceCreateRequest("DOCUMENT", "local://document/1", "b" * 64, "2026-09-09T00:00:00Z"),
-        identity=identity(),
-    )
+    evidence = capability.register(EvidenceCreateRequest("DOCUMENT", "local://document/1", "b" * 64, "2026-09-09T00:00:00Z"), identity=identity())
     result = capability.attach(case.case_id, evidence.evidence_id, identity=identity(), source_channel="test")
     assert evidence.evidence_id in result.case.evidence_refs
     with pytest.raises(LookupError):
@@ -61,13 +55,9 @@ def test_attach_requires_registered_evidence_and_owned_case() -> None:
 
 
 def test_registration_denies_missing_evidence_capability() -> None:
-    cases = InMemoryCivicCaseRepository()
-    capability = EvidenceCapability(InMemoryEvidenceRepository(), CivicCaseCapability(cases))
+    capability = EvidenceCapability(InMemoryEvidenceRepository(), CivicCaseCapability(InMemoryCivicCaseRepository()))
     with pytest.raises(PermissionError):
-        capability.register(
-            EvidenceCreateRequest("DOCUMENT", "local://document/1", "c" * 64, "2026-09-09T00:00:00Z"),
-            identity=identity(evidence=False),
-        )
+        capability.register(EvidenceCreateRequest("DOCUMENT", "local://document/1", "c" * 64, "2026-09-09T00:00:00Z"), identity=identity(evidence=False))
 
 
 def test_get_for_case_is_owner_scoped() -> None:
@@ -75,11 +65,26 @@ def test_get_for_case_is_owner_scoped() -> None:
     evidence_repo = InMemoryEvidenceRepository()
     capability = EvidenceCapability(evidence_repo, CivicCaseCapability(cases))
     case = create_case(cases)
-    evidence = capability.register(
-        EvidenceCreateRequest("DOCUMENT", "local://document/1", "d" * 64, "2026-09-09T00:00:00Z"),
-        identity=identity(),
-    )
+    evidence = capability.register(EvidenceCreateRequest("DOCUMENT", "local://document/1", "d" * 64, "2026-09-09T00:00:00Z"), identity=identity())
     capability.attach(case.case_id, evidence.evidence_id, identity=identity())
     assert capability.get_for_case(case.case_id, identity=identity())[0].evidence_id == evidence.evidence_id
     with pytest.raises(LookupError):
         capability.get_for_case(case.case_id, identity=identity("other"))
+
+
+def test_execution_envelope_is_validated_and_propagated_to_case() -> None:
+    cases = InMemoryCivicCaseRepository()
+    evidence_repo = InMemoryEvidenceRepository()
+    capability = EvidenceCapability(evidence_repo, CivicCaseCapability(cases))
+    case = create_case(cases)
+    evidence = capability.register(EvidenceCreateRequest("PHOTO", "local://photo/1", "e" * 64, "2026-09-09T00:00:00Z"), identity=identity())
+    context = CapabilityExecutionContext.for_capability(identity(), capability_id="case:evidence", action="evidence:attach", surface="telegram", resource_id=case.case_id)
+    result = capability.attach(case.case_id, evidence.evidence_id, identity=identity(), execution_context=context)
+    assert evidence.evidence_id in result.case.evidence_refs
+
+
+def test_execution_envelope_rejects_wrong_identity() -> None:
+    capability = EvidenceCapability(InMemoryEvidenceRepository(), CivicCaseCapability(InMemoryCivicCaseRepository()))
+    context = CapabilityExecutionContext.for_capability(identity("owner"), capability_id="case:evidence", action="evidence:register", surface="webapp")
+    with pytest.raises(PermissionError):
+        capability.register(EvidenceCreateRequest("DOCUMENT", "local://document/2", "f" * 64, "2026-09-09T00:00:00Z"), identity=identity("other"), execution_context=context)
