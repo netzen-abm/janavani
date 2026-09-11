@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest
 from src.access.policy_composition import (
@@ -92,7 +92,7 @@ def test_revoked_delegation_is_denied() -> None:
 
 
 def test_expired_delegation_is_denied() -> None:
-    expired = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    expired = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
     identity = _identity("delegate-1")
     composed = ComposedAuthorizationRequest(
         request=_request(identity, resource_owner_id=None),
@@ -170,6 +170,34 @@ def test_revoked_consent_is_denied() -> None:
         consent_scope="case:submit",
     )
     assert authorize_composed(request) is AuthorizationDecision.DENY
+
+
+def test_delegated_operation_can_use_grantor_consent() -> None:
+    identity = _identity("delegate-1")
+    composed = ComposedAuthorizationRequest(
+        request=_request(identity, resource_owner_id=None),
+        delegation=_delegation(),
+        delegation_grantor_id="citizen-1",
+        consents=(_consent("citizen-1"),),
+        consent_purpose="submit civic case",
+        consent_scope="case:submit",
+        consent_subject_id="citizen-1",
+    )
+    assert authorize_composed(composed) is AuthorizationDecision.ALLOW
+
+
+def test_delegate_cannot_select_consent_from_another_principal() -> None:
+    identity = _identity("delegate-1")
+    composed = ComposedAuthorizationRequest(
+        request=_request(identity, resource_owner_id=None),
+        delegation=_delegation(),
+        delegation_grantor_id="citizen-1",
+        consents=(_consent("citizen-2"),),
+        consent_purpose="submit civic case",
+        consent_scope="case:submit",
+        consent_subject_id="citizen-2",
+    )
+    assert authorize_composed(composed) is AuthorizationDecision.DENY
 
 
 def test_service_identity_requires_explicit_service_policy() -> None:
