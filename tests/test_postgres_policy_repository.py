@@ -22,12 +22,12 @@ class FakeCursor:
             self.rows = [value] if value else []
         elif "INSERT INTO JANAVANI_DELEGATION_GRANTS" in upper:
             self.db.delegations[params[0]] = tuple(params)
-        elif "JANAVANI_POLICY_CONSENTS" in upper and "WHERE SUBJECT_ID" in upper:
+        elif "CIVIC_CASE_CONSENTS" in upper and "WHERE SUBJECT_ID" in upper:
             self.rows = [v for v in self.db.consents.values() if v[1] == params[0]]
-        elif "JANAVANI_POLICY_CONSENTS" in upper and "WHERE CONSENT_ID" in upper:
+        elif "CIVIC_CASE_CONSENTS" in upper and "WHERE CONSENT_ID" in upper:
             value = self.db.consents.get(params[0])
             self.rows = [value] if value else []
-        elif "INSERT INTO JANAVANI_POLICY_CONSENTS" in upper:
+        elif "INSERT INTO CIVIC_CASE_CONSENTS" in upper:
             self.db.consents[params[0]] = tuple(params)
         elif "INSERT INTO JANAVANI_SERVICE_IDENTITY_POLICIES" in upper:
             self.db.services[params[0]] = tuple(params[1:])
