@@ -6,12 +6,14 @@ from src.core.submission_recovery import (
     assert_retryable_submission,
     mark_interrupted_submission_unknown,
     reconcile_unknown_submission,
+    recover_interrupted_submissions,
 )
+from src.storage.repositories.submission import InMemorySubmissionRepository
 
 
-def make_submission(state: str = "submitting") -> SubmissionRecord:
+def make_submission(submission_id: str = "sub_1", state: str = "submitting") -> SubmissionRecord:
     return SubmissionRecord(
-        submission_id="sub_1",
+        submission_id=submission_id,
         case_id="case_1",
         destination_ref="office_1",
         document_ref="doc_1",
@@ -34,6 +36,22 @@ def test_interrupted_submission_becomes_unknown_without_claiming_success():
     assert recovered.retry_count == 0
     assert recovered.version == 3
     assert recovered.submitted_at is None
+
+
+def test_restart_recovery_is_durable_and_idempotent():
+    repository = InMemorySubmissionRepository()
+    repository.save(make_submission())
+    repository.save(make_submission("sub_2", "failed"))
+
+    recovered = recover_interrupted_submissions(
+        repository, recovered_at="2026-09-12T10:05:00+00:00"
+    )
+
+    assert tuple(item.submission_id for item in recovered) == ("sub_1",)
+    assert repository.get("sub_1").state == "unknown"
+    assert recover_interrupted_submissions(
+        repository, recovered_at="2026-09-12T10:06:00+00:00"
+    ) == ()
 
 
 def test_unknown_submission_cannot_be_retried_before_reconciliation():
@@ -82,12 +100,12 @@ def test_unknown_submission_can_reconcile_to_failure_then_be_retryable():
 def test_invalid_recovery_transitions_fail_closed():
     with pytest.raises(SubmissionRecoveryError):
         mark_interrupted_submission_unknown(
-            make_submission("created"), recovered_at="2026-09-12T10:05:00+00:00"
+            make_submission("sub_1", "created"), recovered_at="2026-09-12T10:05:00+00:00"
         )
 
     with pytest.raises(SubmissionRecoveryError):
         reconcile_unknown_submission(
-            make_submission("submitted"),
+            make_submission("sub_1", "submitted"),
             outcome="submitted",
             reconciled_at="2026-09-12T10:06:00+00:00",
         )
