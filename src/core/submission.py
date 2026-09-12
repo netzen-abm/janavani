@@ -6,6 +6,20 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 
+# Keep the domain contract string-compatible with existing adapters while
+# making the durable state vocabulary explicit. ``unknown`` is intentional:
+# it means an external outcome cannot yet be established after interruption.
+SUBMISSION_STATES = frozenset({
+    "created",
+    "submitting",
+    "unknown",
+    "submitted",
+    "acknowledged",
+    "failed",
+})
+RECOVERABLE_SUBMISSION_STATE = "submitting"
+
+
 @dataclass(frozen=True)
 class SubmissionRecord:
     """Durable delivery facts; acknowledgement is evidence, not inferred state."""
@@ -36,6 +50,8 @@ class SubmissionRecord:
             raise ValueError("destination_ref is required")
         if not self.channel.strip():
             raise ValueError("channel is required")
+        if self.state not in SUBMISSION_STATES:
+            raise ValueError(f"Unsupported submission state: {self.state}")
         if self.retry_count < 0:
             raise ValueError("retry_count must be non-negative")
         if self.version < 1:
@@ -75,4 +91,8 @@ class SubmissionRepository(Protocol):
         ...
 
     def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]:
+        ...
+
+    def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
+        """Return in-flight submissions requiring restart reconciliation."""
         ...
