@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from src.core.submission import SubmissionRecord
+from src.core.submission import RECOVERABLE_SUBMISSION_STATE, SubmissionRecord
 
 
 class PostgresSubmissionRepository:
@@ -128,6 +128,21 @@ class PostgresSubmissionRepository:
                     "FROM civic_case_submissions WHERE case_id = %s "
                     "ORDER BY COALESCE(attempted_at, created_at), submission_id",
                     (case_id,),
+                )
+                rows = cursor.fetchall()
+        return tuple(self._hydrate(row) for row in rows)
+
+    def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
+        """Return submissions interrupted while an external send was in flight."""
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, "
+                    "state, attempted_at, submitted_at, acknowledged_at, external_reference, "
+                    "ack_ref, error_code, retry_count, created_at, updated_at, version "
+                    "FROM civic_case_submissions WHERE state = %s "
+                    "ORDER BY COALESCE(attempted_at, created_at), submission_id",
+                    (RECOVERABLE_SUBMISSION_STATE,),
                 )
                 rows = cursor.fetchall()
         return tuple(self._hydrate(row) for row in rows)
