@@ -1,25 +1,29 @@
--- Janavani canonical Case + policy persistence schema.
--- Controlled migration: schema only. RLS is intentionally NOT enabled here.
--- Application/domain authorization remains authoritative until the RLS gate is separately approved.
+-- Janavani — controlled canonical PostgreSQL/Supabase schema migration.
+-- STATUS: SCHEMA-ONLY / NOT A PRODUCTION ACTIVATION.
+-- RLS, legacy-data migration, destructive changes, workflow triggers, and
+-- production-specific Supabase configuration are intentionally excluded.
+-- Domain/application authorization remains authoritative until the RLS gate
+-- is separately approved.
 
 create table if not exists public.civic_cases (
     case_id text primary key,
     case_type text not null,
-    subject text not null check (btrim(subject) <> ''),
-    narrative text not null check (btrim(narrative) <> ''),
+    subject text not null,
+    narrative text not null,
     created_by text,
-    jurisdiction jsonb not null,
+    jurisdiction_json jsonb not null default '{}'::jsonb,
     related_organisation_id text,
     related_office_id text,
     related_official_id text,
     related_representative_id text,
-    claims jsonb not null default '[]'::jsonb,
-    consent_refs jsonb not null default '[]'::jsonb,
+    subject_claims_json jsonb not null default '[]'::jsonb,
     status text not null,
     created_at timestamptz not null,
     updated_at timestamptz not null,
-    version bigint not null default 1 check (version >= 1),
-    check (created_at <= updated_at)
+    version bigint not null default 1,
+    constraint civic_cases_version_positive check (version > 0),
+    constraint civic_cases_subject_nonempty check (length(trim(subject)) > 0),
+    constraint civic_cases_narrative_nonempty check (length(trim(narrative)) > 0)
 );
 
 create table if not exists public.civic_case_events (
@@ -31,20 +35,32 @@ create table if not exists public.civic_case_events (
     source_channel text,
     source_ref text,
     notes text,
-    event_version integer not null,
-    created_at timestamptz not null,
-    metadata_hash text
+    metadata_json jsonb,
+    event_version integer not null default 1,
+    created_at timestamptz not null
 );
 
-create index if not exists civic_case_events_case_occurred_idx
-    on public.civic_case_events(case_id, occurred_at);
+create table if not exists public.civic_case_consents (
+    consent_id text primary key,
+    case_id text references public.civic_cases(case_id),
+    purpose text not null,
+    scope jsonb not null,
+    grant_type text,
+    status text not null,
+    granted_by text,
+    subject_id text,
+    created_at timestamptz not null,
+    expires_at timestamptz,
+    revoked_at timestamptz,
+    proof_ref text
+);
 
 create table if not exists public.civic_case_evidence_refs (
     case_id text not null references public.civic_cases(case_id),
     evidence_id text not null,
     relationship text not null,
     created_at timestamptz not null,
-    created_by text not null,
+    created_by text,
     primary key (case_id, evidence_id, relationship)
 );
 
@@ -52,54 +68,43 @@ create table if not exists public.civic_case_document_refs (
     case_id text not null references public.civic_cases(case_id),
     document_id text not null,
     relationship text not null,
-    version integer not null check (version >= 1),
+    version bigint not null default 1,
     created_at timestamptz not null,
-    primary key (case_id, document_id, relationship, version)
+    primary key (case_id, document_id, relationship)
 );
-
-create table if not exists public.civic_case_consents (
-    consent_id text primary key,
-    subject_id text not null,
-    purpose text not null,
-    scope jsonb not null,
-    grant_type text not null,
-    status text not null,
-    created_at timestamptz not null,
-    expires_at timestamptz,
-    revoked_at timestamptz,
-    proof_ref text
-);
-
-create index if not exists civic_case_consents_subject_idx
-    on public.civic_case_consents(subject_id, created_at);
 
 create table if not exists public.civic_case_submissions (
     submission_id text primary key,
     case_id text not null references public.civic_cases(case_id),
-    destination_ref jsonb not null,
-    transport text not null,
-    status text not null,
-    external_reference text,
+    destination_ref text not null,
+    document_ref text,
+    channel text not null,
+    state text not null,
+    attempted_at timestamptz,
     submitted_at timestamptz,
     acknowledged_at timestamptz,
-    failure_reason text,
+    external_reference text,
+    ack_ref text,
+    error_code text,
+    retry_count integer not null default 0,
+    version bigint not null default 1,
     created_at timestamptz not null,
     updated_at timestamptz not null,
-    version bigint not null default 1 check (version >= 1),
-    check (created_at <= updated_at)
+    constraint civic_case_submissions_retry_nonnegative check (retry_count >= 0),
+    constraint civic_case_submissions_version_positive check (version > 0)
 );
 
-create index if not exists civic_case_submissions_case_status_idx
-    on public.civic_case_submissions(case_id, status);
-
-create index if not exists civic_cases_created_by_updated_idx
-    on public.civic_cases(created_by, updated_at);
-create index if not exists civic_cases_status_updated_idx
-    on public.civic_cases(status, updated_at);
-create index if not exists civic_cases_office_status_idx
-    on public.civic_cases(related_office_id, status);
-create index if not exists civic_cases_org_status_idx
-    on public.civic_cases(related_organisation_id, status);
+create table if not exists public.civic_case_audit (
+    audit_id text primary key,
+    case_id text not null references public.civic_cases(case_id),
+    actor_id text,
+    action text not null,
+    occurred_at timestamptz not null,
+    result text not null,
+    reason text,
+    source_channel text,
+    metadata_hash text
+);
 
 create table if not exists public.janavani_delegation_grants (
     delegation_id text primary key,
@@ -112,14 +117,35 @@ create table if not exists public.janavani_delegation_grants (
     revoked boolean not null default false
 );
 
-create index if not exists janavani_delegation_grants_delegate_idx
-    on public.janavani_delegation_grants(delegate_id);
-
 create table if not exists public.janavani_service_identity_policies (
     principal_id text primary key,
     allowed_capabilities jsonb not null,
     allowed_actions jsonb not null
 );
 
--- RLS intentionally remains a separate security gate.
--- Do not add enable row level security or policy statements in this migration.
+create index if not exists civic_cases_status_updated_idx
+    on public.civic_cases(status, updated_at);
+create index if not exists civic_cases_created_by_idx
+    on public.civic_cases(created_by);
+create index if not exists civic_case_events_case_occurred_idx
+    on public.civic_case_events(case_id, occurred_at);
+create index if not exists civic_case_submissions_case_attempted_idx
+    on public.civic_case_submissions(case_id, attempted_at);
+create index if not exists civic_case_submissions_destination_idx
+    on public.civic_case_submissions(destination_ref);
+create index if not exists civic_case_audit_case_occurred_idx
+    on public.civic_case_audit(case_id, occurred_at);
+create index if not exists civic_case_consents_subject_idx
+    on public.civic_case_consents(subject_id, created_at);
+create index if not exists janavani_delegation_grants_delegate_idx
+    on public.janavani_delegation_grants(delegate_id);
+
+-- IMPORTANT:
+-- 1. Validate the actual Supabase/PostgreSQL environment before execution.
+-- 2. Reconcile existing authority/document/evidence identities and FKs.
+-- 3. Define RLS separately from this schema migration.
+-- 4. Add canonical enum/value constraints only after runtime/canonical
+--    reconciliation is formally verified.
+-- 5. Test on a clean disposable database and against a restore before rollout.
+-- 6. Do not run legacy CSV/JSONL migration as part of this migration.
+-- 7. No live Supabase database is modified by this repository change.
