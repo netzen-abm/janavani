@@ -13,7 +13,7 @@ from src.access.policy_repository import PolicyRepository
 
 @dataclass(frozen=True)
 class RepositoryPolicyEvaluator:
-    """Resolve applicable persisted policy state before composed evaluation."""
+    """Resolve persisted policy state before composed authorization evaluation."""
 
     repository: PolicyRepository
     kernel: AuthorizationPolicy | None = None
@@ -21,15 +21,26 @@ class RepositoryPolicyEvaluator:
     def evaluate(self, request: ComposedAuthorizationRequest) -> AuthorizationDecision:
         principal = request.request.context.principal
 
-        # Resolve delegation only from the executing delegate's bounded grants.
         delegation = request.delegation
-        if delegation is None:
-            delegations = self.repository.list_delegations_for_delegate(principal.principal_id)
-            if len(delegations) == 1:
-                delegation = delegations[0]
+        if delegation is None and request.delegation_grantor_id is not None:
+            candidates = self.repository.list_delegations_for_delegate(principal.principal_id)
+            matching = tuple(
+                grant
+                for grant in candidates
+                if grant.grantor_id == request.delegation_grantor_id
+                and grant.authorizes(
+                    delegate_id=principal.principal_id,
+                    grantor_id=request.delegation_grantor_id,
+                    capability=request.request.capability,
+                    action=request.request.action,
+                    resource_id=request.request.resource_id,
+                )
+            )
+            if len(matching) == 1:
+                delegation = matching[0]
 
-        # Resolve consent only for the explicitly selected subject. Delegated
-        # execution may name the grantor; ordinary execution defaults to self.
+        # Resolve consent only for the selected subject. Delegated execution may
+        # name the grantor; ordinary execution defaults to the executing principal.
         subject_id = request.consent_subject_id or (
             delegation.grantor_id if delegation is not None else principal.principal_id
         )
