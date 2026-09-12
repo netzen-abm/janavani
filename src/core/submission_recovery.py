@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from enum import Enum
+from typing import Protocol
 
 from src.core.submission import SubmissionRecord
 
@@ -24,6 +25,16 @@ class SubmissionState(str, Enum):
 
 class SubmissionRecoveryError(RuntimeError):
     """Invalid recovery transition or unsafe retry attempt."""
+
+
+class RecoverableSubmissionRepository(Protocol):
+    """Minimal repository surface required by restart recovery."""
+
+    def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
+        ...
+
+    def save(self, submission: SubmissionRecord) -> None:
+        ...
 
 
 def mark_interrupted_submission_unknown(
@@ -47,6 +58,27 @@ def mark_interrupted_submission_unknown(
         updated_at=recovered_at,
         version=submission.version + 1,
     )
+
+
+def recover_interrupted_submissions(
+    repository: RecoverableSubmissionRepository,
+    *,
+    recovered_at: str,
+) -> tuple[SubmissionRecord, ...]:
+    """Persist explicit ``unknown`` state for every interrupted submission.
+
+    The repository is the durable source of truth, so the operation is safe to
+    repeat after a process restart: already recovered records are no longer in
+    the ``submitting`` set and are therefore not processed twice.
+    """
+    recovered: list[SubmissionRecord] = []
+    for submission in repository.list_recoverable():
+        updated = mark_interrupted_submission_unknown(
+            submission, recovered_at=recovered_at
+        )
+        repository.save(updated)
+        recovered.append(updated)
+    return tuple(recovered)
 
 
 def reconcile_unknown_submission(
