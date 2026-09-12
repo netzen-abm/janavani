@@ -12,8 +12,9 @@ from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 class PostgresPolicyRepository:
     """Durable adapter implementing the provider-neutral PolicyRepository contract.
 
-    This adapter persists policy inputs only. It does not evaluate authorization,
-    activate RLS, or grant authority merely because a row exists.
+    Policy state is persisted through the canonical Consent storage boundary.
+    This adapter does not evaluate authorization, activate RLS, or grant authority
+    merely because a row exists.
     """
 
     def __init__(self, *, connection_factory: Callable[[], Any] | None = None, dsn: str | None = None) -> None:
@@ -70,7 +71,7 @@ class PostgresPolicyRepository:
         with self._connect() as connection:
             with connection.transaction():
                 with connection.cursor() as cursor:
-                    cursor.execute("""INSERT INTO janavani_policy_consents
+                    cursor.execute("""INSERT INTO civic_case_consents
                         (consent_id, subject_id, purpose, scope, grant_type, status,
                          created_at, expires_at, revoked_at, proof_ref)
                         VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s)
@@ -90,7 +91,7 @@ class PostgresPolicyRepository:
             with connection.cursor() as cursor:
                 cursor.execute("""SELECT consent_id, subject_id, purpose, scope, grant_type,
                     status, created_at, expires_at, revoked_at, proof_ref
-                    FROM janavani_policy_consents WHERE consent_id=%s""", (consent_id,))
+                    FROM civic_case_consents WHERE consent_id=%s""", (consent_id,))
                 row = cursor.fetchone()
         return self._hydrate_consent(row) if row else None
 
@@ -99,7 +100,7 @@ class PostgresPolicyRepository:
             with connection.cursor() as cursor:
                 cursor.execute("""SELECT consent_id, subject_id, purpose, scope, grant_type,
                     status, created_at, expires_at, revoked_at, proof_ref
-                    FROM janavani_policy_consents WHERE subject_id=%s
+                    FROM civic_case_consents WHERE subject_id=%s
                     ORDER BY created_at, consent_id""", (subject_id,))
                 rows = cursor.fetchall()
         return tuple(self._hydrate_consent(row) for row in rows)
