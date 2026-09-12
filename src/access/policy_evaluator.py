@@ -36,8 +36,9 @@ class RepositoryPolicyEvaluator:
                     resource_id=request.request.resource_id,
                 )
             )
-            if len(matching) == 1:
-                delegation = matching[0]
+            if len(matching) != 1:
+                return AuthorizationDecision.DENY
+            delegation = matching[0]
 
         # Resolve consent only for the selected subject. Delegated execution may
         # name the grantor; ordinary execution defaults to the executing principal.
