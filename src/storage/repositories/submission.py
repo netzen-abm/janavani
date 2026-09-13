@@ -1,15 +1,13 @@
 """Provider-neutral in-memory submission repository."""
 from __future__ import annotations
 
-from src.core.submission import RECOVERABLE_SUBMISSION_STATE, SubmissionRecord, SubmissionRepository
-
-
-class SubmissionConcurrencyError(RuntimeError):
-    """The caller attempted to mutate a newer submission version."""
-
-
-class SubmissionIdempotencyConflictError(RuntimeError):
-    """An idempotency key was reused for a different submission payload."""
+from src.core.submission import (
+    RECOVERABLE_SUBMISSION_STATE,
+    SubmissionConcurrencyError,
+    SubmissionIdempotencyConflictError,
+    SubmissionRecord,
+    SubmissionRepository,
+)
 
 
 def _same_operation(left: SubmissionRecord, right: SubmissionRecord) -> bool:
@@ -69,7 +67,4 @@ class InMemorySubmissionRepository(SubmissionRepository):
         return tuple(item for item in self._items.values() if item.case_id == case_id)
 
     def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
-        return tuple(
-            item for item in self._items.values()
-            if item.state == RECOVERABLE_SUBMISSION_STATE
-        )
+        return tuple(item for item in self._items.values() if item.state == RECOVERABLE_SUBMISSION_STATE)
