@@ -4,15 +4,12 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from src.core.submission import RECOVERABLE_SUBMISSION_STATE, SubmissionRecord
-
-
-class SubmissionConcurrencyError(RuntimeError):
-    """The caller attempted to mutate a newer submission version."""
-
-
-class SubmissionIdempotencyConflictError(RuntimeError):
-    """An idempotency key was reused for a different submission payload."""
+from src.core.submission import (
+    RECOVERABLE_SUBMISSION_STATE,
+    SubmissionConcurrencyError,
+    SubmissionIdempotencyConflictError,
+    SubmissionRecord,
+)
 
 
 _OPERATION_FIELDS = ("case_id", "destination_ref", "document_ref", "channel")
@@ -45,10 +42,7 @@ class PostgresSubmissionRepository:
         return psycopg.connect(self._dsn)
 
     def _initialize(self) -> None:
-        """Create the canonical compatibility shape when absent.
-
-        Production migrations remain the authoritative schema owner.
-        """
+        """Create the canonical compatibility shape when absent."""
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -76,39 +70,28 @@ class PostgresSubmissionRepository:
                     )
                     """
                 )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS civic_case_submissions_case_attempted_idx "
-                    "ON civic_case_submissions(case_id, attempted_at)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS civic_case_submissions_destination_idx "
-                    "ON civic_case_submissions(destination_ref)"
-                )
+                cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_case_attempted_idx ON civic_case_submissions(case_id, attempted_at)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_destination_idx ON civic_case_submissions(destination_ref)")
 
     def save(self, submission: SubmissionRecord) -> None:
-        """Legacy blind save retained for non-delivery callers; delivery uses CAS APIs."""
+        """Compatibility save; delivery state transitions must use CAS APIs."""
         with self._connect() as connection:
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        """
-                        INSERT INTO civic_case_submissions (
-                            submission_id, case_id, destination_ref, document_ref,
-                            channel, state, attempted_at, submitted_at,
-                            acknowledged_at, external_reference, ack_ref,
-                            error_code, retry_count, version, created_at, updated_at,
-                            idempotency_key
+                        f"""INSERT INTO civic_case_submissions (
+                            submission_id, case_id, destination_ref, document_ref, channel, state,
+                            attempted_at, submitted_at, acknowledged_at, external_reference, ack_ref,
+                            error_code, retry_count, version, created_at, updated_at, idempotency_key
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (submission_id) DO UPDATE SET
                             case_id=EXCLUDED.case_id, destination_ref=EXCLUDED.destination_ref,
-                            document_ref=EXCLUDED.document_ref, channel=EXCLUDED.channel,
-                            state=EXCLUDED.state, attempted_at=EXCLUDED.attempted_at,
-                            submitted_at=EXCLUDED.submitted_at, acknowledged_at=EXCLUDED.acknowledged_at,
-                            external_reference=EXCLUDED.external_reference, ack_ref=EXCLUDED.ack_ref,
-                            error_code=EXCLUDED.error_code, retry_count=EXCLUDED.retry_count,
-                            version=EXCLUDED.version, created_at=EXCLUDED.created_at,
-                            updated_at=EXCLUDED.updated_at, idempotency_key=EXCLUDED.idempotency_key
-                        """,
+                            document_ref=EXCLUDED.document_ref, channel=EXCLUDED.channel, state=EXCLUDED.state,
+                            attempted_at=EXCLUDED.attempted_at, submitted_at=EXCLUDED.submitted_at,
+                            acknowledged_at=EXCLUDED.acknowledged_at, external_reference=EXCLUDED.external_reference,
+                            ack_ref=EXCLUDED.ack_ref, error_code=EXCLUDED.error_code, retry_count=EXCLUDED.retry_count,
+                            version=EXCLUDED.version, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at,
+                            idempotency_key=EXCLUDED.idempotency_key""",
                         self._params(submission),
                     )
 
@@ -144,18 +127,13 @@ class PostgresSubmissionRepository:
                     row = cursor.fetchone()
                     if row is not None:
                         return self._hydrate(row), False
-                    cursor.execute(
-                        f"SELECT {self._SELECT} FROM civic_case_submissions WHERE idempotency_key = %s FOR UPDATE",
-                        (submission.idempotency_key,),
-                    )
+                    cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE idempotency_key = %s FOR UPDATE", (submission.idempotency_key,))
                     existing_row = cursor.fetchone()
                     if existing_row is None:
                         raise RuntimeError("Submission idempotency reservation disappeared")
         existing = self._hydrate(existing_row)
         if not _same_operation(existing, submission):
-            raise SubmissionIdempotencyConflictError(
-                "Idempotency key is already bound to a different submission operation"
-            )
+            raise SubmissionIdempotencyConflictError("Idempotency key is already bound to a different submission operation")
         return existing, True
 
     def update_if_version(self, submission: SubmissionRecord, *, expected_version: int) -> None:
@@ -168,29 +146,20 @@ class PostgresSubmissionRepository:
                         """UPDATE civic_case_submissions SET
                             case_id=%s, destination_ref=%s, document_ref=%s, channel=%s, state=%s,
                             attempted_at=%s, submitted_at=%s, acknowledged_at=%s, external_reference=%s,
-                            ack_ref=%s, error_code=%s, retry_count=%s, version=%s, created_at=%s,
-                            updated_at=%s
+                            ack_ref=%s, error_code=%s, retry_count=%s, version=%s, created_at=%s, updated_at=%s
                         WHERE submission_id=%s AND version=%s AND idempotency_key=%s""",
-                        (
-                            submission.case_id, submission.destination_ref, submission.document_ref,
-                            submission.channel, submission.state, submission.attempted_at,
-                            submission.submitted_at, submission.acknowledged_at, submission.external_reference,
-                            submission.ack_ref, submission.error_code, submission.retry_count,
-                            submission.version, submission.created_at, submission.updated_at,
-                            submission.submission_id, expected_version, submission.idempotency_key,
-                        ),
+                        (submission.case_id, submission.destination_ref, submission.document_ref, submission.channel,
+                         submission.state, submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
+                         submission.external_reference, submission.ack_ref, submission.error_code, submission.retry_count,
+                         submission.version, submission.created_at, submission.updated_at, submission.submission_id,
+                         expected_version, submission.idempotency_key),
                     )
                     if cursor.rowcount != 1:
-                        cursor.execute(
-                            "SELECT version FROM civic_case_submissions WHERE submission_id = %s",
-                            (submission.submission_id,),
-                        )
+                        cursor.execute("SELECT version FROM civic_case_submissions WHERE submission_id = %s", (submission.submission_id,))
                         row = cursor.fetchone()
                         if row is None:
                             raise LookupError("Submission not found")
-                        raise SubmissionConcurrencyError(
-                            f"Submission version mismatch: expected {expected_version}, found {row[0]}"
-                        )
+                        raise SubmissionConcurrencyError(f"Submission version mismatch: expected {expected_version}, found {row[0]}")
 
     def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]:
         with self._connect() as connection:
@@ -209,20 +178,18 @@ class PostgresSubmissionRepository:
     @staticmethod
     def _params(submission: SubmissionRecord) -> tuple[Any, ...]:
         return (
-            submission.submission_id, submission.case_id, submission.destination_ref,
-            submission.document_ref, submission.channel, submission.state,
-            submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
-            submission.external_reference, submission.ack_ref, submission.error_code,
-            submission.retry_count, submission.version, submission.created_at,
-            submission.updated_at, submission.idempotency_key,
+            submission.submission_id, submission.case_id, submission.destination_ref, submission.document_ref,
+            submission.channel, submission.state, submission.attempted_at, submission.submitted_at,
+            submission.acknowledged_at, submission.external_reference, submission.ack_ref, submission.error_code,
+            submission.retry_count, submission.version, submission.created_at, submission.updated_at,
+            submission.idempotency_key,
         )
 
     @staticmethod
     def _hydrate(row: Any) -> SubmissionRecord:
         return SubmissionRecord(
-            submission_id=row[0], case_id=row[1], destination_ref=row[2],
-            document_ref=row[3], channel=row[4], state=row[5], attempted_at=row[6],
-            submitted_at=row[7], acknowledged_at=row[8], external_reference=row[9],
-            ack_ref=row[10], error_code=row[11], retry_count=row[12], version=row[13],
-            created_at=row[14], updated_at=row[15], idempotency_key=row[16],
+            submission_id=row[0], case_id=row[1], destination_ref=row[2], document_ref=row[3], channel=row[4],
+            state=row[5], attempted_at=row[6], submitted_at=row[7], acknowledged_at=row[8], external_reference=row[9],
+            ack_ref=row[10], error_code=row[11], retry_count=row[12], version=row[13], created_at=row[14],
+            updated_at=row[15], idempotency_key=row[16],
         )
