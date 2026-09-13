@@ -4,13 +4,14 @@ from src.core.submission import SubmissionRecord
 from src.storage.repositories.postgres_submission import PostgresSubmissionRepository
 
 
-def make_submission() -> SubmissionRecord:
+def make_submission(state: str = "created") -> SubmissionRecord:
     return SubmissionRecord.new(
         submission_id="sub-1",
         case_id="case-1",
         destination_ref="office-1",
         document_ref="doc-1",
         channel="web",
+        state=state,
     )
 
 
@@ -48,8 +49,8 @@ def test_get_hydrates_submission():
         submission.document_ref, submission.channel, submission.state,
         submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
         submission.external_reference, submission.ack_ref, submission.error_code,
-        submission.retry_count, submission.created_at, submission.updated_at,
-        submission.version,
+        submission.retry_count, submission.version, submission.created_at,
+        submission.updated_at,
     )
     repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
 
@@ -66,11 +67,30 @@ def test_list_for_case_returns_hydrated_records():
         submission.document_ref, submission.channel, submission.state,
         submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
         submission.external_reference, submission.ack_ref, submission.error_code,
-        submission.retry_count, submission.created_at, submission.updated_at,
-        submission.version,
+        submission.retry_count, submission.version, submission.created_at,
+        submission.updated_at,
     )]
     repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
 
     result = repository.list_for_case("case-1")
 
     assert result == (submission,)
+
+
+def test_list_recoverable_queries_only_in_flight_submissions():
+    connection, cursor = configured_connection()
+    submission = make_submission("submitting")
+    cursor.fetchall.return_value = [(
+        submission.submission_id, submission.case_id, submission.destination_ref,
+        submission.document_ref, submission.channel, submission.state,
+        submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
+        submission.external_reference, submission.ack_ref, submission.error_code,
+        submission.retry_count, submission.version, submission.created_at,
+        submission.updated_at,
+    )]
+    repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
+
+    result = repository.list_recoverable()
+
+    assert result == (submission,)
+    assert any("WHERE state = %s" in call.args[0] for call in cursor.execute.call_args_list)

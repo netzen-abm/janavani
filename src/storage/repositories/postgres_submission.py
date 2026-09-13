@@ -10,12 +10,7 @@ from src.core.submission import RECOVERABLE_SUBMISSION_STATE, SubmissionRecord
 class PostgresSubmissionRepository:
     """Persist submission metadata without coupling the domain to PostgreSQL."""
 
-    def __init__(
-        self,
-        *,
-        connection_factory: Callable[[], Any] | None = None,
-        dsn: str | None = None,
-    ) -> None:
+    def __init__(self, *, connection_factory: Callable[[], Any] | None = None, dsn: str | None = None) -> None:
         if connection_factory is None and not (dsn or os.getenv("JANAVANI_POSTGRES_DSN")):
             raise ValueError("PostgreSQL provider requires a DSN or connection factory")
         self._connection_factory = connection_factory
@@ -29,38 +24,45 @@ class PostgresSubmissionRepository:
         return psycopg.connect(self._dsn)
 
     def _initialize(self) -> None:
+        """Create the canonical compatibility shape when absent.
+
+        Production migrations remain the authoritative schema owner. This
+        initializer exists for standalone deployments/tests and mirrors the
+        checked-in canonical submission schema rather than maintaining a
+        divergent submission schema.
+        """
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS civic_case_submissions (
                         submission_id TEXT PRIMARY KEY,
-                        case_id TEXT NOT NULL,
+                        case_id TEXT NOT NULL REFERENCES civic_cases(case_id),
                         destination_ref TEXT NOT NULL,
                         document_ref TEXT,
                         channel TEXT NOT NULL,
                         state TEXT NOT NULL,
-                        attempted_at TEXT,
-                        submitted_at TEXT,
-                        acknowledged_at TEXT,
+                        attempted_at TIMESTAMPTZ,
+                        submitted_at TIMESTAMPTZ,
+                        acknowledged_at TIMESTAMPTZ,
                         external_reference TEXT,
                         ack_ref TEXT,
                         error_code TEXT,
                         retry_count INTEGER NOT NULL DEFAULT 0,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        version INTEGER NOT NULL DEFAULT 1,
+                        version BIGINT NOT NULL DEFAULT 1,
+                        created_at TIMESTAMPTZ NOT NULL,
+                        updated_at TIMESTAMPTZ NOT NULL,
                         CONSTRAINT civic_case_submissions_retry_nonnegative CHECK (retry_count >= 0),
                         CONSTRAINT civic_case_submissions_version_positive CHECK (version > 0)
                     )
                     """
                 )
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_civic_case_submissions_case_attempted "
+                    "CREATE INDEX IF NOT EXISTS civic_case_submissions_case_attempted_idx "
                     "ON civic_case_submissions(case_id, attempted_at)"
                 )
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_civic_case_submissions_destination "
+                    "CREATE INDEX IF NOT EXISTS civic_case_submissions_destination_idx "
                     "ON civic_case_submissions(destination_ref)"
                 )
 
@@ -74,7 +76,7 @@ class PostgresSubmissionRepository:
                             submission_id, case_id, destination_ref, document_ref,
                             channel, state, attempted_at, submitted_at,
                             acknowledged_at, external_reference, ack_ref,
-                            error_code, retry_count, created_at, updated_at, version
+                            error_code, retry_count, version, created_at, updated_at
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (submission_id) DO UPDATE SET
                             case_id=EXCLUDED.case_id,
@@ -89,9 +91,9 @@ class PostgresSubmissionRepository:
                             ack_ref=EXCLUDED.ack_ref,
                             error_code=EXCLUDED.error_code,
                             retry_count=EXCLUDED.retry_count,
+                            version=EXCLUDED.version,
                             created_at=EXCLUDED.created_at,
-                            updated_at=EXCLUDED.updated_at,
-                            version=EXCLUDED.version
+                            updated_at=EXCLUDED.updated_at
                         """,
                         (
                             submission.submission_id, submission.case_id,
@@ -100,8 +102,8 @@ class PostgresSubmissionRepository:
                             submission.attempted_at, submission.submitted_at,
                             submission.acknowledged_at, submission.external_reference,
                             submission.ack_ref, submission.error_code,
-                            submission.retry_count, submission.created_at,
-                            submission.updated_at, submission.version,
+                            submission.retry_count, submission.version,
+                            submission.created_at, submission.updated_at,
                         ),
                     )
 
@@ -109,9 +111,9 @@ class PostgresSubmissionRepository:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, "
-                    "state, attempted_at, submitted_at, acknowledged_at, external_reference, "
-                    "ack_ref, error_code, retry_count, created_at, updated_at, version "
+                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, state, "
+                    "attempted_at, submitted_at, acknowledged_at, external_reference, ack_ref, "
+                    "error_code, retry_count, version, created_at, updated_at "
                     "FROM civic_case_submissions WHERE submission_id = %s",
                     (submission_id,),
                 )
@@ -122,9 +124,9 @@ class PostgresSubmissionRepository:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, "
-                    "state, attempted_at, submitted_at, acknowledged_at, external_reference, "
-                    "ack_ref, error_code, retry_count, created_at, updated_at, version "
+                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, state, "
+                    "attempted_at, submitted_at, acknowledged_at, external_reference, ack_ref, "
+                    "error_code, retry_count, version, created_at, updated_at "
                     "FROM civic_case_submissions WHERE case_id = %s "
                     "ORDER BY COALESCE(attempted_at, created_at), submission_id",
                     (case_id,),
@@ -137,9 +139,9 @@ class PostgresSubmissionRepository:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, "
-                    "state, attempted_at, submitted_at, acknowledged_at, external_reference, "
-                    "ack_ref, error_code, retry_count, created_at, updated_at, version "
+                    "SELECT submission_id, case_id, destination_ref, document_ref, channel, state, "
+                    "attempted_at, submitted_at, acknowledged_at, external_reference, ack_ref, "
+                    "error_code, retry_count, version, created_at, updated_at "
                     "FROM civic_case_submissions WHERE state = %s "
                     "ORDER BY COALESCE(attempted_at, created_at), submission_id",
                     (RECOVERABLE_SUBMISSION_STATE,),
@@ -154,5 +156,5 @@ class PostgresSubmissionRepository:
             document_ref=row[3], channel=row[4], state=row[5],
             attempted_at=row[6], submitted_at=row[7], acknowledged_at=row[8],
             external_reference=row[9], ack_ref=row[10], error_code=row[11],
-            retry_count=row[12], created_at=row[13], updated_at=row[14], version=row[15],
+            retry_count=row[12], version=row[13], created_at=row[14], updated_at=row[15],
         )
