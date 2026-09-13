@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -28,8 +29,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     idempotency_sql = IDEMPOTENCY_MIGRATION.read_text(encoding="utf-8")
 
     # The CI PostgreSQL service is disposable. Re-apply the checked-in schema
-    # migrations so this test remains self-contained and exercises the actual
-    # repository schema rather than a hand-built test fixture.
+    # migrations so this test exercises the actual repository schema.
     with psycopg.connect(DSN) as connection:
         with connection.transaction():
             with connection.cursor() as cursor:
@@ -51,7 +51,9 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
                     ("pg-submit-it-case", "pg-submit-it-user"),
                 )
 
-    def new_submission(*, key: str, submission_id: str, state: str = "created", version: int = 1, retry_count: int = 0):
+    def new_submission(
+        *, key: str, submission_id: str, state: str = "created", version: int = 1, retry_count: int = 0
+    ) -> SubmissionRecord:
         return SubmissionRecord(
             submission_id=submission_id,
             case_id="pg-submit-it-case",
@@ -67,27 +69,24 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
         )
 
     repository = PostgresSubmissionRepository(dsn=DSN)
-    first, replay = repository.create_idempotent(new_submission(key="pg-submit-key", submission_id="pg-submit-1"))
+    first, replay = repository.create_idempotent(
+        new_submission(key="pg-submit-key", submission_id="pg-submit-1")
+    )
     assert replay is False
     assert first.submission_id == "pg-submit-1"
     assert first.idempotency_key == "pg-submit-key"
 
-    same, replay = repository.create_idempotent(new_submission(key="pg-submit-key", submission_id="pg-submit-2"))
+    same, replay = repository.create_idempotent(
+        new_submission(key="pg-submit-key", submission_id="pg-submit-2")
+    )
     assert replay is True
     assert same.submission_id == "pg-submit-1"
 
     with pytest.raises(SubmissionIdempotencyConflictError):
         repository.create_idempotent(
-            SubmissionRecord(
-                submission_id="pg-submit-3",
-                case_id="pg-submit-it-case",
+            replace(
+                new_submission(key="pg-submit-key", submission_id="pg-submit-3"),
                 destination_ref="different:office",
-                document_ref="doc:test",
-                channel="telegram",
-                state="created",
-                created_at="2026-09-13T00:00:00+00:00",
-                updated_at="2026-09-13T00:00:00+00:00",
-                idempotency_key="pg-submit-key",
             )
         )
 
@@ -95,36 +94,43 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     # on exactly one durable submission identity.
     race_key = "pg-race-key"
 
-    def reserve(index: int):
+    def reserve(index: int) -> tuple[SubmissionRecord, bool]:
         provider = PostgresSubmissionRepository(dsn=DSN)
-        return provider.create_idempotent(new_submission(key=race_key, submission_id=f"pg-race-{index}"))
+        return provider.create_idempotent(
+            new_submission(key=race_key, submission_id=f"pg-race-{index}")
+        )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(reserve, (1, 2)))
 
-    assert {record.submission_id for record, _ in results} == {"pg-race-1"} | {"pg-race-2"} or len(
-        {record.submission_id for record, _ in results}
-    ) == 1
+    assert len({record.submission_id for record, _ in results}) == 1
     assert sum(1 for _, was_replay in results if not was_replay) == 1
     race_records = repository.list_for_case("pg-submit-it-case")
     assert len([record for record in race_records if record.idempotency_key == race_key]) == 1
 
     # CAS mutation succeeds exactly once and a stale writer is rejected.
-    submitting = SubmissionRecord(
-        **{**first.__dict__, "state": "submitting", "version": 2, "attempted_at": "2026-09-13T00:01:00+00:00", "updated_at": "2026-09-13T00:01:00+00:00"}
+    submitting = replace(
+        first,
+        state="submitting",
+        version=2,
+        attempted_at="2026-09-13T00:01:00+00:00",
+        updated_at="2026-09-13T00:01:00+00:00",
     )
     repository.update_if_version(submitting, expected_version=1)
 
-    stale = SubmissionRecord(
-        **{**submitting.__dict__, "state": "failed", "version": 3, "retry_count": 1, "error_code": "TimeoutError", "updated_at": "2026-09-13T00:02:00+00:00"}
+    failed = replace(
+        submitting,
+        state="failed",
+        version=3,
+        retry_count=1,
+        error_code="TimeoutError",
+        updated_at="2026-09-13T00:02:00+00:00",
     )
-    repository.update_if_version(stale, expected_version=2)
+    repository.update_if_version(failed, expected_version=2)
 
     with pytest.raises(SubmissionConcurrencyError):
         repository.update_if_version(
-            SubmissionRecord(
-                **{**stale.__dict__, "state": "submitted", "version": 3, "updated_at": "2026-09-13T00:03:00+00:00"}
-            ),
+            replace(failed, state="submitted", version=4, updated_at="2026-09-13T00:03:00+00:00"),
             expected_version=2,
         )
 
@@ -137,7 +143,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
 
     # A failed retry reuses the same submission identity and idempotency key.
     retry, replay = repository.create_idempotent(
-        new_submission(key="pg-submit-key", submission_id="pg-submit-retry", state="created")
+        new_submission(key="pg-submit-key", submission_id="pg-submit-retry")
     )
     assert replay is True
     assert retry.submission_id == "pg-submit-1"
