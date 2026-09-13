@@ -13,8 +13,15 @@ from src.core.civic_case import CivicCase
 from src.core.evidence import EvidenceRepository
 from src.core.execution import CapabilityExecutionContext
 from src.core.submission import SubmissionRecord, SubmissionRepository
-from src.delivery.contract import DeliveryArtifactResolver, DeliveryRequest, DeliveryTransport
 from src.identity.context import IdentityContext
+from src.delivery.contract import (
+    DeliveryArtifactResolver,
+    DeliveryOutcome,
+    DeliveryReceipt,
+    DeliveryRequest,
+    DeliveryTransport,
+    DeliveryTransportError,
+)
 
 CAPABILITY_ID = "case:submit"
 CONSENT_PURPOSE = "case_submission"
@@ -41,6 +48,10 @@ class SubmissionReceipt:
 
 class SubmissionTransport(Protocol):
     def send(self, *, case: CivicCase, document_id: str, destination_ref: str) -> SubmissionReceipt: ...
+
+
+class SubmissionOutcomeUnknown(RuntimeError):
+    """External delivery outcome is ambiguous and requires reconciliation."""
 
 
 class SubmissionCapability:
@@ -161,32 +172,67 @@ class SubmissionCapability:
         self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
                                source_channel=request.source_channel, execution_context=begin_context)
 
-        try:
-            if self._delivery_transport is not None:
+        if self._delivery_transport is not None:
+            try:
                 if request.artifact_id is None:
                     raise ValueError("An approved artifact is required for delivery")
                 assert self._artifact_resolver is not None
                 artifact = self._artifact_resolver.resolve(artifact_id=request.artifact_id, case_id=case.case_id,
                                                            document_id=request.document_id)
+            except Exception as exc:
+                failed = replace(submission, state="failed", error_code=type(exc).__name__,
+                                 retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
+                self._save(failed, expected_version=submission.version)
+                raise
+
+            try:
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
                     submission_id=submission.submission_id, idempotency_key=submission.idempotency_key,
                     case_id=case.case_id, document_id=request.document_id,
                     destination_ref=request.destination_ref, channel=request.source_channel or "shared", artifact=artifact))
-                external_reference = delivery_receipt.external_reference
-                evidence_id = delivery_receipt.acknowledgement_evidence_ref
-                notes = delivery_receipt.notes
-            else:
-                assert self._transport is not None
+            except DeliveryTransportError as exc:
+                if exc.outcome is DeliveryOutcome.UNKNOWN:
+                    unknown = replace(submission, state="unknown", error_code="unknown_transport_outcome",
+                                      updated_at=self._now(), version=submission.version + 1)
+                    self._save(unknown, expected_version=submission.version)
+                    raise SubmissionOutcomeUnknown("Delivery outcome is unknown; reconciliation is required") from exc
+                failed = replace(submission, state="failed", error_code=type(exc).__name__,
+                                 retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
+                self._save(failed, expected_version=submission.version)
+                raise
+            except Exception as exc:
+                unknown = replace(submission, state="unknown", error_code="unknown_transport_outcome",
+                                  updated_at=self._now(), version=submission.version + 1)
+                self._save(unknown, expected_version=submission.version)
+                raise SubmissionOutcomeUnknown("Delivery outcome is unknown; reconciliation is required") from exc
+
+            if delivery_receipt.outcome is DeliveryOutcome.UNKNOWN:
+                unknown = replace(submission, state="unknown", error_code="unknown_transport_outcome",
+                                  updated_at=self._now(), version=submission.version + 1)
+                self._save(unknown, expected_version=submission.version)
+                raise SubmissionOutcomeUnknown("Delivery outcome is unknown; reconciliation is required")
+            if delivery_receipt.outcome is DeliveryOutcome.FAILED:
+                failed = replace(submission, state="failed", error_code="delivery_failed",
+                                 retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
+                self._save(failed, expected_version=submission.version)
+                raise RuntimeError("Delivery transport reported failure")
+
+            external_reference = delivery_receipt.external_reference
+            evidence_id = delivery_receipt.acknowledgement_evidence_ref
+            notes = delivery_receipt.notes
+        else:
+            assert self._transport is not None
+            try:
                 receipt = self._transport.send(case=case, document_id=request.document_id,
                                                destination_ref=request.destination_ref)
-                external_reference = receipt.acknowledgement_ref
-                evidence_id = None
-                notes = receipt.notes
-        except Exception as exc:
-            failed = replace(submission, state="failed", error_code=type(exc).__name__,
-                             retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
-            self._save(failed, expected_version=submission.version)
-            raise
+            except Exception as exc:
+                failed = replace(submission, state="failed", error_code=type(exc).__name__,
+                                 retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
+                self._save(failed, expected_version=submission.version)
+                raise
+            external_reference = receipt.acknowledgement_ref
+            evidence_id = None
+            notes = receipt.notes
 
         submitted_at = self._now()
         submitted = replace(submission, state="submitted", submitted_at=submitted_at,
