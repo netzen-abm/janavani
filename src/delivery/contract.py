@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Protocol
 
 
@@ -45,10 +46,29 @@ class DeliveryRequest:
             raise ValueError("channel is required")
 
 
+class DeliveryOutcome(str, Enum):
+    """Provider-neutral transport outcome before acknowledgement evidence."""
+
+    SUBMITTED = "submitted"
+    UNKNOWN = "unknown"
+    FAILED = "failed"
+
+
+class DeliveryTransportError(RuntimeError):
+    """A delivery adapter could not complete cleanly and reports its outcome."""
+
+    def __init__(self, message: str, *, outcome: DeliveryOutcome = DeliveryOutcome.UNKNOWN) -> None:
+        super().__init__(message)
+        if outcome not in {DeliveryOutcome.UNKNOWN, DeliveryOutcome.FAILED}:
+            raise ValueError("Transport errors may only report unknown or failed")
+        self.outcome = outcome
+
+
 @dataclass(frozen=True)
 class DeliveryReceipt:
     """Transport result; it is not by itself proof of acknowledgement."""
 
+    outcome: DeliveryOutcome = DeliveryOutcome.SUBMITTED
     external_reference: str | None = None
     transport_reference: str | None = None
     acknowledgement_evidence_ref: str | None = None
