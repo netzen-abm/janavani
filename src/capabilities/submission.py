@@ -169,7 +169,8 @@ class SubmissionCapability:
                 artifact = self._artifact_resolver.resolve(artifact_id=request.artifact_id, case_id=case.case_id,
                                                            document_id=request.document_id)
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
-                    submission_id=submission.submission_id, case_id=case.case_id, document_id=request.document_id,
+                    submission_id=submission.submission_id, idempotency_key=submission.idempotency_key,
+                    case_id=case.case_id, document_id=request.document_id,
                     destination_ref=request.destination_ref, channel=request.source_channel or "shared", artifact=artifact))
                 external_reference = delivery_receipt.external_reference
                 evidence_id = delivery_receipt.acknowledgement_evidence_ref
