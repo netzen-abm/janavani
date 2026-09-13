@@ -50,7 +50,7 @@ def test_get_hydrates_submission():
         submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
         submission.external_reference, submission.ack_ref, submission.error_code,
         submission.retry_count, submission.version, submission.created_at,
-        submission.updated_at,
+        submission.updated_at, submission.idempotency_key,
     )
     repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
 
@@ -68,7 +68,7 @@ def test_list_for_case_returns_hydrated_records():
         submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
         submission.external_reference, submission.ack_ref, submission.error_code,
         submission.retry_count, submission.version, submission.created_at,
-        submission.updated_at,
+        submission.updated_at, submission.idempotency_key,
     )]
     repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
 
@@ -86,7 +86,7 @@ def test_list_recoverable_queries_only_in_flight_submissions():
         submission.attempted_at, submission.submitted_at, submission.acknowledged_at,
         submission.external_reference, submission.ack_ref, submission.error_code,
         submission.retry_count, submission.version, submission.created_at,
-        submission.updated_at,
+        submission.updated_at, submission.idempotency_key,
     )]
     repository = PostgresSubmissionRepository(connection_factory=lambda: connection)
 
