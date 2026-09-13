@@ -3,16 +3,16 @@ from __future__ import annotations
 
 import pytest
 
+from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionOutcomeUnknown, SubmissionRequest
+from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+from src.core.civic_case import CaseStatus, CaseType
 from src.delivery.contract import DeliveryArtifact, DeliveryOutcome, DeliveryReceipt, DeliveryTransportError
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
 from src.storage.repositories.submission import InMemorySubmissionRepository
-from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
-from src.core.consent import Consent, ConsentGrantType, ConsentStatus
-from src.core.civic_case import CaseStatus, CaseType
 
 CASE_CAPABILITY = "JNV-CIVIC-COMPLAINT"
 SUBMIT_CAPABILITY = "case:submit"
@@ -97,7 +97,7 @@ def test_unknown_receipt_is_persisted_and_never_claimed_submitted() -> None:
     record = submissions.list_for_case(case_id)[0]
     assert record.state == "unknown"
     assert record.retry_count == 0
-    assert cases.get_owned(case_id, identity=identity).status is CaseStatus.READY
+    assert cases.get_owned(case_id, identity=identity).status is CaseStatus.SUBMITTING
 
 
 def test_ambiguous_transport_exception_becomes_unknown_not_failed() -> None:
