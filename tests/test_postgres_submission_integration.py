@@ -130,7 +130,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
 
     with pytest.raises(SubmissionConcurrencyError):
         repository.update_if_version(
-            replace(failed, state="submitted", version=4, updated_at="2026-09-13T00:03:00+00:00"),
+            replace(failed, state="submitted", version=3, updated_at="2026-09-13T00:03:00+00:00"),
             expected_version=2,
         )
 
