@@ -23,11 +23,26 @@ class DeliveryRequest:
     """Provider-neutral request sent from the canonical submission boundary."""
 
     submission_id: str
+    idempotency_key: str
     case_id: str
     document_id: str
     destination_ref: str
     channel: str
     artifact: DeliveryArtifact
+
+    def __post_init__(self) -> None:
+        if not self.submission_id.strip():
+            raise ValueError("submission_id is required")
+        if not self.idempotency_key.strip():
+            raise ValueError("idempotency_key is required")
+        if not self.case_id.strip():
+            raise ValueError("case_id is required")
+        if not self.document_id.strip():
+            raise ValueError("document_id is required")
+        if not self.destination_ref.strip():
+            raise ValueError("destination_ref is required")
+        if not self.channel.strip():
+            raise ValueError("channel is required")
 
 
 @dataclass(frozen=True)
