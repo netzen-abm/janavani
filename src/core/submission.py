@@ -7,20 +7,22 @@ from typing import Protocol
 
 
 SUBMISSION_STATES = frozenset({
-    "created",
-    "submitting",
-    "unknown",
-    "submitted",
-    "acknowledged",
-    "failed",
+    "created", "submitting", "unknown", "submitted", "acknowledged", "failed",
 })
 RECOVERABLE_SUBMISSION_STATE = "submitting"
+
+
+class SubmissionConcurrencyError(RuntimeError):
+    """The caller attempted to mutate a newer submission version."""
+
+
+class SubmissionIdempotencyConflictError(RuntimeError):
+    """An idempotency key was reused for a different submission payload."""
 
 
 @dataclass(frozen=True)
 class SubmissionRecord:
     """Durable delivery facts; acknowledgement is evidence, not inferred state."""
-
     submission_id: str
     case_id: str
     destination_ref: str
@@ -58,54 +60,24 @@ class SubmissionRecord:
             raise ValueError("idempotency_key must be non-empty when supplied")
 
     @classmethod
-    def new(
-        cls,
-        *,
-        submission_id: str,
-        case_id: str,
-        destination_ref: str,
-        document_ref: str | None,
-        channel: str,
-        state: str = "created",
-        idempotency_key: str | None = None,
-    ) -> "SubmissionRecord":
+    def new(cls, *, submission_id: str, case_id: str, destination_ref: str,
+            document_ref: str | None, channel: str, state: str = "created",
+            idempotency_key: str | None = None) -> "SubmissionRecord":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
-            submission_id=submission_id,
-            case_id=case_id,
-            destination_ref=destination_ref,
-            document_ref=document_ref,
-            channel=channel,
-            state=state,
-            created_at=now,
-            updated_at=now,
+            submission_id=submission_id, case_id=case_id,
+            destination_ref=destination_ref, document_ref=document_ref,
+            channel=channel, state=state, created_at=now, updated_at=now,
             idempotency_key=idempotency_key or submission_id,
         )
 
 
 class SubmissionRepository(Protocol):
     """Provider-neutral durable boundary for submission delivery facts."""
-
-    def save(self, submission: SubmissionRecord) -> None:
-        ...
-
-    def get(self, submission_id: str) -> SubmissionRecord | None:
-        ...
-
-    def get_by_idempotency_key(self, idempotency_key: str) -> SubmissionRecord | None:
-        ...
-
-    def create_idempotent(self, submission: SubmissionRecord) -> tuple[SubmissionRecord, bool]:
-        """Atomically reserve a submission key; bool is True for an identical replay."""
-        ...
-
-    def update_if_version(self, submission: SubmissionRecord, *, expected_version: int) -> None:
-        """Apply one state mutation only if the persisted version is unchanged."""
-        ...
-
-    def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]:
-        ...
-
-    def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
-        """Return in-flight submissions requiring restart reconciliation."""
-        ...
+    def save(self, submission: SubmissionRecord) -> None: ...
+    def get(self, submission_id: str) -> SubmissionRecord | None: ...
+    def get_by_idempotency_key(self, idempotency_key: str) -> SubmissionRecord | None: ...
+    def create_idempotent(self, submission: SubmissionRecord) -> tuple[SubmissionRecord, bool]: ...
+    def update_if_version(self, submission: SubmissionRecord, *, expected_version: int) -> None: ...
+    def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]: ...
+    def list_recoverable(self) -> tuple[SubmissionRecord, ...]: ...
