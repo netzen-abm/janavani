@@ -6,9 +6,6 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 
-# Keep the domain contract string-compatible with existing adapters while
-# making the durable state vocabulary explicit. ``unknown`` is intentional:
-# it means an external outcome cannot yet be established after interruption.
 SUBMISSION_STATES = frozenset({
     "created",
     "submitting",
@@ -40,6 +37,7 @@ class SubmissionRecord:
     created_at: str = ""
     updated_at: str = ""
     version: int = 1
+    idempotency_key: str | None = None
 
     def __post_init__(self) -> None:
         if not self.submission_id.strip():
@@ -56,6 +54,8 @@ class SubmissionRecord:
             raise ValueError("retry_count must be non-negative")
         if self.version < 1:
             raise ValueError("version must be positive")
+        if self.idempotency_key is not None and not self.idempotency_key.strip():
+            raise ValueError("idempotency_key must be non-empty when supplied")
 
     @classmethod
     def new(
@@ -67,6 +67,7 @@ class SubmissionRecord:
         document_ref: str | None,
         channel: str,
         state: str = "created",
+        idempotency_key: str | None = None,
     ) -> "SubmissionRecord":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
@@ -78,6 +79,7 @@ class SubmissionRecord:
             state=state,
             created_at=now,
             updated_at=now,
+            idempotency_key=idempotency_key or submission_id,
         )
 
 
@@ -88,6 +90,17 @@ class SubmissionRepository(Protocol):
         ...
 
     def get(self, submission_id: str) -> SubmissionRecord | None:
+        ...
+
+    def get_by_idempotency_key(self, idempotency_key: str) -> SubmissionRecord | None:
+        ...
+
+    def create_idempotent(self, submission: SubmissionRecord) -> tuple[SubmissionRecord, bool]:
+        """Atomically reserve a submission key; bool is True for an identical replay."""
+        ...
+
+    def update_if_version(self, submission: SubmissionRecord, *, expected_version: int) -> None:
+        """Apply one state mutation only if the persisted version is unchanged."""
         ...
 
     def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]:
