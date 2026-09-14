@@ -15,7 +15,13 @@ from commands.complaint import complaint
 from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
-from src.platform.composition import create_case_capability, create_case_repository, create_civic_action_capability, create_authority_repository
+from src.platform.composition import (
+    create_case_capability,
+    create_case_repository,
+    create_civic_action_capability,
+    create_authority_repository,
+)
+from src.storage.repositories.consent_provider import create_consent_repository
 
 
 def main():
@@ -35,6 +41,7 @@ def main():
     # Compose shared dependencies once at the bot application boundary.
     case_repository = create_case_repository()
     case_capability = create_case_capability(case_repository)
+    consent_repository = create_consent_repository()
     authority_repository = create_authority_repository()
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
@@ -43,10 +50,13 @@ def main():
     application.bot_data["case_repository"] = case_repository
     application.bot_data["civic_case_capability"] = case_capability
     application.bot_data["civic_action_capability"] = civic_action_capability
+    application.bot_data["consent_repository"] = consent_repository
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
             case_repository=case_repository,
+            case_capability=case_capability,
             civic_action_capability=civic_action_capability,
+            consent_repository=consent_repository,
         )
     )
 
