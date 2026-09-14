@@ -150,12 +150,13 @@ class SubmissionCapability:
                      execution_context: CapabilityExecutionContext | None = None) -> None:
         self._acknowledgement_evidence(case, evidence_id)
         acknowledged_at = self._now()
+        expected_case_version = case.version
         updated = replace(submission, state="acknowledged", acknowledged_at=acknowledged_at,
                           ack_ref=evidence_id, updated_at=acknowledged_at, version=submission.version + 1)
         if self._atomic is not None:
             self._validate_execution_context(execution_context, identity, action="case:acknowledge", resource_id=case.case_id)
             self._atomic_case_mutation(submission=updated, expected_submission_version=submission.version,
-                                       case=case, expected_case_version=case.version,
+                                       case=case, expected_case_version=expected_case_version,
                                        action="case:acknowledge", identity=identity,
                                        source_channel=source_channel, source_ref=evidence_id, notes=notes)
         else:
@@ -187,15 +188,16 @@ class SubmissionCapability:
         key = request.idempotency_key or f"subreq_{uuid4().hex}"
         proposed = SubmissionRecord.new(submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
                                          destination_ref=request.destination_ref, document_ref=request.document_id,
-                                         channel=request.source_channel or "shared", state="submitting", idempotency_key=key)
+                                         channel=request.source_channel or "shared", idempotency_key=key)
         if self._atomic is not None and self._submissions is not None:
             submission = self._submissions.get_by_idempotency_key(key)
             replay = submission is not None
             if submission is None:
-                self._atomic_case_mutation(submission=proposed, expected_submission_version=0, case=case,
+                self._atomic_case_mutation(submission=replace(proposed, state="submitting"),
+                                           expected_submission_version=0, case=case,
                                            expected_case_version=case.version, action="case:begin_submission",
                                            identity=identity, source_channel=request.source_channel)
-                submission = proposed
+                submission = replace(proposed, state="submitting")
             elif submission.state in {"submitted", "acknowledged"}:
                 final_case = self._cases.get_owned(request.case_id, identity=identity)
                 if final_case is None:
@@ -299,8 +301,9 @@ class SubmissionCapability:
             fresh_case = self._cases.get_owned(request.case_id, identity=identity)
             if fresh_case is None:
                 raise LookupError("Case not found before atomic submission outcome")
+            expected_case_version = fresh_case.version
             self._atomic_case_mutation(submission=submitted, expected_submission_version=submission.version,
-                                       case=fresh_case, expected_case_version=fresh_case.version,
+                                       case=fresh_case, expected_case_version=expected_case_version,
                                        action="case:submit", identity=identity, source_channel=request.source_channel)
         else:
             self._save(submitted, expected_version=submission.version)
