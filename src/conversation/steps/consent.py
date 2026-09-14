@@ -4,7 +4,6 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_GENERATE
-from services.case_migration import record_submission_consent
 from conversation.steps.generate import TelegramGenerationDependencies
 
 
@@ -30,10 +29,20 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not isinstance(dependencies, TelegramGenerationDependencies):
         raise RuntimeError("Telegram generation dependencies were not composed")
 
+    case_id = str(session.get("case_id") or session.get("complaint_id") or "")
+    office = session.get("office") or {}
+    office_id = office.get("office_id") or office.get("id")
+    if not case_id or not office_id:
+        await update.message.reply_text(
+            "❌ A canonical case and verified office destination are required before consent can be recorded."
+        )
+        return
+
     try:
-        record_submission_consent(
-            session,
-            repository=dependencies.case_repository,
+        result = dependencies.consent_capability.record_submission_consent(
+            case_id,
+            scope=f"office:{office_id}",
+            identity=dependencies.identity_factory(user_id),
         )
     except Exception as exc:
         print("ERROR in handle_consent:", exc)
