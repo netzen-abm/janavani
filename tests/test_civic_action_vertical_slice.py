@@ -63,6 +63,18 @@ def build_slice(external_channel_capability: ExternalChannelCapability | None = 
     reviews = InMemoryDocumentReviewRepository()
     artifacts = InMemoryDocumentArtifactRepository()
     transport = FakeTransport()
+    if external_channel_capability is None:
+        external_channel_capability = ExternalChannelCapability(InMemoryExternalChannelRepository((
+            ExternalChannel(
+                channel_id="channel-verified",
+                authority_id="office-1",
+                channel_type="portal",
+                destination_ref="office:office-1",
+                jurisdiction="Bengaluru",
+                source_ref="source:test-authority-directory",
+                verified_at="2026-09-14T10:00:00Z",
+            ),
+        )))
 
     case_capability = CivicCaseCapability(cases)
     evidence_capability = EvidenceCapability(evidence, case_capability)
@@ -134,6 +146,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
             consent_scope="office:office-1",
             source_channel="test",
         ),
+        channel_id="channel-verified",
         identity=actor,
         explicit_user_approval=True,
     )
@@ -160,6 +173,7 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
     with pytest.raises(PermissionError):
         slice_.submit(
             SubmissionRequest(case.case_id, "doc-1", "office:office-1", "office:office-1"),
+            channel_id="channel-verified",
             identity=actor,
             explicit_user_approval=False,
         )
