@@ -158,9 +158,6 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
 @router.post("/{case_id}/document/artifact")
 async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        owned = _COMPOSITION.document_review_repository.get(request.document_id)
-        if owned is None or owned.case_id != case_id or _CAPABILITY.get_owned(case_id, identity=context) is None:
-            raise LookupError("Document draft not found")
         artifact = _CIVIC_ACTION.generate_artifact(
             request.document_id, identity=context, document_format=request.document_format
         )
@@ -243,36 +240,3 @@ def _transition(context: IdentityContext, case_id: str, action: str, request: Ev
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _event_result(result.case, result.case.events[-1].event_type.value)
-
-
-def _event_result(case: CivicCase, event_type: str) -> dict[str, object]:
-    return {"case_id": case.case_id, "status": case.status.value, "event": event_type}
-
-
-def _serialize_draft(draft, *, case_id: str, submission: str) -> dict[str, object]:
-    return {
-        "case_id": case_id,
-        "document_id": draft.document_id,
-        "document_type": draft.document_type,
-        "date": draft.date,
-        "subject": draft.subject,
-        "body": draft.body,
-        "to": {"name": draft.to.name, "address": draft.to.address, "email": draft.to.email, "role": draft.to.role},
-        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in draft.cc],
-        "submission": submission,
-    }
-
-
-def _serialize(case: CivicCase) -> dict[str, object]:
-    return {
-        "case_id": case.case_id, "case_type": case.case_type.value, "subject": case.subject,
-        "narrative": case.narrative, "created_by": case.created_by, "jurisdiction": case.jurisdiction,
-        "related_organisation_id": case.related_organisation_id, "related_office_id": case.related_office_id,
-        "related_official_id": case.related_official_id, "related_representative_id": case.related_representative_id,
-        "claims": list(case.claims), "evidence_refs": list(case.evidence_refs),
-        "document_refs": list(case.document_refs), "consent_refs": list(case.consent_refs),
-        "status": case.status.value,
-        "events": [{"event_id": e.event_id, "event_type": e.event_type.value, "occurred_at": e.occurred_at,
-                    "actor_id": e.actor_id, "source_channel": e.source_channel,
-                    "source_ref": e.source_ref, "notes": e.notes} for e in case.events],
-    }
