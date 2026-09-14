@@ -5,7 +5,7 @@ not own Case, Evidence, Authority, Document, Consent, Submission, or Responsibil
 semantics. Access surfaces should use this orchestration boundary rather than
 rebuilding the civic-action lifecycle themselves.
 """
-from __future__ import annotations__
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
