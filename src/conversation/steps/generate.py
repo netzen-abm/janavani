@@ -11,13 +11,15 @@ from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.core.evidence import EvidenceRepository
+from src.capabilities.civic_case import CivicCaseCapability
+from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
 
 
@@ -26,7 +28,9 @@ class TelegramGenerationDependencies:
     """Composition-level dependencies for Telegram generation."""
 
     case_repository: CivicCaseRepository
+    case_capability: CivicCaseCapability
     civic_action_capability: CivicActionCapability
+    consent_capability: ConsentCapability
     artifact_repository: DocumentArtifactRepository
     blob_store: ArtifactBlobStore
 
@@ -34,12 +38,16 @@ class TelegramGenerationDependencies:
 def create_telegram_generation_dependencies(
     *,
     case_repository: CivicCaseRepository,
+    case_capability: CivicCaseCapability,
     civic_action_capability: CivicActionCapability,
+    consent_repository: ConsentRepository,
 ) -> TelegramGenerationDependencies:
-    """Compose Telegram dependencies from the canonical shared capability."""
+    """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
         case_repository=case_repository,
+        case_capability=case_capability,
         civic_action_capability=civic_action_capability,
+        consent_capability=ConsentCapability(repository=consent_repository, case_capability=case_capability),
         artifact_repository=create_document_artifact_repository(),
         blob_store=_create_blob_store(),
     )
@@ -51,15 +59,15 @@ def _create_blob_store() -> ArtifactBlobStore:
 
 
 def _identity(user_id: int) -> IdentityContext:
-    """Map a Telegram session to an opaque capability principal."""
+    """Map a Telegram user to the canonical Telegram principal identity."""
     return IdentityContext(
         principal=Principal(
-            principal_id=f"tg-session-{user_id}",
+            principal_id=f"telegram:{user_id}",
             identity_mode=IdentityMode.ANONYMOUS,
             interface="telegram",
             authentication_method=AuthenticationMethod.NONE,
             session_id=str(user_id),
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:consent"}),
         )
     )
 
@@ -75,7 +83,7 @@ def build_canonical_complaint_artifact(
     user_id: int,
 ):
     """Build a canonical artifact through Case → Evidence → Authority → Document."""
-    case_id = str(session.get("case_id") or "")
+    case_id = str(session.get("case_id") or session.get("complaint_id") or "")
     if not case_id:
         raise ValueError("No canonical case is associated with this Telegram session")
 
@@ -104,22 +112,14 @@ async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         await message.reply_text("Generating document for your review...")
-        artifact = build_canonical_complaint_artifact(
-            session,
-            dependencies=dependencies,
-            user_id=user_id,
-        )
+        artifact = build_canonical_complaint_artifact(session, dependencies=dependencies, user_id=user_id)
         with dependencies.blob_store.open(artifact.reference.storage_ref) as handle:
             await message.reply_document(
                 document=handle,
                 filename=Path(artifact.reference.storage_ref).name,
+                caption="Your document is ready for review.",
             )
-        dependencies.artifact_repository.save(artifact.reference.mark_downloaded())
         set_state(user_id, COMPLETED)
-        await message.reply_text(
-            "✅ Document generated and provided for your review, printing, or download.\n\n"
-            "JanaVani has not submitted, emailed, or otherwise transmitted the document to the government."
-        )
     except Exception as exc:
         print("ERROR in handle_generate:", exc)
-        await message.reply_text("❌ Failed to generate document.")
+        await message.reply_text("❌ Could not generate the document. Please try again.")
