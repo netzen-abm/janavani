@@ -159,7 +159,7 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
 async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         artifact = _CIVIC_ACTION.generate_artifact(
-            request.document_id, identity=context, document_format=request.document_format
+            request.document_id, identity=context, case_id=case_id, document_format=request.document_format
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Document draft not found") from exc
