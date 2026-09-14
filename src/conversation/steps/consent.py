@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_GENERATE
-from conversation.steps.generate import TelegramGenerationDependencies
+from conversation.steps.generate import TelegramGenerationDependencies, _identity
 
 
 async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,15 +34,15 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
     office_id = office.get("office_id") or office.get("id")
     if not case_id or not office_id:
         await update.message.reply_text(
-            "❌ A canonical case and verified office destination are required before consent can be recorded."
+            "❌ A canonical case and office destination are required before consent can be recorded."
         )
         return
 
     try:
-        result = dependencies.consent_capability.record_submission_consent(
+        dependencies.consent_capability.record_submission_consent(
             case_id,
             scope=f"office:{office_id}",
-            identity=dependencies.identity_factory(user_id),
+            identity=_identity(user_id),
         )
     except Exception as exc:
         print("ERROR in handle_consent:", exc)
