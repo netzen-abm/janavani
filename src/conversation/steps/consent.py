@@ -4,8 +4,7 @@ from telegram.ext import ContextTypes
 from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_GENERATE
-from services.case_migration import record_submission_consent
-from conversation.steps.generate import TelegramGenerationDependencies
+from conversation.steps.generate import TelegramGenerationDependencies, _identity
 
 
 async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -14,15 +13,11 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().lower()
 
     if text not in {"yes", "y", "no", "n", "1", "2"}:
-        await update.message.reply_text(
-            "Please reply YES to continue or NO to cancel."
-        )
+        await update.message.reply_text("Please reply YES to continue or NO to cancel.")
         return
 
     if text in {"no", "n", "2"}:
-        await update.message.reply_text(
-            "❌ Consent not given. Your case remains unsubmitted."
-        )
+        await update.message.reply_text("❌ Consent not given. Your case remains unsubmitted.")
         return
 
     session = get_session(user_id)
@@ -30,19 +25,23 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not isinstance(dependencies, TelegramGenerationDependencies):
         raise RuntimeError("Telegram generation dependencies were not composed")
 
-    try:
-        record_submission_consent(
-            session,
-            repository=dependencies.case_repository,
-        )
-    except Exception as exc:
-        print("ERROR in handle_consent:", exc)
+    case_id = str(session.get("case_id") or session.get("complaint_id") or "")
+    office = session.get("office") or {}
+    office_id = office.get("office_id") or office.get("id")
+    if not case_id or not office_id:
         await update.message.reply_text(
-            "❌ Could not record consent. Please try again."
+            "❌ A canonical case and office destination are required before consent can be recorded."
         )
         return
 
+    try:
+        dependencies.consent_capability.record_submission_consent(
+            case_id, scope=f"office:{office_id}", identity=_identity(user_id)
+        )
+    except Exception as exc:
+        print("ERROR in handle_consent:", exc)
+        await update.message.reply_text("❌ Could not record consent. Please try again.")
+        return
+
     set_state(user_id, WAITING_FOR_GENERATE)
-    await update.message.reply_text(
-        "✅ Consent recorded. Generating your document for review/printing."
-    )
+    await update.message.reply_text("✅ Consent recorded. Generating your document for review/printing.")
