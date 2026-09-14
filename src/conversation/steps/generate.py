@@ -11,6 +11,7 @@ from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
@@ -27,6 +28,7 @@ class TelegramGenerationDependencies:
     """Composition-level dependencies for Telegram generation."""
 
     case_repository: CivicCaseRepository
+    case_capability: CivicCaseCapability
     civic_action_capability: CivicActionCapability
     consent_capability: ConsentCapability
     artifact_repository: DocumentArtifactRepository
@@ -36,16 +38,18 @@ class TelegramGenerationDependencies:
 def create_telegram_generation_dependencies(
     *,
     case_repository: CivicCaseRepository,
+    case_capability: CivicCaseCapability,
     civic_action_capability: CivicActionCapability,
     consent_repository: ConsentRepository,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
         case_repository=case_repository,
+        case_capability=case_capability,
         civic_action_capability=civic_action_capability,
         consent_capability=ConsentCapability(
             repository=consent_repository,
-            case_capability=civic_action_capability._case_capability,
+            case_capability=case_capability,
         ),
         artifact_repository=create_document_artifact_repository(),
         blob_store=_create_blob_store(),
