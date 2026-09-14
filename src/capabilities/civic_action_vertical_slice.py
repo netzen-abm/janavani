@@ -7,7 +7,7 @@ orchestration boundary rather than rebuilding the civic-action lifecycle themsel
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from src.capabilities.civic_action_capability import CivicActionCapability
@@ -66,15 +66,24 @@ class CivicActionVerticalSlice:
     def __init__(self, dependencies: CivicActionVerticalSliceDependencies) -> None:
         self._deps = dependencies
 
-    def resolve_responsibility(self, request: ResponsibilityResolutionRequest) -> ResponsibilityResolution:
+    def resolve_responsibility(
+        self,
+        request: ResponsibilityResolutionRequest,
+    ) -> ResponsibilityResolution:
         """Resolve traceable responsibility candidates without asserting liability."""
         return self._deps.responsibility_capability.resolve(request)
 
-    def resolve_obligation(self, request: ObligationResolutionRequest) -> ObligationResolution:
+    def resolve_obligation(
+        self,
+        request: ObligationResolutionRequest,
+    ) -> ObligationResolution:
         """Resolve source-backed obligations for an already identified authority."""
         return self._deps.obligation_capability.resolve(request)
 
-    def discover_external_channels(self, query: ExternalChannelQuery | None = None) -> tuple[ExternalChannel, ...]:
+    def discover_external_channels(
+        self,
+        query: ExternalChannelQuery | None = None,
+    ) -> tuple[ExternalChannel, ...]:
         """Expose only source-backed, currently verified external destinations."""
         return self._deps.external_channel_capability.discover(query)
 
@@ -82,7 +91,10 @@ class CivicActionVerticalSlice:
         """Select one verified external destination through the shared channel boundary."""
         return self._deps.external_channel_capability.get_verified(channel_id)
 
-    def recommend_follow_up(self, context: FollowUpContext) -> FollowUpRecommendation:
+    def recommend_follow_up(
+        self,
+        context: FollowUpContext,
+    ) -> FollowUpRecommendation:
         """Recommend a user-controlled next step from canonical Case state and history."""
         capability = self._deps.follow_up_capability or FollowUpCapability()
         return capability.recommend(context)
@@ -90,8 +102,12 @@ class CivicActionVerticalSlice:
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
         """Attach evidence only through the canonical Evidence capability boundary."""
-        return self._deps.evidence_capability.attach(case_id, evidence_id, identity=identity,
-                                                      source_channel=source_channel or "shared")
+        return self._deps.evidence_capability.attach(
+            case_id,
+            evidence_id,
+            identity=identity,
+            source_channel=source_channel or "shared",
+        )
 
     def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
         """Attach a previously recorded consent through the canonical Case boundary."""
@@ -100,9 +116,13 @@ class CivicActionVerticalSlice:
     def prepare_document(self, case_id: str, *, identity: IdentityContext,
                          document_id: str | None = None) -> PreparedDocument:
         """Resolve Case → Evidence → Authority and persist the reviewable draft."""
-        result = self._deps.civic_action_capability.build_document(case_id, identity=identity, document_id=document_id)
+        result = self._deps.civic_action_capability.build_document(
+            case_id, identity=identity, document_id=document_id
+        )
         self._deps.document_review_repository.save(result.draft)
-        self._deps.case_capability.add_document(case_id, result.draft.document_id, identity=identity, source_channel="shared")
+        self._deps.case_capability.add_document(
+            case_id, result.draft.document_id, identity=identity, source_channel="shared"
+        )
         return PreparedDocument(case_id=case_id, document_id=result.draft.document_id, draft=result.draft)
 
     def review_document(self, request: DocumentReviewRequest, *, identity: IdentityContext) -> DocumentDraft:
@@ -127,11 +147,14 @@ class CivicActionVerticalSlice:
             raise LookupError("Document draft not found")
         if case_id is not None and draft.case_id != case_id:
             raise LookupError("Document draft not found")
-        artifact = generate_artifact(draft, document_format, output_dir, blob_store=self._deps.blob_store)
+        artifact = generate_artifact(
+            draft, document_format, output_dir, blob_store=self._deps.blob_store
+        )
         repository = self._deps.artifact_repository or create_document_artifact_repository()
         repository.save(artifact.reference)
-        self._deps.case_capability.add_document(draft.case_id, artifact.reference.artifact_id,
-                                                identity=identity, source_channel="shared")
+        self._deps.case_capability.add_document(
+            draft.case_id, artifact.reference.artifact_id, identity=identity, source_channel="shared"
+        )
         return artifact
 
     def submit(self, request: SubmissionRequest, *, channel_id: str, identity: IdentityContext,
@@ -146,7 +169,15 @@ class CivicActionVerticalSlice:
         channel = self._deps.external_channel_capability.get_verified(channel_id)
         if request.destination_ref and request.destination_ref != channel.destination_ref:
             raise ValueError("Submission destination does not match the verified external channel")
-        verified_request = replace(request, destination_ref=channel.destination_ref)
+        verified_request = request.__class__(
+            case_id=request.case_id,
+            document_id=request.document_id,
+            destination_ref=channel.destination_ref,
+            consent_scope=request.consent_scope,
+            source_channel=request.source_channel,
+            artifact_id=request.artifact_id,
+            idempotency_key=request.idempotency_key,
+        )
         return self._deps.submission_capability.submit(
             verified_request, identity=identity, explicit_user_approval=explicit_user_approval
         )
