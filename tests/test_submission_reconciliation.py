@@ -1,5 +1,3 @@
-from dataclasses import replace
-
 import pytest
 
 from src.capabilities.submission_reconciliation import (
@@ -40,7 +38,7 @@ def identity(principal_id="citizen-a"):
     return IdentityContext(
         principal=Principal(
             principal_id=principal_id,
-            mode=IdentityMode.AUTHENTICATED,
+            identity_mode=IdentityMode.AUTHENTICATED,
             authentication_method=AuthenticationMethod.PASSKEY,
             capabilities=frozenset({"case:submit"}),
         )
