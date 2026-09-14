@@ -22,10 +22,10 @@ The adapter implements the existing provider-neutral repository contract. Storag
 ## Persisted policy families
 
 - `janavani_delegation_grants`: bounded grantor/delegate capability, action and resource scope, expiry and revocation.
-- `janavani_policy_consents`: purpose/scope-bound consent state, including expiry, revocation and proof reference.
+- `civic_case_consents`: canonical purpose/scope-bound consent state, including expiry, revocation and proof reference.
 - `janavani_service_identity_policies`: explicit service-principal capability/action allow-lists.
 
-These names are intentionally separate from the Civic Case tables. Policy state is shared infrastructure and may be referenced by multiple surfaces and capabilities.
+Consent is intentionally **not** stored in a second `janavani_policy_consents` table. The canonical Case PostgreSQL design and existing consent repository already establish `civic_case_consents` as the durable consent boundary. Shared policy evaluation and Case persistence must therefore resolve the same consent state.
 
 ## Adapter rules
 
@@ -38,6 +38,7 @@ These names are intentionally separate from the Civic Case tables. Policy state 
 7. Keep authorization decisions outside persistence.
 8. Use transactions for individual writes so partial policy rows are not committed.
 9. Do not synthesize consent or delegation records.
+10. Do not create a parallel durable consent store.
 
 ## RLS gate
 

@@ -29,7 +29,7 @@ class FakeCursor:
             self.rows = [value] if value else []
         elif "INSERT INTO CIVIC_CASE_CONSENTS" in upper:
             self.db.consents[params[0]] = tuple(params)
-        elif "INSERT INTO JANAVANI_SERVICE_IDENTITY_POLICIES" in upper:
+        elif "JANAVANI_SERVICE_IDENTITY_POLICIES" in upper and "INSERT INTO" in upper:
             self.db.services[params[0]] = tuple(params[1:])
         elif "JANAVANI_SERVICE_IDENTITY_POLICIES" in upper:
             value = self.db.services.get(params[0])
@@ -96,6 +96,15 @@ def test_policy_repository_round_trips_all_policy_families():
     assert repo.list_consents_for_subject("other") == ()
     assert repo.get_service_policy("service-a") == service
     assert repo.get_service_policy("service-b") is None
+
+
+def test_consent_uses_canonical_case_consent_table():
+    db = FakeDb()
+    repo = PostgresPolicyRepository(connection_factory=lambda: FakeConnection(db))
+    repo.save_consent(consent())
+
+    assert db.consents["c-1"][0] == "c-1"
+    assert not hasattr(db, "policy_consents")
 
 
 def test_revoked_delegation_remains_durable_state():
