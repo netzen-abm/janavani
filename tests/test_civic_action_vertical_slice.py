@@ -4,6 +4,7 @@ from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequ
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
+from src.capabilities.follow_up import FollowUpAction, FollowUpContext, FollowUpStatus
 from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
@@ -192,3 +193,13 @@ def test_vertical_slice_exposes_only_verified_external_channels():
         ExternalChannelQuery(authority_id="office-1")
     )
     assert [channel.channel_id for channel in discovered] == ["channel-verified"]
+
+
+def test_vertical_slice_recommends_follow_up_from_canonical_case():
+    slice_, _, _, _, case = build_slice()
+
+    recommendation = slice_.recommend_follow_up(FollowUpContext(case=case))
+
+    assert recommendation.action is FollowUpAction.REMINDER
+    assert recommendation.status is FollowUpStatus.DUE
+    assert recommendation.reason
