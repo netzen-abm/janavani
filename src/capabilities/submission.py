@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from hashlib import sha256
 from typing import Protocol
 from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.access.consent import ConsentRepositoryReader, ConsentRequirement, require_consent
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
-from src.core.civic_case import CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.core.evidence import EvidenceRepository
 from src.core.execution import CapabilityExecutionContext
 from src.core.submission import SubmissionRecord, SubmissionRepository
-from src.identity.context import IdentityContext
 from src.delivery.contract import (
     DeliveryArtifactResolver,
     DeliveryOutcome,
@@ -22,6 +22,8 @@ from src.delivery.contract import (
     DeliveryTransport,
     DeliveryTransportError,
 )
+from src.identity.context import IdentityContext
+from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
 
 CAPABILITY_ID = "case:submit"
 CONSENT_PURPOSE = "case_submission"
@@ -63,7 +65,8 @@ class SubmissionCapability:
                  submission_repository: SubmissionRepository | None = None,
                  *, delivery_transport: DeliveryTransport | None = None,
                  artifact_resolver: DeliveryArtifactResolver | None = None,
-                 evidence_repository: EvidenceRepository | None = None) -> None:
+                 evidence_repository: EvidenceRepository | None = None,
+                 submission_case_transaction_repository: SubmissionCaseTransactionRepository | None = None) -> None:
         if transport is None and delivery_transport is None:
             raise ValueError("A submission transport is required")
         if delivery_transport is not None and artifact_resolver is None:
@@ -75,10 +78,16 @@ class SubmissionCapability:
         self._delivery_transport = delivery_transport
         self._artifact_resolver = artifact_resolver
         self._evidence = evidence_repository
+        self._atomic = submission_case_transaction_repository
 
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _event_id(submission: SubmissionRecord, stage: str) -> str:
+        digest = sha256(f"{submission.idempotency_key}:{stage}".encode("utf-8")).hexdigest()[:32]
+        return f"event-submission-{stage}-{digest}"
 
     def _save(self, record: SubmissionRecord, *, expected_version: int | None = None) -> SubmissionRecord:
         if self._submissions is None:
@@ -107,6 +116,50 @@ class SubmissionCapability:
         if evidence.status != "ACTIVE":
             raise ValueError("Acknowledgement evidence is not active")
 
+    def _atomic_case_mutation(self, *, submission: SubmissionRecord,
+                              expected_submission_version: int, case: CivicCase,
+                              expected_case_version: int, action: str,
+                              identity: IdentityContext, source_channel: str | None,
+                              source_ref: str | None = None, notes: str | None = None) -> None:
+        if self._atomic is None:
+            raise RuntimeError("Atomic Submission-Case repository is required")
+        now = self._now()
+        event_id = self._event_id(submission, action.removeprefix("case:"))
+        event = CaseEvent(
+            event_id=event_id,
+            case_id=case.case_id,
+            event_type={
+                "case:begin_submission": CaseEventType.SUBMITTING,
+                "case:submit": CaseEventType.SUBMITTED,
+                "case:acknowledge": CaseEventType.ACKNOWLEDGED,
+            }[action],
+            occurred_at=now,
+            actor_id=identity.principal.principal_id,
+            source_channel=source_channel,
+            source_ref=source_ref,
+            notes=notes,
+        )
+        if action == "case:begin_submission":
+            case.begin_submission(event_id=event_id, occurred_at=now,
+                                  actor_id=identity.principal.principal_id, source_channel=source_channel)
+        elif action == "case:submit":
+            case.submit(event_id=event_id, occurred_at=now,
+                        actor_id=identity.principal.principal_id, source_channel=source_channel)
+        elif action == "case:acknowledge":
+            case.acknowledge(event_id=event_id, occurred_at=now,
+                             actor_id=identity.principal.principal_id, source_channel=source_channel,
+                             source_ref=source_ref, notes=notes)
+        else:
+            raise ValueError(f"Unsupported atomic Submission-Case action: {action}")
+        self._atomic.persist_mutation(
+            submission=submission,
+            expected_submission_version=expected_submission_version,
+            case=case,
+            expected_case_version=expected_case_version,
+            event=event,
+            idempotency_key=submission.idempotency_key or submission.submission_id,
+        )
+
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord,
                      evidence_id: str, identity: IdentityContext,
                      source_channel: str | None, notes: str | None,
@@ -115,11 +168,18 @@ class SubmissionCapability:
         acknowledged_at = self._now()
         updated = replace(submission, state="acknowledged", acknowledged_at=acknowledged_at,
                           ack_ref=evidence_id, updated_at=acknowledged_at, version=submission.version + 1)
-        self._save(updated, expected_version=submission.version)
-        case_context = self._child_case_context(execution_context, identity, case.case_id, "case:acknowledge")
-        self._cases.transition(case.case_id, action="case:acknowledge", identity=identity,
-                               source_channel=source_channel, source_ref=evidence_id,
-                               notes=notes, execution_context=case_context)
+        if self._atomic is not None:
+            self._validate_execution_context(execution_context, identity, action="case:acknowledge", resource_id=case.case_id)
+            self._atomic_case_mutation(submission=updated, expected_submission_version=submission.version,
+                                       case=case, expected_case_version=case.version,
+                                       action="case:acknowledge", identity=identity,
+                                       source_channel=source_channel, source_ref=evidence_id, notes=notes)
+        else:
+            self._save(updated, expected_version=submission.version)
+            case_context = self._child_case_context(execution_context, identity, case.case_id, "case:acknowledge")
+            self._cases.transition(case.case_id, action="case:acknowledge", identity=identity,
+                                   source_channel=source_channel, source_ref=evidence_id,
+                                   notes=notes, execution_context=case_context)
 
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool,
@@ -142,39 +202,56 @@ class SubmissionCapability:
                                                             purpose=CONSENT_PURPOSE, scope=request.consent_scope))
 
         key = request.idempotency_key or f"subreq_{uuid4().hex}"
-        now = self._now()
         proposed = SubmissionRecord.new(
             submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
             destination_ref=request.destination_ref, document_ref=request.document_id,
             channel=request.source_channel or "shared", idempotency_key=key,
         )
-        submission, replay = self._reserve(proposed)
-        if replay:
-            if submission.state in {"submitted", "acknowledged"}:
+
+        if self._atomic is not None and self._submissions is not None:
+            submission = self._submissions.get_by_idempotency_key(key)
+            replay = submission is not None
+            if submission is None:
+                submitting = replace(proposed, state="submitting", updated_at=self._now(), version=1)
+                self._atomic_case_mutation(submission=submitting, expected_submission_version=0,
+                                           case=case, expected_case_version=case.version,
+                                           action="case:begin_submission", identity=identity,
+                                           source_channel=request.source_channel)
+                submission = submitting
+            elif submission.state in {"submitted", "acknowledged"}:
                 final_case = self._cases.get_owned(request.case_id, identity=identity)
                 if final_case is None:
                     raise LookupError("Case not found after idempotent replay")
                 return CivicCaseResult(final_case, AuthorizationDecision.ALLOW)
-            if submission.state in {"submitting", "unknown"}:
+            elif submission.state == "unknown":
                 raise RuntimeError("Submission already exists for this idempotency key and requires reconciliation")
-            if submission.state != "failed":
+            elif submission.state not in {"failed", "submitting"}:
                 raise RuntimeError(f"Submission is not retryable: {submission.state}")
-
-        expected_version = submission.version
-        submitting = replace(submission, state="submitting", attempted_at=now,
-                              updated_at=now, version=expected_version + 1)
-        if self._submissions is not None:
-            self._save(submitting, expected_version=expected_version)
         else:
-            self._save(submitting)
-        submission = submitting
+            submission, replay = self._reserve(proposed)
+            if replay:
+                if submission.state in {"submitted", "acknowledged"}:
+                    final_case = self._cases.get_owned(request.case_id, identity=identity)
+                    if final_case is None:
+                        raise LookupError("Case not found after idempotent replay")
+                    return CivicCaseResult(final_case, AuthorizationDecision.ALLOW)
+                if submission.state in {"submitting", "unknown"}:
+                    raise RuntimeError("Submission already exists for this idempotency key and requires reconciliation")
+                if submission.state != "failed":
+                    raise RuntimeError(f"Submission is not retryable: {submission.state}")
 
-        # A failed retry resumes delivery while the Case remains SUBMITTING.
-        # Only the first attempt performs the lifecycle transition from READY.
-        if not replay:
-            begin_context = self._child_case_context(execution_context, identity, request.case_id, "case:begin_submission")
-            self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
-                                   source_channel=request.source_channel, execution_context=begin_context)
+        if submission.state == "failed":
+            expected_version = submission.version
+            submitting = replace(submission, state="submitting", attempted_at=self._now(),
+                                 updated_at=self._now(), version=expected_version + 1)
+            self._save(submitting, expected_version=expected_version)
+            submission = submitting
+        elif submission.state == "submitting":
+            if not replay:
+                # Atomic first-attempt path already persisted SUBMITTING.
+                pass
+        else:
+            raise RuntimeError(f"Unsupported submission state: {submission.state}")
 
         if self._delivery_transport is not None:
             try:
@@ -188,7 +265,6 @@ class SubmissionCapability:
                                  retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
                 self._save(failed, expected_version=submission.version)
                 raise
-
             try:
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
                     submission_id=submission.submission_id, idempotency_key=submission.idempotency_key,
@@ -209,7 +285,6 @@ class SubmissionCapability:
                                   updated_at=self._now(), version=submission.version + 1)
                 self._save(unknown, expected_version=submission.version)
                 raise SubmissionOutcomeUnknown("Delivery outcome is unknown; reconciliation is required") from exc
-
             if delivery_receipt.outcome is DeliveryOutcome.UNKNOWN:
                 unknown = replace(submission, state="unknown", error_code="unknown_transport_outcome",
                                   updated_at=self._now(), version=submission.version + 1)
@@ -220,7 +295,6 @@ class SubmissionCapability:
                                  retry_count=submission.retry_count + 1, updated_at=self._now(), version=submission.version + 1)
                 self._save(failed, expected_version=submission.version)
                 raise RuntimeError("Delivery transport reported failure")
-
             external_reference = delivery_receipt.external_reference
             evidence_id = delivery_receipt.acknowledgement_evidence_ref
             notes = delivery_receipt.notes
@@ -241,12 +315,24 @@ class SubmissionCapability:
         submitted_at = self._now()
         submitted = replace(submission, state="submitted", submitted_at=submitted_at,
                             external_reference=external_reference, updated_at=submitted_at, version=submission.version + 1)
-        self._save(submitted, expected_version=submission.version)
-        submit_context = self._child_case_context(execution_context, identity, request.case_id, "case:submit")
-        self._cases.transition(request.case_id, action="case:submit", identity=identity,
-                               source_channel=request.source_channel, execution_context=submit_context)
+        if self._atomic is not None and self._submissions is not None:
+            fresh_case = self._cases.get_owned(request.case_id, identity=identity)
+            if fresh_case is None:
+                raise LookupError("Case not found before atomic submission outcome")
+            self._atomic_case_mutation(submission=submitted, expected_submission_version=submission.version,
+                                       case=fresh_case, expected_case_version=fresh_case.version,
+                                       action="case:submit", identity=identity,
+                                       source_channel=request.source_channel)
+        else:
+            self._save(submitted, expected_version=submission.version)
+            submit_context = self._child_case_context(execution_context, identity, request.case_id, "case:submit")
+            self._cases.transition(request.case_id, action="case:submit", identity=identity,
+                                   source_channel=request.source_channel, execution_context=submit_context)
         if evidence_id:
-            self._acknowledge(case=case, submission=submitted, evidence_id=evidence_id, identity=identity,
+            acknowledged_case = self._cases.get_owned(request.case_id, identity=identity)
+            if acknowledged_case is None:
+                raise LookupError("Case not found before acknowledgement")
+            self._acknowledge(case=acknowledged_case, submission=submitted, evidence_id=evidence_id, identity=identity,
                               source_channel=request.source_channel, notes=notes, execution_context=execution_context)
         final_case = self._cases.get_owned(request.case_id, identity=identity)
         if final_case is None:
