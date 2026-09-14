@@ -8,6 +8,7 @@ from src.capabilities.civic_action_vertical_slice import (
     CivicActionVerticalSliceDependencies,
 )
 from src.capabilities.civic_case import CivicCaseCapability
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -36,6 +37,17 @@ def create_case_repository() -> CivicCaseRepository:
 
 def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
     return CivicCaseCapability(repository)
+
+
+def create_consent_capability(
+    *,
+    consent_repository: ConsentRepository,
+    case_capability: CivicCaseCapability,
+) -> ConsentCapability:
+    return ConsentCapability(
+        repository=consent_repository,
+        case_capability=case_capability,
+    )
 
 
 def create_authority_capability(repository: AuthorityRepository) -> AuthorityCapability:
@@ -77,9 +89,9 @@ def create_civic_action_vertical_slice(
     """Compose one canonical civic-action slice with shared capability instances.
 
     Access surfaces should receive this object from their composition root rather
-    than constructing parallel Case, review, or submission paths. Durable provider
-    choices are injected by the caller; when no submission repository is supplied,
-    the standard provider selector uses its configured development-safe default.
+    than constructing parallel Case, review, consent, or submission paths. Durable
+    provider choices are injected by the caller; development-safe defaults remain
+    explicit and no production provider is activated by this composition function.
     """
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
