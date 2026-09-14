@@ -2,7 +2,7 @@
 
 This module composes existing provider- and surface-neutral capabilities. It does
 not own Case, Evidence, Authority, Document, Consent, Submission, Responsibility,
-Obligation, or External Channel semantics. Access surfaces should use this
+Obligation, External Channel, or Follow-up semantics. Access surfaces should use this
 orchestration boundary rather than rebuilding the civic-action lifecycle themselves.
 """
 from __future__ import annotations
@@ -15,6 +15,7 @@ from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
+from src.capabilities.follow_up import FollowUpCapability, FollowUpContext, FollowUpRecommendation
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
@@ -47,6 +48,7 @@ class CivicActionVerticalSliceDependencies:
     document_review_repository: DocumentReviewRepository
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
+    follow_up_capability: FollowUpCapability | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,14 @@ class CivicActionVerticalSlice:
     def get_verified_external_channel(self, channel_id: str) -> ExternalChannel:
         """Select one verified external destination through the shared channel boundary."""
         return self._deps.external_channel_capability.get_verified(channel_id)
+
+    def recommend_follow_up(
+        self,
+        context: FollowUpContext,
+    ) -> FollowUpRecommendation:
+        """Recommend a user-controlled next step from canonical Case state and history."""
+        capability = self._deps.follow_up_capability or FollowUpCapability()
+        return capability.recommend(context)
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
