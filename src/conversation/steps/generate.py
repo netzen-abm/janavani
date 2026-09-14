@@ -11,13 +11,14 @@ from conversation.constants import COMPLETED
 from conversation.session import get_session
 from conversation.state import set_state
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.core.evidence import EvidenceRepository
+from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
 
 
@@ -27,6 +28,7 @@ class TelegramGenerationDependencies:
 
     case_repository: CivicCaseRepository
     civic_action_capability: CivicActionCapability
+    consent_capability: ConsentCapability
     artifact_repository: DocumentArtifactRepository
     blob_store: ArtifactBlobStore
 
@@ -35,11 +37,16 @@ def create_telegram_generation_dependencies(
     *,
     case_repository: CivicCaseRepository,
     civic_action_capability: CivicActionCapability,
+    consent_repository: ConsentRepository,
 ) -> TelegramGenerationDependencies:
-    """Compose Telegram dependencies from the canonical shared capability."""
+    """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
         case_repository=case_repository,
         civic_action_capability=civic_action_capability,
+        consent_capability=ConsentCapability(
+            repository=consent_repository,
+            case_capability=civic_action_capability._case_capability,
+        ),
         artifact_repository=create_document_artifact_repository(),
         blob_store=_create_blob_store(),
     )
@@ -51,15 +58,20 @@ def _create_blob_store() -> ArtifactBlobStore:
 
 
 def _identity(user_id: int) -> IdentityContext:
-    """Map a Telegram session to an opaque capability principal."""
+    """Map a Telegram user to the canonical Telegram principal identity."""
     return IdentityContext(
         principal=Principal(
-            principal_id=f"tg-session-{user_id}",
+            principal_id=f"telegram:{user_id}",
             identity_mode=IdentityMode.ANONYMOUS,
             interface="telegram",
             authentication_method=AuthenticationMethod.NONE,
             session_id=str(user_id),
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
+            capabilities=frozenset({
+                "JNV-CIVIC-COMPLAINT",
+                "case:write",
+                "case:review",
+                "case:consent",
+            }),
         )
     )
 
@@ -75,7 +87,7 @@ def build_canonical_complaint_artifact(
     user_id: int,
 ):
     """Build a canonical artifact through Case → Evidence → Authority → Document."""
-    case_id = str(session.get("case_id") or "")
+    case_id = str(session.get("case_id") or session.get("complaint_id") or "")
     if not case_id:
         raise ValueError("No canonical case is associated with this Telegram session")
 
