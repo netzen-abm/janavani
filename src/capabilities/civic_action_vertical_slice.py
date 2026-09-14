@@ -106,11 +106,14 @@ class CivicActionVerticalSlice:
         return self._deps.case_capability.approve(case_id, identity=identity)
 
     def generate_artifact(self, document_id: str, *, identity: IdentityContext,
+                          case_id: str | None = None,
                           document_format: DocumentFormat = DocumentFormat.PDF,
                           output_dir: str | Path = "/tmp/janavani-artifacts/rendered") -> DocumentArtifact:
         """Render the latest owned reviewed draft; never submit or transmit it."""
         draft = self._deps.document_review_capability.get_owned(document_id, identity=identity)
         if draft is None:
+            raise LookupError("Document draft not found")
+        if case_id is not None and draft.case_id != case_id:
             raise LookupError("Document draft not found")
         artifact = generate_artifact(
             draft, document_format, output_dir, blob_store=self._deps.blob_store
