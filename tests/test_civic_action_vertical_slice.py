@@ -3,7 +3,7 @@ from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlic
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
-from src.capabilities.external_channel import ExternalChannelCapability
+from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
 from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
@@ -189,8 +189,6 @@ def test_vertical_slice_exposes_only_verified_external_channels():
     slice_, _, _, _, _ = build_slice(ExternalChannelCapability(channels))
 
     discovered = slice_.discover_external_channels(
-        query=__import__("src.capabilities.external_channel", fromlist=["ExternalChannelQuery"]).ExternalChannelQuery(
-            authority_id="office-1"
-        )
+        ExternalChannelQuery(authority_id="office-1")
     )
     assert [channel.channel_id for channel in discovered] == ["channel-verified"]
