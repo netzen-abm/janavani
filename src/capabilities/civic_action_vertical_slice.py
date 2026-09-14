@@ -13,9 +13,9 @@ from pathlib import Path
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
-from src.core.evidence import EvidenceRepository
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
@@ -33,6 +33,7 @@ class CivicActionVerticalSliceDependencies:
 
     case_capability: CivicCaseCapability
     civic_action_capability: CivicActionCapability
+    evidence_capability: EvidenceCapability
     document_review_capability: DocumentReviewCapability
     submission_capability: SubmissionCapability
     responsibility_capability: ResponsibilityCapability
@@ -40,7 +41,6 @@ class CivicActionVerticalSliceDependencies:
     document_review_repository: DocumentReviewRepository
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
-    evidence_repository: EvidenceRepository | None = None
 
 
 @dataclass(frozen=True)
@@ -67,14 +67,12 @@ class CivicActionVerticalSlice:
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
-        """Attach already-registered evidence through the canonical Case boundary."""
-        if self._deps.evidence_repository is None:
-            raise RuntimeError("Evidence repository is required for the civic-action slice")
-        evidence = self._deps.evidence_repository.get(evidence_id)
-        if evidence is None:
-            raise LookupError("Evidence not found")
-        return self._deps.case_capability.add_evidence(
-            case_id, evidence.evidence_id, identity=identity, source_channel=source_channel or "shared"
+        """Attach evidence only through the canonical Evidence capability boundary."""
+        return self._deps.evidence_capability.attach(
+            case_id,
+            evidence_id,
+            identity=identity,
+            source_channel=source_channel or "shared",
         )
 
     def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
