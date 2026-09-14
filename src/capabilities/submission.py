@@ -8,8 +8,10 @@ from hashlib import sha256
 from typing import Protocol
 from uuid import uuid4
 
-from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
-from src.access.consent import ConsentRepositoryReader, ConsentRequirement, require_consent
+from src.access.authorization import AuthorizationDecision, AuthorizationRequest
+from src.access.consequential import ConsequentialDecision, ConsequentialOperationRequest, gate_consequential_operation
+from src.access.consent import ConsentRepositoryReader, ConsentRequirement
+from src.access.execution_consent import ExecutionConsentRequirement, require_execution_consent
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.core.evidence import EvidenceRepository
@@ -175,6 +177,30 @@ class SubmissionCapability:
                                    execution_context=self._child_case_context(execution_context, identity,
                                                                               case.case_id, "case:acknowledge"))
 
+    def _consequential_submission_decision(self, *, identity: IdentityContext, case_id: str,
+                                           consent_scope: str, explicit_user_approval: bool,
+                                           execution_context: CapabilityExecutionContext | None,
+                                           idempotency_key: str) -> ConsequentialDecision:
+        if execution_context is None:
+            execution_context = CapabilityExecutionContext.for_capability(
+                identity, capability_id=CAPABILITY_ID, action="case:submit", surface="shared",
+                resource_id=case_id, side_effect_class="external_side_effect",
+                idempotency_key=idempotency_key)
+        elif execution_context.idempotency_key != idempotency_key:
+            raise ValueError("Execution idempotency key does not match the Submission idempotency key")
+        requirement = ConsentRequirement(subject_id=identity.principal.principal_id,
+                                         purpose=CONSENT_PURPOSE, scope=consent_scope)
+        request = ConsequentialOperationRequest(
+            authorization=AuthorizationRequest(context=identity, capability=CAPABILITY_ID,
+                action="case:submit", resource_id=case_id, requires_approval=True,
+                execution_context=execution_context),
+            execution_context=execution_context, consent_requirement=requirement,
+            explicit_user_approval=explicit_user_approval)
+        if execution_context.identity.principal.principal_id != identity.principal.principal_id:
+            raise PermissionError("Execution identity does not match the authenticated identity")
+        require_execution_consent(self._consents, ExecutionConsentRequirement(requirement), execution_context)
+        return gate_consequential_operation(request, consent_repository=self._consents)
+
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool,
                execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
@@ -186,15 +212,16 @@ class SubmissionCapability:
             raise ValueError("Document is not attached to the case")
         if not request.destination_ref.strip():
             raise ValueError("A submission destination is required")
-        if not explicit_user_approval:
-            raise PermissionError("Explicit user approval is required for submission")
-        decision = authorize(AuthorizationRequest(context=identity, capability=CAPABILITY_ID,
-                                                   action="case:submit", resource_id=case.case_id))
-        if decision is not AuthorizationDecision.ALLOW:
+        key = request.idempotency_key or (execution_context.idempotency_key if execution_context is not None else None) or f"subreq_{uuid4().hex}"
+        decision = self._consequential_submission_decision(identity=identity, case_id=case.case_id,
+            consent_scope=request.consent_scope, explicit_user_approval=explicit_user_approval,
+            execution_context=execution_context, idempotency_key=key)
+        if decision is ConsequentialDecision.DENY:
             raise PermissionError("Identity is not authorized to submit this case")
-        require_consent(self._consents, ConsentRequirement(subject_id=identity.principal.principal_id,
-                                                            purpose=CONSENT_PURPOSE, scope=request.consent_scope))
-        key = request.idempotency_key or f"subreq_{uuid4().hex}"
+        if decision is ConsequentialDecision.CONSENT_REQUIRED:
+            raise PermissionError("Explicit consent is required for submission")
+        if decision is ConsequentialDecision.REQUIRE_APPROVAL:
+            raise PermissionError("Explicit user approval is required for submission")
         proposed = SubmissionRecord.new(submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
                                          destination_ref=request.destination_ref, document_ref=request.document_id,
                                          channel=request.source_channel or "shared", idempotency_key=key)
