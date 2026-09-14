@@ -111,4 +111,4 @@ def test_cross_principal_case_is_denied():
         outcome="submitted", observed_at="2026-09-14T00:00:00+00:00", source_ref="provider-status-4",
     ))
     with pytest.raises(LookupError, match="Case not found"):
-        SubmissionReconciliationCapability(FakeCases(case_for("citizen-b")), repo, source).reconcile("sub-1", identity())
+        SubmissionReconciliationCapability(FakeCases(case_for("citizen-b")), repo, source).reconcile("sub-1", identity=identity())
