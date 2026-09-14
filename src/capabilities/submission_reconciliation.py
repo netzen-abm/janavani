@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from hashlib import sha256
 from typing import Protocol
 
@@ -57,7 +56,7 @@ class SubmissionReconciliationCapability:
 
     @staticmethod
     def _event_id(submission: SubmissionRecord, observation: SubmissionReconciliationObservation) -> str:
-        digest = sha256(f"{submission.idempotency_key}:{observation.source_ref}:{observation.outcome}".encode("utf-8")).hexdigest()[:32]
+        digest = sha256(f"{submission.idempotency_key}:{observation.source_ref}:{observation.outcome}".encode()).hexdigest()[:32]
         return f"event-reconcile-{digest}"
 
     def reconcile(self, submission_id: str, *, identity: IdentityContext,
@@ -88,6 +87,7 @@ class SubmissionReconciliationCapability:
         if updated.state == "submitted" and case.status in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
             if self._atomic is not None:
                 event_id = self._event_id(submission, observation)
+                expected_case_version = case.version
                 event = CaseEvent(
                     event_id=event_id, case_id=case.case_id, event_type=CaseEventType.SUBMITTED,
                     occurred_at=observation.observed_at, actor_id=identity.principal.principal_id,
@@ -98,7 +98,7 @@ class SubmissionReconciliationCapability:
                             actor_id=identity.principal.principal_id, source_channel=submission.channel)
                 self._atomic.persist_mutation(
                     submission=updated, expected_submission_version=submission.version,
-                    case=case, expected_case_version=case.version,
+                    case=case, expected_case_version=expected_case_version,
                     event=event, idempotency_key=event_id,
                 )
             else:
@@ -112,10 +112,8 @@ class SubmissionReconciliationCapability:
                 )
         elif updated.state == "submitted" and case.status is not CaseStatus.SUBMITTED:
             raise ValueError(f"Case is not in a reconcilable submission state: {case.status.value}")
-        elif self._atomic is not None:
-            # Failed reconciliation is Submission-only by contract; no Case success mutation.
-            self._submissions.update_if_version(updated, expected_version=submission.version)
         else:
+            # Failed reconciliation is Submission-only by contract; no Case success mutation.
             self._submissions.update_if_version(updated, expected_version=submission.version)
 
         final_case = self._cases.get_owned(case.case_id, identity=identity)
