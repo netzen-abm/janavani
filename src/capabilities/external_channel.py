@@ -30,7 +30,9 @@ class ExternalChannelCapability:
     def get_verified(self, channel_id: str) -> ExternalChannel:
         return require_verified_channel(self._repository, channel_id)
 
-    def discover(self, query: ExternalChannelQuery = ExternalChannelQuery()) -> tuple[ExternalChannel, ...]:
+    def discover(self, query: ExternalChannelQuery | None = None) -> tuple[ExternalChannel, ...]:
+        if query is None:
+            raise ValueError("A channel_id, authority_id, or jurisdiction is required")
         if query.channel_id is not None:
             return (self.get_verified(query.channel_id),)
         if query.authority_id is not None:

@@ -6,8 +6,10 @@ from src.capabilities.civic_action_vertical_slice import (
     CivicActionVerticalSlice,
     CivicActionVerticalSliceDependencies,
 )
+from src.capabilities.external_channel import ExternalChannelCapability
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.core.obligation import ObligationObservation
+from src.storage.repositories.external_channel import InMemoryExternalChannelRepository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 
 
@@ -20,6 +22,7 @@ def _vertical_slice_with_obligation_resolver(resolver: AuthorityBackedObligation
         submission_capability=None,  # type: ignore[arg-type]
         responsibility_capability=None,  # type: ignore[arg-type]
         obligation_capability=ObligationCapability(resolver),
+        external_channel_capability=ExternalChannelCapability(InMemoryExternalChannelRepository()),
         case_repository=None,  # type: ignore[arg-type]
         document_review_repository=None,  # type: ignore[arg-type]
     )

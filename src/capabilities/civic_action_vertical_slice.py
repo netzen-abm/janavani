@@ -2,8 +2,8 @@
 
 This module composes existing provider- and surface-neutral capabilities. It does
 not own Case, Evidence, Authority, Document, Consent, Submission, Responsibility,
-or Obligation semantics. Access surfaces should use this orchestration boundary
-rather than rebuilding the civic-action lifecycle themselves.
+Obligation, or External Channel semantics. Access surfaces should use this
+orchestration boundary rather than rebuilding the civic-action lifecycle themselves.
 """
 from __future__ import annotations
 
@@ -14,9 +14,11 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability
+from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.capabilities.submission import SubmissionCapability, SubmissionRequest
+from src.core.delivery_channel import ExternalChannel
 from src.core.obligation import ObligationResolution
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
@@ -40,6 +42,7 @@ class CivicActionVerticalSliceDependencies:
     submission_capability: SubmissionCapability
     responsibility_capability: ResponsibilityCapability
     obligation_capability: ObligationCapability
+    external_channel_capability: ExternalChannelCapability
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
     artifact_repository: DocumentArtifactRepository | None = None
@@ -74,6 +77,17 @@ class CivicActionVerticalSlice:
     ) -> ObligationResolution:
         """Resolve source-backed obligations for an already identified authority."""
         return self._deps.obligation_capability.resolve(request)
+
+    def discover_external_channels(
+        self,
+        query: ExternalChannelQuery | None = None,
+    ) -> tuple[ExternalChannel, ...]:
+        """Expose only source-backed, currently verified external destinations."""
+        return self._deps.external_channel_capability.discover(query)
+
+    def get_verified_external_channel(self, channel_id: str) -> ExternalChannel:
+        """Select one verified external destination through the shared channel boundary."""
+        return self._deps.external_channel_capability.get_verified(channel_id)
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
