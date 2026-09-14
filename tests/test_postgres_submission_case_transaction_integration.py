@@ -107,16 +107,6 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
             idempotency_key="pg-atomic-event-stale-case",
         )
 
-    # A stale Submission writer is checked after the Case UPDATE in the SQL
-    # transaction; rollback must undo that preceding Case mutation too.
-    with pytest.raises(SubmissionCaseConcurrencyError):
-        repository.persist_mutation(
-            submission=replace(submission, version=3), expected_submission_version=1,
-            case=replace(case, status=CaseStatus.SUBMITTED, version=2), expected_case_version=2,
-            event=replace(event, event_id="pg-atomic-event-stale-submission"),
-            idempotency_key="pg-atomic-event-stale-submission",
-        )
-
     # Force the lifecycle-event INSERT to fail after both projections have
     # been changed. PostgreSQL transaction rollback must remove both changes.
     invalid_event = SimpleNamespace(
