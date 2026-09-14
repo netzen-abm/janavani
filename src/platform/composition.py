@@ -10,6 +10,7 @@ from src.capabilities.constitutional_objection import ConstitutionalObjectionCap
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.external_channel import ExternalChannelCapability
+from src.capabilities.follow_up import FollowUpCapability
 from src.capabilities.obligation import ObligationCapability
 from src.capabilities.responsibility import ResponsibilityCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
@@ -60,6 +61,11 @@ def create_external_channel_capability() -> ExternalChannelCapability:
     return ExternalChannelCapability(InMemoryExternalChannelRepository())
 
 
+def create_follow_up_capability() -> FollowUpCapability:
+    """Create the provider- and surface-neutral follow-up decision capability."""
+    return FollowUpCapability()
+
+
 def create_civic_action_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository,
                                     evidence_repository: EvidenceRepository | None = None) -> CivicActionCapability:
     case_capability = create_case_capability(case_repository)
@@ -77,7 +83,8 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
                                        responsibility_resolver: ResponsibilityResolver | None = None,
                                        obligation_resolver: ObligationResolver | None = None,
                                        obligation_records: dict[str, list[dict[str, object]]] | None = None,
-                                       external_channel_capability: ExternalChannelCapability | None = None) -> CivicActionVerticalSlice:
+                                       external_channel_capability: ExternalChannelCapability | None = None,
+                                       follow_up_capability: FollowUpCapability | None = None) -> CivicActionVerticalSlice:
     """Compose one canonical civic-action slice with shared capability instances."""
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -94,6 +101,7 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
     obligation_capability = create_obligation_capability(obligation)
     channel_capability = external_channel_capability or create_external_channel_capability()
+    follow_up = follow_up_capability or create_follow_up_capability()
     if evidence_capability is None:
         raise ValueError("An evidence repository is required for the canonical civic-action slice")
     return CivicActionVerticalSlice(CivicActionVerticalSliceDependencies(
@@ -102,7 +110,7 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
         submission_capability=submission_capability, responsibility_capability=create_responsibility_capability(resolver),
         obligation_capability=obligation_capability, external_channel_capability=channel_capability,
         case_repository=case_repository, document_review_repository=review_repository,
-        artifact_repository=artifact_repository, blob_store=blob_store))
+        artifact_repository=artifact_repository, blob_store=blob_store, follow_up_capability=follow_up))
 
 
 def create_constitutional_objection_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository,
