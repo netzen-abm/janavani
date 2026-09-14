@@ -2,16 +2,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from hashlib import sha256
 from typing import Protocol
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
-from src.core.civic_case import CaseStatus
+from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus
 from src.core.execution import CapabilityExecutionContext
 from src.core.submission import SubmissionRecord, SubmissionRepository
 from src.core.submission_recovery import reconcile_unknown_submission
 from src.identity.context import IdentityContext
+from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
 
 CAPABILITY_ID = "case:submit"
 RECONCILE_ACTION = "case:reconcile_submission"
@@ -46,23 +47,23 @@ class SubmissionReconciliationCapability:
 
     def __init__(self, case_capability: CivicCaseCapability,
                  submission_repository: SubmissionRepository,
-                 observation_source: SubmissionReconciliationSource) -> None:
+                 observation_source: SubmissionReconciliationSource,
+                 submission_case_transaction_repository: SubmissionCaseTransactionRepository | None = None) -> None:
         self._cases = case_capability
         self._submissions = submission_repository
         self._source = observation_source
+        self._atomic = submission_case_transaction_repository
 
     @staticmethod
-    def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+    def _event_id(submission: SubmissionRecord, observation: SubmissionReconciliationObservation) -> str:
+        digest = sha256(f"{submission.idempotency_key}:{observation.source_ref}:{observation.outcome}".encode()).hexdigest()[:32]
+        return f"event-reconcile-{digest}"
 
     def reconcile(self, submission_id: str, *, identity: IdentityContext,
                   execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         self._validate_execution_context(execution_context, identity, submission_id)
         decision = authorize(AuthorizationRequest(
-            context=identity,
-            capability=CAPABILITY_ID,
-            action=RECONCILE_ACTION,
-            resource_id=submission_id,
+            context=identity, capability=CAPABILITY_ID, action=RECONCILE_ACTION, resource_id=submission_id,
         ))
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to reconcile this submission")
@@ -75,30 +76,45 @@ class SubmissionReconciliationCapability:
 
         observation = self._source.reconcile(submission)
         updated = reconcile_unknown_submission(
-            submission,
-            outcome=observation.outcome,
+            submission, outcome=observation.outcome,
             reconciled_at=observation.observed_at,
             external_reference=observation.external_reference,
         )
-        self._submissions.update_if_version(updated, expected_version=submission.version)
-
         case = self._cases.get_owned(submission.case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
-        if updated.state == "submitted":
-            if case.status in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
+
+        if updated.state == "submitted" and case.status in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
+            if self._atomic is not None:
+                event_id = self._event_id(submission, observation)
+                expected_case_version = case.version
+                event = CaseEvent(
+                    event_id=event_id, case_id=case.case_id, event_type=CaseEventType.SUBMITTED,
+                    occurred_at=observation.observed_at, actor_id=identity.principal.principal_id,
+                    source_channel=submission.channel, source_ref=observation.source_ref,
+                    notes="Submission outcome reconciled from an independent observation",
+                )
+                case.submit(event_id=event_id, occurred_at=observation.observed_at,
+                            actor_id=identity.principal.principal_id, source_channel=submission.channel)
+                self._atomic.persist_mutation(
+                    submission=updated, expected_submission_version=submission.version,
+                    case=case, expected_case_version=expected_case_version,
+                    event=event, idempotency_key=event_id,
+                )
+            else:
+                self._submissions.update_if_version(updated, expected_version=submission.version)
                 case_context = self._child_case_context(execution_context, identity, case.case_id)
                 self._cases.transition(
-                    case.case_id,
-                    action="case:submit",
-                    identity=identity,
-                    source_channel=submission.channel,
-                    source_ref=observation.source_ref,
+                    case.case_id, action="case:submit", identity=identity,
+                    source_channel=submission.channel, source_ref=observation.source_ref,
                     notes="Submission outcome reconciled from an independent observation",
                     execution_context=case_context,
                 )
-            elif case.status is not CaseStatus.SUBMITTED:
-                raise ValueError(f"Case is not in a reconcilable submission state: {case.status.value}")
+        elif updated.state == "submitted" and case.status is not CaseStatus.SUBMITTED:
+            raise ValueError(f"Case is not in a reconcilable submission state: {case.status.value}")
+        else:
+            # Failed reconciliation is Submission-only by contract; no Case success mutation.
+            self._submissions.update_if_version(updated, expected_version=submission.version)
 
         final_case = self._cases.get_owned(case.case_id, identity=identity)
         if final_case is None:
@@ -125,18 +141,9 @@ class SubmissionReconciliationCapability:
         if parent is None:
             return None
         return CapabilityExecutionContext.for_capability(
-            identity,
-            capability_id="JNV-CIVIC-COMPLAINT",
-            action="case:submit",
-            surface=parent.surface,
-            resource_id=case_id,
-            correlation_id=parent.correlation_id,
-            parent_operation_id=parent.operation_id,
-            authorization_ref=parent.authorization_ref,
-            consent_refs=parent.consent_refs,
-            policy_ref=parent.policy_ref,
-            risk_level=parent.risk_level,
-            side_effect_class=parent.side_effect_class,
-            provenance=parent.provenance,
-            metadata=parent.metadata,
+            identity, capability_id="JNV-CIVIC-COMPLAINT", action="case:submit",
+            surface=parent.surface, resource_id=case_id, correlation_id=parent.correlation_id,
+            parent_operation_id=parent.operation_id, authorization_ref=parent.authorization_ref,
+            consent_refs=parent.consent_refs, policy_ref=parent.policy_ref, risk_level=parent.risk_level,
+            side_effect_class=parent.side_effect_class, provenance=parent.provenance, metadata=parent.metadata,
         )

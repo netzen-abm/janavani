@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,7 +21,7 @@ DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
 
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
-def test_atomic_submission_case_mutation_and_stale_writer_rejection():
+def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_replay():
     psycopg = pytest.importorskip("psycopg")
     canonical_sql = CANONICAL_MIGRATION.read_text(encoding="utf-8")
     idempotency_sql = IDEMPOTENCY_MIGRATION.read_text(encoding="utf-8")
@@ -88,7 +89,7 @@ def test_atomic_submission_case_mutation_and_stale_writer_rejection():
             cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (event.event_id,))
             assert cursor.fetchone()[0] == 1
 
-    replay = repository.persist_mutation(
+    replay = PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
         submission=submission, expected_submission_version=1,
         case=case, expected_case_version=1, event=event,
         idempotency_key=event.event_id,
@@ -97,13 +98,57 @@ def test_atomic_submission_case_mutation_and_stale_writer_rejection():
     assert replay.case_version == 2
     assert replay.submission_version == 2
 
+    # A stale Case writer must not mutate either projection.
     with pytest.raises(SubmissionCaseConcurrencyError):
         repository.persist_mutation(
             submission=replace(submission, version=3), expected_submission_version=2,
             case=replace(case, version=1), expected_case_version=1,
-            event=replace(event, event_id="pg-atomic-event-stale"),
-            idempotency_key="pg-atomic-event-stale",
+            event=replace(event, event_id="pg-atomic-event-stale-case"),
+            idempotency_key="pg-atomic-event-stale-case",
         )
+
+    # Force the lifecycle-event INSERT to fail after both projections have
+    # been changed. PostgreSQL transaction rollback must remove both changes.
+    invalid_event = SimpleNamespace(
+        event_id="pg-atomic-event-rollback",
+        case_id=case_id,
+        event_type=SimpleNamespace(value=None),
+        occurred_at="2026-09-14T00:02:00+00:00",
+        actor_id="pg-atomic-user",
+        source_channel="telegram",
+        source_ref=None,
+        notes="forced rollback test",
+    )
+    with pytest.raises(Exception):
+        repository.persist_mutation(
+            submission=replace(submission, state="acknowledged", acknowledged_at="2026-09-14T00:02:00+00:00", version=3),
+            expected_submission_version=2,
+            case=replace(case, status=CaseStatus.ACKNOWLEDGED, version=3),
+            expected_case_version=2,
+            event=invalid_event,
+            idempotency_key=invalid_event.event_id,
+        )
+
+    with psycopg.connect(DSN) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status, version FROM civic_cases WHERE case_id = %s", (case_id,))
+            assert cursor.fetchone() == ("submitted", 2)
+            cursor.execute("SELECT state, version FROM civic_case_submissions WHERE submission_id = %s", (submission_id,))
+            assert cursor.fetchone() == ("submitted", 2)
+            cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (invalid_event.event_id,))
+            assert cursor.fetchone()[0] == 0
+
+    # A fresh repository instance after the committed transaction must still
+    # converge on the exact durable state through idempotent replay.
+    restarted = PostgresSubmissionCaseTransactionRepository(dsn=DSN)
+    replay_after_restart = restarted.persist_mutation(
+        submission=submission, expected_submission_version=1,
+        case=case, expected_case_version=1, event=event,
+        idempotency_key=event.event_id,
+    )
+    assert replay_after_restart.idempotent_replay is True
+    assert replay_after_restart.case_version == 2
+    assert replay_after_restart.submission_version == 2
 
     with psycopg.connect(DSN) as connection:
         with connection.cursor() as cursor:
