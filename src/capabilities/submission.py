@@ -168,9 +168,13 @@ class SubmissionCapability:
         else:
             self._save(submitting)
         submission = submitting
-        begin_context = self._child_case_context(execution_context, identity, request.case_id, "case:begin_submission")
-        self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
-                               source_channel=request.source_channel, execution_context=begin_context)
+
+        # A failed retry resumes delivery while the Case remains SUBMITTING.
+        # Only the first attempt performs the lifecycle transition from READY.
+        if not replay:
+            begin_context = self._child_case_context(execution_context, identity, request.case_id, "case:begin_submission")
+            self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
+                                   source_channel=request.source_channel, execution_context=begin_context)
 
         if self._delivery_transport is not None:
             try:
