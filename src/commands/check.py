@@ -1,34 +1,44 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from storage.repositories import CivicCaseRepository
+from capabilities.civic_case import CivicCaseCapability
+from core.civic_case import CivicCase
+from identity.context import IdentityContext
+from identity.principal import Principal
 
 
-def _case_repository(context: ContextTypes.DEFAULT_TYPE) -> CivicCaseRepository:
-    dependencies = context.application.bot_data.get("telegram_generation_dependencies")
-    if dependencies is None:
-        raise RuntimeError("Telegram case dependencies were not composed")
-    return dependencies.case_repository
+def _case_capability(context: ContextTypes.DEFAULT_TYPE) -> CivicCaseCapability:
+    capability = context.application.bot_data.get("civic_case_capability")
+    if capability is None:
+        raise RuntimeError("Telegram civic case capability was not composed")
+    return capability
 
 
-def _owned_case(update: Update, repository: CivicCaseRepository, case_id: str):
-    case = repository.get(case_id)
-    if case is None:
-        return None
-
+def _telegram_identity(update: Update) -> IdentityContext:
     telegram_user_id = getattr(update.effective_user, "id", None)
-    expected_actor = f"telegram:{telegram_user_id}" if telegram_user_id is not None else None
-    if expected_actor is None or case.created_by != expected_actor:
-        return None
-    return case
+    if telegram_user_id is None:
+        raise ValueError("Telegram user identity is required")
+    return IdentityContext(
+        principal=Principal(
+            principal_id=f"telegram:{telegram_user_id}",
+            interface="telegram",
+        )
+    )
+
+
+def _owned_case(
+    update: Update,
+    capability: CivicCaseCapability,
+    case_id: str,
+) -> CivicCase | None:
+    return capability.get_owned(case_id, identity=_telegram_identity(update))
 
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show the current user's canonical Case status.
 
-    This deliberately replaces the legacy JSONL complaint lookup. A Case is
-    returned only when its canonical created_by value matches the Telegram
-    principal for the current interaction.
+    Case reads are routed through the shared CivicCase capability rather than
+    accessing the persistence repository directly from the Telegram adapter.
     """
     if not context.args:
         await update.message.reply_text(
@@ -42,7 +52,7 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        case = _owned_case(update, _case_repository(context), case_id)
+        case = _owned_case(update, _case_capability(context), case_id)
     except Exception:
         await update.message.reply_text("⚠️ Case tracking is temporarily unavailable.")
         return
