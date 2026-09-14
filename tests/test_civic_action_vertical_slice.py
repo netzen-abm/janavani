@@ -45,7 +45,7 @@ def identity() -> IdentityContext:
     )
 
 
-def build_slice():
+def build_slice(external_channel_capability: ExternalChannelCapability | None = None):
     cases = InMemoryCivicCaseRepository()
     authorities = InMemoryAuthorityRepository([
         AuthorityRecord(
@@ -73,6 +73,7 @@ def build_slice():
         evidence_repository=evidence,
         document_review_repository=reviews,
         artifact_repository=artifacts,
+        external_channel_capability=external_channel_capability,
     )
 
     case = case_capability.create(
@@ -185,11 +186,11 @@ def test_vertical_slice_exposes_only_verified_external_channels():
             verification_status="UNVERIFIED",
         ),
     ))
-    slice_, _, _, _, _ = build_slice()
-    # Replace only the channel capability; delivery remains owned by SubmissionCapability.
-    slice_._deps = type(slice_._deps)(
-        **{**slice_._deps.__dict__, "external_channel_capability": ExternalChannelCapability(channels)}
-    )
+    slice_, _, _, _, _ = build_slice(ExternalChannelCapability(channels))
 
-    discovered = slice_.discover_external_channels()
+    discovered = slice_.discover_external_channels(
+        query=__import__("src.capabilities.external_channel", fromlist=["ExternalChannelQuery"]).ExternalChannelQuery(
+            authority_id="office-1"
+        )
+    )
     assert [channel.channel_id for channel in discovered] == ["channel-verified"]
