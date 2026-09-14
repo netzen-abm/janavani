@@ -3,10 +3,12 @@ from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlic
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
+from src.capabilities.external_channel import ExternalChannelCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.civic_case import CaseType
+from src.core.delivery_channel import ExternalChannel
 from src.core.evidence import EvidenceSource
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
@@ -17,6 +19,7 @@ from src.storage.repositories.consent import InMemoryConsentRepository
 from src.storage.repositories.document_artifact import InMemoryDocumentArtifactRepository
 from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
+from src.storage.repositories.external_channel import InMemoryExternalChannelRepository
 
 
 class FakeTransport:
@@ -158,3 +161,35 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
             identity=actor,
             explicit_user_approval=False,
         )
+
+
+def test_vertical_slice_exposes_only_verified_external_channels():
+    channels = InMemoryExternalChannelRepository((
+        ExternalChannel(
+            channel_id="channel-verified",
+            authority_id="office-1",
+            channel_type="portal",
+            destination_ref="https://example.gov/submit",
+            jurisdiction="Bengaluru",
+            source_ref="source:authority-directory",
+            verified_at="2026-09-14T10:00:00Z",
+        ),
+        ExternalChannel(
+            channel_id="channel-unverified",
+            authority_id="office-1",
+            channel_type="email",
+            destination_ref="mailto:example@example.gov",
+            jurisdiction="Bengaluru",
+            source_ref="source:unverified",
+            verified_at="2026-09-14T10:00:00Z",
+            verification_status="UNVERIFIED",
+        ),
+    ))
+    slice_, _, _, _, _ = build_slice()
+    # Replace only the channel capability; delivery remains owned by SubmissionCapability.
+    slice_._deps = type(slice_._deps)(
+        **{**slice_._deps.__dict__, "external_channel_capability": ExternalChannelCapability(channels)}
+    )
+
+    discovered = slice_.discover_external_channels()
+    assert [channel.channel_id for channel in discovered] == ["channel-verified"]
