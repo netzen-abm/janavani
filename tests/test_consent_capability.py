@@ -7,10 +7,10 @@ from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
 
 
-def _identity(*capabilities: str) -> IdentityContext:
+def _identity(principal_id: str = "telegram:12345", *capabilities: str) -> IdentityContext:
     return IdentityContext(
         principal=Principal(
-            principal_id="telegram:12345",
+            principal_id=principal_id,
             identity_mode=IdentityMode.ANONYMOUS,
             interface="telegram",
             capabilities=frozenset(capabilities),
@@ -41,7 +41,7 @@ def test_record_submission_consent_persists_canonical_consent_and_advances_case(
     result = capability.record_submission_consent(
         "JV-001",
         scope="office:office-1",
-        identity=_identity("case:consent", "case:write", "case:review"),
+        identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"),
     )
 
     assert result.consent.subject_id == "telegram:12345"
@@ -65,7 +65,7 @@ def test_record_submission_consent_denies_cross_principal_case() -> None:
         capability.record_submission_consent(
             "JV-001",
             scope="office:office-1",
-            identity=_identity("case:consent", "case:write", "case:review"),
+            identity=_identity("telegram:99999", "case:consent", "case:write", "case:review"),
         )
     except LookupError:
         pass
@@ -85,7 +85,7 @@ def test_record_submission_consent_requires_scope() -> None:
         capability.record_submission_consent(
             "JV-001",
             scope=" ",
-            identity=_identity("case:consent", "case:write", "case:review"),
+            identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"),
         )
     except ValueError:
         pass
