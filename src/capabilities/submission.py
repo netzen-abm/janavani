@@ -139,25 +139,13 @@ class SubmissionCapability:
             source_ref=source_ref,
             notes=notes,
         )
-        if action == "case:begin_submission":
-            case.begin_submission(event_id=event_id, occurred_at=now,
-                                  actor_id=identity.principal.principal_id, source_channel=source_channel)
-        elif action == "case:submit":
-            case.submit(event_id=event_id, occurred_at=now,
-                        actor_id=identity.principal.principal_id, source_channel=source_channel)
-        elif action == "case:acknowledge":
-            case.acknowledge(event_id=event_id, occurred_at=now,
-                             actor_id=identity.principal.principal_id, source_channel=source_channel,
-                             source_ref=source_ref, notes=notes)
-        else:
-            raise ValueError(f"Unsupported atomic Submission-Case action: {action}")
         self._atomic.persist_mutation(
             submission=submission,
             expected_submission_version=expected_submission_version,
             case=case,
             expected_case_version=expected_case_version,
             event=event,
-            idempotency_key=submission.idempotency_key or submission.submission_id,
+            idempotency_key=event_id,
         )
 
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord,
@@ -247,9 +235,7 @@ class SubmissionCapability:
             self._save(submitting, expected_version=expected_version)
             submission = submitting
         elif submission.state == "submitting":
-            if not replay:
-                # Atomic first-attempt path already persisted SUBMITTING.
-                pass
+            pass
         else:
             raise RuntimeError(f"Unsupported submission state: {submission.state}")
 
