@@ -72,3 +72,7 @@ This gate does not authorize:
 - Tool Gateway implementation
 - authorization-policy redesign
 - a second Submission or Case persistence path
+
+## Verification checkpoint
+
+The first exact-head PR run exposed eight functional failures. The failures were traced to the initial integration branch behavior around the existing non-atomic compatibility path; the corrected branch preserves the legacy development/test path while activating the atomic boundary only when explicitly injected. The next exact-head run is authoritative for functional verification.
