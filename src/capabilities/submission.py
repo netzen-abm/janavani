@@ -1,6 +1,7 @@
 """Canonical, provider- and surface-neutral submission capability."""
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -115,6 +116,12 @@ class SubmissionCapability:
         if evidence.status != "ACTIVE":
             raise ValueError("Acknowledgement evidence is not active")
 
+    @staticmethod
+    def _synchronize_case_projection(target: CivicCase, projection: CivicCase) -> None:
+        """Copy the committed projection into the caller object after success only."""
+        for field_name, value in projection.__dict__.items():
+            setattr(target, field_name, deepcopy(value))
+
     def _atomic_case_mutation(self, *, submission: SubmissionRecord, expected_submission_version: int,
                               case: CivicCase, expected_case_version: int, action: str,
                               identity: IdentityContext, source_channel: str | None,
@@ -129,21 +136,23 @@ class SubmissionCapability:
         event = CaseEvent(event_id=event_id, case_id=case.case_id, event_type=event_type,
                           occurred_at=now, actor_id=identity.principal.principal_id,
                           source_channel=source_channel, source_ref=source_ref, notes=notes)
+        projection = deepcopy(case)
         if action == "case:begin_submission":
-            case.begin_submission(event_id=event_id, occurred_at=now,
-                                  actor_id=identity.principal.principal_id, source_channel=source_channel)
+            projection.begin_submission(event_id=event_id, occurred_at=now,
+                                        actor_id=identity.principal.principal_id, source_channel=source_channel)
         elif action == "case:submit":
-            case.submit(event_id=event_id, occurred_at=now,
-                        actor_id=identity.principal.principal_id, source_channel=source_channel)
+            projection.submit(event_id=event_id, occurred_at=now,
+                              actor_id=identity.principal.principal_id, source_channel=source_channel)
         elif action == "case:acknowledge":
-            case.acknowledge(event_id=event_id, occurred_at=now,
-                             actor_id=identity.principal.principal_id, source_channel=source_channel,
-                             source_ref=source_ref, notes=notes)
+            projection.acknowledge(event_id=event_id, occurred_at=now,
+                                   actor_id=identity.principal.principal_id, source_channel=source_channel,
+                                   source_ref=source_ref, notes=notes)
         else:
             raise ValueError(f"Unsupported atomic Submission-Case action: {action}")
         self._atomic.persist_mutation(submission=submission, expected_submission_version=expected_submission_version,
-                                      case=case, expected_case_version=expected_case_version, event=event,
+                                      case=projection, expected_case_version=expected_case_version, event=event,
                                       idempotency_key=event_id)
+        self._synchronize_case_projection(case, projection)
 
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord, evidence_id: str,
                      identity: IdentityContext, source_channel: str | None, notes: str | None,
