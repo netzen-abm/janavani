@@ -9,10 +9,12 @@ from src.capabilities.consent import ConsentCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.evidence import EvidenceCapability
+from src.capabilities.obligation import ObligationCapability
 from src.capabilities.responsibility import ResponsibilityCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
+from src.core.obligation import ObligationResolver
 from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
@@ -22,6 +24,7 @@ from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_review import DocumentReviewRepository, InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.provider import create_civic_case_repository
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.storage.repositories.submission_provider import create_submission_repository
 
@@ -46,6 +49,10 @@ def create_responsibility_capability(resolver: ResponsibilityResolver) -> Respon
     return ResponsibilityCapability(resolver)
 
 
+def create_obligation_capability(resolver: ObligationResolver) -> ObligationCapability:
+    return ObligationCapability(resolver)
+
+
 def create_civic_action_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository,
                                     evidence_repository: EvidenceRepository | None = None) -> CivicActionCapability:
     case_capability = create_case_capability(case_repository)
@@ -60,7 +67,9 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
                                        evidence_repository: EvidenceRepository | None = None,
                                        document_review_repository: DocumentReviewRepository | None = None,
                                        artifact_repository=None, blob_store=None,
-                                       responsibility_resolver: ResponsibilityResolver | None = None) -> CivicActionVerticalSlice:
+                                       responsibility_resolver: ResponsibilityResolver | None = None,
+                                       obligation_resolver: ObligationResolver | None = None,
+                                       obligation_records: dict[str, list[dict[str, object]]] | None = None) -> CivicActionVerticalSlice:
     """Compose one canonical civic-action slice with shared capability instances."""
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -74,14 +83,16 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
     submission_capability = SubmissionCapability(case_capability, consent_repository, submission_transport,
                                                  submission_repository=submission_repo)
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
+    obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
+    obligation_capability = create_obligation_capability(obligation)
     if evidence_capability is None:
         raise ValueError("An evidence repository is required for the canonical civic-action slice")
     return CivicActionVerticalSlice(CivicActionVerticalSliceDependencies(
         case_capability=case_capability, civic_action_capability=civic_action_capability,
         evidence_capability=evidence_capability, document_review_capability=document_review_capability,
         submission_capability=submission_capability, responsibility_capability=create_responsibility_capability(resolver),
-        case_repository=case_repository, document_review_repository=review_repository,
-        artifact_repository=artifact_repository, blob_store=blob_store))
+        obligation_capability=obligation_capability, case_repository=case_repository,
+        document_review_repository=review_repository, artifact_repository=artifact_repository, blob_store=blob_store))
 
 
 def create_constitutional_objection_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository,
