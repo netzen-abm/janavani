@@ -17,7 +17,6 @@ from src.core.submission import SubmissionRecord, SubmissionRepository
 from src.delivery.contract import (
     DeliveryArtifactResolver,
     DeliveryOutcome,
-    DeliveryReceipt,
     DeliveryRequest,
     DeliveryTransport,
     DeliveryTransportError,
@@ -86,7 +85,7 @@ class SubmissionCapability:
 
     @staticmethod
     def _event_id(submission: SubmissionRecord, stage: str) -> str:
-        digest = sha256(f"{submission.idempotency_key}:{stage}".encode("utf-8")).hexdigest()[:32]
+        digest = sha256(f"{submission.idempotency_key}:{stage}".encode()).hexdigest()[:32]
         return f"event-submission-{stage}-{digest}"
 
     def _save(self, record: SubmissionRecord, *, expected_version: int | None = None) -> SubmissionRecord:
@@ -116,41 +115,38 @@ class SubmissionCapability:
         if evidence.status != "ACTIVE":
             raise ValueError("Acknowledgement evidence is not active")
 
-    def _atomic_case_mutation(self, *, submission: SubmissionRecord,
-                              expected_submission_version: int, case: CivicCase,
-                              expected_case_version: int, action: str,
+    def _atomic_case_mutation(self, *, submission: SubmissionRecord, expected_submission_version: int,
+                              case: CivicCase, expected_case_version: int, action: str,
                               identity: IdentityContext, source_channel: str | None,
                               source_ref: str | None = None, notes: str | None = None) -> None:
         if self._atomic is None:
             raise RuntimeError("Atomic Submission-Case repository is required")
         now = self._now()
         event_id = self._event_id(submission, action.removeprefix("case:"))
-        event = CaseEvent(
-            event_id=event_id,
-            case_id=case.case_id,
-            event_type={
-                "case:begin_submission": CaseEventType.SUBMITTING,
-                "case:submit": CaseEventType.SUBMITTED,
-                "case:acknowledge": CaseEventType.ACKNOWLEDGED,
-            }[action],
-            occurred_at=now,
-            actor_id=identity.principal.principal_id,
-            source_channel=source_channel,
-            source_ref=source_ref,
-            notes=notes,
-        )
-        self._atomic.persist_mutation(
-            submission=submission,
-            expected_submission_version=expected_submission_version,
-            case=case,
-            expected_case_version=expected_case_version,
-            event=event,
-            idempotency_key=event_id,
-        )
+        event_type = {"case:begin_submission": CaseEventType.SUBMITTING,
+                      "case:submit": CaseEventType.SUBMITTED,
+                      "case:acknowledge": CaseEventType.ACKNOWLEDGED}[action]
+        event = CaseEvent(event_id=event_id, case_id=case.case_id, event_type=event_type,
+                          occurred_at=now, actor_id=identity.principal.principal_id,
+                          source_channel=source_channel, source_ref=source_ref, notes=notes)
+        if action == "case:begin_submission":
+            case.begin_submission(event_id=event_id, occurred_at=now,
+                                  actor_id=identity.principal.principal_id, source_channel=source_channel)
+        elif action == "case:submit":
+            case.submit(event_id=event_id, occurred_at=now,
+                        actor_id=identity.principal.principal_id, source_channel=source_channel)
+        elif action == "case:acknowledge":
+            case.acknowledge(event_id=event_id, occurred_at=now,
+                             actor_id=identity.principal.principal_id, source_channel=source_channel,
+                             source_ref=source_ref, notes=notes)
+        else:
+            raise ValueError(f"Unsupported atomic Submission-Case action: {action}")
+        self._atomic.persist_mutation(submission=submission, expected_submission_version=expected_submission_version,
+                                      case=case, expected_case_version=expected_case_version, event=event,
+                                      idempotency_key=event_id)
 
-    def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord,
-                     evidence_id: str, identity: IdentityContext,
-                     source_channel: str | None, notes: str | None,
+    def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord, evidence_id: str,
+                     identity: IdentityContext, source_channel: str | None, notes: str | None,
                      execution_context: CapabilityExecutionContext | None = None) -> None:
         self._acknowledgement_evidence(case, evidence_id)
         acknowledged_at = self._now()
@@ -164,10 +160,10 @@ class SubmissionCapability:
                                        source_channel=source_channel, source_ref=evidence_id, notes=notes)
         else:
             self._save(updated, expected_version=submission.version)
-            case_context = self._child_case_context(execution_context, identity, case.case_id, "case:acknowledge")
             self._cases.transition(case.case_id, action="case:acknowledge", identity=identity,
-                                   source_channel=source_channel, source_ref=evidence_id,
-                                   notes=notes, execution_context=case_context)
+                                   source_channel=source_channel, source_ref=evidence_id, notes=notes,
+                                   execution_context=self._child_case_context(execution_context, identity,
+                                                                              case.case_id, "case:acknowledge"))
 
     def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
                explicit_user_approval: bool,
@@ -188,24 +184,18 @@ class SubmissionCapability:
             raise PermissionError("Identity is not authorized to submit this case")
         require_consent(self._consents, ConsentRequirement(subject_id=identity.principal.principal_id,
                                                             purpose=CONSENT_PURPOSE, scope=request.consent_scope))
-
         key = request.idempotency_key or f"subreq_{uuid4().hex}"
-        proposed = SubmissionRecord.new(
-            submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
-            destination_ref=request.destination_ref, document_ref=request.document_id,
-            channel=request.source_channel or "shared", idempotency_key=key,
-        )
-
+        proposed = SubmissionRecord.new(submission_id=f"sub_{uuid4().hex}", case_id=case.case_id,
+                                         destination_ref=request.destination_ref, document_ref=request.document_id,
+                                         channel=request.source_channel or "shared", state="submitting", idempotency_key=key)
         if self._atomic is not None and self._submissions is not None:
             submission = self._submissions.get_by_idempotency_key(key)
             replay = submission is not None
             if submission is None:
-                submitting = replace(proposed, state="submitting", updated_at=self._now(), version=1)
-                self._atomic_case_mutation(submission=submitting, expected_submission_version=0,
-                                           case=case, expected_case_version=case.version,
-                                           action="case:begin_submission", identity=identity,
-                                           source_channel=request.source_channel)
-                submission = submitting
+                self._atomic_case_mutation(submission=proposed, expected_submission_version=0, case=case,
+                                           expected_case_version=case.version, action="case:begin_submission",
+                                           identity=identity, source_channel=request.source_channel)
+                submission = proposed
             elif submission.state in {"submitted", "acknowledged"}:
                 final_case = self._cases.get_owned(request.case_id, identity=identity)
                 if final_case is None:
@@ -227,18 +217,23 @@ class SubmissionCapability:
                     raise RuntimeError("Submission already exists for this idempotency key and requires reconciliation")
                 if submission.state != "failed":
                     raise RuntimeError(f"Submission is not retryable: {submission.state}")
-
-        if submission.state == "failed":
-            expected_version = submission.version
+        if submission.state == "created":
             submitting = replace(submission, state="submitting", attempted_at=self._now(),
-                                 updated_at=self._now(), version=expected_version + 1)
-            self._save(submitting, expected_version=expected_version)
+                                 updated_at=self._now(), version=submission.version + 1)
+            self._save(submitting, expected_version=submission.version)
+            if self._atomic is None:
+                self._cases.transition(request.case_id, action="case:begin_submission", identity=identity,
+                                       source_channel=request.source_channel,
+                                       execution_context=self._child_case_context(execution_context, identity,
+                                                                                  request.case_id, "case:begin_submission"))
             submission = submitting
-        elif submission.state == "submitting":
-            pass
-        else:
+        elif submission.state == "failed":
+            submitting = replace(submission, state="submitting", attempted_at=self._now(),
+                                 updated_at=self._now(), version=submission.version + 1)
+            self._save(submitting, expected_version=submission.version)
+            submission = submitting
+        elif submission.state != "submitting":
             raise RuntimeError(f"Unsupported submission state: {submission.state}")
-
         if self._delivery_transport is not None:
             try:
                 if request.artifact_id is None:
@@ -254,8 +249,8 @@ class SubmissionCapability:
             try:
                 delivery_receipt = self._delivery_transport.deliver(DeliveryRequest(
                     submission_id=submission.submission_id, idempotency_key=submission.idempotency_key,
-                    case_id=case.case_id, document_id=request.document_id,
-                    destination_ref=request.destination_ref, channel=request.source_channel or "shared", artifact=artifact))
+                    case_id=case.case_id, document_id=request.document_id, destination_ref=request.destination_ref,
+                    channel=request.source_channel or "shared", artifact=artifact))
             except DeliveryTransportError as exc:
                 if exc.outcome is DeliveryOutcome.UNKNOWN:
                     unknown = replace(submission, state="unknown", error_code="unknown_transport_outcome",
@@ -297,7 +292,6 @@ class SubmissionCapability:
             external_reference = receipt.acknowledgement_ref
             evidence_id = None
             notes = receipt.notes
-
         submitted_at = self._now()
         submitted = replace(submission, state="submitted", submitted_at=submitted_at,
                             external_reference=external_reference, updated_at=submitted_at, version=submission.version + 1)
@@ -307,19 +301,20 @@ class SubmissionCapability:
                 raise LookupError("Case not found before atomic submission outcome")
             self._atomic_case_mutation(submission=submitted, expected_submission_version=submission.version,
                                        case=fresh_case, expected_case_version=fresh_case.version,
-                                       action="case:submit", identity=identity,
-                                       source_channel=request.source_channel)
+                                       action="case:submit", identity=identity, source_channel=request.source_channel)
         else:
             self._save(submitted, expected_version=submission.version)
-            submit_context = self._child_case_context(execution_context, identity, request.case_id, "case:submit")
             self._cases.transition(request.case_id, action="case:submit", identity=identity,
-                                   source_channel=request.source_channel, execution_context=submit_context)
+                                   source_channel=request.source_channel,
+                                   execution_context=self._child_case_context(execution_context, identity,
+                                                                              request.case_id, "case:submit"))
         if evidence_id:
             acknowledged_case = self._cases.get_owned(request.case_id, identity=identity)
             if acknowledged_case is None:
                 raise LookupError("Case not found before acknowledgement")
-            self._acknowledge(case=acknowledged_case, submission=submitted, evidence_id=evidence_id, identity=identity,
-                              source_channel=request.source_channel, notes=notes, execution_context=execution_context)
+            self._acknowledge(case=acknowledged_case, submission=submitted, evidence_id=evidence_id,
+                              identity=identity, source_channel=request.source_channel, notes=notes,
+                              execution_context=execution_context)
         final_case = self._cases.get_owned(request.case_id, identity=identity)
         if final_case is None:
             raise LookupError("Case not found after submission")
@@ -367,9 +362,9 @@ class SubmissionCapability:
         if parent is None:
             return None
         return CapabilityExecutionContext.for_capability(
-            identity, capability_id="JNV-CIVIC-COMPLAINT", action=action,
-            surface=parent.surface, resource_id=case_id, correlation_id=parent.correlation_id,
-            parent_operation_id=parent.operation_id, authorization_ref=parent.authorization_ref,
-            consent_refs=parent.consent_refs, policy_ref=parent.policy_ref, risk_level=parent.risk_level,
-            side_effect_class=parent.side_effect_class, provenance=parent.provenance, metadata=parent.metadata,
+            identity, capability_id="JNV-CIVIC-COMPLAINT", action=action, surface=parent.surface,
+            resource_id=case_id, correlation_id=parent.correlation_id, parent_operation_id=parent.operation_id,
+            authorization_ref=parent.authorization_ref, consent_refs=parent.consent_refs,
+            policy_ref=parent.policy_ref, risk_level=parent.risk_level, side_effect_class=parent.side_effect_class,
+            provenance=parent.provenance, metadata=parent.metadata,
         )
