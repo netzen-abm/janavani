@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.civic_case import (
     CivicCaseRepository,
     InMemoryCivicCaseRepository,
@@ -23,18 +24,25 @@ class CivicCaseProviderConfigurationError(RuntimeError):
 def create_civic_case_repository(
     provider: str | None = None,
     *,
+    composition: ProviderComposition | None = None,
     connection_factory: Any = None,
     dsn: str | None = None,
     supabase_client: Any = None,
 ) -> CivicCaseRepository:
     """Build the configured Civic Case repository.
 
+    When a shared ``composition`` is supplied, its Civic Case decision is
+    authoritative. The legacy direct provider argument remains supported for
+    compatibility and tests.
+
     The default is ``memory`` so a deployment cannot silently acquire a
     durable external dependency. Durable providers must be selected
     explicitly with ``JANAVANI_CASE_REPOSITORY_PROVIDER`` or ``provider``.
     """
     selected = (
-        provider
+        composition.provider_for("civic_case")
+        if composition is not None
+        else provider
         or os.getenv("JANAVANI_CASE_REPOSITORY_PROVIDER", "memory")
     ).strip().lower()
 
