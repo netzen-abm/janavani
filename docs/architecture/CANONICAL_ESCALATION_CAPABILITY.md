@@ -38,9 +38,11 @@ No legacy escalation service may become a hidden alternative to these boundaries
 
 ## Legacy implementation status
 
-The repository still contains `src/services/escalation_rules.py`, `escalation_engine.py`, and `escalation_runner.py`. They are legacy code, not the canonical escalation boundary. They currently read and rewrite `database/ratings.jsonl`, derive category-based target lists, and change a complaint status while reporting `Escalated`.
+The historical implementations `src/services/escalation_rules.py`, `src/services/escalation_engine.py`, and the operational behavior of `src/services/escalation_runner.py` have been quarantined after repository-wide searches found no additional caller beyond the legacy chain itself.
 
-They must therefore not be wired into access surfaces or treated as the source of truth for the canonical Case lifecycle. They should remain available for historical recovery until their behavior is either migrated to canonical capabilities or explicitly retired after evidence.
+Their original implementations are preserved under `archive/legacy/escalation/` for historical recovery. The active service paths no longer contain the historical category-target rules or JSONL mutation logic. The remaining compatibility entry points fail closed and direct callers to the canonical capability.
+
+Deletion of the archived copies remains deferred under the repository's archive-first rule. Retirement evidence should be extended if future surfaces or deployment configuration reveal any historical dependency.
 
 ## Safety invariant
 
