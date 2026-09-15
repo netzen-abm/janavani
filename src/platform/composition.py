@@ -21,6 +21,9 @@ from src.core.obligation import ObligationResolver
 from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.provider_composition import ProviderComposition
+from src.storage.repositories.accountability_feedback_provider import (
+    create_accountability_feedback_repository,
+)
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -42,6 +45,17 @@ def create_provider_composition() -> ProviderComposition:
 def create_case_repository(*, provider_composition: ProviderComposition | None = None) -> CivicCaseRepository:
     composition = provider_composition or create_provider_composition()
     return create_civic_case_repository(composition=composition)
+
+
+def create_accountability_feedback_repository(
+    *, provider_composition: ProviderComposition | None = None,
+    path=None,
+):
+    """Create feedback persistence from the shared provider plan."""
+    composition = provider_composition or create_provider_composition()
+    return create_accountability_feedback_repository(
+        composition=composition, path=path
+    )
 
 
 def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
