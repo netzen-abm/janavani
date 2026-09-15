@@ -63,6 +63,8 @@ pub enum CaseEventType {
     Resolved,
     Escalated,
     Correction,
+    CitizenVerified,
+    CitizenReopened,
     Closed,
     Archived,
 }
@@ -194,15 +196,7 @@ impl CivicCase {
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Review;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::ReviewStarted,
-            actor_id,
-            None,
-            None,
-            None,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::ReviewStarted, actor_id, None, None, None)
     }
 
     pub fn mark_ready(
@@ -212,9 +206,7 @@ impl CivicCase {
         actor_id: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if !matches!(self.status, CaseStatus::Review | CaseStatus::Ready) {
-            return Err(DomainError::InvalidOperation(
-                "Cannot approve this case status",
-            ));
+            return Err(DomainError::InvalidOperation("Cannot approve this case status"));
         }
         self.ensure_content()?;
         if self.consent_refs.is_empty() {
@@ -223,15 +215,7 @@ impl CivicCase {
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Ready;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Approved,
-            actor_id,
-            None,
-            None,
-            None,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Approved, actor_id, None, None, None)
     }
 
     pub fn begin_submission(
@@ -241,22 +225,11 @@ impl CivicCase {
         actor_id: Option<String>,
         source_channel: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        self.require_status(
-            CaseStatus::Ready,
-            "Only a ready case can begin submission",
-        )?;
+        self.require_status(CaseStatus::Ready, "Only a ready case can begin submission")?;
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Submitting;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Submitting,
-            actor_id,
-            source_channel,
-            None,
-            None,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Submitting, actor_id, source_channel, None, None)
     }
 
     pub fn queue_submission(
@@ -266,22 +239,11 @@ impl CivicCase {
         actor_id: Option<String>,
         source_channel: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        self.require_status(
-            CaseStatus::Submitting,
-            "Only a submitting case can be queued",
-        )?;
+        self.require_status(CaseStatus::Submitting, "Only a submitting case can be queued")?;
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Queued;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Queued,
-            actor_id,
-            source_channel,
-            None,
-            None,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Queued, actor_id, source_channel, None, None)
     }
 
     pub fn submit(
@@ -292,22 +254,12 @@ impl CivicCase {
         source_channel: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if !matches!(self.status, CaseStatus::Submitting | CaseStatus::Queued) {
-            return Err(DomainError::InvalidOperation(
-                "Only a submitting or queued case can be submitted",
-            ));
+            return Err(DomainError::InvalidOperation("Only a submitting or queued case can be submitted"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Submitted;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Submitted,
-            actor_id,
-            source_channel,
-            None,
-            None,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Submitted, actor_id, source_channel, None, None)
     }
 
     pub fn acknowledge(
@@ -319,22 +271,11 @@ impl CivicCase {
         source_ref: Option<String>,
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        self.require_status(
-            CaseStatus::Submitted,
-            "Only a submitted case can be acknowledged",
-        )?;
+        self.require_status(CaseStatus::Submitted, "Only a submitted case can be acknowledged")?;
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Acknowledged;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Acknowledged,
-            actor_id,
-            source_channel,
-            source_ref,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Acknowledged, actor_id, source_channel, source_ref, notes)
     }
 
     pub fn follow_up(
@@ -344,26 +285,13 @@ impl CivicCase {
         actor_id: Option<String>,
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        if !matches!(
-            self.status,
-            CaseStatus::Acknowledged | CaseStatus::InProgress | CaseStatus::Responded
-        ) {
-            return Err(DomainError::InvalidOperation(
-                "Case is not ready for follow-up",
-            ));
+        if !matches!(self.status, CaseStatus::Acknowledged | CaseStatus::InProgress | CaseStatus::Responded) {
+            return Err(DomainError::InvalidOperation("Case is not ready for follow-up"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::FollowUp;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::FollowUp,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::FollowUp, actor_id, None, None, notes)
     }
 
     pub fn respond(
@@ -373,29 +301,13 @@ impl CivicCase {
         actor_id: Option<String>,
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        if !matches!(
-            self.status,
-            CaseStatus::Acknowledged
-                | CaseStatus::FollowUp
-                | CaseStatus::InProgress
-                | CaseStatus::Escalated
-        ) {
-            return Err(DomainError::InvalidOperation(
-                "Case is not ready for a response",
-            ));
+        if !matches!(self.status, CaseStatus::Acknowledged | CaseStatus::FollowUp | CaseStatus::InProgress | CaseStatus::Escalated) {
+            return Err(DomainError::InvalidOperation("Case is not ready for a response"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Responded;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Response,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Response, actor_id, None, None, notes)
     }
 
     pub fn resolve(
@@ -405,22 +317,41 @@ impl CivicCase {
         actor_id: Option<String>,
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        self.require_status(
-            CaseStatus::Responded,
-            "Only a responded case can be resolved",
-        )?;
+        self.require_status(CaseStatus::Responded, "Only a responded case can be resolved")?;
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Resolved;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Resolved,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Resolved, actor_id, None, None, notes)
+    }
+
+    pub fn verify_resolution(
+        &mut self,
+        event_id: impl Into<String>,
+        occurred_at: impl Into<String>,
+        actor_id: Option<String>,
+        source_channel: Option<String>,
+        source_ref: Option<String>,
+        notes: Option<String>,
+    ) -> Result<CaseEvent, DomainError> {
+        self.require_status(CaseStatus::Resolved, "Only a resolved case can be citizen-verified")?;
+        self.status_event(event_id, occurred_at, CaseEventType::CitizenVerified, actor_id, source_channel, source_ref, notes)
+    }
+
+    pub fn reopen_after_citizen_verification(
+        &mut self,
+        event_id: impl Into<String>,
+        occurred_at: impl Into<String>,
+        actor_id: Option<String>,
+        source_channel: Option<String>,
+        notes: Option<String>,
+    ) -> Result<CaseEvent, DomainError> {
+        self.require_status(CaseStatus::Resolved, "Only a resolved case can be reopened")?;
+        self.status = CaseStatus::FollowUp;
+        self.status_event(event_id, occurred_at, CaseEventType::CitizenReopened, actor_id, source_channel, None, notes)
+    }
+
+    pub fn citizen_verified_resolution(&self) -> bool {
+        self.events.iter().any(|event| event.event_type == CaseEventType::CitizenVerified && event.source_ref.is_some())
     }
 
     pub fn escalate(
@@ -430,29 +361,13 @@ impl CivicCase {
         actor_id: Option<String>,
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
-        if !matches!(
-            self.status,
-            CaseStatus::Acknowledged
-                | CaseStatus::FollowUp
-                | CaseStatus::InProgress
-                | CaseStatus::Responded
-        ) {
-            return Err(DomainError::InvalidOperation(
-                "Case is not ready for escalation",
-            ));
+        if !matches!(self.status, CaseStatus::Acknowledged | CaseStatus::FollowUp | CaseStatus::InProgress | CaseStatus::Responded) {
+            return Err(DomainError::InvalidOperation("Case is not ready for escalation"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Escalated;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Escalated,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Escalated, actor_id, None, None, notes)
     }
 
     pub fn close(
@@ -463,22 +378,12 @@ impl CivicCase {
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if !matches!(self.status, CaseStatus::Resolved | CaseStatus::Escalated) {
-            return Err(DomainError::InvalidOperation(
-                "Only resolved or escalated cases can be closed",
-            ));
+            return Err(DomainError::InvalidOperation("Only resolved or escalated cases can be closed"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         self.status = CaseStatus::Closed;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Closed,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Closed, actor_id, None, None, notes)
     }
 
     pub fn add_evidence(
@@ -490,25 +395,13 @@ impl CivicCase {
         source_channel: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if matches!(self.status, CaseStatus::Closed | CaseStatus::Archived) {
-            return Err(DomainError::InvalidOperation(
-                "Cannot add evidence to a closed or archived case",
-            ));
+            return Err(DomainError::InvalidOperation("Cannot add evidence to a closed or archived case"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         let evidence_id = evidence_id.into();
-        if !self.evidence_refs.contains(&evidence_id) {
-            self.evidence_refs.push(evidence_id.clone());
-        }
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::EvidenceAdded,
-            actor_id,
-            source_channel,
-            Some(evidence_id),
-            None,
-        )
+        if !self.evidence_refs.contains(&evidence_id) { self.evidence_refs.push(evidence_id.clone()); }
+        self.status_event(event_id, occurred_at, CaseEventType::EvidenceAdded, actor_id, source_channel, Some(evidence_id), None)
     }
 
     pub fn add_document(
@@ -520,25 +413,13 @@ impl CivicCase {
         source_channel: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if self.status == CaseStatus::Archived {
-            return Err(DomainError::InvalidOperation(
-                "Cannot add a document to an archived case",
-            ));
+            return Err(DomainError::InvalidOperation("Cannot add a document to an archived case"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
         let document_id = document_id.into();
-        if !self.document_refs.contains(&document_id) {
-            self.document_refs.push(document_id.clone());
-        }
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::DocumentAdded,
-            actor_id,
-            source_channel,
-            Some(document_id),
-            None,
-        )
+        if !self.document_refs.contains(&document_id) { self.document_refs.push(document_id.clone()); }
+        self.status_event(event_id, occurred_at, CaseEventType::DocumentAdded, actor_id, source_channel, Some(document_id), None)
     }
 
     pub fn correct(
@@ -549,70 +430,36 @@ impl CivicCase {
         notes: Option<String>,
     ) -> Result<CaseEvent, DomainError> {
         if matches!(self.status, CaseStatus::Closed | CaseStatus::Archived) {
-            return Err(DomainError::InvalidOperation(
-                "Closed or archived cases cannot be corrected",
-            ));
+            return Err(DomainError::InvalidOperation("Closed or archived cases cannot be corrected"));
         }
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
-        self.status_event(
-            event_id,
-            occurred_at,
-            CaseEventType::Correction,
-            actor_id,
-            None,
-            None,
-            notes,
-        )
+        self.status_event(event_id, occurred_at, CaseEventType::Correction, actor_id, None, None, notes)
     }
 
-    pub fn confirmed_delivery(&self) -> bool {
-        confirmed_delivery(self.status)
-    }
+    pub fn confirmed_delivery(&self) -> bool { confirmed_delivery(self.status) }
 
     fn ensure_content(&self) -> Result<(), DomainError> {
         if self.subject.trim().is_empty() || self.narrative.trim().is_empty() {
-            return Err(DomainError::InvalidOperation(
-                "A case requires a subject and narrative",
-            ));
+            return Err(DomainError::InvalidOperation("A case requires a subject and narrative"));
         }
         Ok(())
     }
 
     fn ensure_editable(&self) -> Result<(), DomainError> {
-        if matches!(
-            self.status,
-            CaseStatus::Submitting
-                | CaseStatus::Queued
-                | CaseStatus::Submitted
-                | CaseStatus::Acknowledged
-                | CaseStatus::InProgress
-                | CaseStatus::Responded
-                | CaseStatus::Resolved
-                | CaseStatus::Escalated
-                | CaseStatus::Closed
-                | CaseStatus::Archived
-        ) {
+        if matches!(self.status, CaseStatus::Submitting | CaseStatus::Queued | CaseStatus::Submitted | CaseStatus::Acknowledged | CaseStatus::InProgress | CaseStatus::Responded | CaseStatus::Resolved | CaseStatus::Escalated | CaseStatus::Closed | CaseStatus::Archived) {
             return Err(DomainError::InvalidOperation("Case is no longer editable"));
         }
         Ok(())
     }
 
     fn ensure_event_id_available(&self, event_id: &str) -> Result<(), DomainError> {
-        if self.events.iter().any(|event| event.event_id == event_id) {
-            return Err(DomainError::DuplicateEventId);
-        }
+        if self.events.iter().any(|event| event.event_id == event_id) { return Err(DomainError::DuplicateEventId); }
         Ok(())
     }
 
-    fn require_status(
-        &self,
-        expected: CaseStatus,
-        message: &'static str,
-    ) -> Result<(), DomainError> {
-        if self.status != expected {
-            return Err(DomainError::InvalidOperation(message));
-        }
+    fn require_status(&self, expected: CaseStatus, message: &'static str) -> Result<(), DomainError> {
+        if self.status != expected { return Err(DomainError::InvalidOperation(message)); }
         Ok(())
     }
 
@@ -628,12 +475,7 @@ impl CivicCase {
     ) -> Result<CaseEvent, DomainError> {
         let event_id = event_id.into();
         self.ensure_event_id_available(&event_id)?;
-        let mut event = CaseEvent::new(
-            event_id,
-            self.case_id.clone(),
-            event_type,
-            occurred_at,
-        );
+        let mut event = CaseEvent::new(event_id, self.case_id.clone(), event_type, occurred_at);
         event.actor_id = actor_id;
         event.source_channel = source_channel;
         event.source_ref = source_ref;
@@ -642,12 +484,8 @@ impl CivicCase {
     }
 
     fn record(&mut self, event: CaseEvent) -> Result<CaseEvent, DomainError> {
-        if event.case_id != self.case_id {
-            return Err(DomainError::EventBelongsToDifferentCase);
-        }
-        if self.events.iter().any(|existing| existing.event_id == event.event_id) {
-            return Err(DomainError::DuplicateEventId);
-        }
+        if event.case_id != self.case_id { return Err(DomainError::EventBelongsToDifferentCase); }
+        if self.events.iter().any(|existing| existing.event_id == event.event_id) { return Err(DomainError::DuplicateEventId); }
         self.events.push(event.clone());
         Ok(event)
     }
@@ -672,9 +510,7 @@ impl CaseStatus {
             Submitting => matches!(target, Submitting | Queued | Submitted),
             Queued => matches!(target, Queued | Submitted),
             Submitted => matches!(target, Acknowledged),
-            Acknowledged => {
-                matches!(target, FollowUp | InProgress | Responded | Escalated)
-            }
+            Acknowledged => matches!(target, FollowUp | InProgress | Responded | Escalated),
             FollowUp => matches!(target, FollowUp | Responded | Escalated),
             InProgress => matches!(target, FollowUp | Responded | Escalated),
             Responded => matches!(target, FollowUp | Resolved | Escalated),
@@ -686,29 +522,14 @@ impl CaseStatus {
     }
 
     pub fn require_transition(self, target: Self) -> Result<(), DomainError> {
-        if self.can_transition(target) {
-            Ok(())
-        } else {
-            Err(DomainError::InvalidTransition { from: self, to: target })
-        }
+        if self.can_transition(target) { Ok(()) } else { Err(DomainError::InvalidTransition { from: self, to: target }) }
     }
 
-    pub fn confirmed_delivery(self) -> bool {
-        confirmed_delivery(self)
-    }
+    pub fn confirmed_delivery(self) -> bool { confirmed_delivery(self) }
 }
 
 pub fn confirmed_delivery(status: CaseStatus) -> bool {
-    matches!(
-        status,
-        CaseStatus::Acknowledged
-            | CaseStatus::FollowUp
-            | CaseStatus::InProgress
-            | CaseStatus::Responded
-            | CaseStatus::Resolved
-            | CaseStatus::Escalated
-            | CaseStatus::Closed
-    )
+    matches!(status, CaseStatus::Acknowledged | CaseStatus::FollowUp | CaseStatus::InProgress | CaseStatus::Responded | CaseStatus::Resolved | CaseStatus::Escalated | CaseStatus::Closed)
 }
 
 pub fn validate_event_chain<I>(events: I) -> bool
@@ -720,22 +541,10 @@ where
     let mut case_id: Option<String> = None;
 
     for event in events {
-        if case_id.is_none() {
-            case_id = Some(event.case_id.clone());
-        }
-        if Some(&event.case_id) != case_id.as_ref()
-            || !seen.insert(event.event_id.clone())
-        {
-            return false;
-        }
-        if previous == Some(CaseEventType::Acknowledged)
-            && event.event_type == CaseEventType::Submitted
-        {
-            return false;
-        }
-        if previous == Some(CaseEventType::Closed) {
-            return false;
-        }
+        if case_id.is_none() { case_id = Some(event.case_id.clone()); }
+        if Some(&event.case_id) != case_id.as_ref() || !seen.insert(event.event_id.clone()) { return false; }
+        if previous == Some(CaseEventType::Acknowledged) && event.event_type == CaseEventType::Submitted { return false; }
+        if previous == Some(CaseEventType::Closed) { return false; }
         previous = Some(event.event_type);
     }
     true
@@ -747,39 +556,21 @@ mod tests {
     use serde_json::json;
 
     fn make_case() -> CivicCase {
-        let mut case = CivicCase::new(
-            "case-1",
-            CaseType::Complaint,
-            "Delayed public service",
-            "The requested service has not been delivered.",
-        );
+        let mut case = CivicCase::new("case-1", CaseType::Complaint, "Delayed public service", "The requested service has not been delivered.");
         case.consent_refs.push("consent-1".into());
-        case.start_review("event-1", "2026-08-24T00:00:00Z", None)
-            .unwrap();
-        case.mark_ready("event-2", "2026-08-24T00:01:00Z", None)
-            .unwrap();
+        case.start_review("event-1", "2026-08-24T00:00:00Z", None).unwrap();
+        case.mark_ready("event-2", "2026-08-24T00:01:00Z", None).unwrap();
         case
     }
 
     #[test]
     fn aggregate_preserves_canonical_fields_and_lifecycle() {
         let mut case = make_case();
-        case.jurisdiction
-            .insert("district".into(), json!("Bengaluru Urban"));
+        case.jurisdiction.insert("district".into(), json!("Bengaluru Urban"));
         case.related_official_id = Some("official-1".into());
-        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None)
-            .unwrap();
-        case.submit("event-4", "2026-08-24T00:03:00Z", None, None)
-            .unwrap();
-        case.acknowledge(
-            "event-5",
-            "2026-08-24T00:04:00Z",
-            None,
-            Some("web".into()),
-            Some("ACK-1".into()),
-            None,
-        )
-        .unwrap();
+        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None).unwrap();
+        case.submit("event-4", "2026-08-24T00:03:00Z", None, None).unwrap();
+        case.acknowledge("event-5", "2026-08-24T00:04:00Z", None, Some("web".into()), Some("ACK-1".into()), None).unwrap();
         assert_eq!(case.status, CaseStatus::Acknowledged);
         assert!(case.confirmed_delivery());
         assert_eq!(case.events.len(), 5);
@@ -788,20 +579,9 @@ mod tests {
     #[test]
     fn json_domain_values_round_trip_without_narrowing() {
         let mut case = make_case();
-        case.jurisdiction.insert(
-            "district".into(),
-            json!({"name": "Pune", "rank": 3, "active": true}),
-        );
-        case.jurisdiction
-            .insert("levels".into(), json!(["state", "district"]));
-        case.claims.push(BTreeMap::from([
-            ("claim".into(), json!("road damage")),
-            ("verified".into(), json!(false)),
-            ("confidence".into(), json!(0.75)),
-            ("tags".into(), json!(["road", "public-service"])),
-            ("metadata".into(), json!({"source": null})),
-        ]));
-
+        case.jurisdiction.insert("district".into(), json!({"name": "Pune", "rank": 3, "active": true}));
+        case.jurisdiction.insert("levels".into(), json!(["state", "district"]));
+        case.claims.push(BTreeMap::from([("claim".into(), json!("road damage")), ("verified".into(), json!(false)), ("confidence".into(), json!(0.75)), ("tags".into(), json!(["road", "public-service"])), ("metadata".into(), json!({"source": null}))]));
         let encoded = serde_json::to_string(&case).unwrap();
         let decoded: CivicCase = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, case);
@@ -810,54 +590,21 @@ mod tests {
     #[test]
     fn acknowledgement_event_notes_are_persisted() {
         let mut case = make_case();
-        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None)
-            .unwrap();
-        case.submit("event-4", "2026-08-24T00:03:00Z", None, None)
-            .unwrap();
-        let event = case
-            .acknowledge(
-                "event-5",
-                "2026-08-24T00:04:00Z",
-                None,
-                Some("web".into()),
-                Some("ACK-1".into()),
-                Some("Received by office".into()),
-            )
-            .unwrap();
+        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None).unwrap();
+        case.submit("event-4", "2026-08-24T00:03:00Z", None, None).unwrap();
+        let event = case.acknowledge("event-5", "2026-08-24T00:04:00Z", None, Some("web".into()), Some("ACK-1".into()), Some("Received by office".into())).unwrap();
         assert_eq!(event.notes.as_deref(), Some("Received by office"));
-        assert_eq!(
-            case.events.last().unwrap().notes.as_deref(),
-            Some("Received by office")
-        );
-        assert_eq!(
-            case.events.last().unwrap().source_ref.as_deref(),
-            Some("ACK-1")
-        );
+        assert_eq!(case.events.last().unwrap().notes.as_deref(), Some("Received by office"));
+        assert_eq!(case.events.last().unwrap().source_ref.as_deref(), Some("ACK-1"));
     }
 
     #[test]
     fn notes_are_not_encoded_as_source_reference() {
         let mut case = make_case();
-        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None)
-            .unwrap();
-        case.submit("event-4", "2026-08-24T00:03:00Z", None, None)
-            .unwrap();
-        case.acknowledge(
-            "event-5",
-            "2026-08-24T00:04:00Z",
-            None,
-            Some("web".into()),
-            Some("ACK-1".into()),
-            Some("Received by office".into()),
-        )
-        .unwrap();
-        case.follow_up(
-            "event-6",
-            "2026-08-24T00:05:00Z",
-            None,
-            Some("Request status update".into()),
-        )
-        .unwrap();
+        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None).unwrap();
+        case.submit("event-4", "2026-08-24T00:03:00Z", None, None).unwrap();
+        case.acknowledge("event-5", "2026-08-24T00:04:00Z", None, Some("web".into()), Some("ACK-1".into()), Some("Received by office".into())).unwrap();
+        case.follow_up("event-6", "2026-08-24T00:05:00Z", None, Some("Request status update".into())).unwrap();
         let event = case.events.last().unwrap();
         assert_eq!(event.notes.as_deref(), Some("Request status update"));
         assert_eq!(event.source_ref, None);
@@ -868,12 +615,7 @@ mod tests {
         let mut case = make_case();
         let before_status = case.status;
         let before_events = case.events.clone();
-        let result = case.begin_submission(
-            "event-1",
-            "2026-08-24T00:02:00Z",
-            None,
-            None,
-        );
+        let result = case.begin_submission("event-1", "2026-08-24T00:02:00Z", None, None);
         assert_eq!(result, Err(DomainError::DuplicateEventId));
         assert_eq!(case.status, before_status);
         assert_eq!(case.events, before_events);
@@ -883,13 +625,7 @@ mod tests {
     fn duplicate_event_does_not_mutate_evidence() {
         let mut case = make_case();
         let before = case.evidence_refs.clone();
-        let result = case.add_evidence(
-            "evidence-1",
-            "event-1",
-            "2026-08-24T00:02:00Z",
-            None,
-            None,
-        );
+        let result = case.add_evidence("evidence-1", "event-1", "2026-08-24T00:02:00Z", None, None);
         assert_eq!(result, Err(DomainError::DuplicateEventId));
         assert_eq!(case.evidence_refs, before);
     }
@@ -898,13 +634,7 @@ mod tests {
     fn duplicate_event_does_not_mutate_document_refs() {
         let mut case = make_case();
         let before = case.document_refs.clone();
-        let result = case.add_document(
-            "document-1",
-            "event-1",
-            "2026-08-24T00:02:00Z",
-            None,
-            None,
-        );
+        let result = case.add_document("document-1", "event-1", "2026-08-24T00:02:00Z", None, None);
         assert_eq!(result, Err(DomainError::DuplicateEventId));
         assert_eq!(case.document_refs, before);
     }
@@ -914,13 +644,7 @@ mod tests {
         let mut case = make_case();
         let before_subject = case.subject.clone();
         let before_narrative = case.narrative.clone();
-        let result = case.edit(
-            "event-1",
-            "2026-08-24T00:02:00Z",
-            None,
-            Some("Changed subject".into()),
-            Some("Changed narrative".into()),
-        );
+        let result = case.edit("event-1", "2026-08-24T00:02:00Z", None, Some("Changed subject".into()), Some("Changed narrative".into()));
         assert_eq!(result, Err(DomainError::DuplicateEventId));
         assert_eq!(case.subject, before_subject);
         assert_eq!(case.narrative, before_narrative);
@@ -928,61 +652,26 @@ mod tests {
 
     #[test]
     fn consent_gate_is_enforced() {
-        let mut case = CivicCase::new(
-            "case-1",
-            CaseType::Complaint,
-            "Subject",
-            "Narrative",
-        );
-        case.start_review("event-1", "2026-08-24T00:00:00Z", None)
-            .unwrap();
-        assert_eq!(
-            case.mark_ready("event-2", "2026-08-24T00:01:00Z", None),
-            Err(DomainError::ConsentRequired)
-        );
+        let mut case = CivicCase::new("case-1", CaseType::Complaint, "Subject", "Narrative");
+        case.start_review("event-1", "2026-08-24T00:00:00Z", None).unwrap();
+        assert_eq!(case.mark_ready("event-2", "2026-08-24T00:01:00Z", None), Err(DomainError::ConsentRequired));
     }
 
     #[test]
     fn duplicate_and_cross_case_events_are_rejected() {
         let mut case = make_case();
-        assert!(matches!(
-            case.begin_submission("event-1", "2026-08-24T00:02:00Z", None, None),
-            Err(DomainError::DuplicateEventId)
-        ));
-        let mut event = CaseEvent::new(
-            "event-9",
-            "case-2",
-            CaseEventType::Edited,
-            "2026-08-24T00:05:00Z",
-        );
+        assert!(matches!(case.begin_submission("event-1", "2026-08-24T00:02:00Z", None, None), Err(DomainError::DuplicateEventId)));
+        let mut event = CaseEvent::new("event-9", "case-2", CaseEventType::Edited, "2026-08-24T00:05:00Z");
         event.notes = Some("wrong case".into());
-        assert_eq!(
-            case.record(event),
-            Err(DomainError::EventBelongsToDifferentCase)
-        );
+        assert_eq!(case.record(event), Err(DomainError::EventBelongsToDifferentCase));
     }
 
     #[test]
     fn event_chain_keeps_orthogonal_events_outside_status_graph() {
         let events = vec![
-            CaseEvent::new(
-                "1",
-                "case-1",
-                CaseEventType::Created,
-                "2026-08-24T00:00:00Z",
-            ),
-            CaseEvent::new(
-                "2",
-                "case-1",
-                CaseEventType::EvidenceAdded,
-                "2026-08-24T00:01:00Z",
-            ),
-            CaseEvent::new(
-                "3",
-                "case-1",
-                CaseEventType::Edited,
-                "2026-08-24T00:02:00Z",
-            ),
+            CaseEvent::new("1", "case-1", CaseEventType::Created, "2026-08-24T00:00:00Z"),
+            CaseEvent::new("2", "case-1", CaseEventType::EvidenceAdded, "2026-08-24T00:01:00Z"),
+            CaseEvent::new("3", "case-1", CaseEventType::Edited, "2026-08-24T00:02:00Z"),
         ];
         assert!(validate_event_chain(events));
     }
@@ -999,18 +688,34 @@ mod tests {
     }
 
     #[test]
+    fn citizen_outcome_events_are_distinct_from_correction() {
+        assert_ne!(CaseEventType::CitizenVerified, CaseEventType::Correction);
+        assert_ne!(CaseEventType::CitizenReopened, CaseEventType::Correction);
+        assert_eq!(serde_json::to_string(&CaseEventType::CitizenVerified).unwrap(), "\"citizen_verified\"");
+        assert_eq!(serde_json::to_string(&CaseEventType::CitizenReopened).unwrap(), "\"citizen_reopened\"");
+    }
+
+    #[test]
+    fn citizen_verification_and_reopen_have_explicit_events() {
+        let mut case = make_case();
+        case.begin_submission("event-3", "2026-08-24T00:02:00Z", None, None).unwrap();
+        case.submit("event-4", "2026-08-24T00:03:00Z", None, None).unwrap();
+        case.acknowledge("event-5", "2026-08-24T00:04:00Z", None, Some("web".into()), Some("ACK-1".into()), None).unwrap();
+        case.respond("event-6", "2026-08-24T00:05:00Z", None, None).unwrap();
+        case.resolve("event-7", "2026-08-24T00:06:00Z", None, None).unwrap();
+        case.verify_resolution("event-8", "2026-08-24T00:07:00Z", Some("citizen:1".into()), Some("web".into()), Some("observation-1".into()), None).unwrap();
+        assert_eq!(case.status, CaseStatus::Resolved);
+        assert!(case.citizen_verified_resolution());
+        assert_eq!(case.events.last().unwrap().event_type, CaseEventType::CitizenVerified);
+        case.reopen_after_citizen_verification("event-9", "2026-08-24T00:08:00Z", Some("citizen:1".into()), Some("web".into()), Some("Issue remains".into())).unwrap();
+        assert_eq!(case.status, CaseStatus::FollowUp);
+        assert_eq!(case.events.last().unwrap().event_type, CaseEventType::CitizenReopened);
+    }
+
+    #[test]
     fn serde_uses_contract_values() {
-        assert_eq!(
-            serde_json::to_string(&CaseType::TransferConcern).unwrap(),
-            "\"transfer_concern\""
-        );
-        assert_eq!(
-            serde_json::to_string(&CaseStatus::FollowUp).unwrap(),
-            "\"follow_up\""
-        );
-        assert_eq!(
-            serde_json::to_string(&CaseEventType::ReviewStarted).unwrap(),
-            "\"review_started\""
-        );
+        assert_eq!(serde_json::to_string(&CaseType::TransferConcern).unwrap(), "\"transfer_concern\"");
+        assert_eq!(serde_json::to_string(&CaseStatus::FollowUp).unwrap(), "\"follow_up\"");
+        assert_eq!(serde_json::to_string(&CaseEventType::ReviewStarted).unwrap(), "\"review_started\"");
     }
 }
