@@ -157,9 +157,27 @@ class CivicActionVerticalSlice:
         )
         return artifact
 
-    def submit(self, request: SubmissionRequest, *, identity: IdentityContext,
+    def submit(self, request: SubmissionRequest, *, channel_id: str, identity: IdentityContext,
                explicit_user_approval: bool) -> CivicCaseResult:
-        """Submit only through the canonical approval/consent/transport boundary."""
+        """Submit only after resolving a currently verified External Channel.
+
+        The channel registry remains control-plane metadata; SubmissionCapability
+        remains responsible for authorization, consent, approval, idempotency,
+        delivery and reconciliation. The caller cannot supply an arbitrary
+        destination through this canonical orchestration boundary.
+        """
+        channel = self._deps.external_channel_capability.get_verified(channel_id)
+        if request.destination_ref and request.destination_ref != channel.destination_ref:
+            raise ValueError("Submission destination does not match the verified external channel")
+        verified_request = request.__class__(
+            case_id=request.case_id,
+            document_id=request.document_id,
+            destination_ref=channel.destination_ref,
+            consent_scope=request.consent_scope,
+            source_channel=request.source_channel,
+            artifact_id=request.artifact_id,
+            idempotency_key=request.idempotency_key,
+        )
         return self._deps.submission_capability.submit(
-            request, identity=identity, explicit_user_approval=explicit_user_approval
+            verified_request, identity=identity, explicit_user_approval=explicit_user_approval
         )
