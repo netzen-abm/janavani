@@ -22,7 +22,7 @@ from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.accountability_feedback_provider import (
-    create_accountability_feedback_repository,
+    create_accountability_feedback_repository as create_feedback_repository,
 )
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
@@ -53,9 +53,7 @@ def create_accountability_feedback_repository(
 ):
     """Create feedback persistence from the shared provider plan."""
     composition = provider_composition or create_provider_composition()
-    return create_accountability_feedback_repository(
-        composition=composition, path=path
-    )
+    return create_feedback_repository(composition=composition, path=path)
 
 
 def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
