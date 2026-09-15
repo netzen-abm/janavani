@@ -59,7 +59,8 @@ def test_citizen_verification_is_distinct_from_authority_resolution() -> None:
 
     assert result.case.status is CaseStatus.RESOLVED
     assert result.case.citizen_verified_resolution() is True
-    assert result.case.events[-1].event_type is CaseEventType.CORRECTION
+    assert result.case.events[-1].event_type is CaseEventType.CITIZEN_VERIFIED
+    assert result.case.events[-1].event_type is not CaseEventType.CORRECTION
     assert result.case.events[-1].source_ref == "citizen-observation-1"
 
 
@@ -74,7 +75,8 @@ def test_citizen_can_reopen_an_authority_resolved_case() -> None:
     )
 
     assert result.case.status is CaseStatus.FOLLOW_UP
-    assert result.case.events[-1].event_type is CaseEventType.CORRECTION
+    assert result.case.events[-1].event_type is CaseEventType.CITIZEN_REOPENED
+    assert result.case.events[-1].event_type is not CaseEventType.CORRECTION
 
 
 def test_citizen_verification_requires_resolved_case() -> None:
