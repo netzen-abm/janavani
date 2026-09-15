@@ -14,7 +14,7 @@ class AccountabilityFeedbackCapability:
     def __init__(self, repository: AccountabilityFeedbackRepository):
         self._repository = repository
 
-    def submit(
+    def record(
         self,
         *,
         office_id: str,
