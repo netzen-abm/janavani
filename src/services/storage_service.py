@@ -1,45 +1,23 @@
-import json
-from datetime import datetime
+"""Retired legacy complaint storage service.
 
-FILE_PATH = "database/complaints.jsonl"
+The historical implementation is preserved under
+``archive/legacy/storage/storage_service.py``.
 
-
-# --------------------------------------------------
-# 💾 SAVE COMPLAINT
-# --------------------------------------------------
-
-def save_complaint(session: dict):
-
-    record = {
-        "complaint_id": session.get("complaint_id"),
-        "issue": session.get("issue"),
-        "category": session.get("category"),
-        "department": session.get("department"),
-        "district": session.get("district"),
-        "office": session.get("office"),
-        "created_at": datetime.now().isoformat(),
-        "status": "Pending"
-    }
-
-    with open(FILE_PATH, "a") as f:
-        f.write(json.dumps(record) + "\n")
+The canonical Case lifecycle and repository boundaries are authoritative.
+This compatibility tombstone fails closed so callers cannot continue writing
+or reading the legacy ``database/complaints.jsonl`` store through this service.
+"""
 
 
-# --------------------------------------------------
-# 🔍 FETCH COMPLAINT BY ID
-# --------------------------------------------------
+def save_complaint(*args, **kwargs):
+    """Fail closed; legacy complaint persistence is retired."""
+    raise RuntimeError(
+        "Legacy complaint storage is retired; use the canonical Case lifecycle."
+    )
 
-def get_complaint_by_id(complaint_id: str):
 
-    try:
-        with open(FILE_PATH, "r") as f:
-            for line in f:
-                record = json.loads(line)
-
-                if record.get("complaint_id") == complaint_id:
-                    return record
-
-    except FileNotFoundError:
-        return None
-
-    return None
+def get_complaint_by_id(*args, **kwargs):
+    """Fail closed; legacy complaint lookup is retired."""
+    raise RuntimeError(
+        "Legacy complaint storage is retired; use the canonical Case lifecycle."
+    )
