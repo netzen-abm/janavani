@@ -28,13 +28,15 @@ from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.consent import ConsentRepository
-from src.storage.repositories.document_review import DocumentReviewRepository, InMemoryDocumentReviewRepository
+from src.storage.repositories.consent_provider import create_consent_repository as create_consent_repository_for_provider
+from src.storage.repositories.document_review import DocumentReviewRepository
+from src.storage.repositories.document_review_provider import create_document_review_repository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.external_channel_provider import create_external_channel_repository
 from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
-from src.storage.repositories.submission_provider import create_submission_repository
+from src.storage.repositories.submission_provider import create_submission_repository as create_submission_repository_for_provider
 
 
 def create_provider_composition() -> ProviderComposition:
@@ -45,6 +47,30 @@ def create_provider_composition() -> ProviderComposition:
 def create_case_repository(*, provider_composition: ProviderComposition | None = None) -> CivicCaseRepository:
     composition = provider_composition or create_provider_composition()
     return create_civic_case_repository(composition=composition)
+
+
+def create_consent_repository(*, provider_composition: ProviderComposition | None = None) -> ConsentRepository:
+    """Create consent persistence through the shared provider plan."""
+    composition = provider_composition or create_provider_composition()
+    return create_consent_repository_for_provider(
+        provider=composition.provider_for("consent")
+    )
+
+
+def create_submission_repository(*, provider_composition: ProviderComposition | None = None) -> SubmissionRepository:
+    """Create submission persistence through the shared provider plan."""
+    composition = provider_composition or create_provider_composition()
+    return create_submission_repository_for_provider(
+        provider=composition.provider_for("submission")
+    )
+
+
+def create_document_review_repository_for_platform(
+    *, provider_composition: ProviderComposition | None = None,
+) -> DocumentReviewRepository:
+    """Create document-review persistence through the shared provider plan."""
+    composition = provider_composition or create_provider_composition()
+    return create_document_review_repository(provider_composition=composition)
 
 
 def create_accountability_feedback_repository(
@@ -113,23 +139,29 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
                                        obligation_records: dict[str, list[dict[str, object]]] | None = None,
                                        external_channel_capability: ExternalChannelCapability | None = None,
                                        follow_up_capability: FollowUpCapability | None = None,
-                                       escalation_capability: EscalationCapability | None = None) -> CivicActionVerticalSlice:
+                                       escalation_capability: EscalationCapability | None = None,
+                                       provider_composition: ProviderComposition | None = None) -> CivicActionVerticalSlice:
     """Compose one canonical civic-action slice with shared capability instances."""
+    composition = provider_composition or create_provider_composition()
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability) if evidence_repository is not None else None
     civic_action_capability = CivicActionCapability(case_capability=case_capability, case_repository=case_repository,
                                                     authority_capability=authority_capability,
                                                     evidence_repository=evidence_repository)
-    review_repository = document_review_repository or InMemoryDocumentReviewRepository()
+    review_repository = document_review_repository or create_document_review_repository_for_platform(
+        provider_composition=composition
+    )
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
-    submission_repo = submission_repository or create_submission_repository()
+    submission_repo = submission_repository or create_submission_repository(provider_composition=composition)
     submission_capability = SubmissionCapability(case_capability, consent_repository, submission_transport,
                                                  submission_repository=submission_repo)
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
     obligation_capability = create_obligation_capability(obligation)
-    channel_capability = external_channel_capability or create_external_channel_capability()
+    channel_capability = external_channel_capability or create_external_channel_capability(
+        provider_composition=composition
+    )
     follow_up = follow_up_capability or create_follow_up_capability()
     escalation = escalation_capability or create_escalation_capability()
     if evidence_capability is None:
