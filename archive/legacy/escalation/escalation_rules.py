@@ -1,4 +1,4 @@
-# src/services/escalation_rules.py
+# Archived copy of src/services/escalation_rules.py
 
 def get_escalation_targets(category: str):
     """
