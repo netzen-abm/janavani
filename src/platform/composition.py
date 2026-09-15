@@ -30,7 +30,7 @@ from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_review import DocumentReviewRepository, InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
-from src.storage.repositories.external_channel import InMemoryExternalChannelRepository
+from src.storage.repositories.external_channel_provider import create_external_channel_repository
 from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
@@ -76,9 +76,12 @@ def create_obligation_capability(resolver: ObligationResolver) -> ObligationCapa
     return ObligationCapability(resolver)
 
 
-def create_external_channel_capability() -> ExternalChannelCapability:
-    """Create the provider-neutral channel capability with an in-memory adapter."""
-    return ExternalChannelCapability(InMemoryExternalChannelRepository())
+def create_external_channel_capability(
+    *, provider_composition: ProviderComposition | None = None,
+) -> ExternalChannelCapability:
+    """Create the channel capability through shared provider composition."""
+    composition = provider_composition or create_provider_composition()
+    return ExternalChannelCapability(create_external_channel_repository(composition=composition))
 
 
 def create_follow_up_capability() -> FollowUpCapability:
