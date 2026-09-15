@@ -47,7 +47,7 @@ Rating
         actor_ref = f"telegram:{update.effective_user.id}"
 
     try:
-        feedback = feedback_capability.submit(
+        feedback = feedback_capability.record(
             office_id=office_id,
             rating=rating,
             issue=issue,
