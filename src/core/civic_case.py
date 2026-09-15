@@ -56,16 +56,14 @@ class CaseEventType(str, Enum):
     RESOLVED = "resolved"
     ESCALATED = "escalated"
     CORRECTION = "correction"
+    CITIZEN_VERIFIED = "citizen_verified"
+    CITIZEN_REOPENED = "citizen_reopened"
     CLOSED = "closed"
     ARCHIVED = "archived"
 
 
-# Citizen outcome semantics are intentionally represented through the existing
-# canonical correction event until the Rust event contract is extended. The
-# semantic aliases keep the application API explicit without allowing Python
-# to silently diverge from the canonical cross-language event set.
-CITIZEN_VERIFIED_EVENT = CaseEventType.CORRECTION
-CITIZEN_REOPENED_EVENT = CaseEventType.CORRECTION
+CITIZEN_VERIFIED_EVENT = CaseEventType.CITIZEN_VERIFIED
+CITIZEN_REOPENED_EVENT = CaseEventType.CITIZEN_REOPENED
 
 
 @dataclass(frozen=True)
