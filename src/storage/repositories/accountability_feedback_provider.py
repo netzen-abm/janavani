@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 from src.core.accountability_feedback import AccountabilityFeedbackRepository
 from src.storage.provider_composition import ProviderComposition
@@ -25,12 +24,13 @@ def create_accountability_feedback_repository(
     path: str | Path | None = None,
 ) -> AccountabilityFeedbackRepository:
     """Build the feedback repository from the shared provider composition."""
-    selected = (
-        composition.provider_for("accountability_feedback")
-        if composition is not None
-        else provider
-        or os.getenv("JANAVANI_ACCOUNTABILITY_FEEDBACK_REPOSITORY_PROVIDER", "memory")
-    ).strip().lower()
+    if composition is not None:
+        selected = composition.provider_for("accountability_feedback")
+    else:
+        selected = provider or os.getenv(
+            "JANAVANI_ACCOUNTABILITY_FEEDBACK_REPOSITORY_PROVIDER", "memory"
+        )
+    selected = selected.strip().lower()
 
     if selected not in SUPPORTED_PROVIDERS:
         supported = ", ".join(sorted(SUPPORTED_PROVIDERS))
