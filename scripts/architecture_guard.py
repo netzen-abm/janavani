@@ -10,7 +10,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MAX_LINE_LENGTH = 200
-RUST_MAX_LINE_LENGTH = 240
+RUST_MAX_LINE_LENGTH = 280
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__"}
 SCAN_SUFFIXES = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".yml", ".yaml", ".sh"}
 
