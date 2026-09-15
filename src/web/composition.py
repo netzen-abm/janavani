@@ -10,12 +10,15 @@ from dataclasses import dataclass
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.submission import SubmissionTransport
-from src.platform.composition import create_civic_action_vertical_slice
-from src.storage.repositories.consent import ConsentRepository, InMemoryConsentRepository
-from src.storage.repositories.document_review import (
-    DocumentReviewRepository,
-    InMemoryDocumentReviewRepository,
+from src.platform.composition import (
+    create_civic_action_vertical_slice,
+    create_consent_repository,
+    create_document_review_repository_for_platform,
+    create_provider_composition,
 )
+from src.storage.provider_composition import ProviderComposition
+from src.storage.repositories.consent import ConsentRepository
+from src.storage.repositories.document_review import DocumentReviewRepository
 
 
 class UnconfiguredWebSubmissionTransport(SubmissionTransport):
@@ -48,16 +51,22 @@ def create_web_civic_action_composition(
     artifact_repository=None,
     blob_store=None,
     submission_transport: SubmissionTransport | None = None,
+    provider_composition: ProviderComposition | None = None,
 ) -> WebCivicActionComposition:
     """Build the Web adapter's one canonical civic-action dependency graph.
 
-    The default submission transport is deliberately fail-closed. A Web
-    request therefore cannot claim external delivery merely because the route
-    exists. Durable consent/review providers must be injected when the Web
-    deployment is configured for production persistence.
+    The default submission transport is deliberately fail-closed. Provider
+    defaults come from the shared platform composition; durable providers can
+    still be injected explicitly when a deployment has completed its
+    persistence and migration readiness work.
     """
-    consent_repo = consent_repository or InMemoryConsentRepository()
-    review_repo = document_review_repository or InMemoryDocumentReviewRepository()
+    composition = provider_composition or create_provider_composition()
+    consent_repo = consent_repository or create_consent_repository(
+        provider_composition=composition
+    )
+    review_repo = document_review_repository or create_document_review_repository_for_platform(
+        provider_composition=composition
+    )
     transport = submission_transport or UnconfiguredWebSubmissionTransport()
     civic_action = create_civic_action_vertical_slice(
         case_repository=case_repository,
@@ -68,6 +77,7 @@ def create_web_civic_action_composition(
         document_review_repository=review_repo,
         artifact_repository=artifact_repository,
         blob_store=blob_store,
+        provider_composition=composition,
     )
     return WebCivicActionComposition(
         case_repository=case_repository,
