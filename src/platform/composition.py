@@ -20,6 +20,7 @@ from src.core.evidence import EvidenceRepository
 from src.core.obligation import ObligationResolver
 from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
+from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.authority_csv import CsvAuthorityRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -33,8 +34,14 @@ from src.storage.repositories.responsibility import AuthorityBackedResponsibilit
 from src.storage.repositories.submission_provider import create_submission_repository
 
 
-def create_case_repository() -> CivicCaseRepository:
-    return create_civic_case_repository()
+def create_provider_composition() -> ProviderComposition:
+    """Create the shared provider plan used by access-surface composition."""
+    return ProviderComposition.from_environment()
+
+
+def create_case_repository(*, provider_composition: ProviderComposition | None = None) -> CivicCaseRepository:
+    composition = provider_composition or create_provider_composition()
+    return create_civic_case_repository(composition=composition)
 
 
 def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
