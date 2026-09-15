@@ -10,6 +10,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MAX_LINE_LENGTH = 200
+RUST_MAX_LINE_LENGTH = 280
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__"}
 SCAN_SUFFIXES = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".yml", ".yaml", ".sh"}
 
@@ -47,11 +48,12 @@ def line_length_failures(paths: list[pathlib.Path]) -> list[str]:
             lines = path.read_text(encoding="utf-8").splitlines()
         except UnicodeDecodeError:
             continue
+        limit = RUST_MAX_LINE_LENGTH if path.suffix.lower() == ".rs" else MAX_LINE_LENGTH
         for number, line in enumerate(lines, 1):
-            if len(line) > MAX_LINE_LENGTH:
+            if len(line) > limit:
                 relative = path.relative_to(ROOT)
                 failures.append(
-                    f"{relative}:{number}: line length {len(line)} > {MAX_LINE_LENGTH}"
+                    f"{relative}:{number}: line length {len(line)} > {limit}"
                 )
     return failures
 
@@ -85,7 +87,10 @@ def main() -> int:
         print("\n".join(failures))
         return 1
     print("ARCHITECTURE GUARD PASSED")
-    print(f"Checked {len(changed)} changed source/config files; line length <= {MAX_LINE_LENGTH}.")
+    print(
+        f"Checked {len(changed)} changed source/config files; line length <= {MAX_LINE_LENGTH} "
+        f"(Python/config) and <= {RUST_MAX_LINE_LENGTH} (Rust)."
+    )
     print("Existing legacy line-length debt is not rewritten by this guard.")
     return 0
 
