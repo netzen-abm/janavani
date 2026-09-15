@@ -2,10 +2,12 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
-from src.storage.repositories.accountability_feedback_jsonl import JsonlAccountabilityFeedbackRepository
+from src.platform.composition import create_accountability_feedback_repository
 
 
-feedback_capability = AccountabilityFeedbackCapability(JsonlAccountabilityFeedbackRepository())
+feedback_capability = AccountabilityFeedbackCapability(
+    create_accountability_feedback_repository()
+)
 
 
 async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
