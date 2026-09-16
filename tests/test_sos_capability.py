@@ -1,0 +1,131 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pytest
+
+from src.capabilities.sos import CAPABILITY_ID, SOSCapability
+from src.core.sos import (
+    DeliveryRequest,
+    DeliveryResult,
+    SOSDeliveryState,
+    SOSRequest,
+    TransportKind,
+)
+from src.identity.context import IdentityContext
+from src.identity.principal import IdentityMode, Principal
+
+
+class AllowGate:
+    def evaluate(self, request: SOSRequest) -> str:
+        return "ALLOW"
+
+
+@dataclass
+class FakeTransport:
+    transport_kind: TransportKind = TransportKind.LOCAL
+    result_state: SOSDeliveryState = SOSDeliveryState.ACCEPTED
+
+    def deliver(self, request: DeliveryRequest) -> DeliveryResult:
+        return DeliveryResult(
+            delivery_id=request.delivery_id,
+            transport_kind=self.transport_kind,
+            state=self.result_state,
+            attempted_at=request.requested_at,
+            provider_reference="provider-ref",
+        )
+
+
+def identity() -> IdentityContext:
+    return IdentityContext(Principal(
+        principal_id="citizen-1",
+        identity_mode=IdentityMode.AUTHENTICATED,
+        interface="test",
+        capabilities=frozenset({CAPABILITY_ID}),
+    ))
+
+
+def request(**overrides) -> SOSRequest:
+    values = {
+        "sos_id": "sos-1",
+        "incident_context": "unsafe travel",
+        "explicit_user_choice": True,
+    }
+    values.update(overrides)
+    return SOSRequest(**values)
+
+
+def test_local_sos_does_not_claim_delivery() -> None:
+    result = SOSCapability(decision_gate=AllowGate()).trigger(request(), identity=identity())
+    assert result.state is SOSDeliveryState.LOCAL_ONLY
+    assert result.deliveries == ()
+
+
+def test_remote_sos_without_transport_is_unknown() -> None:
+    result = SOSCapability(decision_gate=AllowGate()).trigger(
+        request(remote_transmission=True, destination_refs=("trusted-contact-1",)),
+        identity=identity(),
+    )
+    assert result.state is SOSDeliveryState.UNKNOWN
+    assert result.deliveries[0].error_code == "NO_ELIGIBLE_TRANSPORT"
+
+
+def test_provider_acceptance_is_not_delivery() -> None:
+    adapter = FakeTransport(result_state=SOSDeliveryState.ACCEPTED)
+    result = SOSCapability(
+        decision_gate=AllowGate(), delivery_adapters=(adapter,)
+    ).trigger(
+        request(remote_transmission=True, destination_refs=("trusted-contact-1",)),
+        identity=identity(),
+    )
+    assert result.state is SOSDeliveryState.ACCEPTED
+    assert result.state is not SOSDeliveryState.DELIVERED
+
+
+def test_acknowledgement_is_stronger_than_delivery() -> None:
+    adapter = FakeTransport(result_state=SOSDeliveryState.ACKNOWLEDGED)
+    result = SOSCapability(
+        decision_gate=AllowGate(), delivery_adapters=(adapter,)
+    ).trigger(
+        request(remote_transmission=True, destination_refs=("trusted-contact-1",)),
+        identity=identity(),
+    )
+    assert result.state is SOSDeliveryState.ACKNOWLEDGED
+
+
+def test_missing_explicit_choice_is_rejected_before_policy_gate() -> None:
+    with pytest.raises(PermissionError, match="Explicit user choice"):
+        SOSCapability(decision_gate=AllowGate()).trigger(
+            request(explicit_user_choice=False), identity=identity()
+        )
+
+
+def test_policy_denial_is_not_bypassed() -> None:
+    class DenyGate:
+        def evaluate(self, request: SOSRequest) -> str:
+            return "BLOCK"
+
+    with pytest.raises(PermissionError, match="BLOCK"):
+        SOSCapability(decision_gate=DenyGate()).trigger(request(), identity=identity())
+
+
+def test_transport_exception_becomes_failed_state() -> None:
+    class BrokenTransport(FakeTransport):
+        def deliver(self, request: DeliveryRequest) -> DeliveryResult:
+            raise RuntimeError("offline")
+
+    result = SOSCapability(
+        decision_gate=AllowGate(), delivery_adapters=(BrokenTransport(),)
+    ).trigger(
+        request(remote_transmission=True, destination_refs=("trusted-contact-1",)),
+        identity=identity(),
+    )
+    assert result.state is SOSDeliveryState.FAILED
+    assert result.deliveries[0].error_code == "TRANSPORT_EXCEPTION"
+
+
+def test_consequential_action_requires_authorization_approval() -> None:
+    with pytest.raises(PermissionError, match="requires approval"):
+        SOSCapability(decision_gate=AllowGate()).trigger(
+            request(consequential_action=True), identity=identity()
+        )
