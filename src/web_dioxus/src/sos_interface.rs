@@ -86,3 +86,24 @@ impl JanavaniWasmSOSTrigger {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
+
+    #[tokio::test]
+    async fn sos_rejects_transmission_without_explicit_user_choice() {
+        let result = JanavaniWasmSOSTrigger::dispatch_panic_beacon(LocalEmergencyContext {
+            tracking_id: "test-session".to_string(),
+            geo_coordinates: None,
+            danger_context: "test".to_string(),
+            explicit_user_choice: false,
+        })
+        .await;
+
+        assert_eq!(
+            result,
+            Err("SOS requires explicit user choice before transmission.".to_string())
+        );
+    }
+}
