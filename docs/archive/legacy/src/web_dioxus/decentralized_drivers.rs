@@ -1,0 +1,39 @@
+Archived from `src/web_dioxus/src/decentralized_drivers.rs` during Web Dioxus SOS convergence (2026-09-16).
+
+Reason: this surface-owned module contained mock/legacy Nostr, Nym, Reticulum, and blockchain transport/identity implementations. The canonical SOS architecture now requires the Web surface to consume the shared SOS capability through an API adapter rather than owning emergency transport/provider behavior.
+
+Original content:
+
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Default)]
+pub struct DecentralizedStatusGrid {
+    pub nostr_active: bool,
+    pub nym_active: bool,
+    pub reticulum_active: bool,
+    pub blockchain_active: bool,
+}
+
+pub struct JanavaniDecentralizedCore;
+
+impl JanavaniDecentralizedCore {
+    pub fn initialize_nostr_identity() -> Result<(String, String), String> {
+        let mock_pubkey = "npub1janavani789xxyz0123456789abcdef0123456789abcdef012".to_string();
+        let mock_seckey = "nsec1secretprivatetokenkey0123456789abcdef0123456789abc".to_string();
+        Ok((mock_pubkey, mock_seckey))
+    }
+
+    pub async fn route_via_nym_mixnet(target_url: &str, payload: &str) -> Result<String, String> {
+        let mock_mixnet_proxy = "http://127.0.0";
+        Ok(format!("Routed through Nym Mixnet Endpoint safely. Response code: 200"))
+    }
+
+    pub fn transmit_via_reticulum_mesh(document_text: &str) -> Result<String, String> {
+        let mock_destination_hash = "6cdb2c938d2f6d90a57e2d93b3";
+        Ok(format!("Packet injected into Reticulum Mesh transport. Destination: {}", mock_destination_hash))
+    }
+
+    pub fn verify_blockchain_compliance_checkpoint(merkle_root: &str) -> bool {
+        merkle_root.starts_with("0x") || merkle_root.len() == 64
+    }
+}
