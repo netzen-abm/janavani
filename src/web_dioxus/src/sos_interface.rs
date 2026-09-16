@@ -33,14 +33,20 @@ struct SosApiResponse {
 pub struct JanavaniWasmSOSTrigger;
 
 impl JanavaniWasmSOSTrigger {
+    /// Validate the surface-level user-action requirement before any network call.
+    pub fn validate_user_choice(context: &LocalEmergencyContext) -> Result<(), String> {
+        if !context.explicit_user_choice {
+            return Err("SOS requires explicit user choice before transmission.".to_string());
+        }
+        Ok(())
+    }
+
     /// Submit a user-authorised SOS request through the canonical API boundary.
     ///
     /// The Web surface does not choose or execute emergency transports. Concrete
     /// delivery is owned by the server-side SOS capability and its adapters.
     pub async fn dispatch_panic_beacon(context: LocalEmergencyContext) -> Result<String, String> {
-        if !context.explicit_user_choice {
-            return Err("SOS requires explicit user choice before transmission.".to_string());
-        }
+        Self::validate_user_choice(&context)?;
 
         let endpoint = option_env!("JANAVANI_SOS_ENDPOINT")
             .or(option_env!("JANAVANI_BACKEND_URL"))
@@ -91,19 +97,30 @@ impl JanavaniWasmSOSTrigger {
 mod tests {
     use super::{JanavaniWasmSOSTrigger, LocalEmergencyContext};
 
-    #[tokio::test]
-    async fn sos_rejects_transmission_without_explicit_user_choice() {
-        let result = JanavaniWasmSOSTrigger::dispatch_panic_beacon(LocalEmergencyContext {
+    #[test]
+    fn sos_rejects_without_explicit_user_choice() {
+        let context = LocalEmergencyContext {
             tracking_id: "test-session".to_string(),
             geo_coordinates: None,
             danger_context: "test".to_string(),
             explicit_user_choice: false,
-        })
-        .await;
+        };
 
         assert_eq!(
-            result,
+            JanavaniWasmSOSTrigger::validate_user_choice(&context),
             Err("SOS requires explicit user choice before transmission.".to_string())
         );
+    }
+
+    #[test]
+    fn sos_accepts_explicit_user_choice_for_api_submission() {
+        let context = LocalEmergencyContext {
+            tracking_id: "test-session".to_string(),
+            geo_coordinates: None,
+            danger_context: "test".to_string(),
+            explicit_user_choice: true,
+        };
+
+        assert!(JanavaniWasmSOSTrigger::validate_user_choice(&context).is_ok());
     }
 }
