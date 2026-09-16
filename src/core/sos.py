@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
+from src.identity.context import IdentityContext
+
 
 class SOSDeliveryState(str, Enum):
     LOCAL_ONLY = "LOCAL_ONLY"
@@ -78,9 +80,11 @@ class SOSDecisionGate(Protocol):
     """Adapter for the canonical safety/privacy policy boundary.
 
     The implementation is intentionally external to the SOS capability so
-    SOS cannot become a second policy engine.
+    SOS cannot become a second policy engine. Identity context is supplied so
+    the canonical policy boundary can perform its existing authorization
+    evaluation without the SOS layer inventing a second identity model.
     """
 
-    def evaluate(self, request: SOSRequest) -> str:
-        """Return the canonical policy outcome for this SOS request."""
+    def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> str:
+        """Return the normalized canonical policy outcome for this SOS request."""
         ...
