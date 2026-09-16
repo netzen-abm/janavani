@@ -25,6 +25,7 @@ class SafetyPrivacyDecision(str, Enum):
 class AccessPurpose(str, Enum):
     EVIDENCE_CAPTURE = "evidence_capture"
     SOS = "sos"
+    SOS_TRANSMISSION = "sos_transmission"
     LOCAL_ANALYSIS = "local_analysis"
     EXPLICIT_UPLOAD = "explicit_upload"
     EXTERNAL_ACTION = "external_action"
@@ -42,11 +43,11 @@ class SensitiveResource(str, Enum):
 
 @dataclass(frozen=True)
 class SafetyPrivacyRequest:
-    """Purpose-bound request for a sensitive resource."""
+    """Purpose-bound request for a sensitive resource or SOS operation."""
 
     identity: IdentityContext
     purpose: AccessPurpose
-    resource: SensitiveResource
+    resource: SensitiveResource | None = None
     capability: str = CAPABILITY_ID
     data_minimization: bool = True
     explicit_user_choice: bool = True
@@ -71,17 +72,21 @@ class SafetyPrivacyDecisionBoundary:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Explicit user choice is required")
         if request.background_access or request.continuous_access:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Background or continuous sensitive access is not permitted by this boundary")
-        if request.remote_transmission and request.purpose is not AccessPurpose.EXPLICIT_UPLOAD:
-            return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Remote transmission requires an explicit upload purpose")
+        if request.remote_transmission and request.purpose not in {
+            AccessPurpose.EXPLICIT_UPLOAD,
+            AccessPurpose.SOS_TRANSMISSION,
+        }:
+            return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Remote transmission requires an explicit upload or SOS-transmission purpose")
         if request.biometric_processing and request.resource is not SensitiveResource.BIOMETRIC_PROCESSING:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Biometric processing must be separately scoped")
         if request.consequential_action and request.purpose is not AccessPurpose.EXTERNAL_ACTION:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Consequential action requires the external-action boundary")
 
+        resource_action = request.resource.value if request.resource is not None else "operation"
         decision = authorize(AuthorizationRequest(
             context=request.identity,
             capability=request.capability,
-            action=f"{request.purpose.value}:{request.resource.value}",
+            action=f"{request.purpose.value}:{resource_action}",
             risk_level="high" if request.consequential_action else "normal",
             requires_approval=request.consequential_action,
         ))
