@@ -17,6 +17,7 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Identify and converge duplicate capability owners.
 - [ ] Identify remaining legacy bypasses and archive only after evidence.
 - [ ] Update Source of Truth and architecture decision records from audit evidence.
+- [ ] Review and merge PR #173 after CI and final diff verification.
 
 ## P0 — Canonical runtime and persistence boundary
 
@@ -78,6 +79,8 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Metadata/EXIF minimization where applicable.
 - [ ] User-controlled recovery/key lifecycle production design.
 - [ ] Optional decentralized providers/adapters (Freenet/Nostr/IPFS/etc.) only behind stable contracts and truthful degraded states.
+- [ ] Establish provider-neutral research/open-access retrieval and archival boundary (see `docs/architecture/RESEARCH_EVIDENCE_ARCHIVAL_PROVIDER_CONTRACT.md`).
+- [ ] Evaluate Unpaywall/OpenAlex/Crossref as scholarly discovery adapters; evaluate Wayback/WARC/local archival adapters for source preservation.
 
 ## P2 — Ecosystem expansion
 
@@ -107,3 +110,5 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 8. Code + tests + runtime/deployment evidence = completion.
 9. Do not create a new abstraction when an existing canonical contract can be strengthened.
 10. Every completed item must reference code/test/evidence where applicable.
+11. External research, retrieval, archival, and MCP projects are adapters/references, not automatic core dependencies.
+12. Lawful public/open-access retrieval only; no access-control or paywall circumvention.
