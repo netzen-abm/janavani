@@ -116,15 +116,15 @@ fn App() -> Element {
                 section {
                     style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #aaa; border-radius: 8px;",
                     h2 { "Case workspace" }
-                    p { b { "Case: " } "{result.case_id}" }</p>
-                    p { b { "Status: " } "{result.status}" }</p>
+                    p { b { "Case: " } "{result.case_id}" }
+                    p { b { "Status: " } "{result.status}" }
                     h3 { "Subject" }
                     p { "{result.subject}" }
                     h3 { "Issue" }
                     p { "{result.narrative}" }
-                    p { "Evidence references: {result.evidence_refs.len()}" }</p>
-                    p { "Document references: {result.document_refs.len()}" }</p>
-                    p { "Consent references: {result.consent_refs.len()}" }</p>
+                    p { "Evidence references: {result.evidence_refs.len()}" }
+                    p { "Document references: {result.document_refs.len()}" }
+                    p { "Consent references: {result.consent_refs.len()}" }
                     button { onclick: on_refresh_case, "Refresh case" }
                 }
             }
