@@ -65,8 +65,9 @@ fn App() -> Element {
         spawn(async move {
             let context = LocalEmergencyContext {
                 tracking_id: "SESSION_INTERNAL_ACTIVE_NODE".to_string(),
-                geo_coordinates: "local-only".to_string(),
+                geo_coordinates: None,
                 danger_context: danger_type,
+                explicit_user_choice: true,
             };
             match JanavaniWasmSOSTrigger::dispatch_panic_beacon(context).await {
                 Ok(message) => sos_notification.set(Some(message)),
@@ -115,15 +116,15 @@ fn App() -> Element {
                 section {
                     style: "padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid #aaa; border-radius: 8px;",
                     h2 { "Case workspace" }
-                    p { b { "Case: " } "{result.case_id}" }
-                    p { b { "Status: " } "{result.status}" }
+                    p { b { "Case: " } "{result.case_id}" }</p>
+                    p { b { "Status: " } "{result.status}" }</p>
                     h3 { "Subject" }
                     p { "{result.subject}" }
                     h3 { "Issue" }
                     p { "{result.narrative}" }
-                    p { "Evidence references: {result.evidence_refs.len()}" }
-                    p { "Document references: {result.document_refs.len()}" }
-                    p { "Consent references: {result.consent_refs.len()}" }
+                    p { "Evidence references: {result.evidence_refs.len()}" }</p>
+                    p { "Document references: {result.document_refs.len()}" }</p>
+                    p { "Consent references: {result.consent_refs.len()}" }</p>
                     button { onclick: on_refresh_case, "Refresh case" }
                 }
             }
@@ -131,6 +132,7 @@ fn App() -> Element {
                 style: "padding: 1.25rem; border: 1px solid #ecc; border-radius: 8px;",
                 h2 { "Emergency capability" }
                 p { "Emergency handling is independent from the ordinary civic case workflow." }
+                p { "SOS requests are sent only after an explicit user action. Delivery transport and policy decisions are handled by the canonical Janavani SOS service." }
                 div {
                     button { onclick: move |_| on_sos("Late Night Travel / Unsafe Area".to_string()), "Late night danger" }
                     button { onclick: move |_| on_sos("Stalker / Being Followed".to_string()), "Being followed" }
