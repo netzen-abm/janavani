@@ -4,7 +4,6 @@ use dioxus::prelude::*;
 
 mod api_client;
 mod capability_checker;
-mod decentralized_drivers;
 mod sos_interface;
 
 use api_client::{CaseDocument, JanavaniDioxusBridge};
