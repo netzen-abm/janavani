@@ -54,7 +54,7 @@ class SOSCapability:
         if decision is AuthorizationDecision.REQUIRE_APPROVAL:
             raise PermissionError("SOS action requires approval")
 
-        policy_outcome = self._decision_gate.evaluate(request)
+        policy_outcome = self._decision_gate.evaluate(request, identity=identity)
         if policy_outcome != "ALLOW":
             raise PermissionError(f"SOS safety/privacy decision is {policy_outcome}")
 
