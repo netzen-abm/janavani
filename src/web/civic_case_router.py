@@ -16,10 +16,15 @@ from src.platform.runtime import AUTHORITY_REPOSITORY, CASE_REPOSITORY, EVIDENCE
 from src.web.composition import create_web_civic_action_composition
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
+# Compatibility aliases preserve existing test injection points while sourcing
+# the actual instances from the shared process-local runtime composition.
+_REPOSITORY = CASE_REPOSITORY
+_AUTHORITY_REPOSITORY = AUTHORITY_REPOSITORY
+_EVIDENCE_REPOSITORY = EVIDENCE_REPOSITORY
 _COMPOSITION = create_web_civic_action_composition(
-    case_repository=CASE_REPOSITORY,
-    authority_repository=AUTHORITY_REPOSITORY,
-    evidence_repository=EVIDENCE_REPOSITORY,
+    case_repository=_REPOSITORY,
+    authority_repository=_AUTHORITY_REPOSITORY,
+    evidence_repository=_EVIDENCE_REPOSITORY,
 )
 _CAPABILITY = _COMPOSITION.case_capability
 _CIVIC_ACTION = _COMPOSITION.civic_action
