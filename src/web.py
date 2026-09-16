@@ -1,5 +1,9 @@
-import subprocess
-import os
+"""Legacy Flask web entrypoint kept isolated from the canonical FastAPI app.
+
+This module must not start or own any other access surface. Telegram runs as an
+independent process/runtime. New deployment paths should use
+``src.web.canonical_app:app``.
+"""
 
 from flask import Flask
 
@@ -9,51 +13,42 @@ from database.supabase import supabase
 app = Flask(__name__)
 
 
-# ---------------------------------------------------
-# Home
-# ---------------------------------------------------
 @app.route("/")
 def home():
     return """
     <h1>🇮🇳 Janavani</h1>
     <h2>Citizen Governance Platform</h2>
 
-    <p>✅ Flask Running</p>
+    <p>✅ Legacy Flask compatibility surface</p>
 
     <ul>
         <li><a href="/health">Health Check</a></li>
         <li><a href="/supabase">Supabase Test</a></li>
     </ul>
+
+    <p>Canonical API: <code>src.web.canonical_app:app</code></p>
     """
 
 
-# ---------------------------------------------------
-# Health
-# ---------------------------------------------------
 @app.route("/health")
 def health():
-
     return {
         "status": "healthy",
-        "database": "connected" if supabase else "not configured"
+        "database": "connected" if supabase else "not configured",
+        "runtime": "legacy-compatibility",
+        "canonical_runtime": "src.web.canonical_app:app",
     }
 
 
-# ---------------------------------------------------
-# Supabase Test
-# ---------------------------------------------------
 @app.route("/supabase")
 def supabase_test():
-
     if supabase is None:
-
         return {
             "status": "error",
-            "message": "Supabase is not configured."
+            "message": "Supabase is not configured.",
         }, 500
 
     try:
-
         response = (
             supabase
             .table("offices")
@@ -61,66 +56,20 @@ def supabase_test():
             .limit(5)
             .execute()
         )
-
         return {
             "status": "connected",
             "count": len(response.data),
-            "rows": response.data
+            "rows": response.data,
         }
-
-    except Exception as e:
-
+    except Exception as exc:
         return {
             "status": "failed",
-            "error": str(e)
+            "error": str(exc),
         }, 500
 
 
-# ---------------------------------------------------
-# Main (legacy developer-mode guarded)
-# ---------------------------------------------------
 if __name__ == "__main__":
-
-    print("=" * 50)
-    print("Starting Janavani Web Server")
-    print("=" * 50)
-
-    # Developer-controlled behavior: only start the Telegram bot as a subprocess
-    # when the environment variable START_TELEGRAM_FOR_LOCAL is set to a truthy value.
-    start_telegram = os.getenv("START_TELEGRAM_FOR_LOCAL", "false").lower() in ("1", "true", "yes")
-
-    if start_telegram:
-        print("WARNING: Starting Telegram bot as a child process. This is intended for local development only.")
-        try:
-            bot_process = subprocess.Popen(
-                ["python3", "-u", "src/bot_telegram.py"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-
-            print(f"Telegram Bot PID: {bot_process.pid}")
-            print("Telegram Bot Started (dev mode)")
-
-        except Exception as exc:
-            print("Failed to start Telegram bot as subprocess:", exc)
-            bot_process = None
-
-    else:
-        print("Starting Web server in independent runtime mode. Telegram bot will NOT be started as a subprocess.")
-        bot_process = None
-
-    try:
-        app.run(
-            host="0.0.0.0",
-            port=Config.PORT,
-            debug=False
-        )
-    finally:
-        # Attempt graceful shutdown of dev-mode bot if we started it
-        try:
-            if bot_process:
-                bot_process.terminate()
-                bot_process.wait(timeout=5)
-        except Exception:
-            pass
+    print("Starting Janavani legacy Flask compatibility surface")
+    print("Telegram is an independent runtime and will not be spawned by Web.")
+    print("Canonical production API: src.web.canonical_app:app")
+    app.run(host="0.0.0.0", port=Config.PORT, debug=False)

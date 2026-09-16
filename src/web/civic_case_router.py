@@ -12,19 +12,18 @@ from src.core.civic_case import CaseType, CivicCase
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_repository,
-    create_development_evidence_repository,
-)
+from src.platform.runtime import AUTHORITY_REPOSITORY, CASE_REPOSITORY, EVIDENCE_REPOSITORY
 from src.web.composition import create_web_civic_action_composition
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
-_REPOSITORY = create_case_repository()
-_EVIDENCE_REPOSITORY = create_development_evidence_repository()
+# Compatibility aliases preserve existing test injection points while sourcing
+# the actual instances from the shared process-local runtime composition.
+_REPOSITORY = CASE_REPOSITORY
+_AUTHORITY_REPOSITORY = AUTHORITY_REPOSITORY
+_EVIDENCE_REPOSITORY = EVIDENCE_REPOSITORY
 _COMPOSITION = create_web_civic_action_composition(
     case_repository=_REPOSITORY,
-    authority_repository=create_authority_repository(),
+    authority_repository=_AUTHORITY_REPOSITORY,
     evidence_repository=_EVIDENCE_REPOSITORY,
 )
 _CAPABILITY = _COMPOSITION.case_capability
