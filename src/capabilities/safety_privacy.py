@@ -89,10 +89,15 @@ class SafetyPrivacyDecisionBoundary:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Biometric processing must be separately scoped")
 
         resource_action = request.resource.value if request.resource is not None else "operation"
+        action = (
+            request.execution_context.action
+            if request.execution_context is not None
+            else f"{request.purpose.value}:{resource_action}"
+        )
         authorization_request = AuthorizationRequest(
             context=request.identity,
             capability=request.capability,
-            action=f"{request.purpose.value}:{resource_action}",
+            action=action,
             risk_level="high" if request.consequential_action else "normal",
             requires_approval=request.consequential_action,
             execution_context=request.execution_context,
