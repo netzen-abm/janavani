@@ -1,8 +1,8 @@
 """Canonical SOS capability orchestration boundary.
 
 The capability coordinates authorization, the canonical safety/privacy gate,
-consequential-operation controls, and provider-neutral delivery adapters. It
-does not implement transport or create a competing policy/approval engine.
+and provider-neutral delivery adapters. It does not implement transport or
+create a competing policy/approval engine.
 """
 from __future__ import annotations
 
@@ -11,11 +11,6 @@ from datetime import datetime, timezone
 from hashlib import sha256
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
-from src.access.consequential import (
-    ConsequentialDecision,
-    ConsequentialOperationRequest,
-    gate_consequential_operation,
-)
 from src.capabilities.safety_privacy import (
     AccessPurpose,
     SafetyPrivacyDecision,
@@ -23,7 +18,7 @@ from src.capabilities.safety_privacy import (
     SensitiveResource,
     evaluate_safety_privacy,
 )
-from src.core.execution import CapabilityExecutionContext, SideEffectClass
+from src.core.execution import SideEffectClass
 from src.core.sos import (
     DeliveryRequest,
     DeliveryResult,
@@ -76,9 +71,7 @@ class SOSCapability:
         """Authorize and execute an SOS request without claiming unverified delivery."""
         self._validate_request(request, identity=identity)
 
-        if request.consequential_action:
-            self._evaluate_consequential_operation(request, identity=identity)
-        else:
+        if not request.consequential_action:
             decision = authorize(AuthorizationRequest(
                 context=identity,
                 capability=CAPABILITY_ID,
@@ -146,46 +139,18 @@ class SOSCapability:
             raise PermissionError("Explicit user choice is required")
         if request.remote_transmission and not request.destination_refs:
             raise ValueError("A destination is required for remote transmission")
-        if request.execution_context is not None and request.execution_context.identity is not identity:
-            raise PermissionError("SOS execution identity does not match request identity")
-        if request.consequential_action and request.execution_context is None:
-            raise ValueError("Consequential SOS requires a CapabilityExecutionContext")
-
-    @staticmethod
-    def _evaluate_consequential_operation(request: SOSRequest, *, identity: IdentityContext) -> None:
         context = request.execution_context
-        assert context is not None
-        if context.identity is not identity:
+        if context is not None and context.identity is not identity:
             raise PermissionError("SOS execution identity does not match request identity")
-        if context.capability_id != CAPABILITY_ID or context.action != "sos:trigger":
-            raise ValueError("SOS execution context does not match capability")
-        if context.resource_id not in {None, request.sos_id}:
-            raise ValueError("SOS execution context resource does not match request")
-        if context.side_effect_class is not SideEffectClass.EXTERNAL_SIDE_EFFECT:
-            raise ValueError("Consequential SOS requires an external side-effect context")
-
-        authorization = AuthorizationRequest(
-            context=identity,
-            capability=CAPABILITY_ID,
-            action="sos:trigger",
-            resource_id=request.sos_id,
-            risk_level=context.risk_level,
-            requires_approval=True,
-            execution_context=context,
-        )
-        decision = gate_consequential_operation(
-            ConsequentialOperationRequest(
-                authorization=authorization,
-                execution_context=context,
-                explicit_user_approval=request.explicit_user_approval,
-            )
-        )
-        if decision is ConsequentialDecision.DENY:
-            raise PermissionError("Identity is not authorized to trigger consequential SOS")
-        if decision is ConsequentialDecision.CONSENT_REQUIRED:
-            raise PermissionError("SOS action requires consent")
-        if decision is ConsequentialDecision.REQUIRE_APPROVAL:
-            raise PermissionError("SOS action requires approval")
+        if request.consequential_action:
+            if context is None:
+                raise ValueError("Consequential SOS requires a CapabilityExecutionContext")
+            if context.capability_id != CAPABILITY_ID or context.action != "sos:trigger":
+                raise ValueError("SOS execution context does not match capability")
+            if context.resource_id not in {None, request.sos_id}:
+                raise ValueError("SOS execution context resource does not match request")
+            if context.side_effect_class is not SideEffectClass.EXTERNAL_SIDE_EFFECT:
+                raise ValueError("Consequential SOS requires an external side-effect context")
 
     def _select_adapter(self, request: SOSRequest, index: int) -> SOSDeliveryAdapter | None:
         """Select only a transport explicitly requested by the caller, when constrained."""
