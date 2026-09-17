@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from src.capabilities.sos import CAPABILITY_ID, SOSCapability
+from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.core.sos import (
     DeliveryRequest,
     DeliveryResult,
@@ -54,6 +55,19 @@ def request(**overrides) -> SOSRequest:
     }
     values.update(overrides)
     return SOSRequest(**values)
+
+
+def consequential_context(identity_context: IdentityContext) -> CapabilityExecutionContext:
+    return CapabilityExecutionContext.for_capability(
+        identity_context,
+        capability_id=CAPABILITY_ID,
+        action="sos:trigger",
+        surface="test",
+        resource_id="sos-1",
+        idempotency_key="idem-sos-1",
+        risk_level="high",
+        side_effect_class=SideEffectClass.EXTERNAL_SIDE_EFFECT,
+    )
 
 
 def test_local_sos_does_not_claim_delivery() -> None:
@@ -126,8 +140,26 @@ def test_transport_exception_becomes_failed_state() -> None:
     assert result.deliveries[0].error_code == "TRANSPORT_EXCEPTION"
 
 
-def test_consequential_action_requires_authorization_approval() -> None:
+def test_consequential_action_requires_canonical_approval() -> None:
+    identity_context = identity()
     with pytest.raises(PermissionError, match="requires approval"):
         SOSCapability(decision_gate=AllowGate()).trigger(
-            request(consequential_action=True), identity=identity()
+            request(
+                consequential_action=True,
+                execution_context=consequential_context(identity_context),
+            ),
+            identity=identity_context,
         )
+
+
+def test_consequential_action_with_approval_can_reach_sos_gate() -> None:
+    identity_context = identity()
+    result = SOSCapability(decision_gate=AllowGate()).trigger(
+        request(
+            consequential_action=True,
+            execution_context=consequential_context(identity_context),
+            explicit_user_approval=True,
+        ),
+        identity=identity_context,
+    )
+    assert result.state is SOSDeliveryState.LOCAL_ONLY
