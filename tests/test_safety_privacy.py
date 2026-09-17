@@ -80,7 +80,12 @@ def test_blocks_implicit_biometric_processing() -> None:
 
 def test_requires_review_for_consequential_action() -> None:
     result = evaluate_safety_privacy(
-        request(purpose=AccessPurpose.SOS_TRANSMISSION, resource=None, remote_transmission=True, consequential_action=True)
+        request(
+            purpose=AccessPurpose.SOS_TRANSMISSION,
+            resource=None,
+            remote_transmission=True,
+            consequential_action=True,
+        )
     )
     assert result.decision is SafetyPrivacyDecision.REVIEW
 
@@ -99,8 +104,9 @@ def test_blocks_identity_without_capability() -> None:
 
 
 def test_consequential_review_preserves_execution_context() -> None:
+    identity_context = context()
     execution_context = CapabilityExecutionContext.for_capability(
-        context := context(),
+        identity_context,
         capability_id="sos:trigger",
         action="sos:trigger",
         surface="test",
@@ -111,7 +117,7 @@ def test_consequential_review_preserves_execution_context() -> None:
     )
     result = evaluate_safety_privacy(
         request(
-            identity=context,
+            identity=identity_context,
             capability="safety:privacy",
             purpose=AccessPurpose.SOS_TRANSMISSION,
             resource=None,
