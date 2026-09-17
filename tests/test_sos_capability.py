@@ -180,7 +180,7 @@ def test_unavailable_requested_transport_is_unknown() -> None:
 def test_consequential_action_requires_canonical_approval() -> None:
     identity_context = identity()
     with pytest.raises(PermissionError, match="requires approval"):
-        SOSCapability(decision_gate=AllowGate()).trigger(
+        SOSCapability().trigger(
             request(
                 consequential_action=True,
                 execution_context=consequential_context(identity_context),
