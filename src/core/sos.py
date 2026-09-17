@@ -46,6 +46,7 @@ class SOSRequest:
     consequential_action: bool = False
     execution_context: CapabilityExecutionContext | None = None
     explicit_user_approval: bool = False
+    requested_transport_kinds: tuple[TransportKind, ...] = ()
 
 
 @dataclass(frozen=True)
