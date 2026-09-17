@@ -16,6 +16,13 @@ from src.access.consequential import (
     ConsequentialOperationRequest,
     gate_consequential_operation,
 )
+from src.capabilities.safety_privacy import (
+    AccessPurpose,
+    SafetyPrivacyDecision,
+    SafetyPrivacyRequest,
+    SensitiveResource,
+    evaluate_safety_privacy,
+)
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.core.sos import (
     DeliveryRequest,
@@ -37,11 +44,36 @@ class SOSResult:
     deliveries: tuple[DeliveryResult, ...] = ()
 
 
+class CanonicalSOSSafetyPrivacyGate:
+    """Adapt the canonical Safety/Privacy boundary to the SOS decision contract."""
+
+    def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> SafetyPrivacyDecision:
+        purpose = (
+            AccessPurpose.SOS_TRANSMISSION
+            if request.remote_transmission
+            else AccessPurpose.SOS
+        )
+        result = evaluate_safety_privacy(
+            SafetyPrivacyRequest(
+                identity=identity,
+                purpose=purpose,
+                resource=SensitiveResource.FILES if request.evidence_refs else None,
+                capability=CAPABILITY_ID,
+                explicit_user_choice=request.explicit_user_choice,
+                remote_transmission=request.remote_transmission,
+                consequential_action=request.consequential_action,
+                execution_context=request.execution_context,
+                explicit_user_approval=request.explicit_user_approval,
+            )
+        )
+        return result.decision
+
+
 class SOSCapability:
     """Surface-independent SOS orchestration."""
 
-    def __init__(self, *, decision_gate, delivery_adapters: tuple[SOSDeliveryAdapter, ...] = ()) -> None:
-        self._decision_gate = decision_gate
+    def __init__(self, *, decision_gate=None, delivery_adapters: tuple[SOSDeliveryAdapter, ...] = ()) -> None:
+        self._decision_gate = decision_gate or CanonicalSOSSafetyPrivacyGate()
         self._adapters = {adapter.transport_kind: adapter for adapter in delivery_adapters}
 
     def trigger(self, request: SOSRequest, *, identity: IdentityContext) -> SOSResult:
@@ -63,7 +95,7 @@ class SOSCapability:
                 raise PermissionError("SOS action requires approval")
 
         policy_outcome = self._decision_gate.evaluate(request, identity=identity)
-        if policy_outcome != "ALLOW":
+        if policy_outcome is not SafetyPrivacyDecision.ALLOW and policy_outcome != "ALLOW":
             raise PermissionError(f"SOS safety/privacy decision is {policy_outcome}")
 
         if not request.remote_transmission or not request.destination_refs:
