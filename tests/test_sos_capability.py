@@ -76,6 +76,11 @@ def test_local_sos_does_not_claim_delivery() -> None:
     assert result.deliveries == ()
 
 
+def test_default_sos_uses_canonical_safety_privacy_gate() -> None:
+    result = SOSCapability().trigger(request(), identity=identity())
+    assert result.state is SOSDeliveryState.LOCAL_ONLY
+
+
 def test_remote_sos_without_transport_is_unknown() -> None:
     result = SOSCapability(decision_gate=AllowGate()).trigger(
         request(remote_transmission=True, destination_refs=("trusted-contact-1",)),
