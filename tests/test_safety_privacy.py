@@ -79,12 +79,31 @@ def test_blocks_implicit_biometric_processing() -> None:
 
 
 def test_requires_review_for_consequential_action() -> None:
+    identity_context = IdentityContext(
+        principal=Principal(
+            principal_id="test-principal",
+            interface="test",
+            capabilities=frozenset({"sos:trigger"}),
+        )
+    )
     result = evaluate_safety_privacy(
         request(
+            identity=identity_context,
+            capability="sos:trigger",
             purpose=AccessPurpose.SOS_TRANSMISSION,
             resource=None,
             remote_transmission=True,
             consequential_action=True,
+            execution_context=CapabilityExecutionContext.for_capability(
+                identity_context,
+                capability_id="sos:trigger",
+                action="sos:trigger",
+                surface="test",
+                resource_id="sos-1",
+                idempotency_key="idem-sos-1",
+                risk_level="high",
+                side_effect_class=SideEffectClass.EXTERNAL_SIDE_EFFECT,
+            ),
         )
     )
     assert result.decision is SafetyPrivacyDecision.REVIEW
@@ -118,7 +137,7 @@ def test_consequential_review_preserves_execution_context() -> None:
     result = evaluate_safety_privacy(
         request(
             identity=identity_context,
-            capability="safety:privacy",
+            capability="sos:trigger",
             purpose=AccessPurpose.SOS_TRANSMISSION,
             resource=None,
             remote_transmission=True,
