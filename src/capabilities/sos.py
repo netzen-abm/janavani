@@ -16,6 +16,7 @@ from src.access.consequential import (
     ConsequentialOperationRequest,
     gate_consequential_operation,
 )
+from src.capabilities.safety_privacy import SafetyPrivacyDecision
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.core.sos import (
     DeliveryRequest,
@@ -63,8 +64,8 @@ class SOSCapability:
                 raise PermissionError("SOS action requires approval")
 
         policy_outcome = self._decision_gate.evaluate(request, identity=identity)
-        if policy_outcome != "ALLOW":
-            raise PermissionError(f"SOS safety/privacy decision is {policy_outcome}")
+        if policy_outcome is not SafetyPrivacyDecision.ALLOW:
+            raise PermissionError(f"SOS safety/privacy decision is {policy_outcome.value}")
 
         if not request.remote_transmission or not request.destination_refs:
             return SOSResult(sos_id=request.sos_id, state=SOSDeliveryState.LOCAL_ONLY)
