@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
+from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 
 
@@ -43,6 +44,8 @@ class SOSRequest:
     explicit_user_choice: bool = False
     remote_transmission: bool = False
     consequential_action: bool = False
+    execution_context: CapabilityExecutionContext | None = None
+    explicit_user_approval: bool = False
 
 
 @dataclass(frozen=True)
