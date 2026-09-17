@@ -123,7 +123,13 @@ def test_blocks_identity_without_capability() -> None:
 
 
 def test_consequential_review_preserves_execution_context() -> None:
-    identity_context = context()
+    identity_context = IdentityContext(
+        principal=Principal(
+            principal_id="test-principal",
+            interface="test",
+            capabilities=frozenset({"sos:trigger"}),
+        )
+    )
     execution_context = CapabilityExecutionContext.for_capability(
         identity_context,
         capability_id="sos:trigger",
@@ -140,8 +146,8 @@ def test_consequential_review_preserves_execution_context() -> None:
             capability="sos:trigger",
             purpose=AccessPurpose.SOS_TRANSMISSION,
             resource=None,
-            remote_transmission=True,
             consequential_action=True,
+            remote_transmission=True,
             execution_context=execution_context,
         )
     )
