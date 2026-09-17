@@ -100,7 +100,7 @@ class SafetyPrivacyDecisionBoundary:
 
         if request.consequential_action:
             if request.execution_context is None:
-                return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Consequential action requires an execution context")
+                return SafetyPrivacyResult(SafetyPrivacyDecision.REVIEW, "Consequential action requires an execution context")
             decision = gate_consequential_operation(
                 ConsequentialOperationRequest(
                     authorization=authorization_request,
