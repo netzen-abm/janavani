@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.access.consequential import (
+    ConsequentialDecision,
+    ConsequentialOperationRequest,
+    gate_consequential_operation,
+)
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 
@@ -58,6 +63,7 @@ class SafetyPrivacyRequest:
     biometric_processing: bool = False
     consequential_action: bool = False
     execution_context: CapabilityExecutionContext | None = None
+    explicit_user_approval: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,18 +89,37 @@ class SafetyPrivacyDecisionBoundary:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Biometric processing must be separately scoped")
 
         resource_action = request.resource.value if request.resource is not None else "operation"
-        decision = authorize(AuthorizationRequest(
+        authorization_request = AuthorizationRequest(
             context=request.identity,
             capability=request.capability,
             action=f"{request.purpose.value}:{resource_action}",
             risk_level="high" if request.consequential_action else "normal",
             requires_approval=request.consequential_action,
             execution_context=request.execution_context,
-        ))
-        if decision is AuthorizationDecision.DENY:
-            return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Identity is not authorized for this capability")
-        if decision is AuthorizationDecision.REQUIRE_APPROVAL:
-            return SafetyPrivacyResult(SafetyPrivacyDecision.REVIEW, "Additional approval is required")
+        )
+
+        if request.consequential_action:
+            if request.execution_context is None:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Consequential action requires an execution context")
+            decision = gate_consequential_operation(
+                ConsequentialOperationRequest(
+                    authorization=authorization_request,
+                    execution_context=request.execution_context,
+                    explicit_user_approval=request.explicit_user_approval,
+                )
+            )
+            if decision is ConsequentialDecision.DENY:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Identity is not authorized for this consequential capability")
+            if decision is ConsequentialDecision.CONSENT_REQUIRED:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.REVIEW, "Required consent is not satisfied")
+            if decision is ConsequentialDecision.REQUIRE_APPROVAL:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.REVIEW, "Additional approval is required")
+        else:
+            decision = authorize(authorization_request)
+            if decision is AuthorizationDecision.DENY:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Identity is not authorized for this capability")
+            if decision is AuthorizationDecision.REQUIRE_APPROVAL:
+                return SafetyPrivacyResult(SafetyPrivacyDecision.REVIEW, "Additional approval is required")
 
         if not request.data_minimization:
             return SafetyPrivacyResult(SafetyPrivacyDecision.MINIMIZE, "Access is permitted only after data minimization")
