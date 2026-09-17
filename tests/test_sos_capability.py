@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from src.capabilities.safety_privacy import SafetyPrivacyDecision
 from src.capabilities.sos import CAPABILITY_ID, SOSCapability
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.core.sos import (
@@ -18,9 +19,9 @@ from src.identity.principal import IdentityMode, Principal
 
 
 class AllowGate:
-    def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> str:
+    def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> SafetyPrivacyDecision:
         assert identity.principal.principal_id == "citizen-1"
-        return "ALLOW"
+        return SafetyPrivacyDecision.ALLOW
 
 
 @dataclass
@@ -117,11 +118,11 @@ def test_missing_explicit_choice_is_rejected_before_policy_gate() -> None:
 
 def test_policy_denial_is_not_bypassed() -> None:
     class DenyGate:
-        def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> str:
+        def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> SafetyPrivacyDecision:
             assert identity.principal.principal_id == "citizen-1"
-            return "BLOCK"
+            return SafetyPrivacyDecision.BLOCK
 
-    with pytest.raises(PermissionError, match="BLOCK"):
+    with pytest.raises(PermissionError, match="block"):
         SOSCapability(decision_gate=DenyGate()).trigger(request(), identity=identity())
 
 
