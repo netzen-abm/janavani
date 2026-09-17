@@ -73,7 +73,7 @@ class SOSCapability:
         deliveries: list[DeliveryResult] = []
         now = datetime.now(timezone.utc).isoformat()
         for index, destination_ref in enumerate(request.destination_refs):
-            adapter = self._select_adapter(index)
+            adapter = self._select_adapter(request, index)
             if adapter is None:
                 deliveries.append(DeliveryResult(
                     delivery_id=f"delivery-{request.sos_id}-{index}",
@@ -159,7 +159,14 @@ class SOSCapability:
         if decision is ConsequentialDecision.REQUIRE_APPROVAL:
             raise PermissionError("SOS action requires approval")
 
-    def _select_adapter(self, index: int) -> SOSDeliveryAdapter | None:
+    def _select_adapter(self, request: SOSRequest, index: int) -> SOSDeliveryAdapter | None:
+        """Select only a transport explicitly requested by the caller, when constrained."""
+        if request.requested_transport_kinds:
+            for kind in request.requested_transport_kinds:
+                adapter = self._adapters.get(kind)
+                if adapter is not None:
+                    return adapter
+            return None
         if not self._adapters:
             return None
         return tuple(self._adapters.values())[index % len(self._adapters)]
