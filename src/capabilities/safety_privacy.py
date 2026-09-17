@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 
 CAPABILITY_ID = "safety:privacy"
@@ -56,6 +57,7 @@ class SafetyPrivacyRequest:
     remote_transmission: bool = False
     biometric_processing: bool = False
     consequential_action: bool = False
+    execution_context: CapabilityExecutionContext | None = None
 
 
 @dataclass(frozen=True)
@@ -79,8 +81,6 @@ class SafetyPrivacyDecisionBoundary:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Remote transmission requires an explicit upload or SOS-transmission purpose")
         if request.biometric_processing and request.resource is not SensitiveResource.BIOMETRIC_PROCESSING:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Biometric processing must be separately scoped")
-        if request.consequential_action and request.purpose is not AccessPurpose.EXTERNAL_ACTION:
-            return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Consequential action requires the external-action boundary")
 
         resource_action = request.resource.value if request.resource is not None else "operation"
         decision = authorize(AuthorizationRequest(
@@ -89,6 +89,7 @@ class SafetyPrivacyDecisionBoundary:
             action=f"{request.purpose.value}:{resource_action}",
             risk_level="high" if request.consequential_action else "normal",
             requires_approval=request.consequential_action,
+            execution_context=request.execution_context,
         ))
         if decision is AuthorizationDecision.DENY:
             return SafetyPrivacyResult(SafetyPrivacyDecision.BLOCK, "Identity is not authorized for this capability")
