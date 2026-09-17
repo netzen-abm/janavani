@@ -7,6 +7,7 @@ from src.capabilities.safety_privacy import (
     SensitiveResource,
     evaluate_safety_privacy,
 )
+from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 
@@ -79,7 +80,7 @@ def test_blocks_implicit_biometric_processing() -> None:
 
 def test_requires_review_for_consequential_action() -> None:
     result = evaluate_safety_privacy(
-        request(purpose=AccessPurpose.EXTERNAL_ACTION, consequential_action=True)
+        request(purpose=AccessPurpose.SOS_TRANSMISSION, resource=None, remote_transmission=True, consequential_action=True)
     )
     assert result.decision is SafetyPrivacyDecision.REVIEW
 
@@ -95,3 +96,28 @@ def test_blocks_identity_without_capability() -> None:
     )
     result = evaluate_safety_privacy(request(identity=denied))
     assert result.decision is SafetyPrivacyDecision.BLOCK
+
+
+def test_consequential_review_preserves_execution_context() -> None:
+    execution_context = CapabilityExecutionContext.for_capability(
+        context := context(),
+        capability_id="sos:trigger",
+        action="sos:trigger",
+        surface="test",
+        resource_id="sos-1",
+        idempotency_key="idem-sos-1",
+        risk_level="high",
+        side_effect_class=SideEffectClass.EXTERNAL_SIDE_EFFECT,
+    )
+    result = evaluate_safety_privacy(
+        request(
+            identity=context,
+            capability="safety:privacy",
+            purpose=AccessPurpose.SOS_TRANSMISSION,
+            resource=None,
+            remote_transmission=True,
+            consequential_action=True,
+            execution_context=execution_context,
+        )
+    )
+    assert result.decision is SafetyPrivacyDecision.REVIEW
