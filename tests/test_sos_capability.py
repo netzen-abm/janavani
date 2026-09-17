@@ -140,6 +140,38 @@ def test_transport_exception_becomes_failed_state() -> None:
     assert result.deliveries[0].error_code == "TRANSPORT_EXCEPTION"
 
 
+def test_requested_transport_is_honored() -> None:
+    local = FakeTransport(transport_kind=TransportKind.LOCAL)
+    internet = FakeTransport(transport_kind=TransportKind.INTERNET)
+    result = SOSCapability(
+        decision_gate=AllowGate(), delivery_adapters=(local, internet)
+    ).trigger(
+        request(
+            remote_transmission=True,
+            destination_refs=("trusted-contact-1",),
+            requested_transport_kinds=(TransportKind.INTERNET,),
+        ),
+        identity=identity(),
+    )
+    assert result.deliveries[0].transport_kind is TransportKind.INTERNET
+
+
+def test_unavailable_requested_transport_is_unknown() -> None:
+    result = SOSCapability(
+        decision_gate=AllowGate(),
+        delivery_adapters=(FakeTransport(transport_kind=TransportKind.LOCAL),),
+    ).trigger(
+        request(
+            remote_transmission=True,
+            destination_refs=("trusted-contact-1",),
+            requested_transport_kinds=(TransportKind.INTERNET,),
+        ),
+        identity=identity(),
+    )
+    assert result.state is SOSDeliveryState.UNKNOWN
+    assert result.deliveries[0].error_code == "NO_ELIGIBLE_TRANSPORT"
+
+
 def test_consequential_action_requires_canonical_approval() -> None:
     identity_context = identity()
     with pytest.raises(PermissionError, match="requires approval"):
