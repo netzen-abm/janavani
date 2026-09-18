@@ -78,7 +78,7 @@ def test_local_sos_is_truthfully_local_only() -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["state"] == "local_only"
+    assert body["state"] == "LOCAL_ONLY"
     assert body["deliveries"] == []
     assert body["submission"] == "not_submitted"
     assert body["police_delivery"] == "not_implemented"
