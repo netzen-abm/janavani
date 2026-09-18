@@ -28,8 +28,6 @@ class SOSTriggerRequest(BaseModel):
     location_ref: str | None = None
     explicit_user_choice: bool = False
     remote_transmission: bool = False
-    consequential_action: bool = False
-    explicit_user_approval: bool = False
     idempotency_key: str | None = None
     requested_transport_kinds: tuple[TransportKind, ...] = ()
 
@@ -42,7 +40,7 @@ async def trigger_sos(
     sos_id = f"sos-{uuid4().hex}"
     side_effect = (
         SideEffectClass.EXTERNAL_SIDE_EFFECT
-        if request.remote_transmission or request.consequential_action
+        if request.remote_transmission
         else SideEffectClass.LOCAL_MUTATION
     )
 
@@ -56,7 +54,7 @@ async def trigger_sos(
         surface="webapp",
         resource_id=sos_id,
         idempotency_key=request.idempotency_key,
-        risk_level="high" if request.consequential_action else "normal",
+        risk_level="high" if request.remote_transmission else "normal",
         side_effect_class=side_effect,
     )
 
@@ -70,9 +68,11 @@ async def trigger_sos(
                 location_ref=request.location_ref,
                 explicit_user_choice=request.explicit_user_choice,
                 remote_transmission=request.remote_transmission,
-                consequential_action=request.consequential_action,
+                consequential_action=request.remote_transmission,
                 execution_context=execution_context,
-                explicit_user_approval=request.explicit_user_approval,
+                # Approval is intentionally not accepted as a client-supplied boolean.
+                # A trusted approval artifact/channel must exist before consequential SOS can execute.
+                explicit_user_approval=False,
                 requested_transport_kinds=request.requested_transport_kinds,
             ),
             identity=context,
