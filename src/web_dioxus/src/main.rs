@@ -4,7 +4,6 @@ use dioxus::prelude::*;
 
 mod api_client;
 mod capability_checker;
-mod decentralized_drivers;
 mod sos_interface;
 
 use api_client::{CaseDocument, JanavaniDioxusBridge};
@@ -65,8 +64,9 @@ fn App() -> Element {
         spawn(async move {
             let context = LocalEmergencyContext {
                 tracking_id: "SESSION_INTERNAL_ACTIVE_NODE".to_string(),
-                geo_coordinates: "local-only".to_string(),
+                geo_coordinates: None,
                 danger_context: danger_type,
+                explicit_user_choice: true,
             };
             match JanavaniWasmSOSTrigger::dispatch_panic_beacon(context).await {
                 Ok(message) => sos_notification.set(Some(message)),
@@ -131,6 +131,7 @@ fn App() -> Element {
                 style: "padding: 1.25rem; border: 1px solid #ecc; border-radius: 8px;",
                 h2 { "Emergency capability" }
                 p { "Emergency handling is independent from the ordinary civic case workflow." }
+                p { "SOS requests are sent only after an explicit user action. Delivery transport and policy decisions are handled by the canonical Janavani SOS service." }
                 div {
                     button { onclick: move |_| on_sos("Late Night Travel / Unsafe Area".to_string()), "Late night danger" }
                     button { onclick: move |_| on_sos("Stalker / Being Followed".to_string()), "Being followed" }
