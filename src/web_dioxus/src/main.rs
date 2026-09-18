@@ -67,6 +67,7 @@ fn App() -> Element {
                 geo_coordinates: None,
                 danger_context: danger_type,
                 explicit_user_choice: true,
+                identity_assertion: None,
             };
             match JanavaniWasmSOSTrigger::dispatch_panic_beacon(context).await {
                 Ok(message) => sos_notification.set(Some(message)),
