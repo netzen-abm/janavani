@@ -19,9 +19,9 @@ mod tests {
     #[test]
     fn test_blockchain_verification_compliance_bounds() {
         let valid_merkle_root = "0x8f3c2d1e9b4a5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d";
-        let invalid_root = "broken-non-hex-string-format";
+        let invalid_merkle_root = "broken-non-hex-string-format";
 
-        assert!(JanavaniDecentralizedCore::verify_blockchain_compliance_checkpoint(valid_merkle_root));
+        assert!(JanavaniDecentralizedCore::verify_blockchain_compliance_checkpoint(valid_root));
         assert!(!JanavaniDecentralizedCore::verify_blockchain_compliance_checkpoint(invalid_root));
     }
 }
