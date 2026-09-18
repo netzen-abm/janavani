@@ -82,3 +82,18 @@ def test_local_sos_is_truthfully_local_only() -> None:
     assert body["deliveries"] == []
     assert body["submission"] == "not_submitted"
     assert body["police_delivery"] == "not_implemented"
+
+
+def test_remote_sos_fails_closed_without_server_side_approval() -> None:
+    response = client.post(
+        "/api/v1/sos/trigger",
+        headers=_auth_header(),
+        json={
+            "incident_context": "harassment",
+            "destination_refs": ["control-room-ref"],
+            "explicit_user_choice": True,
+            "remote_transmission": True,
+            "idempotency_key": "sos-test-idempotency-1",
+        },
+    )
+    assert response.status_code == 403
