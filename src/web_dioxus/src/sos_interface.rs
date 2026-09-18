@@ -14,11 +14,12 @@ pub struct LocalEmergencyContext {
     pub geo_coordinates: Option<String>,
     pub danger_context: String,
     pub explicit_user_choice: bool,
+    /// Short-lived assertion issued by the Janavani identity gateway. It is not persisted.
+    pub identity_assertion: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct SosApiRequest {
-    pub tracking_id: String,
     pub location_ref: Option<String>,
     pub incident_context: String,
     pub explicit_user_choice: bool,
@@ -55,8 +56,11 @@ impl JanavaniWasmSOSTrigger {
             format!("{}/api/v1/sos/trigger", endpoint.trim_end_matches('/'))
         };
 
+        let assertion = context.identity_assertion.as_deref().ok_or_else(|| {
+            "Authenticated Janavani identity is required before SOS API submission.".to_string()
+        })?;
+
         let request = SosApiRequest {
-            tracking_id: context.tracking_id,
             location_ref: context.geo_coordinates,
             incident_context: context.danger_context,
             explicit_user_choice: context.explicit_user_choice,
@@ -64,6 +68,7 @@ impl JanavaniWasmSOSTrigger {
 
         let response = Client::new()
             .post(url)
+            .bearer_auth(assertion)
             .json(&request)
             .send()
             .await
@@ -99,6 +104,7 @@ mod tests {
             geo_coordinates: None,
             danger_context: "test".to_string(),
             explicit_user_choice: false,
+            identity_assertion: None,
         };
 
         assert_eq!(
@@ -114,6 +120,7 @@ mod tests {
             geo_coordinates: None,
             danger_context: "test".to_string(),
             explicit_user_choice: true,
+            identity_assertion: Some("short-lived-test-assertion".to_string()),
         };
 
         assert!(JanavaniWasmSOSTrigger::validate_user_choice(&context).is_ok());
