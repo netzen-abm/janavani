@@ -1,3 +1,9 @@
+Archived from `src/web_dioxus/src/test_sos.rs` during Web Dioxus SOS convergence (2026-09-16).
+
+Reason: the test exercised the removed surface-owned Reticulum implementation rather than the canonical SOS capability/API boundary. It is retained as historical evidence and must not be treated as a current transport verification test.
+
+Original content:
+
 #[cfg(test)]
 mod tests {
     use crate::sos_interface::JanavaniWasmSOSTrigger;

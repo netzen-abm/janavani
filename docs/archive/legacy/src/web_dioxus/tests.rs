@@ -1,3 +1,9 @@
+Archived from `src/web_dioxus/src/tests.rs` during Web Dioxus decentralized-code convergence (2026-09-16).
+
+Reason: these tests exercised surface-owned mock Nostr/blockchain helpers rather than canonical Janavani capabilities. Preserved as historical evidence; not a current verification suite.
+
+Original content:
+
 #[cfg(test)]
 mod tests {
     use super::*;

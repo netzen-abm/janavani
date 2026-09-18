@@ -1,3 +1,9 @@
+Archived from `src/web_dioxus/src/decentralized_drivers.rs` during Web Dioxus SOS convergence (2026-09-16).
+
+Reason: this surface-owned module contained mock/legacy Nostr, Nym, Reticulum, and blockchain transport/identity implementations. The canonical SOS architecture requires the Web surface to consume shared capabilities through an adapter rather than owning emergency transport/provider behavior.
+
+Original content:
+
 use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Default)]
