@@ -68,32 +68,32 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
             try:
                 try:
                     with connection.transaction():
-                        _bootstrap(connection)
-                        with connection.cursor() as cur:
-                                cur.execute("CREATE SCHEMA IF NOT EXISTS janavani_private")
-                                cur.execute(
-                                    f"GRANT USAGE ON SCHEMA public, janavani_private "
-                                f"TO {owner_role}, {delegate_role}, {stranger_role}"
-                            )
-                            cur.execute(
+                    _bootstrap(connection)
+                    with connection.cursor() as cur:
+                        cur.execute("CREATE SCHEMA IF NOT EXISTS janavani_private")
+                        cur.execute(
+                            f"GRANT USAGE ON SCHEMA public, janavani_private "
+                            f"TO {owner_role}, {delegate_role}, {stranger_role}"
+                        )
+                        cur.execute(
                             f"GRANT SELECT, INSERT, UPDATE ON public.civic_cases "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
-                            cur.execute(
+                        cur.execute(
                             f"GRANT SELECT, UPDATE ON public.janavani_delegation_grants "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
-                            cur.execute(
+                        cur.execute(
                             f"GRANT SELECT ON public.civic_case_consents "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
-                            cur.execute(
+                        cur.execute(
                             f"GRANT SELECT ON public.janavani_service_identity_policies "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
-                            cur.execute(RLS_SQL)
+                        cur.execute(RLS_SQL)
                         _set_principal(connection, "alice")
-                            cur.execute(
+                        cur.execute(
                             """
                             INSERT INTO civic_cases (
                                 case_id, case_type, subject, narrative, created_by,
@@ -107,7 +107,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             )
                             """
                         )
-                            cur.execute(
+                        cur.execute(
                             """
                             INSERT INTO civic_case_consents (
                                 consent_id, case_id, purpose, scope, status,
@@ -118,7 +118,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             )
                             """
                         )
-                            cur.execute(
+                        cur.execute(
                             """
                             INSERT INTO janavani_delegation_grants (
                                 delegation_id, grantor_id, delegate_id, capabilities,
@@ -131,7 +131,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             )
                             """
                         )
-                            cur.execute(
+                        cur.execute(
                             """
                             INSERT INTO janavani_service_identity_policies (
                                 principal_id, allowed_capabilities, allowed_actions
@@ -139,62 +139,62 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             """
                         )
 
-                            cur.execute("SET ROLE " + owner_role)
+                        cur.execute("SET ROLE " + owner_role)
                         _set_principal(connection, "alice")
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
                         )
                         assert cur.fetchone()[0] == 1
 
-                            cur.execute("SET ROLE " + delegate_role)
+                        cur.execute("SET ROLE " + delegate_role)
                         _set_principal(connection, "bob")
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
                         )
                         assert cur.fetchone()[0] == 1
-                            cur.execute(
+                        cur.execute(
                             "UPDATE civic_cases SET narrative = 'delegate update', "
                             "version = 2 WHERE case_id = 'rls-case'"
                         )
                         assert cur.rowcount == 1
 
-                            cur.execute("SET ROLE " + stranger_role)
+                        cur.execute("SET ROLE " + stranger_role)
                         _set_principal(connection, "mallory")
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
                         )
                         assert cur.fetchone()[0] == 0
-                            cur.execute(
+                        cur.execute(
                             "UPDATE civic_cases SET narrative = 'cross-user update' "
                             "WHERE case_id = 'rls-case'"
                         )
                         assert cur.rowcount == 0
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM civic_case_consents "
                             "WHERE consent_id = 'rls-consent'"
                         )
                         assert cur.fetchone()[0] == 0
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM janavani_service_identity_policies"
                         )
                         assert cur.fetchone()[0] == 0
 
                         # Only the grantor can revoke the delegation.
-                            cur.execute("SET ROLE " + owner_role)
+                        cur.execute("SET ROLE " + owner_role)
                         _set_principal(connection, "alice")
-                            cur.execute(
+                        cur.execute(
                             "UPDATE janavani_delegation_grants SET revoked = true "
                             "WHERE delegation_id = 'rls-delegation'"
                         )
                         assert cur.rowcount == 1
 
-                            cur.execute("SET ROLE " + delegate_role)
+                        cur.execute("SET ROLE " + delegate_role)
                         _set_principal(connection, "bob")
-                            cur.execute(
+                        cur.execute(
                             "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
                         )
                         assert cur.fetchone()[0] == 0
-                            cur.execute(
+                        cur.execute(
                             "UPDATE civic_cases SET narrative = 'revoked update' "
                             "WHERE case_id = 'rls-case'"
                         )
