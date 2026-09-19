@@ -4,8 +4,15 @@ ROOT = Path(__file__).parents[1]
 SQL = (ROOT / "db/migrations/20260919_canonical_schema_convergence.sql").read_text(encoding="utf-8")
 
 
+def _sql_without_leading_comments(sql: str) -> str:
+    lines = sql.splitlines()
+    while lines and (not lines[0].strip() or lines[0].lstrip().startswith("--")):
+        lines.pop(0)
+    return "\n".join(lines)
+
+
 def test_convergence_is_transactional():
-    statements = SQL.lstrip()
+    statements = _sql_without_leading_comments(SQL)
     assert statements.startswith("BEGIN;")
     assert statements.rstrip().endswith("COMMIT;")
 
