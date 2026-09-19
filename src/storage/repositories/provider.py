@@ -14,7 +14,7 @@ from src.storage.repositories.civic_case import (
     InMemoryCivicCaseRepository,
 )
 
-SUPPORTED_PROVIDERS = frozenset({"memory", "postgres", "supabase"})
+SUPPORTED_PROVIDERS = frozenset({"memory", "postgres"})
 
 
 class CivicCaseProviderConfigurationError(RuntimeError):
@@ -71,27 +71,6 @@ def create_civic_case_repository(
                 "PostgreSQL provider requires a DSN or connection factory"
             ) from exc
 
-    if supabase_client is None:
-        try:
-            from src.storage.supabase import supabase
-        except Exception as exc:
-            raise CivicCaseProviderConfigurationError(
-                "Supabase provider could not be initialized"
-            ) from exc
-        supabase_client = supabase
-
-    if supabase_client is None:
-        raise CivicCaseProviderConfigurationError(
-            "Supabase provider requires a configured client"
-        )
-
-    from src.storage.repositories.supabase_civic_case import (
-        SupabaseCivicCaseRepository,
+    raise CivicCaseProviderConfigurationError(
+        "Supabase is intentionally not a runtime provider. Use PostgreSQL."
     )
-
-    try:
-        return SupabaseCivicCaseRepository(supabase_client)
-    except (ValueError, TypeError) as exc:
-        raise CivicCaseProviderConfigurationError(
-            "Supabase provider requires a configured client"
-        ) from exc
