@@ -46,11 +46,6 @@ from src.storage.repositories.submission_provider import (
     create_submission_repository,
 )
 from src.storage.repositories.postgres_submission import PostgresSubmissionRepository
-from src.storage.repositories.supabase_civic_case import (
-    CivicCaseConcurrencyError,
-    CivicCasePersistenceError,
-    SupabaseCivicCaseRepository,
-)
 
 __all__ = [
     "CivicCaseRepository",
@@ -75,9 +70,6 @@ __all__ = [
     "create_submission_repository",
     "SUPPORTED_SUBMISSION_PROVIDERS",
     "SubmissionProviderConfigurationError",
-    "CivicCaseConcurrencyError",
-    "CivicCasePersistenceError",
-    "SupabaseCivicCaseRepository",
     "PostgresCivicCaseConcurrencyError",
     "PostgresCivicCasePersistenceError",
     "PostgresCivicCaseRepository",

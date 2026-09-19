@@ -63,7 +63,7 @@ No application capability may require Supabase-specific semantics when standard 
 
 ## 4. Supabase position
 
-Supabase remains an **optional provider**, not the Janavani platform foundation.
+Supabase is not a Janavani runtime provider. It may be used only as an external development/verification environment when explicitly isolated from the canonical runtime.
 
 Supabase-specific services may be consumed through explicit adapters where they provide value, including hosted database, authentication, storage, or realtime capabilities.
 
@@ -187,7 +187,7 @@ The immediate storage sequence is:
 
 1. retain the canonical `CivicCaseRepository` contract;
 2. implement a standard PostgreSQL provider using a PostgreSQL-native driver;
-3. keep the Supabase provider as an adapter;
+3. keep any historical Supabase adapter only in the archive/verification boundary;
 4. establish migration tooling independent of Supabase;
 5. run contract tests against local PostgreSQL;
 6. run provider tests against Supabase only after live schema/RLS evidence is available;
@@ -207,3 +207,12 @@ If the answer is no, the dependency is in the wrong architectural layer.
 **Janavani owns the capabilities. Providers merely implement them.**
 
 No vendor owns the Janavani domain, identity model, civic case lifecycle, citizen records, capability contracts, or architectural authority.
+
+
+## 15. Supabase-free runtime invariant
+
+Supabase is not a Janavani runtime dependency. The canonical application, domain kernel, capability layer, repository selection, configuration, tests for core behavior, deployment manifests, and required build dependencies must remain operable without a Supabase account, URL, key, SDK, RPC, Auth, Storage, Realtime service, or Supabase-specific API.
+
+Supabase-specific material may exist only in an explicitly isolated verification/archive boundary. It must never be required for core startup, core tests, standard PostgreSQL persistence, or deployment.
+
+The portability test is simple: a clean environment with standard PostgreSQL and no Supabase credentials must be able to build and run the canonical Janavani runtime.

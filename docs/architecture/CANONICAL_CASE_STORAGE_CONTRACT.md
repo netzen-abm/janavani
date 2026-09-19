@@ -31,7 +31,7 @@ It is **not production persistence**. Process restart still loses state.
 
 ## Durable target
 
-The existing repository audit identifies Supabase/PostgreSQL as the intended durable relational authority, with object storage for binary artifacts and Redis reserved for ephemeral state.
+The existing repository audit identifies standard PostgreSQL as the durable relational authority; Supabase is not required, with object storage for binary artifacts and Redis reserved for ephemeral state.
 
 A durable Civic Case provider must be verified against the existing schema, access-control model, serialization/hydration requirements, audit events, and privacy rules before the HTTP adapter is switched to it.
 
@@ -47,7 +47,7 @@ Do not migrate or delete legacy JSONL/CSV stores as part of this contract change
 
 Before production activation:
 
-1. Verify the current Supabase schema against the canonical `CivicCase` lifecycle.
+1. Verify the target standard PostgreSQL schema against the canonical `CivicCase` lifecycle.
 2. Implement serialization/hydration with round-trip tests.
 3. Implement authorization/RLS behavior and negative-access tests.
 4. Persist lifecycle events without equating persistence with delivery acknowledgement.

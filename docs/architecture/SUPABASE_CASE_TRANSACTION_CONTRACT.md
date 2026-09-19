@@ -1,10 +1,6 @@
 # Supabase Civic Case Transaction Contract
 
-**Status:** REQUIRED BEFORE PRODUCTION CASE PERSISTENCE
-
-## Purpose
-
-The canonical Civic Case repository now has a Supabase/PostgreSQL provider, but its current implementation deliberately does not claim multi-table atomicity. This document defines the database transaction boundary required before that provider can become the production repository.
+**Status:** ARCHIVED PROVIDER-SPECIFIC DESIGN — not part of the Janavani runtimenonical Civic Case repository now has a Supabase/PostgreSQL provider, but its current implementation deliberately does not claim multi-table atomicity. This document defines the database transaction boundary required before that provider can become the production repository.
 
 No production database mutation is authorized by this document.
 
@@ -136,3 +132,8 @@ Production activation requires all of the following evidence:
 - provider activation is explicit and reversible.
 
 Until this gate is satisfied, `InMemoryCivicCaseRepository` remains the active development adapter and the Supabase provider remains a verified-but-not-production-enabled implementation.
+
+
+## Runtime independence decision
+
+This document is retained for historical/provider-verification context only. The canonical runtime must not require Supabase, Supabase SDKs, Supabase RPCs, Supabase Auth, Supabase Storage, or Supabase-specific database semantics. The standard PostgreSQL provider and provider-neutral repository contracts are authoritative.
