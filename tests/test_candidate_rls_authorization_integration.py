@@ -68,8 +68,8 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
             try:
                 try:
                     with connection.transaction():
-                    _bootstrap(connection)
-                    with connection.cursor() as cur:
+                        _bootstrap(connection)
+                        with connection.cursor() as cur:
                         cur.execute("CREATE SCHEMA IF NOT EXISTS janavani_private")
                         cur.execute(
                             f"GRANT USAGE ON SCHEMA public, janavani_private "
