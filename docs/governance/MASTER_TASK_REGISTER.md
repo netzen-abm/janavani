@@ -24,7 +24,7 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Verify Docker/Procfile/Compose/deployment manifests agree on one authoritative application target.
 - [ ] Verify full Python/Rust/Dioxus test orchestrator on canonical `main` or record exact blockers.
 - [ ] Keep PostgreSQL migration blocked until boundary audit and runtime evidence justify it.
-- [ ] Keep Supabase as an adapter; do not treat it as transaction authority without verified atomicity.
+- [x] Retire Supabase from the active runtime/build graph; preserve historical evidence under archive/legacy/.
 - [ ] Verify all durable repositories are selected only by composition/provider boundaries.
 
 ## P0 — Shared civic domain
