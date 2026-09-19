@@ -14,8 +14,6 @@ The repository does contain service/integration credentials and a strong privacy
 | Credential | Current purpose | Citizen login credential? |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | Telegram bot integration | No |
-| `SUPABASE_URL` | Supabase integration configuration | No |
-| `SUPABASE_ANON_KEY` | Supabase client/integration access | No |
 | `OPENROUTER_API_KEY` | OpenRouter provider access | No |
 | `HF_TOKEN` | Hugging Face inference/provider access | No |
 | `NOSTR_PRIVATE_KEY_HEX` | Nostr cryptographic identity | Capability-specific |
