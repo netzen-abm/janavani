@@ -46,19 +46,6 @@ ON public.civic_cases
 FOR INSERT
 WITH CHECK (
     created_by = janavani_private.current_principal_id()
-    OR EXISTS (
-        SELECT 1
-        FROM public.janavani_delegation_grants d
-        WHERE d.grantor_id = civic_cases.created_by
-          AND d.delegate_id = janavani_private.current_principal_id()
-          AND d.revoked = false
-          AND (d.expires_at IS NULL OR d.expires_at > now())
-          AND d.actions @> '["case:update"]'::jsonb
-          AND (
-              d.resource_ids = '[]'::jsonb
-              OR d.resource_ids @> jsonb_build_array(civic_cases.case_id)
-          )
-    )
 );
 
 DROP POLICY IF EXISTS civic_cases_owner_update ON public.civic_cases;
@@ -83,6 +70,19 @@ USING (
 )
 WITH CHECK (
     created_by = janavani_private.current_principal_id()
+    OR EXISTS (
+        SELECT 1
+        FROM public.janavani_delegation_grants d
+        WHERE d.grantor_id = civic_cases.created_by
+          AND d.delegate_id = janavani_private.current_principal_id()
+          AND d.revoked = false
+          AND (d.expires_at IS NULL OR d.expires_at > now())
+          AND d.actions @> '["case:update"]'::jsonb
+          AND (
+              d.resource_ids = '[]'::jsonb
+              OR d.resource_ids @> jsonb_build_array(civic_cases.case_id)
+          )
+    )
 );
 
 -- Child records inherit authorization from their Case.
