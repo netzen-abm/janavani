@@ -122,7 +122,7 @@ AI Agent                  -> approved capabilities only
 
 ```text
 CASE repository:
-    memory -> PostgreSQL -> Supabase PostgreSQL adapter
+    memory -> PostgreSQL adapter
 
 AI:
     local model -> hosted model provider -> another provider
