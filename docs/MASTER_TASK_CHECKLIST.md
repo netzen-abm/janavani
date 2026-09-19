@@ -512,6 +512,28 @@ Remaining: capability → repository → tests → deployment → security/priva
 - [ ] M2-C Storage Ownership Map — decision/verification layer.
 - [ ] M2-D Runtime Execution Verification.
 
+## P0 — CURRENT CONVERGENCE GATE (2026-09-19)
+
+Architectural decision: Janavani owns the capability; PostgreSQL is the relational standard; Supabase is not required by runtime, build, CI, configuration or startup. Historical Supabase artifacts remain in archive/legacy/ only.
+
+- [x] P0.1 Active Supabase implementation files removed from runtime graph and preserved in archive.
+- [x] P0.2 Supabase package removed from requirements.txt and pyproject.toml.
+- [x] P0.3 Supabase runtime configuration removed from src/core/config.py and .env.example.
+- [x] P0.4 Civic Case provider selection reduced to memory / postgres.
+- [ ] P0.5 Sweep CI/deployment/startup/import references on canonical main and verify no active Supabase dependency remains.
+- [ ] P0.6 Run canonical PostgreSQL conformance/security gate and record exact CI evidence.
+
+### PostgreSQL conformance/security gate
+
+- [x] P0.6a Atomic Case + event/reference transaction boundary exists.
+- [x] P0.6b Rollback test exists.
+- [x] P0.6c Stale-version concurrency rejection test exists.
+- [x] P0.6d Submission/Case exact replay/idempotency integration test exists.
+- [ ] P0.6e Cross-user negative authorization tests execute against real PostgreSQL.
+- [ ] P0.6f PostgreSQL RLS policies are implemented and negative-tested.
+- [ ] P0.6g Restart durability / outage / recovery evidence is executed.
+- [ ] P0.6h Backup/restore evidence is executed.
+
 ## Immediate unresolved sequence
 
 1. M2-B Capability → Repository → Test → Deployment Map.
