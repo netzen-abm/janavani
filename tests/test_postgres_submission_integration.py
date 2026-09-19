@@ -16,8 +16,8 @@ from src.storage.repositories.postgres_submission import PostgresSubmissionRepos
 
 
 ROOT = Path(__file__).parents[1]
-CANONICAL_MIGRATION = ROOT / "supabase" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
-IDEMPOTENCY_MIGRATION = ROOT / "supabase" / "migrations" / "20260913100000_submission_idempotency_key.sql"
+CANONICAL_MIGRATION = ROOT / "db" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
+IDEMPOTENCY_MIGRATION = ROOT / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
 
