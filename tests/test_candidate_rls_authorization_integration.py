@@ -17,10 +17,6 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-class _RollbackRLS(Exception):
-    """Sentinel used to roll back the disposable RLS transaction after success."""
-
-
 def _bootstrap(connection) -> None:
     canonical = (
         ROOT / "db/migrations/20260912100000_canonical_case_policy_schema.sql"
@@ -199,6 +195,9 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                         )
                         assert cur.rowcount == 0
             finally:
+                # Explicit rollback is required because psycopg commits a
+                # successful context manager automatically.
+                connection.rollback()
     finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
             with admin.cursor() as cur:
