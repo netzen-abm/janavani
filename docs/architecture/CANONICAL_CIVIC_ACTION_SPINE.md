@@ -36,7 +36,7 @@ same capability contracts.
    download. Generation does not imply submission or email.
 5. External submission is a separate consequential capability and requires
    explicit authorization/approval.
-6. Providers are adapters. PostgreSQL, Supabase, local stores and other
+6. Providers are adapters. PostgreSQL, local stores and other
    providers cannot become domain dependencies.
 7. Durable providers are required for continuity across independently deployed
    surfaces; process-local memory is for development/tests only.
