@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 
-MIGRATION = Path(__file__).parents[1] / "supabase" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
+MIGRATION = Path(__file__).parents[1] / "db" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
 
