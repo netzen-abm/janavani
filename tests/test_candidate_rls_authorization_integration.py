@@ -50,6 +50,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
             for role in (owner_role, delegate_role, stranger_role):
                 cur.execute(f"DROP ROLE IF EXISTS {role}")
                 cur.execute(f"CREATE ROLE {role} NOLOGIN")
+            cur.execute("CREATE SCHEMA IF NOT EXISTS janavani_private")
             cur.execute(f"GRANT USAGE ON SCHEMA public, janavani_private TO {owner_role}, {delegate_role}, {stranger_role}")
             cur.execute(f"GRANT SELECT, INSERT, UPDATE ON public.civic_cases TO {owner_role}, {delegate_role}, {stranger_role}")
             cur.execute(f"GRANT SELECT ON public.janavani_delegation_grants TO {owner_role}, {delegate_role}, {stranger_role}")
