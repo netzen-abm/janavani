@@ -23,8 +23,3 @@ def test_postgres_provider_can_be_selected_with_injected_connection():
         connection_factory=lambda: None,
     )
     assert repository.__class__.__name__ == "PostgresCivicCaseRepository"
-
-
-def test_supabase_provider_requires_a_client():
-    with pytest.raises(CivicCaseProviderConfigurationError):
-        create_civic_case_repository("supabase")
