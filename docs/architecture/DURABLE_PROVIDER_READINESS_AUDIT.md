@@ -1,14 +1,14 @@
 # Janavani — Durable Provider Readiness Audit
 
 **Status:** AUDIT COMPLETE — production activation remains blocked
-**Scope:** PostgreSQL and Supabase CivicCase providers
+**Scope:** Canonical PostgreSQL CivicCase provider; historical Supabase evidence
 **Date:** 2026-09-06
 
 ## Executive decision
 
-The canonical PostgreSQL schema and provider boundaries are sufficiently defined for continued implementation, and the PostgreSQL provider now has disposable real-database integration evidence. Neither durable provider is approved for production activation.
+The canonical PostgreSQL schema and provider boundaries are sufficiently defined for continued implementation, and the PostgreSQL provider now has disposable real-database integration evidence. The canonical PostgreSQL provider is not yet approved for production activation. The historical Supabase adapter is not part of the active runtime.
 
-The direct PostgreSQL provider has a stronger transaction boundary than the Supabase adapter. The Supabase adapter explicitly does not claim multi-table atomicity. Both providers still require production evidence for authorization, RLS, restart durability, backup/restore, outage behavior, and full submission consistency.
+The historical Supabase adapter was non-atomic and is retained only as archive evidence. The canonical PostgreSQL provider still requires production evidence for authorization, RLS, restart durability, backup/restore, outage behavior, and full submission consistency.
 
 ## Verified strengths
 
@@ -36,9 +36,9 @@ The runtime `CivicCase` contains `consent_refs`, and the PostgreSQL provider hyd
 
 This must not be "fixed" by manufacturing consent rows with invented purpose, scope or grant semantics. The next design slice must establish the canonical consent object/repository boundary before durable consent persistence is activated.
 
-### 3. Supabase provider lacks verified multi-table atomicity
+### 3. Historical Supabase implementation is retired
 
-The Supabase adapter performs case, event and reference writes through separate API operations. Its own implementation documentation states that multi-table atomicity is not claimed. It must not replace the PostgreSQL provider as a production write path until a verified transaction/RPC boundary exists.
+The historical Supabase adapter performed case, event and reference writes through separate API operations. It has been removed from the active build/runtime graph and preserved under archive/legacy/. It must not be reintroduced as a production write path.
 
 ### 4. Authorization and RLS are not activated
 
@@ -87,7 +87,7 @@ Automation must detect and report. It must not silently activate providers, exec
 8. Database outage produces deterministic degraded behavior.
 9. Backup/restore is demonstrated.
 10. Application authorization negative tests pass.
-11. Supabase RLS negative tests pass if Supabase is activated.
+11. PostgreSQL RLS negative tests pass.
 12. Sensitive-case isolation is demonstrated.
 13. Submission retry history is preserved.
 14. External failure cannot create acknowledgement.
