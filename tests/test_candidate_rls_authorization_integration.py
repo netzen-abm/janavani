@@ -50,7 +50,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
             _bootstrap(admin)
             with admin.cursor() as bootstrap_cur:
                 for public_role in ("anon", "authenticated"):
-                    bootstrap_cur.execute(f"DO $ BEGIN CREATE ROLE {public_role} NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $;")
+                    bootstrap_cur.execute(f"CREATE ROLE {public_role} NOLOGIN")
             for role in (owner_role, delegate_role, stranger_role):
                 cur.execute(f"DROP ROLE IF EXISTS {role}")
                 cur.execute(f"CREATE ROLE {role} NOLOGIN")
