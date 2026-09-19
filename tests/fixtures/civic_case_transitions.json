@@ -1,0 +1,16 @@
+{
+  "draft": ["review"],
+  "review": ["review", "ready"],
+  "ready": ["ready", "submitting"],
+  "submitting": ["submitting", "queued", "submitted"],
+  "queued": ["queued", "submitted"],
+  "submitted": ["acknowledged"],
+  "acknowledged": ["follow_up", "in_progress", "responded", "escalated"],
+  "follow_up": ["follow_up", "responded", "escalated"],
+  "in_progress": ["follow_up", "responded", "escalated"],
+  "responded": ["follow_up", "resolved", "escalated"],
+  "resolved": ["closed"],
+  "escalated": ["responded", "closed"],
+  "closed": ["archived"],
+  "archived": []
+}
