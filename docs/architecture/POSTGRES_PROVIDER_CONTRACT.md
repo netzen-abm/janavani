@@ -19,8 +19,7 @@ Surface
 ```
 
 `PostgresCivicCaseRepository` is the standard direct-PostgreSQL provider.
-Supabase remains a separate provider adapter. Neither provider is the domain
-model or the capability contract.
+Supabase is historical evidence only and is not an active provider. PostgreSQL is the canonical relational implementation; the domain model and capability contracts remain provider-neutral.
 
 ## Provider requirements
 
