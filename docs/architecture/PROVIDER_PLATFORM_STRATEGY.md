@@ -25,7 +25,7 @@ Janavani should remain **provider-neutral at the domain and capability layers** 
 | Observability | Google Cloud Operations | Production telemetry |
 | Mobile supporting services | Firebase where justified | Push, crash reporting, app protection and selected mobile services |
 | Development/staging | Render | Fast multi-language integration environments |
-| Database development/experimentation | Supabase/local PostgreSQL | Development provider, not canonical architecture |
+| Database development/experimentation | local PostgreSQL / managed PostgreSQL | Development provider, not canonical architecture |
 
 ## Why this is the recommendation
 
@@ -53,7 +53,7 @@ Render is useful for fast Python/Rust services, Telegram Bot deployment, integra
 
 Firebase may support native mobile concerns such as push notifications, crash reporting and app protection. It should not become the canonical identity, case, evidence or domain backend merely because it is convenient for mobile.
 
-### 6. Supabase is a provider, not the architecture
+### 6. PostgreSQL is the relational standard
 
 Supabase is useful for development and rapid PostgreSQL-backed experimentation. Janavani's repository contracts must continue to target PostgreSQL/provider-neutral interfaces so production can move to Cloud SQL or another compliant PostgreSQL provider without domain rewrites.
 
