@@ -75,7 +75,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
                         cur.execute(
-                            f"GRANT SELECT ON public.janavani_delegation_grants "
+                            f"GRANT SELECT, UPDATE ON public.janavani_delegation_grants "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
                         cur.execute(
