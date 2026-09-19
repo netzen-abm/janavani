@@ -47,6 +47,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
 
     with psycopg.connect(DSN, autocommit=True) as admin:
         with admin.cursor() as cur:
+            _bootstrap(admin)
             for role in (owner_role, delegate_role, stranger_role):
                 cur.execute(f"DROP ROLE IF EXISTS {role}")
                 cur.execute(f"CREATE ROLE {role} NOLOGIN")
