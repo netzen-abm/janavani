@@ -28,3 +28,8 @@ def test_postgres_provider_can_be_selected_with_injected_connection():
 def test_supabase_is_not_a_runtime_provider():
     with pytest.raises(CivicCaseProviderConfigurationError):
         create_civic_case_repository("supabase")
+
+
+def test_supported_runtime_providers_are_supabase_free():
+    from src.storage.repositories.provider import SUPPORTED_PROVIDERS
+    assert SUPPORTED_PROVIDERS == frozenset({"memory", "postgres"})
