@@ -5,8 +5,9 @@ SQL = (ROOT / "db/migrations/20260919_canonical_schema_convergence.sql").read_te
 
 
 def test_convergence_is_transactional():
-    assert SQL.strip().startswith("BEGIN;")
-    assert SQL.strip().endswith("COMMIT;")
+    statements = SQL.lstrip()
+    assert statements.startswith("BEGIN;")
+    assert statements.rstrip().endswith("COMMIT;")
 
 
 def test_case_legacy_names_converge_to_canonical_names():
