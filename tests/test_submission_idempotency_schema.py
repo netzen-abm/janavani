@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-MIGRATION = Path(__file__).parents[1] / "supabase" / "migrations" / "20260913100000_submission_idempotency_key.sql"
+MIGRATION = Path(__file__).parents[1] / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
 REPOSITORY = Path(__file__).parents[1] / "src" / "storage" / "repositories" / "postgres_submission.py"
 
 
