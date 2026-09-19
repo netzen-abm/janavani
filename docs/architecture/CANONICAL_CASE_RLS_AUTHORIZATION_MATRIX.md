@@ -1,7 +1,7 @@
 # Canonical Civic Case RLS & Authorization Matrix
 
 **Status:** Design/security contract — implementation pending approval
-**Scope:** Authorization and PostgreSQL/Supabase RLS requirements for durable Civic Case storage.
+**Scope:** Authorization and PostgreSQL RLS requirements for durable Civic Case storage.
 **Important:** This document defines policy intent. It does **not** authorize creation or modification of RLS SQL policies.
 
 ## 1. Security principle
