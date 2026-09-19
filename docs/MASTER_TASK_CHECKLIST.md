@@ -520,7 +520,7 @@ Architectural decision: Janavani owns the capability; PostgreSQL is the relation
 - [x] P0.2 Supabase package removed from requirements.txt and pyproject.toml.
 - [x] P0.3 Supabase runtime configuration removed from src/core/config.py and .env.example.
 - [x] P0.4 Civic Case provider selection reduced to memory / postgres.
-- [ ] P0.5 Sweep CI/deployment/startup/import references on canonical main and verify no active Supabase dependency remains.
+- [x] P0.5 Sweep active imports/build/configuration/tests and move canonical SQL migrations to provider-neutral db/migrations/. Historical Supabase references remain only in dated evidence/archive; deployment/startup verification remains open.
 - [ ] P0.6 Run canonical PostgreSQL conformance/security gate and record exact CI evidence.
 
 ### PostgreSQL conformance/security gate
