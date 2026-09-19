@@ -37,7 +37,7 @@ Data + Trust + Provenance
 External Government / Civic Systems
 ```
 
-Capabilities are primary. Interfaces are access surfaces. Implementations are replaceable behind contracts.
+Capabilities are primary. Interfaces are access surfaces. Implementations are replaceable behind contracts. PostgreSQL is the relational standard; managed PostgreSQL services are deployment choices, not architecture dependencies.
 
 ## 4. INTERFACE INDEPENDENCE
 
@@ -81,7 +81,7 @@ Current repository layers include:
 - `src/domain/` — citizen, issue, office, location, document, evidence, remedy, submission
 - `src/services/` — shared application/business capabilities
 - `src/documents/` — composition, standards, delivery, PDF
-- `src/storage/` — persistence, repositories, cache, Supabase integration
+- `src/storage/` — persistence, repositories and cache; PostgreSQL is the canonical relational provider
 - `src/models/` — application models
 - `src/core/` — configuration and shared core services
 - `src/adapters/` — external interface adapters
