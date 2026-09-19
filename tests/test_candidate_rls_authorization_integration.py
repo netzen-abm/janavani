@@ -134,10 +134,10 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                     _set_principal(connection, "mallory")
                     cur.execute("SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'")
                     assert cur.fetchone()[0] == 0
-                    with pytest.raises(psycopg.errors.InsufficientPrivilege):
-                        cur.execute(
-                            "UPDATE civic_cases SET narrative = 'cross-user update' WHERE case_id = 'rls-case'"
-                        )
+                    cur.execute(
+                        "UPDATE civic_cases SET narrative = 'cross-user update' WHERE case_id = 'rls-case'"
+                    )
+                    assert cur.rowcount == 0
                     cur.execute("SELECT count(*) FROM civic_case_consents WHERE consent_id = 'rls-consent'")
                     assert cur.fetchone()[0] == 0
                     cur.execute("SELECT count(*) FROM janavani_service_identity_policies")
