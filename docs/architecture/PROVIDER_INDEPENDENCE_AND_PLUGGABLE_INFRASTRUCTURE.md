@@ -53,7 +53,6 @@ The Civic Case domain must depend on a repository contract. Database providers i
 
 Supported deployment choices may include, subject to verification:
 
-- Supabase PostgreSQL;
 - managed PostgreSQL from another provider;
 - cloud PostgreSQL;
 - self-hosted PostgreSQL;
