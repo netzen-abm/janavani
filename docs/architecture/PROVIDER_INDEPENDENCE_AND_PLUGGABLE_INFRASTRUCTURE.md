@@ -207,3 +207,12 @@ If the answer is no, the dependency is in the wrong architectural layer.
 **Janavani owns the capabilities. Providers merely implement them.**
 
 No vendor owns the Janavani domain, identity model, civic case lifecycle, citizen records, capability contracts, or architectural authority.
+
+
+## 15. Supabase-free runtime invariant
+
+Supabase is not a Janavani runtime dependency. The canonical application, domain kernel, capability layer, repository selection, configuration, tests for core behavior, deployment manifests, and required build dependencies must remain operable without a Supabase account, URL, key, SDK, RPC, Auth, Storage, Realtime service, or Supabase-specific API.
+
+Supabase-specific material may exist only in an explicitly isolated verification/archive boundary. It must never be required for core startup, core tests, standard PostgreSQL persistence, or deployment.
+
+The portability test is simple: a clean environment with standard PostgreSQL and no Supabase credentials must be able to build and run the canonical Janavani runtime.
