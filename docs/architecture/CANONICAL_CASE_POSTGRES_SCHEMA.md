@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-Define the relational shape required before a production Civic Case repository is connected to PostgreSQL/Supabase. This document is a mapping and verification contract, not a migration. No table, column, policy, or legacy store is changed by this document.
+Define the relational shape required before a production Civic Case repository is connected to PostgreSQL. This document is a mapping and verification contract, not a migration. No table, column, policy, or legacy store is changed by this document.
 
 The canonical flow is:
 
@@ -14,7 +14,7 @@ The canonical flow is:
 CivicCase
     -> CivicCaseRepository
         -> Durable PostgreSQL adapter
-            -> PostgreSQL / Supabase
+            -> PostgreSQL
 ```
 
 Interface adapters (Web, Telegram, mobile, DApp, WhatsApp, etc.) must not write database records directly.
@@ -252,7 +252,7 @@ Additional indexes require measured query need. Avoid indexing sensitive free-te
 
 ## 14. RLS dependency
 
-PostgreSQL/Supabase Row Level Security is a security control, not a substitute for domain authorization.
+PostgreSQL Row Level Security is a security control, not a substitute for domain authorization.
 
 Before implementation, define the authorization matrix for:
 
