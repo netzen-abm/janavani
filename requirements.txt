@@ -8,7 +8,6 @@ python-dotenv>=1.0.1
 pydantic-settings>=2.0.0
 
 # Database providers
-supabase>=2.8.0
 psycopg[binary]>=3.2.0
 
 # Telegram bot
