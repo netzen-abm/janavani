@@ -20,6 +20,7 @@ def test_civic_case_durable_provider_set_is_postgres_neutral():
         ".env.example",
         ".github/workflows/ci.yml",
         "src/storage/repositories/provider.py",
+        "tests/test_civic_case_provider_selection.py",
         "src/storage/repositories/__init__.py",
         "src/core/config.py",
     ],
