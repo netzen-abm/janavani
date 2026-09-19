@@ -200,3 +200,8 @@ create missing canonical objects
 ## Explicit gate
 
 No production migration, RLS policy change, legacy-data migration, or switch from `InMemoryCivicCaseRepository` to the durable provider is authorized until this evidence has been reviewed and the resulting implementation plan has passed the existing verification gates.
+
+
+## Runtime dependency rule
+
+Supabase evidence is optional verification material only. It must never become a runtime, build, domain, authentication, storage, deployment, or persistence dependency of Janavani. The canonical runtime target is standard PostgreSQL behind provider-neutral contracts.
