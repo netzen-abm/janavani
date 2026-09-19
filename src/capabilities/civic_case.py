@@ -85,8 +85,14 @@ class CivicCaseCapability:
     ) -> CivicCaseResult:
         self._validate_execution_context(execution_context, identity, action="save")
         owned = self.get_owned(case.case_id, identity=identity)
-        if owned is None or owned is not case:
+        if owned is None:
             raise LookupError("Case not found")
+        # Repository implementations may hydrate a fresh aggregate instance
+        # (for example PostgreSQL/Supabase). Ownership is a domain property,
+        # not Python object identity. The repository's optimistic-concurrency
+        # version remains the write-conflict boundary.
+        if owned.case_id != case.case_id or owned.created_by != case.created_by:
+            raise LookupError("Case ownership mismatch")
         self._repository.save(case)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
