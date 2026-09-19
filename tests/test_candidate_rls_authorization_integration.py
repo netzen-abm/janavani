@@ -66,8 +66,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
         # test rows, grants, and policy state must disappear together.
         with psycopg.connect(DSN) as connection:
             try:
-                try:
-                    with connection.transaction():
+                with connection.transaction():
                     _bootstrap(connection)
                     with connection.cursor() as cur:
                         cur.execute("CREATE SCHEMA IF NOT EXISTS janavani_private")
@@ -199,9 +198,6 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             "WHERE case_id = 'rls-case'"
                         )
                         assert cur.rowcount == 0
-                    raise _RollbackRLS()
-                except _RollbackRLS:
-                    pass
             finally:
     finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
