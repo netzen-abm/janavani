@@ -26,8 +26,6 @@ Use these names consistently across code, CI, and deployment:
 
 - `OPENROUTER_API_KEY` — OpenRouter AI provider credential.
 - `HF_TOKEN` — Hugging Face provider credential.
-- `SUPABASE_URL` — Supabase integration configuration.
-- `SUPABASE_ANON_KEY` — Supabase integration access credential.
 - `TELEGRAM_BOT_TOKEN` — Telegram bot integration credential; **not** a citizen-login credential.
 - `JANAVANI_POSTGRES_DSN` — PostgreSQL connection credential/configuration for production persistence.
 - `JANAVANI_ARTIFACT_S3_BUCKET` — S3-compatible artifact bucket name.
@@ -77,8 +75,6 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `JANAVANI_ARTIFACT_S3_PREFIX` | Optional | Optional | No | No | Optional | Storage config |
 | `OPENROUTER_API_KEY` | Only if API invokes AI | No | Yes | No | Mock fixture | Secret |
 | `HF_TOKEN` | Only if API invokes HF | No | Yes | No | Mock fixture | Secret |
-| `SUPABASE_URL` | If integration is used | If integration is used | No | If integration is used | Fixture | Integration config |
-| `SUPABASE_ANON_KEY` | If integration is used | If integration is used | No | If integration is used | Fixture | Secret |
 | `TELEGRAM_BOT_TOKEN` | **No by default** | **Yes** | No | No | Mock/secret in bot CI | Secret |
 | `WEB_INTERFACE_TOKEN` | If protected server adapter/health check is enabled | No | If calling Web/API | No | Fixture | Service credential |
 | `JANAVANI_INTERFACE_TOKENS` | If protected API endpoints are enabled | If interface calls them | If interface calls them | No | Fixture | Service credential |
