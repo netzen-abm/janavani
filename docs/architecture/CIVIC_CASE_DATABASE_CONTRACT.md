@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-This contract maps the channel-neutral Civic Case capability to durable relational storage without making the domain model depend on Supabase, PostgreSQL, Telegram, Web, mobile, DApp, or any other transport.
+This contract maps the channel-neutral Civic Case capability to durable relational storage without making the domain model depend on PostgreSQL, Telegram, Web, mobile, DApp, or any other transport.
 
 This is a schema contract, not a claim that the schema or durable provider is deployed.
 
