@@ -27,18 +27,6 @@ ON public.civic_cases
 FOR SELECT
 USING (
     created_by = janavani_private.current_principal_id()
-    OR EXISTS (
-        SELECT 1
-        FROM public.janavani_delegation_grants d
-        WHERE d.grantor_id = civic_cases.created_by
-          AND d.delegate_id = janavani_private.current_principal_id()
-          AND d.revoked = false
-          AND (d.expires_at IS NULL OR d.expires_at > now())
-          AND (
-              d.resource_ids = '[]'::jsonb
-              OR d.resource_ids @> jsonb_build_array(civic_cases.case_id)
-          )
-    )
 );
 
 DROP POLICY IF EXISTS civic_cases_owner_insert ON public.civic_cases;
@@ -55,36 +43,16 @@ ON public.civic_cases
 FOR UPDATE
 USING (
     created_by = janavani_private.current_principal_id()
-    OR EXISTS (
-        SELECT 1
-        FROM public.janavani_delegation_grants d
-        WHERE d.grantor_id = civic_cases.created_by
-          AND d.delegate_id = janavani_private.current_principal_id()
-          AND d.revoked = false
-          AND (d.expires_at IS NULL OR d.expires_at > now())
-          AND d.actions @> '["case:update"]'::jsonb
-          AND (
-              d.resource_ids = '[]'::jsonb
-              OR d.resource_ids @> jsonb_build_array(civic_cases.case_id)
-          )
-    )
 )
 WITH CHECK (
     created_by = janavani_private.current_principal_id()
-    OR EXISTS (
-        SELECT 1
-        FROM public.janavani_delegation_grants d
-        WHERE d.grantor_id = civic_cases.created_by
-          AND d.delegate_id = janavani_private.current_principal_id()
-          AND d.revoked = false
-          AND (d.expires_at IS NULL OR d.expires_at > now())
-          AND d.actions @> '["case:update"]'::jsonb
-          AND (
-              d.resource_ids = '[]'::jsonb
-              OR d.resource_ids @> jsonb_build_array(civic_cases.case_id)
-          )
-    )
 );
+
+-- Delegated Case mutation is intentionally NOT granted by this candidate.
+-- The active capability layer currently enforces owner access through
+-- CivicCaseCapability.get_owned(). Delegation must be wired end-to-end
+-- (application authorization + repository access + RLS) before database
+-- policy expands to delegated mutation.
 
 -- Audit history is protected and append-only for ordinary application roles.
 ALTER TABLE public.civic_case_audit ENABLE ROW LEVEL SECURITY;
