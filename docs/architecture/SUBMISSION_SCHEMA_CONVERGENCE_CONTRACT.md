@@ -5,7 +5,7 @@
 
 ## Decision
 
-The checked-in canonical PostgreSQL/Supabase migration is the schema authority for `civic_case_submissions`. The PostgreSQL submission repository may retain a compatibility initializer for standalone/test deployments, but that initializer must mirror the canonical schema and must not create a divergent schema.
+The checked-in canonical PostgreSQL migration is the schema authority for `civic_case_submissions`. The PostgreSQL submission repository may retain a compatibility initializer for standalone/test deployments, but that initializer must mirror the canonical schema and must not create a divergent schema.
 
 The canonical persisted fields are:
 
