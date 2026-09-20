@@ -9,11 +9,11 @@ from src.core.civic_case import CivicCase
 class CivicCaseRepository(Protocol):
     """Durable or local persistence contract for CivicCase."""
 
-    def save(self, case: CivicCase) -> None:
+    def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
         """Persist the current case representation."""
         ...
 
-    def get(self, case_id: str) -> CivicCase | None:
+    def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         """Return a case by identifier when present."""
         ...
 
@@ -24,10 +24,10 @@ class InMemoryCivicCaseRepository:
     def __init__(self, store: dict[str, CivicCase] | None = None) -> None:
         self._cases = store if store is not None else {}
 
-    def save(self, case: CivicCase) -> None:
+    def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
         self._cases[case.case_id] = case
 
-    def get(self, case_id: str) -> CivicCase | None:
+    def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         return self._cases.get(case_id)
 
     def clear(self) -> None:
