@@ -1,0 +1,1 @@
+"""Web MVP adapter services."""
