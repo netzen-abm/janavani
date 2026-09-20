@@ -278,20 +278,14 @@ def test_candidate_rls_principal_context_does_not_leak_between_transactions():
                     cur.execute(
                         "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-context-case'"
                     )
-                    assert cur.fetchone()[0] == 0
-    finally:
-        with psycopg.connect(DSN, autocommit=True) as admin:
-            with admin.cursor() as cur:
-                cur.execute("DELETE FROM civic_cases WHERE case_id = 'rls-context-case'")
-                for role in (owner_role, stranger_role):
-                    cur.execute(f"REASSIGN OWNED BY {role} TO CURRENT_USER")
-                    cur.execute(f"DROP OWNED BY {role}")
-                    cur.execute(f"DROP ROLE IF EXISTS {role}")
-
-    finally:
+                    assert cur.fetchone()[0] == 0    finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
             with admin.cursor() as cur:
                 for role in test_roles:
                     cur.execute(f"REASSIGN OWNED BY {role} TO CURRENT_USER")
                     cur.execute(f"DROP OWNED BY {role}")
                     cur.execute(f"DROP ROLE IF EXISTS {role}")
+
+        cur.execute(f"DROP OWNED BY {role}")
+                    cur.execute(f"DROP ROLE IF EXISTS {role}")
+
