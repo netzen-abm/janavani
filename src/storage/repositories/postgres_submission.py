@@ -41,6 +41,15 @@ class PostgresSubmissionRepository:
         import psycopg
         return psycopg.connect(self._dsn)
 
+    @staticmethod
+    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
+        if principal_id is None:
+            return
+        if not principal_id.strip():
+            raise ValueError("principal_id must not be blank")
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", (principal_id,))
+
     def _initialize(self) -> None:
         """Create the canonical compatibility shape when absent."""
         with self._connect() as connection:
@@ -73,9 +82,10 @@ class PostgresSubmissionRepository:
                 cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_case_attempted_idx ON civic_case_submissions(case_id, attempted_at)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_destination_idx ON civic_case_submissions(destination_ref)")
 
-    def save(self, submission: SubmissionRecord) -> None:
+    def save(self, submission: SubmissionRecord, *, principal_id: str | None = None) -> None:
         """Compatibility save; delivery state transitions must use CAS APIs."""
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -95,24 +105,27 @@ class PostgresSubmissionRepository:
                         self._params(submission),
                     )
 
-    def get(self, submission_id: str) -> SubmissionRecord | None:
+    def get(self, submission_id: str, *, principal_id: str | None = None) -> SubmissionRecord | None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE submission_id = %s", (submission_id,))
                 row = cursor.fetchone()
         return self._hydrate(row) if row else None
 
-    def get_by_idempotency_key(self, idempotency_key: str) -> SubmissionRecord | None:
+    def get_by_idempotency_key(self, idempotency_key: str, *, principal_id: str | None = None) -> SubmissionRecord | None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE idempotency_key = %s", (idempotency_key,))
                 row = cursor.fetchone()
         return self._hydrate(row) if row else None
 
-    def create_idempotent(self, submission: SubmissionRecord) -> tuple[SubmissionRecord, bool]:
+    def create_idempotent(self, submission: SubmissionRecord, *, principal_id: str | None = None) -> tuple[SubmissionRecord, bool]:
         if not submission.idempotency_key:
             raise ValueError("idempotency_key is required")
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -136,10 +149,11 @@ class PostgresSubmissionRepository:
             raise SubmissionIdempotencyConflictError("Idempotency key is already bound to a different submission operation")
         return existing, True
 
-    def update_if_version(self, submission: SubmissionRecord, *, expected_version: int) -> None:
+    def update_if_version(self, submission: SubmissionRecord, *, expected_version: int, principal_id: str | None = None) -> None:
         if submission.version != expected_version + 1:
             raise ValueError("Submission mutation must increment version by exactly one")
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -161,15 +175,17 @@ class PostgresSubmissionRepository:
                             raise LookupError("Submission not found")
                         raise SubmissionConcurrencyError(f"Submission version mismatch: expected {expected_version}, found {row[0]}")
 
-    def list_for_case(self, case_id: str) -> tuple[SubmissionRecord, ...]:
+    def list_for_case(self, case_id: str, *, principal_id: str | None = None) -> tuple[SubmissionRecord, ...]:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE case_id = %s ORDER BY COALESCE(attempted_at, created_at), submission_id", (case_id,))
                 rows = cursor.fetchall()
         return tuple(self._hydrate(row) for row in rows)
 
-    def list_recoverable(self) -> tuple[SubmissionRecord, ...]:
+    def list_recoverable(self, *, principal_id: str | None = None) -> tuple[SubmissionRecord, ...]:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE state = %s ORDER BY COALESCE(attempted_at, created_at), submission_id", (RECOVERABLE_SUBMISSION_STATE,))
                 rows = cursor.fetchall()
