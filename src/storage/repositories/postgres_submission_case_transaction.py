@@ -29,6 +29,7 @@ class PostgresSubmissionCaseTransactionRepository:
         connection_factory: Callable[[], Any] | None = None,
         dsn: str | None = None,
         unit_of_work_factory: UnitOfWorkFactory | None = None,
+        principal_id: str | None = None,
     ) -> None:
         self._connection_factory = connection_factory
         self._dsn = dsn
