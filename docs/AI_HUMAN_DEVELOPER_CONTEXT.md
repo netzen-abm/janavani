@@ -330,7 +330,7 @@ Technologies are providers/adapters, not domain authorities.
 
 Examples include:
 
-- PostgreSQL / Supabase / other storage;
+- PostgreSQL / other storage;
 - Ollama / cloud AI / future AI providers;
 - Freenet / Nostr / IPFS / Nym / Reticulum / blockchain;
 - messaging platforms;
