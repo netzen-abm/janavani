@@ -1,54 +1,39 @@
+"""Telegram authority-search adapter over the shared capability."""
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from services.search_directory import search_office
+from src.capabilities.authority import AuthorityCapability, AuthorityLookupRequest
+from src.platform.composition import create_authority_capability, create_authority_repository
+
+
+authority_capability: AuthorityCapability = create_authority_capability(
+    create_authority_repository()
+)
+
+
+def _render(results) -> str:
+    if not results:
+        return "No matching authority was found."
+    lines = ["🏛 Authorities"]
+    for item in results:
+        lines.append(f"• {item.name} — {item.city} — {item.authority_id}")
+    return "\n".join(lines)
 
 
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    # ------------------------------------
-    # Validate Input
-    # ------------------------------------
-
+    """Search public authority metadata without coupling Telegram to storage."""
     if len(context.args) < 2:
-
         await update.message.reply_text(
-            """
-Usage
-
-/search department location
-
-Example
-
-/search ration Kochi
-
-/search village Kannur
-
-/search police Kozhikode
-"""
+            "/search <department> <location>\nExample: /search ration Kochi"
         )
-
         return
-
-    # ------------------------------------
-    # Read Arguments
-    # ------------------------------------
-
     department = context.args[0]
-
-    location = " ".join(context.args[1:])
-
-    # ------------------------------------
-    # Search Office
-    # ------------------------------------
-
-    result = search_office(
-        department,
-        location,
-    )
-
-    # ------------------------------------
-    # Reply
-    # ------------------------------------
-
-    await update.message.reply_text(result)
+    city = " ".join(context.args[1:])
+    try:
+        results = authority_capability.search(
+            AuthorityLookupRequest(authority_type=department, city=city)
+        )
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    await update.message.reply_text(_render(results))
