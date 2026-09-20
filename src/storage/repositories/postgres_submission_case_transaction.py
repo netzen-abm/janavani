@@ -30,12 +30,14 @@ class PostgresSubmissionCaseTransactionRepository:
         dsn: str | None = None,
         unit_of_work_factory: UnitOfWorkFactory | None = None,
         principal_id: str | None = None,
+        principal_id: str | None = None,
     ) -> None:
         self._connection_factory = connection_factory
         self._dsn = dsn
+        self._principal_id = principal_id
         if connection_factory is None and not dsn:
             raise ValueError("Provide connection_factory or dsn")
-        self._unit_of_work_factory = unit_of_work_factory or postgres_unit_of_work_factory(self._connect)
+        self._unit_of_work_factory = unit_of_work_factory or postgres_unit_of_work_factory(self._connect, principal_id=principal_id)
 
     def _connect(self) -> Any:
         if self._connection_factory is not None:
