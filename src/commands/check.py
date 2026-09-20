@@ -3,8 +3,8 @@ from telegram.ext import ContextTypes
 
 from capabilities.civic_case import CivicCaseCapability
 from core.civic_case import CivicCase
-from identity.context import IdentityContext
-from identity.principal import Principal
+from src.identity.context import IdentityContext
+from src.adapters.telegram.identity import identity_for_telegram_user
 
 
 def _case_capability(context: ContextTypes.DEFAULT_TYPE) -> CivicCaseCapability:
@@ -15,15 +15,10 @@ def _case_capability(context: ContextTypes.DEFAULT_TYPE) -> CivicCaseCapability:
 
 
 def _telegram_identity(update: Update) -> IdentityContext:
-    telegram_user_id = getattr(update.effective_user, "id", None)
-    if telegram_user_id is None:
+    user_id = getattr(update.effective_user, "id", None)
+    if user_id is None:
         raise ValueError("Telegram user identity is required")
-    return IdentityContext(
-        principal=Principal(
-            principal_id=f"telegram:{telegram_user_id}",
-            interface="telegram",
-        )
-    )
+    return identity_for_telegram_user(user_id)
 
 
 def _owned_case(
