@@ -67,13 +67,15 @@ class PostgresCaseTransactionRepository:
         connection_factory: Callable[[], Any] | None = None,
         dsn: str | None = None,
         unit_of_work_factory: UnitOfWorkFactory | None = None,
+        principal_id: str | None = None,
     ) -> None:
         self._dsn = dsn
         self._connection_factory = connection_factory
         if self._connection_factory is None and not self._dsn:
             raise ValueError("Provide connection_factory or dsn")
+        self._principal_id = principal_id
         self._unit_of_work_factory = unit_of_work_factory or postgres_unit_of_work_factory(
-            self._connect
+            self._connect, principal_id=principal_id
         )
 
     def _connect(self) -> Any:
