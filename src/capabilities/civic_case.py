@@ -67,11 +67,11 @@ class CivicCaseCapability:
         if request.claims is not None:
             case.claims = [dict(claim) for claim in request.claims]
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
-        case = self._repository.get(case_id)
+        case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
         if case is None or case.created_by != identity.principal.principal_id:
             return None
         return case
@@ -87,7 +87,7 @@ class CivicCaseCapability:
         owned = self.get_owned(case.case_id, identity=identity)
         if owned is None or owned is not case:
             raise LookupError("Case not found")
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_evidence(
@@ -105,7 +105,7 @@ class CivicCaseCapability:
         now = datetime.now(timezone.utc).isoformat()
         case.add_evidence(evidence_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
                           actor_id=identity.principal.principal_id, source_channel=source_channel)
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_document(
@@ -123,7 +123,7 @@ class CivicCaseCapability:
         now = datetime.now(timezone.utc).isoformat()
         case.add_document(document_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
                           actor_id=identity.principal.principal_id, source_channel=source_channel)
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def start_review(self, case_id: str, *, identity: IdentityContext,
@@ -147,7 +147,7 @@ class CivicCaseCapability:
         self._require(identity, "case:write", "case:consent")
         if consent_id not in case.consent_refs:
             case.consent_refs.append(consent_id)
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def transition(
@@ -189,7 +189,7 @@ class CivicCaseCapability:
         if action == "case:reopen_resolution":
             kwargs["notes"] = notes
         transition_fn(case, **kwargs)
-        self._repository.save(case)
+        self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def _owned(self, case_id: str, identity: IdentityContext) -> CivicCase:
