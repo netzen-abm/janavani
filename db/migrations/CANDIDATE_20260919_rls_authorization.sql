@@ -17,6 +17,45 @@ AS $$
     SELECT NULLIF(current_setting('janavani.principal_id', true), '')
 $$;
 
+-- Evidence metadata is protected through the Case reference boundary.
+-- An evidence object is readable only when the current principal owns a Case
+-- that references it. Direct registration is backend-only until a complete
+-- evidence ownership/delegation model is established.
+ALTER TABLE public.evidence_objects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evidence_objects FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS evidence_objects_case_access ON public.evidence_objects;
+CREATE POLICY evidence_objects_case_access
+ON public.evidence_objects
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.civic_case_evidence_refs r
+        JOIN public.civic_cases c ON c.case_id = r.case_id
+        WHERE r.evidence_id = evidence_objects.evidence_id
+          AND c.created_by = janavani_private.current_principal_id()
+    )
+);
+
+-- Document artifact metadata is similarly Case-scoped. Direct artifact writes
+-- remain backend-only until document mutation authorization is fully mapped.
+ALTER TABLE public.document_artifacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.document_artifacts FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS document_artifacts_case_access ON public.document_artifacts;
+CREATE POLICY document_artifacts_case_access
+ON public.document_artifacts
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.civic_cases c
+        WHERE c.case_id = document_artifacts.case_id
+          AND c.created_by = janavani_private.current_principal_id()
+    )
+);
+
 -- Case ownership / active delegation.
 ALTER TABLE public.civic_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_cases FORCE ROW LEVEL SECURITY;
