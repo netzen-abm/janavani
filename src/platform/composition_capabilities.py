@@ -54,7 +54,7 @@ def create_escalation_capability() -> EscalationCapability:
 def create_civic_action_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository, evidence_repository: EvidenceRepository | None = None) -> CivicActionCapability:
     return CivicActionCapability(case_capability=create_case_capability(case_repository), case_repository=case_repository, authority_capability=create_authority_capability(authority_repository), evidence_repository=evidence_repository)
 
-def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository,
+def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository, case_capability: CivicCaseCapability | None = None,
                                        consent_repository: ConsentRepository, submission_transport: SubmissionTransport,
                                        submission_repository: SubmissionRepository | None = None, evidence_repository: EvidenceRepository | None = None,
                                        document_review_repository: DocumentReviewRepository | None = None, artifact_repository=None, blob_store=None,
@@ -64,7 +64,7 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
                                        follow_up_capability: FollowUpCapability | None = None, escalation_capability: EscalationCapability | None = None,
                                        provider_composition: ProviderComposition | None = None) -> CivicActionVerticalSlice:
     composition = provider_composition or create_provider_composition()
-    case_capability = create_case_capability(case_repository)
+    case_capability = case_capability or create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
     if evidence_repository is None:
         raise ValueError("An evidence repository is required for the canonical civic-action slice")
