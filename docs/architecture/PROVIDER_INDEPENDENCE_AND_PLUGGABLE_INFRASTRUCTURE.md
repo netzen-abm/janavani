@@ -58,13 +58,13 @@ Supported deployment choices may include, subject to verification:
 - self-hosted PostgreSQL;
 - local PostgreSQL for development and testing.
 
-No application capability may require Supabase-specific semantics when standard PostgreSQL semantics are sufficient.
+No application capability may require vendor-specific semantics when standard PostgreSQL semantics are sufficient.
 
 ## 4. Supabase position
 
 Supabase remains an **optional provider**, not the Janavani platform foundation.
 
-Supabase-specific services may be consumed through explicit adapters where they provide value, including hosted database, authentication, storage, or realtime capabilities.
+vendor-specific services may be consumed through explicit adapters where they provide value, including hosted database, authentication, storage, or realtime capabilities.
 
 Those adapters must not leak vendor-specific types or assumptions into the canonical domain contracts.
 
@@ -76,7 +76,7 @@ The current Supabase Civic Case provider remains behind the repository boundary 
 |---|---|---|
 | Relational persistence | Repository / PostgreSQL contract | Supabase, RDS, Cloud SQL, Neon, self-hosted |
 | Object storage | Artifact storage contract | S3-compatible, Supabase Storage, cloud object storage, local/self-hosted |
-| Identity | Identity contract | OIDC, passkeys, Supabase Auth, other IdPs |
+| Identity | Identity contract | OIDC, passkeys, external authentication provider, other IdPs |
 | Authentication | Authentication adapter | OIDC, WebAuthn/passkeys, channel providers |
 | Messaging | Transport contract | Telegram, WhatsApp, Messenger, email where explicitly permitted |
 | Realtime | Event/notification contract | WebSocket, SSE, Redis, provider realtime services |
@@ -186,7 +186,7 @@ The immediate storage sequence is:
 
 1. retain the canonical `CivicCaseRepository` contract;
 2. implement a standard PostgreSQL provider using a PostgreSQL-native driver;
-3. keep the Supabase provider as an adapter;
+3. keep the historical Supabase provider as an adapter;
 4. establish migration tooling independent of Supabase;
 5. run contract tests against local PostgreSQL;
 6. run provider tests against Supabase only after live schema/RLS evidence is available;
