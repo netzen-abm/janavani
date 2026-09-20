@@ -29,6 +29,15 @@ class PostgresDocumentArtifactRepository:
 
         return psycopg.connect(self._dsn)
 
+    @staticmethod
+    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
+        if principal_id is None:
+            return
+        if not principal_id.strip():
+            raise ValueError("principal_id must not be blank")
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", (principal_id,))
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             with connection.cursor() as cursor:
@@ -50,8 +59,9 @@ class PostgresDocumentArtifactRepository:
                     "ON document_artifacts(case_id)"
                 )
 
-    def save(self, artifact: DocumentArtifactRef) -> None:
+    def save(self, artifact: DocumentArtifactRef, *, principal_id: str | None = None) -> None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -79,8 +89,9 @@ class PostgresDocumentArtifactRepository:
                         ),
                     )
 
-    def get(self, artifact_id: str) -> DocumentArtifactRef | None:
+    def get(self, artifact_id: str, *, principal_id: str | None = None) -> DocumentArtifactRef | None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT artifact_id, document_id, case_id, format, "
@@ -93,6 +104,7 @@ class PostgresDocumentArtifactRepository:
 
     def list_for_case(self, case_id: str) -> list[DocumentArtifactRef]:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT artifact_id, document_id, case_id, format, "
