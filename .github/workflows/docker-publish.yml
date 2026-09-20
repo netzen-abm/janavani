@@ -86,6 +86,13 @@ jobs:
           subject-digest: ${{ steps.build-and-push.outputs.digest }}
           push-to-registry: true
 
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
       - name: Verify artifact provenance
         if: github.event_name != 'pull_request'
         env:
@@ -108,9 +115,3 @@ jobs:
             --certificate-identity-regexp "^https://github.com/${REPOSITORY}/.github/workflows/docker-publish.yml@refs/(heads/main|tags/v.*)$" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
-      - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
