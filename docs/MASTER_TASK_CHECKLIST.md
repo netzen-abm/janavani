@@ -609,6 +609,7 @@ Archive requires:
 | 2026-08-23 | Storage reconnaissance completed | `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md` / storage evidence |
 | 2026-08-23 | Ecosystem scope explicitly locked as NOT MVP | `docs/JANAVANI_ECOSYSTEM_CHARTER.md` + documentation correction record |
 | 2026-09-19 | PostgreSQL became the canonical relational standard; active Supabase runtime/build dependency removed and historical evidence archived | `docs/audits/POSTGRESQL_STANDARD_SUPABASE_CONVERGENCE_2026-09-19.md` |
+| 2026-09-20 | CI supply-chain hardening: CodeQL, OpenSSF Scorecard, pinned action baselines, SBOM and build/SBOM attestations | `.github/workflows/security-ci.yml`, `.github/workflows/docker-publish.yml` |
 | 2026-09-20 | PostgreSQL security gate prioritized ahead of broader capability mapping | Current master execution queue |
 | 2026-08-23 | Checklist reconciled against verified status register | `docs/MASTER_TASK_CHECKLIST_RECONCILIATION_2026-08-23.md` |
 
