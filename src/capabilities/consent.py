@@ -47,7 +47,7 @@ class ConsentCapability:
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to record consent")
         consent_id = self._consent_id(case_id, PURPOSE_SUBMISSION, scope)
-        consent = self._repository.get(consent_id)
+        consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
         if consent is None:
             now = datetime.now(timezone.utc).isoformat()
             consent = Consent(
@@ -55,7 +55,7 @@ class ConsentCapability:
                 purpose=PURPOSE_SUBMISSION, scope=(scope,), grant_type=ConsentGrantType.EXPLICIT,
                 status=ConsentStatus.GRANTED, created_at=now, proof_ref=proof_ref,
             )
-            self._repository.save(consent)
+            self._repository.save(consent, principal_id=identity.principal.principal_id)
         elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(PURPOSE_SUBMISSION, scope):
             raise PermissionError("Existing consent does not authorize this identity and scope")
         attached = self._cases.add_consent(case_id, consent.consent_id, identity=identity)
