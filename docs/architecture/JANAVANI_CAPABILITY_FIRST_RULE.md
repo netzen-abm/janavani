@@ -80,7 +80,7 @@ Examples:
 ```text
 Database capability
   → PostgreSQL provider
-  → Supabase provider
+  → historical Supabase provider
   → managed PostgreSQL provider
   → self-hosted provider
 
