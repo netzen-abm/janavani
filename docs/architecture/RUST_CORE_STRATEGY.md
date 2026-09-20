@@ -74,7 +74,7 @@ The canonical Rust core should live in a stable shared crate boundary rather tha
 This decision does not require:
 
 - an immediate Python rewrite;
-- replacing PostgreSQL/Supabase providers;
+- replacing PostgreSQL providers;
 - replacing Telegram or other adapters;
 - forcing AI/RAG implementation into Rust;
 - activating decentralized protocols merely because Rust supports them;
