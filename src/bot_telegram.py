@@ -15,12 +15,7 @@ from commands.complaint import complaint
 from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
-from src.platform.composition import (
-    create_case_capability,
-    create_case_repository,
-    create_civic_action_capability,
-    create_authority_repository,
-)
+from src.platform.surface_case_composition import create_surface_case_composition
 from src.storage.repositories.consent_provider import create_consent_repository
 
 
@@ -36,19 +31,17 @@ def main():
 
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
 
-    # Compose shared dependencies once at the bot application boundary.
-    case_repository = create_case_repository()
-    case_capability = create_case_capability(case_repository)
-    consent_repository = create_consent_repository()
-    authority_repository = create_authority_repository()
-    civic_action_capability = create_civic_action_capability(
-        case_repository=case_repository,
-        authority_repository=authority_repository,
-    )
+    # Compose the shared ecosystem graph once at the bot application boundary.
+    composition = create_surface_case_composition()
+    case_repository = composition.case_repository
+    case_capability = composition.case_capability
+    consent_repository = composition.consent_repository
+    civic_action_capability = composition.civic_action_capability
     application.bot_data["case_repository"] = case_repository
     application.bot_data["civic_case_capability"] = case_capability
     application.bot_data["civic_action_capability"] = civic_action_capability
     application.bot_data["consent_repository"] = consent_repository
+    application.bot_data["identity_link_repository"] = composition.identity_link_repository
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
             case_repository=case_repository,
