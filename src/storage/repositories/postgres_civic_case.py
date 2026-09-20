@@ -164,10 +164,12 @@ class PostgresCivicCaseRepository:
             ) from exc
         return psycopg.connect(self._dsn)
 
-    def get(self, case_id: str) -> CivicCase | None:
+    def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         try:
             with self._connect() as conn:
-                with conn.cursor(row_factory=self._row_factory()) as cur:
+                with conn.transaction():
+                    self._set_local_principal(conn, principal_id)
+                    with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
                         "SELECT * FROM civic_cases WHERE case_id = %s",
                         (case_id,),
@@ -195,10 +197,11 @@ class PostgresCivicCaseRepository:
                 f"Failed to read Civic Case {case_id}"
             ) from exc
 
-    def save(self, case: CivicCase) -> None:
+    def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
         try:
             with self._unit_of_work_factory() as uow:
                 conn = uow.connection
+                self._set_local_principal(conn, principal_id)
                 with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
                         "SELECT version, created_at "
@@ -247,6 +250,23 @@ class PostgresCivicCaseRepository:
             raise PostgresCivicCasePersistenceError(
                 f"Failed to persist Civic Case {case.case_id}"
             ) from exc
+
+    @staticmethod
+    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
+        """Bind the authenticated principal only for the current transaction.
+
+        A missing principal intentionally leaves the RLS context unset so
+        protected PostgreSQL operations fail closed.
+        """
+        if principal_id is None:
+            return
+        if not principal_id.strip():
+            raise ValueError("principal_id must not be blank")
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT set_config('janavani.principal_id', %s, true)",
+                (principal_id,),
+            )
 
     @staticmethod
     def _row_factory() -> Any:
