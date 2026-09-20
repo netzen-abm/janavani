@@ -86,6 +86,26 @@ WITH CHECK (
     )
 );
 
+-- Audit history is protected and append-only for ordinary application roles.
+ALTER TABLE public.civic_case_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_audit FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS civic_case_audit_case_access ON public.civic_case_audit;
+CREATE POLICY civic_case_audit_case_access
+ON public.civic_case_audit
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.civic_cases c
+        WHERE c.case_id = civic_case_audit.case_id
+    )
+);
+
+-- INSERT/UPDATE/DELETE are intentionally absent. Audit mutation belongs to a
+-- dedicated backend/service boundary and must not be available through the
+-- ordinary client role.
+
 -- Child records inherit authorization from their Case.
 ALTER TABLE public.civic_case_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_case_events FORCE ROW LEVEL SECURITY;
