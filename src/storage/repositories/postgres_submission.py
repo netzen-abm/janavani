@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
+from src.storage.postgres_unit_of_work import bind_postgres_principal
 from src.core.submission import (
     RECOVERABLE_SUBMISSION_STATE,
     SubmissionConcurrencyError,
