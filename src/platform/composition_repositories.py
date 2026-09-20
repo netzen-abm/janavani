@@ -49,7 +49,7 @@ def create_external_channel_repository_for_platform(*, provider_composition: Pro
 def create_identity_link_repository(*, provider_composition: ProviderComposition | None = None) -> ExternalIdentityLinkRepository:
     """Select the shared identity-link provider at the composition boundary."""
     composition = provider_composition or create_provider_composition()
-    if composition.provider_for("civic_case") == "postgres":
+    if composition.provider_for("external_identity_links") == "postgres":
         dsn = os.getenv("JANAVANI_POSTGRES_DSN")
         if not dsn:
             raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL identity persistence")
