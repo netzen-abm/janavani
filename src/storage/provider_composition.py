@@ -24,6 +24,7 @@ PERSISTED_DOMAINS = (
     "submission",
     "accountability_feedback",
     "external_channel",
+    "external_identity_links",
 )
 
 DEFAULT_PROVIDER = "memory"
