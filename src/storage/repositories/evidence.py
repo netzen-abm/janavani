@@ -10,10 +10,10 @@ class InMemoryEvidenceRepository(EvidenceRepository):
     def __init__(self) -> None:
         self._items: dict[str, EvidenceObject] = {}
 
-    def get(self, evidence_id: str) -> EvidenceObject | None:
+    def get(self, evidence_id: str, *, principal_id: str | None = None) -> EvidenceObject | None:
         return self._items.get(evidence_id)
 
-    def save(self, evidence: EvidenceObject) -> None:
+    def save(self, evidence: EvidenceObject, *, principal_id: str | None = None) -> None:
         normalized = validate_sha256(evidence.sha256)
         if normalized != evidence.sha256:
             evidence = EvidenceObject(
