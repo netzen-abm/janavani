@@ -17,3 +17,8 @@ def test_each_surface_graph_keeps_one_case_capability_owner():
     assert shared.evidence_capability._cases is shared.case_capability
     assert shared.consent_capability._cases is shared.case_capability
     assert shared.civic_action_capability._case_capability is shared.case_capability
+
+
+def test_surface_composition_does_not_hide_provider_identity_in_memory():
+    composition = create_surface_case_composition()
+    assert composition.identity_link_repository is not None
