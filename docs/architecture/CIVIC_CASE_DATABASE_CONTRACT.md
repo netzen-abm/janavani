@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL DESIGN CONTRACT — implementation pending  
 **Scope:** Civic Case durable persistence  
-**Principle:** PostgreSQL/Supabase is the authoritative relational store; application workflow remains in the domain/service layer.
+**Principle:** PostgreSQL is the authoritative relational store; application workflow remains in the domain/service layer.
 
 ## 1. Purpose
 
@@ -27,7 +27,7 @@ Civic Case capability
 CivicCaseRepository
       |
       v
-PostgreSQL / Supabase
+PostgreSQL
       |
       +-- case records
       +-- case events
