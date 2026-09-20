@@ -22,3 +22,21 @@ def test_each_surface_graph_keeps_one_case_capability_owner():
 def test_surface_composition_does_not_hide_provider_identity_in_memory():
     composition = create_surface_case_composition()
     assert composition.identity_link_repository is not None
+
+
+def test_identity_linking_is_explicitly_surface_neutral():
+    from src.identity.linking import IdentityLinkRequest, IdentityLinkingService, InMemoryExternalIdentityLinkRepository
+    service = IdentityLinkingService(InMemoryExternalIdentityLinkRepository())
+    a = service.link_verified(IdentityLinkRequest(
+        principal_id="janavani:principal-a",
+        provider="telegram",
+        subject="tg-a",
+        authentication_method="explicit_verified_link",
+    ), verified=True)
+    b = service.link_verified(IdentityLinkRequest(
+        principal_id="janavani:principal-a",
+        provider="web",
+        subject="web-a",
+        authentication_method="explicit_verified_link",
+    ), verified=True)
+    assert a.principal_id == b.principal_id
