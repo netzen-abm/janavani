@@ -23,16 +23,16 @@ class InMemoryConsentRepository:
     def __init__(self) -> None:
         self._items: dict[str, Consent] = {}
 
-    def save(self, consent: Consent) -> None:
+    def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         existing = self._items.get(consent.consent_id)
         if existing is not None and existing != consent:
             raise ValueError("Consent identifier already has different content")
         self._items[consent.consent_id] = consent
 
-    def get(self, consent_id: str) -> Consent | None:
+    def get(self, consent_id: str, *, principal_id: str | None = None) -> Consent | None:
         return self._items.get(consent_id)
 
-    def list_for_subject(self, subject_id: str) -> list[Consent]:
+    def list_for_subject(self, subject_id: str, *, principal_id: str | None = None) -> list[Consent]:
         return [
             item for item in self._items.values() if item.subject_id == subject_id
         ]
