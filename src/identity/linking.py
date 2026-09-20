@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 from .external import ExternalIdentity
+from typing import Callable, Any
 
 @dataclass(frozen=True)
 class IdentityLinkRequest:
@@ -14,6 +15,47 @@ class IdentityLinkRequest:
 class ExternalIdentityLinkRepository(Protocol):
     def find(self, provider: str, subject: str) -> ExternalIdentity | None: ...
     def save(self, identity: ExternalIdentity) -> None: ...
+
+class PostgresExternalIdentityLinkRepository:
+    """Provider-neutral contract backed by a PostgreSQL connection factory."""
+    def __init__(self, connection_factory: Callable[[], Any]) -> None:
+        self._connection_factory = connection_factory
+
+    def find(self, provider: str, subject: str) -> ExternalIdentity | None:
+        with self._connection_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT provider, subject, principal_id, authentication_method, verified "
+                    "FROM external_identity_links WHERE provider = %s AND subject = %s",
+                    (provider, subject),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                return ExternalIdentity(
+                    provider=row[0], subject=row[1], principal_id=row[2],
+                    authentication_method=row[3], verified=bool(row[4]),
+                )
+
+    def save(self, identity: ExternalIdentity) -> None:
+        with self._connection_factory() as conn:
+            with conn.transaction():
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO external_identity_links
+                        (provider, subject, principal_id, authentication_method, verified)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (provider, subject) DO UPDATE SET
+                          principal_id = EXCLUDED.principal_id,
+                          authentication_method = EXCLUDED.authentication_method,
+                          verified = EXCLUDED.verified
+                        WHERE external_identity_links.principal_id = EXCLUDED.principal_id""",
+                        (identity.provider, identity.subject, identity.principal_id,
+                         identity.authentication_method, identity.verified),
+                    )
+                    if cur.rowcount != 1:
+                        raise PermissionError("external identity is already linked to another principal")
+
 
 class InMemoryExternalIdentityLinkRepository:
     def __init__(self) -> None:
