@@ -536,10 +536,12 @@ Architectural decision: Janavani owns the capability; PostgreSQL is the relation
 
 ## Immediate unresolved sequence
 
-1. M2-B Capability → Repository → Test → Deployment Map.
-2. M2-C Storage Ownership decision/verification layer.
-3. M2-D Runtime Execution Verification.
-4. Only then approve targeted consolidation/archive candidates.
+1. P0.6 PostgreSQL conformance/security gate: execute real cross-user authorization + candidate RLS tests; keep RLS unactivated until evidence passes.
+2. P0.6g/P0.6h restart, outage/recovery and backup/restore evidence.
+3. M2-D Runtime Execution Verification: canonical Web/API, CI and independent surface startup evidence.
+4. M2-B Capability → Repository → Test → Deployment Map.
+5. M2-C Storage Ownership decision/verification layer.
+6. Only then approve targeted consolidation/archive candidates.
 
 ## Ecosystem construction sequence after reconciliation
 
@@ -606,6 +608,8 @@ Archive requires:
 | 2026-08-23 | Static repository reconciliation substantially completed | dated reconciliation/runtime audits |
 | 2026-08-23 | Storage reconnaissance completed | `docs/STORAGE_OWNERSHIP_MAP_2026-08-23.md` / storage evidence |
 | 2026-08-23 | Ecosystem scope explicitly locked as NOT MVP | `docs/JANAVANI_ECOSYSTEM_CHARTER.md` + documentation correction record |
+| 2026-09-19 | PostgreSQL became the canonical relational standard; active Supabase runtime/build dependency removed and historical evidence archived | `docs/audits/POSTGRESQL_STANDARD_SUPABASE_CONVERGENCE_2026-09-19.md` |
+| 2026-09-20 | PostgreSQL security gate prioritized ahead of broader capability mapping | Current master execution queue |
 | 2026-08-23 | Checklist reconciled against verified status register | `docs/MASTER_TASK_CHECKLIST_RECONCILIATION_2026-08-23.md` |
 
 ---
