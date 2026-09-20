@@ -41,7 +41,6 @@ class PostgresSubmissionRepository:
         import psycopg
         return psycopg.connect(self._dsn)
 
-    @staticmethod
     def _set_local_principal(connection: Any, principal_id: str | None) -> None:
         if principal_id is None:
             return
@@ -85,7 +84,7 @@ class PostgresSubmissionRepository:
     def save(self, submission: SubmissionRecord, *, principal_id: str | None = None) -> None:
         """Compatibility save; delivery state transitions must use CAS APIs."""
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -107,7 +106,7 @@ class PostgresSubmissionRepository:
 
     def get(self, submission_id: str, *, principal_id: str | None = None) -> SubmissionRecord | None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE submission_id = %s", (submission_id,))
                 row = cursor.fetchone()
@@ -115,7 +114,7 @@ class PostgresSubmissionRepository:
 
     def get_by_idempotency_key(self, idempotency_key: str, *, principal_id: str | None = None) -> SubmissionRecord | None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE idempotency_key = %s", (idempotency_key,))
                 row = cursor.fetchone()
@@ -125,7 +124,7 @@ class PostgresSubmissionRepository:
         if not submission.idempotency_key:
             raise ValueError("idempotency_key is required")
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -153,7 +152,7 @@ class PostgresSubmissionRepository:
         if submission.version != expected_version + 1:
             raise ValueError("Submission mutation must increment version by exactly one")
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -177,7 +176,7 @@ class PostgresSubmissionRepository:
 
     def list_for_case(self, case_id: str, *, principal_id: str | None = None) -> tuple[SubmissionRecord, ...]:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE case_id = %s ORDER BY COALESCE(attempted_at, created_at), submission_id", (case_id,))
                 rows = cursor.fetchall()
@@ -185,7 +184,7 @@ class PostgresSubmissionRepository:
 
     def list_recoverable(self, *, principal_id: str | None = None) -> tuple[SubmissionRecord, ...]:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(f"SELECT {self._SELECT} FROM civic_case_submissions WHERE state = %s ORDER BY COALESCE(attempted_at, created_at), submission_id", (RECOVERABLE_SUBMISSION_STATE,))
                 rows = cursor.fetchall()
