@@ -24,6 +24,15 @@ class PostgresConsentRepository:
         import psycopg
         return psycopg.connect(self._dsn)
 
+    @staticmethod
+    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
+        if principal_id is None:
+            return
+        if not principal_id.strip():
+            raise ValueError("principal_id must not be blank")
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", (principal_id,))
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             with connection.cursor() as cursor:
@@ -46,8 +55,9 @@ class PostgresConsentRepository:
                     "ON civic_case_consents(subject_id, created_at)"
                 )
 
-    def save(self, consent: Consent) -> None:
+    def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute("""
@@ -72,8 +82,9 @@ class PostgresConsentRepository:
                         consent.expires_at, consent.revoked_at, consent.proof_ref,
                     ))
 
-    def get(self, consent_id: str) -> Consent | None:
+    def get(self, consent_id: str, *, principal_id: str | None = None) -> Consent | None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT consent_id, subject_id, purpose, scope, grant_type, "
@@ -84,8 +95,9 @@ class PostgresConsentRepository:
                 row = cursor.fetchone()
         return self._hydrate(row) if row else None
 
-    def list_for_subject(self, subject_id: str) -> list[Consent]:
+    def list_for_subject(self, subject_id: str, *, principal_id: str | None = None) -> list[Consent]:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT consent_id, subject_id, purpose, scope, grant_type, "
