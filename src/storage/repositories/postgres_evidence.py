@@ -30,7 +30,6 @@ class PostgresEvidenceRepository:
 
         return psycopg.connect(self._dsn)
 
-    @staticmethod
     def _set_local_principal(connection: Any, principal_id: str | None) -> None:
         if principal_id is None:
             return
@@ -64,7 +63,7 @@ class PostgresEvidenceRepository:
         normalized = validate_sha256(evidence.sha256)
         provenance = [source.__dict__ for source in evidence.provenance]
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -105,7 +104,7 @@ class PostgresEvidenceRepository:
 
     def get(self, evidence_id: str, *, principal_id: str | None = None) -> EvidenceObject | None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT evidence_id, evidence_type, storage_ref, sha256, "
