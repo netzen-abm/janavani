@@ -30,13 +30,15 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
-    identity = identity_for_telegram_user(user_id)
+    links = context.bot_data["identity_link_repository"]
+    identity = identity_for_telegram_user(user_id, links=links)
     repository = context.bot_data["case_repository"]
     case = create_case_from_telegram(
         repository,
         identity=identity,
         subject=session["category"],
         narrative=user_input,
+        case_capability=context.bot_data["civic_case_capability"],
     )
     session["case_id"] = case.case_id
 
