@@ -41,7 +41,7 @@ def _role_name(prefix: str) -> str:
     return prefix.replace("-", "_")
 
 
-def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
+def test_candidate_rls_real_postgres_owner_only_and_isolation():
     psycopg = pytest.importorskip("psycopg")
     owner_role = _role_name("janavani_rls_owner")
     delegate_role = _role_name("janavani_rls_delegate")
@@ -147,17 +147,21 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                         )
                         assert cur.fetchone()[0] == 1
 
+                        # Delegated Case mutation is intentionally disabled in the
+                        # candidate policy. A delegation row must not itself expand
+                        # database access until capability + RLS + repository semantics
+                        # converge.
                         cur.execute("SET ROLE " + delegate_role)
                         _set_principal(connection, "bob")
                         cur.execute(
                             "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
                         )
-                        assert cur.fetchone()[0] == 1
+                        assert cur.fetchone()[0] == 0
                         cur.execute(
-                            "UPDATE civic_cases SET narrative = 'delegate update', "
-                            "version = 2 WHERE case_id = 'rls-case'"
+                            "UPDATE civic_cases SET narrative = 'delegate update' "
+                            "WHERE case_id = 'rls-case'"
                         )
-                        assert cur.rowcount == 1
+                        assert cur.rowcount == 0
 
                         cur.execute("SET ROLE " + stranger_role)
                         _set_principal(connection, "mallory")
