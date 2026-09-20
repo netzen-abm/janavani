@@ -69,6 +69,10 @@ ACTION_REGISTRY: tuple[ActionSpec, ...] = (
     ActionSpec("sos:trigger", "sos:trigger", ResourceType.SOS, MutationClass.EXTERNAL_SIDE_EFFECT, True, False, False, True),
 )
 
+# Semantic aliases observed in active tests are intentionally not registered
+# as separate actions. For example, "submit" is a legacy execution-context
+# spelling; the canonical active capability action is "case:submit".
+
 
 def get_action_spec(capability_id: str, action: str) -> ActionSpec | None:
     for spec in ACTION_REGISTRY:
