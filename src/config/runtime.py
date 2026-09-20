@@ -29,6 +29,7 @@ def validate_runtime_configuration(
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
     }
     mismatches = [
         f"{name}={values.get(name)!r} (expected {expected!r})"
