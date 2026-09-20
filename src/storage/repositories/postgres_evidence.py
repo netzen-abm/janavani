@@ -6,6 +6,7 @@ import os
 from typing import Any, Callable
 
 from src.core.evidence import EvidenceObject, EvidenceSource, validate_sha256
+from src.storage.postgres_unit_of_work import bind_postgres_principal
 
 
 class PostgresEvidenceRepository:
