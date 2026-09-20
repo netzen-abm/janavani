@@ -32,3 +32,11 @@ def test_postgres_identity_repository_has_provider_neutral_contract():
     assert isinstance(PostgresExternalIdentityLinkRepository, type)
     assert hasattr(ExternalIdentityLinkRepository, "find")
     assert hasattr(ExternalIdentityLinkRepository, "save")
+
+
+def test_identity_link_schema_exists():
+    from pathlib import Path
+    migration = Path(__file__).parents[1] / "db/migrations/20260920100000_external_identity_links.sql"
+    text = migration.read_text(encoding="utf-8")
+    assert "external_identity_links" in text
+    assert "PRIMARY KEY (provider, subject)" in text
