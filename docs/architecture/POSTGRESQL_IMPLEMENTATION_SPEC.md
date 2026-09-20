@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-This specification converts the verified Civic Case contracts into an implementation sequence for PostgreSQL/Supabase. It is intentionally non-destructive: it does not authorize production schema changes, RLS activation, legacy-data deletion, or production deployment.
+This specification converts the verified Civic Case contracts into an implementation sequence for PostgreSQL. It is intentionally non-destructive: it does not authorize production schema changes, RLS activation, legacy-data deletion, or production deployment.
 
 ## 2. Canonical tables
 
@@ -179,7 +179,7 @@ Lifecycle events and security audit events remain distinct concepts.
 
 ## 10. Repository contract
 
-The durable provider must implement the existing provider-neutral `CivicCaseRepository` boundary. The domain model must remain independent of Supabase/PostgreSQL.
+The durable provider must implement the existing provider-neutral `CivicCaseRepository` boundary. The domain model must remain independent of PostgreSQL.
 
 Minimum required behavior:
 
