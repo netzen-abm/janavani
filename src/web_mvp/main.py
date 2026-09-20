@@ -89,7 +89,7 @@ def post(citizen_input: str):
     )
 
 @rt("/bill-review/{bill_code}")
-def get(bill_code: str):
+def get_bill_review(bill_code: str):
     """Displays targeted bill details alongside dynamic print and email action controls."""
     return Container(
         Div(
@@ -112,7 +112,7 @@ def get(bill_code: str):
     )
 
 @rt("/dispatch-objection")
-def post(bill_code: str, comments: str, format_choice: str):
+def post_dispatch_objection(bill_code: str, comments: str, format_choice: str):
     """Triggers document streaming back to the browser based on format preferences."""
     client = JanavaniWebAPIClient()
     file_bytes = client.download_constitutional_objection(bill_code, comments, format_choice)
