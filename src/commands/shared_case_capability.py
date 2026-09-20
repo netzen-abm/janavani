@@ -16,6 +16,8 @@ def create_case_from_telegram(
     narrative: str,
 ) -> CivicCase:
     """Create a Telegram-originated case through shared infrastructure."""
+    # The adapter accepts the repository for compatibility; shared composition
+    # owns provider selection so surfaces cannot introduce parallel capability graphs.
     composition = create_surface_case_composition()
     return composition.case_capability.create(
         CivicCaseCreateRequest(
