@@ -8,6 +8,10 @@
 
 This matrix is derived from the active capability/access code and the candidate PostgreSQL policy. It does not create a second authorization vocabulary. Where the database cannot safely infer an application action from row data, the item remains **GAP / BLOCKER** until the boundary is explicitly designed and tested.
 
+## Canonical action registry
+
+The active capability vocabulary is now captured in `src/access/action_registry.py`. The registry is descriptive and validation-oriented; it does not replace authorization. Only actions observed in active capability implementations are registered. Legacy spellings found in tests are not promoted to new canonical actions.
+
 ## Core invariants
 
 1. Application authorization must fail closed.
