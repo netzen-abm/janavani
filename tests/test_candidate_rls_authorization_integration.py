@@ -232,6 +232,13 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                 # Explicit rollback is required because psycopg commits a
                 # successful context manager automatically.
                 connection.rollback()
+    finally:
+        with psycopg.connect(DSN, autocommit=True) as admin:
+            with admin.cursor() as cur:
+                for role in test_roles:
+                    cur.execute(f"REASSIGN OWNED BY {role} TO CURRENT_USER")
+                    cur.execute(f"DROP OWNED BY {role}")
+                    cur.execute(f"DROP ROLE IF EXISTS {role}")
 
 def test_candidate_rls_principal_context_does_not_leak_between_transactions():
     """The same physical connection must not retain a prior principal."""
@@ -278,14 +285,4 @@ def test_candidate_rls_principal_context_does_not_leak_between_transactions():
                     cur.execute(
                         "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-context-case'"
                     )
-                    assert cur.fetchone()[0] == 0    finally:
-        with psycopg.connect(DSN, autocommit=True) as admin:
-            with admin.cursor() as cur:
-                for role in test_roles:
-                    cur.execute(f"REASSIGN OWNED BY {role} TO CURRENT_USER")
-                    cur.execute(f"DROP OWNED BY {role}")
-                    cur.execute(f"DROP ROLE IF EXISTS {role}")
-
-        cur.execute(f"DROP OWNED BY {role}")
-                    cur.execute(f"DROP ROLE IF EXISTS {role}")
-
+                    assert cur.fetchone()[0] == 0
