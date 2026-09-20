@@ -71,7 +71,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
                         cur.execute(
-                            f"GRANT SELECT, INSERT, UPDATE ON public.civic_cases "
+                            f"GRANT SELECT, INSERT, UPDATE, DELETE ON public.civic_cases "
                             f"TO {owner_role}, {delegate_role}, {stranger_role}"
                         )
                         cur.execute(
@@ -180,6 +180,32 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                         )
                         assert cur.fetchone()[0] == 0
 
+                        # Expired delegation must stop access.
+                        cur.execute("SET ROLE " + owner_role)
+                        _set_principal(connection, "alice")
+                        cur.execute(
+                            "UPDATE janavani_delegation_grants "
+                            "SET expires_at = now() - interval '1 second', revoked = false "
+                            "WHERE delegation_id = 'rls-delegation'"
+                        )
+                        assert cur.rowcount == 1
+
+                        cur.execute("SET ROLE " + delegate_role)
+                        _set_principal(connection, "bob")
+                        cur.execute(
+                            "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-case'"
+                        )
+                        assert cur.fetchone()[0] == 0
+
+                        cur.execute("SET ROLE " + owner_role)
+                        _set_principal(connection, "alice")
+                        cur.execute(
+                            "UPDATE janavani_delegation_grants "
+                            "SET expires_at = now() + interval '1 hour', revoked = false "
+                            "WHERE delegation_id = 'rls-delegation'"
+                        )
+                        assert cur.rowcount == 1
+
                         # Only the grantor can revoke the delegation.
                         cur.execute("SET ROLE " + owner_role)
                         _set_principal(connection, "alice")
@@ -200,10 +226,68 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             "WHERE case_id = 'rls-case'"
                         )
                         assert cur.rowcount == 0
+                        cur.execute("DELETE FROM civic_cases WHERE case_id = 'rls-case'")
+                        assert cur.rowcount == 0
             finally:
                 # Explicit rollback is required because psycopg commits a
                 # successful context manager automatically.
                 connection.rollback()
+
+def test_candidate_rls_principal_context_does_not_leak_between_transactions():
+    """The same physical connection must not retain a prior principal."""
+    psycopg = pytest.importorskip("psycopg")
+    owner_role = _role_name("janavani_rls_context_owner")
+    stranger_role = _role_name("janavani_rls_context_stranger")
+
+    with psycopg.connect(DSN, autocommit=True) as admin:
+        with admin.cursor() as cur:
+            _bootstrap(admin)
+            for role in (owner_role, stranger_role):
+                cur.execute(f"DROP ROLE IF EXISTS {role}")
+                cur.execute(f"CREATE ROLE {role} NOLOGIN")
+                cur.execute(f"GRANT USAGE ON SCHEMA public TO {role}")
+                cur.execute(f"GRANT SELECT ON public.civic_cases TO {role}")
+            cur.execute(RLS_SQL)
+            cur.execute(
+                "INSERT INTO civic_cases "
+                "(case_id, case_type, subject, narrative, created_by, "
+                "jurisdiction_json, subject_claims_json, status, created_at, updated_at, version) "
+                "VALUES ('rls-context-case', 'complaint', 'context', 'context', 'alice', "
+                "'{}'::jsonb, '[]'::jsonb, 'ready', now(), now(), 1)"
+            )
+
+    try:
+        with psycopg.connect(DSN) as connection:
+            with connection.transaction():
+                with connection.cursor() as cur:
+                    cur.execute("SET ROLE " + owner_role)
+                    _set_principal(connection, "alice")
+                    cur.execute(
+                        "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-context-case'"
+                    )
+                    assert cur.fetchone()[0] == 1
+
+            with connection.transaction():
+                with connection.cursor() as cur:
+                    cur.execute("RESET ROLE")
+                    cur.execute(
+                        "SELECT current_setting('janavani.principal_id', true)"
+                    )
+                    assert cur.fetchone()[0] in (None, "")
+                    cur.execute("SET ROLE " + stranger_role)
+                    cur.execute(
+                        "SELECT count(*) FROM civic_cases WHERE case_id = 'rls-context-case'"
+                    )
+                    assert cur.fetchone()[0] == 0
+    finally:
+        with psycopg.connect(DSN, autocommit=True) as admin:
+            with admin.cursor() as cur:
+                cur.execute("DELETE FROM civic_cases WHERE case_id = 'rls-context-case'")
+                for role in (owner_role, stranger_role):
+                    cur.execute(f"REASSIGN OWNED BY {role} TO CURRENT_USER")
+                    cur.execute(f"DROP OWNED BY {role}")
+                    cur.execute(f"DROP ROLE IF EXISTS {role}")
+
     finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
             with admin.cursor() as cur:
