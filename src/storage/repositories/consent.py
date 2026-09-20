@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from core.consent import Consent
+from src.core.consent import Consent
 
 
 class ConsentRepository(Protocol):
-    def save(self, consent: Consent) -> None:
+    def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         ...
 
-    def get(self, consent_id: str) -> Consent | None:
+    def get(self, consent_id: str, *, principal_id: str | None = None) -> Consent | None:
         ...
 
-    def list_for_subject(self, subject_id: str) -> list[Consent]:
+    def list_for_subject(self, subject_id: str, *, principal_id: str | None = None) -> list[Consent]:
         ...
 
 
