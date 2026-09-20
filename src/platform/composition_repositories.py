@@ -17,6 +17,7 @@ from src.storage.repositories.external_channel_provider import create_external_c
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
+from src.identity.linking import ExternalIdentityLinkRepository, InMemoryExternalIdentityLinkRepository, PostgresExternalIdentityLinkRepository
 from src.storage.repositories.submission_provider import create_submission_repository as create_submission_repository_for_provider
 
 def create_provider_composition() -> ProviderComposition:
@@ -42,6 +43,15 @@ def create_accountability_feedback_repository(*, provider_composition: ProviderC
 
 def create_external_channel_repository_for_platform(*, provider_composition: ProviderComposition | None = None):
     return create_external_channel_repository(composition=provider_composition or create_provider_composition())
+
+def create_identity_link_repository(*, provider_composition: ProviderComposition | None = None) -> ExternalIdentityLinkRepository:
+    """Select the shared identity-link provider at the composition boundary."""
+    composition = provider_composition or create_provider_composition()
+    if composition.provider_for("civic_case") == "postgres":
+        from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+        repo = PostgresCivicCaseRepository()
+        return PostgresExternalIdentityLinkRepository(repo._connect)
+    return InMemoryExternalIdentityLinkRepository()
 
 def create_authority_repository() -> AuthorityRepository:
     return CsvAuthorityRepository()
