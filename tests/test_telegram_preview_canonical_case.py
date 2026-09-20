@@ -10,7 +10,7 @@ from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 def _identity(user_id: int) -> IdentityContext:
     return IdentityContext(
         principal=Principal(
-            principal_id=f"tg-session-{user_id}",
+            principal_id=f"telegram:{user_id}",
             identity_mode=IdentityMode.ANONYMOUS,
             interface="telegram",
             authentication_method=AuthenticationMethod.NONE,
