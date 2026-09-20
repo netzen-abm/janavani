@@ -1,13 +1,13 @@
-"""Canonical shared dependencies for the Web civic-case adapter."""
-from src.platform.composition import create_authority_repository, create_case_repository, create_development_evidence_repository
-from src.web.composition import create_web_civic_action_composition
+"""Canonical shared dependencies for the Web civic-case adapter.
 
-_REPOSITORY = create_case_repository()
-_EVIDENCE_REPOSITORY = create_development_evidence_repository()
-_COMPOSITION = create_web_civic_action_composition(
-    case_repository=_REPOSITORY,
-    authority_repository=create_authority_repository(),
-    evidence_repository=_EVIDENCE_REPOSITORY,
-)
+The Web surface is an adapter. Its capabilities are composed once from the
+same provider-neutral surface graph used by other access surfaces.
+"""
+from src.platform.surface_case_composition import create_surface_case_composition
+
+_COMPOSITION = create_surface_case_composition()
 CAPABILITY = _COMPOSITION.case_capability
-CIVIC_ACTION = _COMPOSITION.civic_action
+CIVIC_ACTION = _COMPOSITION.civic_action_capability
+EVIDENCE = _COMPOSITION.evidence_capability
+AUTHORITY = _COMPOSITION.authority_capability
+CONSENT = _COMPOSITION.consent_capability
