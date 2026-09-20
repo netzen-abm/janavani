@@ -7,8 +7,7 @@ from conversation.constants import WAITING_FOR_DOCUMENT
 
 from services.issue_classifier import classify_issue
 from src.commands.shared_case_capability import create_case_from_telegram
-from src.identity.context import IdentityContext
-from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
+from src.adapters.telegram.identity import identity_for_telegram_user
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -31,17 +30,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
-    # Channel identifiers are mapped to an opaque principal. The raw Telegram
-    # identifier is kept only in the channel session, never as case ownership.
-    principal = Principal(
-        principal_id=f"tg-session-{user_id}",
-        identity_mode=IdentityMode.ANONYMOUS,
-        interface="telegram",
-        authentication_method=AuthenticationMethod.NONE,
-        session_id=str(user_id),
-        capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
-    )
-    identity = IdentityContext(principal=principal)
+    identity = identity_for_telegram_user(user_id)
     repository = context.bot_data["case_repository"]
     case = create_case_from_telegram(
         repository,
