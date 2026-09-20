@@ -5,6 +5,7 @@ import os
 from typing import Any, Callable
 
 from src.documents.artifact_ref import ArtifactState, DocumentArtifactRef
+from src.storage.postgres_unit_of_work import bind_postgres_principal
 
 
 class PostgresDocumentArtifactRepository:
@@ -93,7 +94,7 @@ class PostgresDocumentArtifactRepository:
                 row = cursor.fetchone()
         return self._hydrate(row) if row else None
 
-    def list_for_case(self, case_id: str) -> list[DocumentArtifactRef]:
+    def list_for_case(self, case_id: str, *, principal_id: str | None = None) -> list[DocumentArtifactRef]:
         with self._connect() as connection:
             bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
