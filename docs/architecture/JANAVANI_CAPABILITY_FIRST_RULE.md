@@ -109,7 +109,7 @@ surface.
 ```text
 Telegram down   → WebApp remains usable
 WebApp down     → Telegram remains usable
-Supabase down   → another compliant provider can be selected
+PostgreSQL deployment down → another compliant PostgreSQL deployment can be selected
 AI provider down → non-AI capabilities remain usable where possible
 ```
 
