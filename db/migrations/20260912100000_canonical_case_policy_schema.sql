@@ -55,6 +55,30 @@ create table if not exists public.civic_case_consents (
     proof_ref text
 );
 
+create table if not exists public.evidence_objects (
+    evidence_id text primary key,
+    evidence_type text not null,
+    storage_ref text not null,
+    sha256 text not null,
+    received_at timestamptz not null,
+    captured_at timestamptz,
+    source_description text,
+    provenance jsonb not null default '[]'::jsonb,
+    access_policy_ref text,
+    retention_policy_ref text,
+    status text not null
+);
+
+create table if not exists public.document_artifacts (
+    artifact_id text primary key,
+    document_id text not null,
+    case_id text not null references public.civic_cases(case_id),
+    format text not null,
+    storage_ref text not null,
+    content_sha256 text,
+    state text not null
+);
+
 create table if not exists public.civic_case_evidence_refs (
     case_id text not null references public.civic_cases(case_id),
     evidence_id text not null,
@@ -127,6 +151,10 @@ create index if not exists civic_cases_status_updated_idx
     on public.civic_cases(status, updated_at);
 create index if not exists civic_cases_created_by_idx
     on public.civic_cases(created_by);
+create index if not exists evidence_objects_access_policy_idx
+    on public.evidence_objects(access_policy_ref);
+create index if not exists document_artifacts_case_idx
+    on public.document_artifacts(case_id);
 create index if not exists civic_case_events_case_occurred_idx
     on public.civic_case_events(case_id, occurred_at);
 create index if not exists civic_case_submissions_case_attempted_idx
