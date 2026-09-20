@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from src.adapters.telegram.identity import identity_for_telegram_user
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
 from src.platform.composition import create_accountability_feedback_repository
 
@@ -46,7 +47,7 @@ Rating
     issue = " ".join(context.args[2:])
     actor_ref = None
     if update.effective_user is not None:
-        actor_ref = f"telegram:{update.effective_user.id}"
+        actor_ref = identity_for_telegram_user(update.effective_user.id).principal.principal_id
 
     try:
         feedback = feedback_capability.record(
