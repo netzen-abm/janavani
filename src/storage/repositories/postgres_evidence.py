@@ -30,6 +30,15 @@ class PostgresEvidenceRepository:
 
         return psycopg.connect(self._dsn)
 
+    @staticmethod
+    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
+        if principal_id is None:
+            return
+        if not principal_id.strip():
+            raise ValueError("principal_id must not be blank")
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", (principal_id,))
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             with connection.cursor() as cursor:
@@ -51,10 +60,11 @@ class PostgresEvidenceRepository:
                     """
                 )
 
-    def save(self, evidence: EvidenceObject) -> None:
+    def save(self, evidence: EvidenceObject, *, principal_id: str | None = None) -> None:
         normalized = validate_sha256(evidence.sha256)
         provenance = [source.__dict__ for source in evidence.provenance]
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -93,8 +103,9 @@ class PostgresEvidenceRepository:
                         ),
                     )
 
-    def get(self, evidence_id: str) -> EvidenceObject | None:
+    def get(self, evidence_id: str, *, principal_id: str | None = None) -> EvidenceObject | None:
         with self._connect() as connection:
+            self._set_local_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT evidence_id, evidence_type, storage_ref, sha256, "
