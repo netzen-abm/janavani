@@ -14,12 +14,14 @@ class UnitOfWork(AbstractContextManager, Protocol):
     """
 
     resource: Any
+    principal_id: str | None
 
     def __enter__(self) -> Self:
         ...
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool | None:
         ...
+
 
 
 class UnitOfWorkFactory(Protocol):
