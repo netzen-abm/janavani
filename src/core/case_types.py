@@ -1,0 +1,55 @@
+"""Canonical civic case enums and status vocabulary."""
+from enum import Enum
+
+class CaseType(str, Enum):
+    COMPLAINT = "complaint"
+    GRIEVANCE = "grievance"
+    RTI = "rti"
+    PETITION = "petition"
+    REPRESENTATION = "representation"
+    OBJECTION = "objection"
+    APPEAL = "appeal"
+    CORRUPTION = "corruption"
+    MISBEHAVIOUR = "misbehaviour"
+    TRANSFER_CONCERN = "transfer_concern"
+    OTHER = "other"
+
+class CaseStatus(str, Enum):
+    DRAFT = "draft"
+    REVIEW = "review"
+    READY = "ready"
+    SUBMITTING = "submitting"
+    QUEUED = "queued"
+    SUBMITTED = "submitted"
+    ACKNOWLEDGED = "acknowledged"
+    FOLLOW_UP = "follow_up"
+    IN_PROGRESS = "in_progress"
+    RESPONDED = "responded"
+    RESOLVED = "resolved"
+    ESCALATED = "escalated"
+    CLOSED = "closed"
+    ARCHIVED = "archived"
+
+class CaseEventType(str, Enum):
+    CREATED = "created"
+    EDITED = "edited"
+    REVIEW_STARTED = "review_started"
+    APPROVED = "approved"
+    EVIDENCE_ADDED = "evidence_added"
+    DOCUMENT_ADDED = "document_added"
+    SUBMITTING = "submitting"
+    QUEUED = "queued"
+    SUBMITTED = "submitted"
+    ACKNOWLEDGED = "acknowledged"
+    FOLLOW_UP = "follow_up"
+    RESPONSE = "response"
+    RESOLVED = "resolved"
+    ESCALATED = "escalated"
+    CORRECTION = "correction"
+    CITIZEN_VERIFIED = "citizen_verified"
+    CITIZEN_REOPENED = "citizen_reopened"
+    CLOSED = "closed"
+    ARCHIVED = "archived"
+
+CITIZEN_VERIFIED_EVENT = CaseEventType.CITIZEN_VERIFIED
+CITIZEN_REOPENED_EVENT = CaseEventType.CITIZEN_REOPENED
