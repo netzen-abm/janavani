@@ -21,7 +21,7 @@ The repository contract exposes only:
 - `save(case)`
 - `get(case_id)`
 
-The domain object remains independent of Supabase and other storage providers.
+The domain object remains independent of hosted PostgreSQL services and other storage providers.
 
 ## Current implementation
 
@@ -31,7 +31,7 @@ It is **not production persistence**. Process restart still loses state.
 
 ## Durable target
 
-The existing repository audit identifies Supabase/PostgreSQL as the intended durable relational authority, with object storage for binary artifacts and Redis reserved for ephemeral state.
+The existing repository audit identifies PostgreSQL as the intended durable relational authority, with object storage for binary artifacts and Redis reserved for ephemeral state.
 
 A durable Civic Case provider must be verified against the existing schema, access-control model, serialization/hydration requirements, audit events, and privacy rules before the HTTP adapter is switched to it.
 
