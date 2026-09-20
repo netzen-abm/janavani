@@ -43,3 +43,15 @@ def test_unknown_provider_domain_lookup_is_rejected() -> None:
 
     with pytest.raises(ProviderCompositionError, match="Unknown persisted domain"):
         composition.provider_for("not_a_domain")
+
+
+def test_identity_provider_is_independent_of_case_provider() -> None:
+    composition = ProviderComposition.memory_first().with_provider("civic_case", "postgres")
+    assert composition.provider_for("civic_case") == "postgres"
+    assert composition.provider_for("external_identity_links") == "memory"
+
+
+def test_identity_provider_can_be_postgres_while_case_is_memory() -> None:
+    composition = ProviderComposition.memory_first().with_provider("external_identity_links", "postgres")
+    assert composition.provider_for("external_identity_links") == "postgres"
+    assert composition.provider_for("civic_case") == "memory"
