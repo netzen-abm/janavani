@@ -17,7 +17,7 @@ class FakeCursor:
     def execute(self, sql, params=None):
         sql_text = str(sql)
         self.calls.append(sql_text)
-        if self.fail_at and self.fail_at in sql_text:
+        self.rowcount = 1\n        if self.fail_at and self.fail_at in sql_text:
             raise RuntimeError(f"forced failure: {self.fail_at}")
         if "SELECT version FROM civic_cases" in sql_text:
             self._row = (1,)
