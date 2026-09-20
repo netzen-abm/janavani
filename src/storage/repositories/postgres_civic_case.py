@@ -173,25 +173,25 @@ class PostgresCivicCaseRepository:
                     bind_postgres_principal(conn, principal_id)
                     with conn.cursor(row_factory=self._row_factory()) as cur:
                         cur.execute(
-                        "SELECT * FROM civic_cases WHERE case_id = %s",
-                        (case_id,),
-                    )
+                            "SELECT * FROM civic_cases WHERE case_id = %s",
+                            (case_id,),
+                        )
                         row = cur.fetchone()
                         if row is None:
-                        return None
+                            return None
                         events = self._select_children(cur, "civic_case_events", case_id)
                         evidence = self._select_children(
-                        cur, "civic_case_evidence_refs", case_id
-                    )
+                            cur, "civic_case_evidence_refs", case_id
+                        )
                         documents = self._select_children(
-                        cur, "civic_case_document_refs", case_id
-                    )
+                            cur, "civic_case_document_refs", case_id
+                        )
                         consents = self._select_children(
-                        cur, "civic_case_consents", case_id
-                    )
+                            cur, "civic_case_consents", case_id
+                        )
                         return _hydrate(
-                        row, events, evidence, documents, consents
-                    )
+                            row, events, evidence, documents, consents
+                        )
         except PostgresCivicCasePersistenceError:
             raise
         except Exception as exc:
@@ -203,6 +203,7 @@ class PostgresCivicCaseRepository:
         try:
             with self._unit_of_work_factory() as uow:
                 conn = uow.connection
+                bind_postgres_principal(conn, principal_id)
 
                 with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
@@ -252,23 +253,6 @@ class PostgresCivicCaseRepository:
             raise PostgresCivicCasePersistenceError(
                 f"Failed to persist Civic Case {case.case_id}"
             ) from exc
-
-    @staticmethod
-    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
-        """Bind the authenticated principal only for the current transaction.
-
-        A missing principal intentionally leaves the RLS context unset so
-        protected PostgreSQL operations fail closed.
-        """
-        if principal_id is None:
-            return
-        if not principal_id.strip():
-            raise ValueError("principal_id must not be blank")
-        with connection.cursor() as cur:
-            cur.execute(
-                "SELECT set_config('janavani.principal_id', %s, true)",
-                (principal_id,),
-            )
 
     @staticmethod
     def _row_factory() -> Any:
