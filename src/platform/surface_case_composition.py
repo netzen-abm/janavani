@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.authority import AuthorityCapability
-from src.identity.linking import ExternalIdentityLinkRepository, InMemoryExternalIdentityLinkRepository
+from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
@@ -19,6 +19,7 @@ from src.platform.composition import (
     create_case_repository,
     create_consent_repository,
     create_development_evidence_repository,
+    create_identity_link_repository,
 )
 from src.platform.composition_capabilities import (
     create_authority_capability,
@@ -50,7 +51,7 @@ def create_surface_case_composition() -> SurfaceCaseComposition:
     authority_repository = create_authority_repository()
     evidence_repository = create_development_evidence_repository()
     consent_repository = create_consent_repository()
-    identity_link_repository = InMemoryExternalIdentityLinkRepository()
+    identity_link_repository = create_identity_link_repository()
 
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
