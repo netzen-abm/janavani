@@ -102,11 +102,33 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS civic_case_events_case_insert ON public.civic_case_events;
+CREATE POLICY civic_case_events_case_insert
+ON public.civic_case_events
+FOR INSERT
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_events.case_id
+    )
+);
+
 DROP POLICY IF EXISTS civic_case_evidence_case_access ON public.civic_case_evidence_refs;
 CREATE POLICY civic_case_evidence_case_access
 ON public.civic_case_evidence_refs
 FOR SELECT
 USING (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_evidence_refs.case_id
+    )
+);
+
+DROP POLICY IF EXISTS civic_case_evidence_case_insert ON public.civic_case_evidence_refs;
+CREATE POLICY civic_case_evidence_case_insert
+ON public.civic_case_evidence_refs
+FOR INSERT
+WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_evidence_refs.case_id
@@ -124,11 +146,50 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS civic_case_document_case_insert ON public.civic_case_document_refs;
+CREATE POLICY civic_case_document_case_insert
+ON public.civic_case_document_refs
+FOR INSERT
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_document_refs.case_id
+    )
+);
+
 DROP POLICY IF EXISTS civic_case_submission_case_access ON public.civic_case_submissions;
 CREATE POLICY civic_case_submission_case_access
 ON public.civic_case_submissions
 FOR SELECT
 USING (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_submissions.case_id
+    )
+);
+
+DROP POLICY IF EXISTS civic_case_submission_case_insert ON public.civic_case_submissions;
+CREATE POLICY civic_case_submission_case_insert
+ON public.civic_case_submissions
+FOR INSERT
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_submissions.case_id
+    )
+);
+
+DROP POLICY IF EXISTS civic_case_submission_case_update ON public.civic_case_submissions;
+CREATE POLICY civic_case_submission_case_update
+ON public.civic_case_submissions
+FOR UPDATE
+USING (
+    EXISTS (
+        SELECT 1 FROM public.civic_cases c
+        WHERE c.case_id = civic_case_submissions.case_id
+    )
+)
+WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_submissions.case_id
@@ -143,6 +204,25 @@ CREATE POLICY civic_case_consents_subject_access
 ON public.civic_case_consents
 FOR SELECT
 USING (
+    subject_id = janavani_private.current_principal_id()
+);
+
+DROP POLICY IF EXISTS civic_case_consents_subject_insert ON public.civic_case_consents;
+CREATE POLICY civic_case_consents_subject_insert
+ON public.civic_case_consents
+FOR INSERT
+WITH CHECK (
+    subject_id = janavani_private.current_principal_id()
+);
+
+DROP POLICY IF EXISTS civic_case_consents_subject_update ON public.civic_case_consents;
+CREATE POLICY civic_case_consents_subject_update
+ON public.civic_case_consents
+FOR UPDATE
+USING (
+    subject_id = janavani_private.current_principal_id()
+)
+WITH CHECK (
     subject_id = janavani_private.current_principal_id()
 );
 
