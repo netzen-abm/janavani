@@ -5,9 +5,9 @@
 
 ## 1. Purpose
 
-The current Supabase provider deliberately stops short of claiming multi-table atomicity. This contract defines the boundary required before the provider can become the production durable case implementation.
+The current historical Supabase provider deliberately stops short of claiming multi-table atomicity. This contract defines the boundary required before the provider can become the production durable case implementation.
 
-The contract is provider-neutral at the domain boundary. PostgreSQL/Supabase may implement it through a stored function/RPC or another verified transaction mechanism, but application code must not depend on a sequence of independent table writes for one domain mutation.
+The contract is provider-neutral at the domain boundary. PostgreSQL may implement it through a stored function/RPC or another verified transaction mechanism, but application code must not depend on a sequence of independent table writes for one domain mutation.
 
 ## 2. Atomic unit
 
@@ -150,7 +150,7 @@ Before production adoption, tests must demonstrate:
 
 ## 12. Verification gate
 
-Do not activate a production RPC/function until the actual target PostgreSQL/Supabase schema has been inspected and reconciled with:
+Do not activate a production RPC/function until the actual target PostgreSQL schema has been inspected and reconciled with:
 
 - `docs/architecture/CANONICAL_CASE_POSTGRES_SCHEMA.md`;
 - `docs/architecture/CIVIC_CASE_DATABASE_CONTRACT.md`;
