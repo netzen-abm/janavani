@@ -57,7 +57,8 @@ class ConsentCapability:
                 purpose=PURPOSE_SUBMISSION, scope=(scope,), grant_type=ConsentGrantType.EXPLICIT,
                 status=ConsentStatus.GRANTED, created_at=now, proof_ref=proof_ref,
             )
-            self._repository.save(consent, principal_id=identity.principal.principal_id)
+            if self._atomic_repository is None:
+                self._repository.save(consent, principal_id=identity.principal.principal_id)
         elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(PURPOSE_SUBMISSION, scope):
             raise PermissionError("Existing consent does not authorize this identity and scope")
         if self._atomic_repository is not None:
