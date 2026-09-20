@@ -47,7 +47,7 @@ Required controls:
 
 - Secrets must be supplied through protected environment/configuration mechanisms, never hard-coded.
 - `.env` and equivalent local secret files must be ignored; `.env.example` may document required variable names without real values.
-- Supabase service-role/secret credentials must never reach public clients. Client-side keys must be limited to the access model they are designed for and protected by appropriate row-level authorization.
+- database service-role/secret credentials must never reach public clients. Client-side keys must be limited to the access model they are designed for and protected by appropriate row-level authorization.
 - Stripe-style public/publishable credentials must be separated from secret credentials.
 - Database connection strings and private provider credentials belong in protected runtime configuration.
 - Sensitive values must not be placed in public/browser-exposed environment namespaces.
