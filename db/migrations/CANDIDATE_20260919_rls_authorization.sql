@@ -19,6 +19,7 @@ $$;
 
 -- Case ownership / active delegation.
 ALTER TABLE public.civic_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_cases FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS civic_cases_owner_select ON public.civic_cases;
 CREATE POLICY civic_cases_owner_select
@@ -87,9 +88,13 @@ WITH CHECK (
 
 -- Child records inherit authorization from their Case.
 ALTER TABLE public.civic_case_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_events FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_case_evidence_refs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_evidence_refs FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_case_document_refs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_document_refs FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_case_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_submissions FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS civic_case_events_case_access ON public.civic_case_events;
 CREATE POLICY civic_case_events_case_access
@@ -198,6 +203,7 @@ WITH CHECK (
 
 -- Consent follows subject identity, not case visibility.
 ALTER TABLE public.civic_case_consents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_case_consents FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS civic_case_consents_subject_access ON public.civic_case_consents;
 CREATE POLICY civic_case_consents_subject_access
@@ -228,6 +234,7 @@ WITH CHECK (
 
 -- Delegations: grantor may manage; delegate may inspect active grants.
 ALTER TABLE public.janavani_delegation_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.janavani_delegation_grants FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS janavani_delegation_grant_access ON public.janavani_delegation_grants;
 CREATE POLICY janavani_delegation_grant_access
@@ -256,8 +263,12 @@ WITH CHECK (grantor_id = janavani_private.current_principal_id());
 -- Service identity policy state is backend-controlled. Ordinary database
 -- sessions receive no policy that permits reading or changing these rows.
 ALTER TABLE public.janavani_service_identity_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.janavani_service_identity_policies FORCE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.janavani_service_identity_policies FROM anon, authenticated;
 
 -- No DELETE policies are intentional: lifecycle/history removal must remain
 -- behind dedicated capability/service boundaries.
+-- FORCE ROW LEVEL SECURITY is required so table ownership cannot silently bypass
+-- these candidate policies. Production must still use a dedicated NO-BYPASSRLS
+-- application role, separate from migration/admin ownership.
