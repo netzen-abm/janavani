@@ -29,7 +29,6 @@ class PostgresDocumentArtifactRepository:
 
         return psycopg.connect(self._dsn)
 
-    @staticmethod
     def _set_local_principal(connection: Any, principal_id: str | None) -> None:
         if principal_id is None:
             return
@@ -61,7 +60,7 @@ class PostgresDocumentArtifactRepository:
 
     def save(self, artifact: DocumentArtifactRef, *, principal_id: str | None = None) -> None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -91,7 +90,7 @@ class PostgresDocumentArtifactRepository:
 
     def get(self, artifact_id: str, *, principal_id: str | None = None) -> DocumentArtifactRef | None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT artifact_id, document_id, case_id, format, "
@@ -104,7 +103,7 @@ class PostgresDocumentArtifactRepository:
 
     def list_for_case(self, case_id: str) -> list[DocumentArtifactRef]:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT artifact_id, document_id, case_id, format, "
