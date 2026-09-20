@@ -33,8 +33,8 @@ class IdentityLinkingService:
     def link_verified(self, request: IdentityLinkRequest, *, verified: bool) -> ExternalIdentity:
         if not verified:
             raise PermissionError("explicit verified identity linking is required")
-        if not request.principal_id or not request.provider or not request.subject:
-            raise ValueError("principal, provider and subject are required")
+        if not request.principal_id or not request.provider or not request.subject or request.authentication_method == "none":
+            raise ValueError("principal, provider, subject and authentication method are required")
         existing = self._repository.find(request.provider, request.subject)
         if existing is not None and existing.principal_id != request.principal_id:
             raise PermissionError("external identity is already linked to another principal")
