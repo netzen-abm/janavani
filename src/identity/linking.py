@@ -45,3 +45,16 @@ class IdentityLinkingService:
         )
         self._repository.save(identity)
         return identity
+
+class IdentityLinkResolver:
+    """Resolve a provider subject only after an explicit verified link exists."""
+
+    def __init__(self, repository: ExternalIdentityLinkRepository) -> None:
+        self._repository = repository
+
+    def resolve(self, provider: str, subject: str) -> ExternalIdentity:
+        identity = self._repository.find(provider, subject)
+        if identity is None or not identity.is_usable():
+            raise LookupError("external identity is not explicitly linked and verified")
+        return identity
+
