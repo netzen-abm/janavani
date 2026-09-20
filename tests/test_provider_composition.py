@@ -55,3 +55,7 @@ def test_identity_provider_can_be_postgres_while_case_is_memory() -> None:
     composition = ProviderComposition.memory_first().with_provider("external_identity_links", "postgres")
     assert composition.provider_for("external_identity_links") == "postgres"
     assert composition.provider_for("civic_case") == "memory"
+
+
+def test_identity_domain_is_in_persisted_domains() -> None:
+    assert "external_identity_links" in PERSISTED_DOMAINS
