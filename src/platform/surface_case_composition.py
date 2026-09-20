@@ -60,6 +60,7 @@ def create_surface_case_composition() -> SurfaceCaseComposition:
         case_repository=case_repository,
         authority_repository=authority_repository,
         evidence_repository=evidence_repository,
+        case_capability=case_capability,
     )
 
     return SurfaceCaseComposition(
