@@ -57,7 +57,7 @@ class EvidenceCapability:
             provenance=request.provenance, access_policy_ref=request.access_policy_ref,
             retention_policy_ref=request.retention_policy_ref, status=request.status,
         )
-        self._repository.save(evidence)
+        self._repository.save(evidence, principal_id=identity.principal.principal_id)
         return evidence
 
     def attach(
@@ -70,7 +70,7 @@ class EvidenceCapability:
         execution_context: CapabilityExecutionContext | None = None,
     ) -> CivicCaseResult:
         self._validate_execution_context(execution_context, identity, action="evidence:attach", resource_id=case_id)
-        evidence = self._repository.get(evidence_id)
+        evidence = self._repository.get(evidence_id, principal_id=identity.principal.principal_id)
         if evidence is None:
             raise LookupError("Evidence not found")
         case_context = self._child_case_context(execution_context, identity, case_id, "case:add_evidence")
@@ -96,7 +96,7 @@ class EvidenceCapability:
         self._authorize(identity, "evidence:read")
         return tuple(
             evidence for evidence_id in case.evidence_refs
-            if (evidence := self._repository.get(evidence_id)) is not None
+            if (evidence := self._repository.get(evidence_id, principal_id=identity.principal.principal_id)) is not None
         )
 
     @staticmethod
