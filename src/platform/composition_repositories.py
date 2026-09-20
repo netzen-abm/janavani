@@ -1,5 +1,7 @@
 """Provider-neutral repository composition for Janavani surfaces."""
 from __future__ import annotations
+
+import os
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.core.submission import SubmissionRepository
@@ -48,9 +50,18 @@ def create_identity_link_repository(*, provider_composition: ProviderComposition
     """Select the shared identity-link provider at the composition boundary."""
     composition = provider_composition or create_provider_composition()
     if composition.provider_for("civic_case") == "postgres":
-        from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
-        repo = PostgresCivicCaseRepository()
-        return PostgresExternalIdentityLinkRepository(repo._connect)
+        dsn = os.getenv("JANAVANI_POSTGRES_DSN")
+        if not dsn:
+            raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL identity persistence")
+
+        def connect():
+            try:
+                import psycopg
+            except ImportError as exc:
+                raise RuntimeError("Psycopg 3 is required for PostgreSQL identity persistence") from exc
+            return psycopg.connect(dsn)
+
+        return PostgresExternalIdentityLinkRepository(connect)
     return InMemoryExternalIdentityLinkRepository()
 
 def create_authority_repository() -> AuthorityRepository:
