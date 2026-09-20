@@ -45,6 +45,8 @@ class PostgresConsentCaseAtomicRepository:
             raise ValueError("principal_id is required")
         if consent.subject_id != principal_id:
             raise PermissionError("Consent subject must match transaction principal")
+        if case.created_by != principal_id:
+            raise PermissionError("Case owner must match transaction principal")
         if consent.consent_id not in case.consent_refs:
             raise ValueError("Case must reference the consent before atomic persistence")
         with self._unit_of_work_factory() as uow:
