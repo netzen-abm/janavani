@@ -5,27 +5,12 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_IDENTITY
 from src.capabilities.civic_case import CivicCaseCapability
-from src.identity.context import IdentityContext
-from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
-
-
-def _identity(user_id: int) -> IdentityContext:
-    """Map the Telegram session to the same opaque Case owner used at creation."""
-    return IdentityContext(
-        principal=Principal(
-            principal_id=f"tg-session-{user_id}",
-            identity_mode=IdentityMode.ANONYMOUS,
-            interface="telegram",
-            authentication_method=AuthenticationMethod.NONE,
-            session_id=str(user_id),
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
-        )
-    )
+from src.adapters.telegram.identity import identity_for_telegram_user
 
 
 def build_case_preview(*, capability: CivicCaseCapability, case_id: str, user_id: int) -> str:
     """Build preview text from the canonical owned Case without legacy reconstruction."""
-    case = capability.get_owned(case_id, identity=_identity(user_id))
+    case = capability.get_owned(case_id, identity=identity_for_telegram_user(user_id))
     if case is None:
         raise LookupError("Case not found")
 
