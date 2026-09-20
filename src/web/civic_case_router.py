@@ -1,87 +1,29 @@
 """HTTP adapter for the shared civic case and civic action capabilities."""
 from __future__ import annotations
-
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-
 from src.capabilities.civic_case import CivicCaseCreateRequest
-from src.capabilities.document_review import DocumentReviewRequest
-from src.core.civic_case import CaseType, CivicCase
-from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_repository,
-    create_development_evidence_repository,
-)
-from src.web.composition import create_web_civic_action_composition
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
+from src.web.civic_case_document_router import router as document_router
+from src.web.civic_case_lifecycle_router import router as lifecycle_router
+from src.web.civic_case_models import CaseCreateRequest, ConsentRequest, EvidenceRequest, event_result, serialize_case
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
-_REPOSITORY = create_case_repository()
-_EVIDENCE_REPOSITORY = create_development_evidence_repository()
-_COMPOSITION = create_web_civic_action_composition(
-    case_repository=_REPOSITORY,
-    authority_repository=create_authority_repository(),
-    evidence_repository=_EVIDENCE_REPOSITORY,
-)
-_CAPABILITY = _COMPOSITION.case_capability
-_CIVIC_ACTION = _COMPOSITION.civic_action
-
-
-class CaseCreateRequest(BaseModel):
-    case_type: CaseType
-    subject: str = Field(min_length=1)
-    narrative: str = Field(min_length=1)
-    case_id: str | None = None
-    created_by: str | None = None
-    jurisdiction: dict[str, Any] = Field(default_factory=dict)
-    related_organisation_id: str | None = None
-    related_office_id: str | None = None
-    related_official_id: str | None = None
-    related_representative_id: str | None = None
-    claims: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class ConsentRequest(BaseModel):
-    consent_id: str = Field(min_length=1)
-
-
-class EvidenceRequest(BaseModel):
-    evidence_id: str = Field(min_length=1)
-    source_channel: str | None = None
-
-
-class DocumentReviewRequestModel(BaseModel):
-    document_id: str = Field(min_length=1)
-    subject: str | None = None
-    body: str | None = None
-    reason: str | None = None
-
-
-class ArtifactRequest(BaseModel):
-    document_id: str = Field(min_length=1)
-    document_format: DocumentFormat = DocumentFormat.PDF
-
-
-class EventRequest(BaseModel):
-    source_channel: str | None = None
-    source_ref: str | None = None
-    notes: str | None = None
-
+router.include_router(document_router)
+router.include_router(lifecycle_router)
 
 @router.post("")
 async def create_case(request: CaseCreateRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = _CAPABILITY.create(
+        result = CAPABILITY.create(
             CivicCaseCreateRequest(
                 case_type=request.case_type, subject=request.subject, narrative=request.narrative,
                 jurisdiction=request.jurisdiction, related_organisation_id=request.related_organisation_id,
                 related_office_id=request.related_office_id, related_official_id=request.related_official_id,
                 related_representative_id=request.related_representative_id, claims=request.claims,
-            ), identity=context, source_channel="webapp",
+            ),
+            identity=context, source_channel="webapp",
         )
         return {"case_id": result.case.case_id, "status": result.case.status.value}
     except ValueError as exc:
@@ -89,187 +31,31 @@ async def create_case(request: CaseCreateRequest, context: IdentityContext = Dep
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
-
 @router.get("/{case_id}")
 async def get_case(case_id: str, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    case = _CAPABILITY.get_owned(case_id, identity=context)
+    case = CAPABILITY.get_owned(case_id, identity=context)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
-    return _serialize(case)
-
-
-@router.get("/{case_id}/document/draft")
-async def build_document_draft(case_id: str, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    """Prepare the shared reviewable document contract."""
-    try:
-        prepared = _CIVIC_ACTION.prepare_document(case_id, identity=context)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Case not found") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _serialize_draft(prepared.draft, case_id=prepared.case_id, submission="not_submitted")
-
+    return serialize_case(case)
 
 @router.post("/{case_id}/consent")
 async def add_consent(case_id: str, request: ConsentRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = _CIVIC_ACTION.add_consent(case_id, request.consent_id, identity=context)
+        result = CIVIC_ACTION.add_consent(case_id, request.consent_id, identity=context)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return {"case_id": result.case.case_id, "consent_refs": list(result.case.consent_refs)}
 
-
 @router.post("/{case_id}/evidence")
 async def add_evidence(case_id: str, request: EvidenceRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = _CIVIC_ACTION.attach_evidence(
+        result = CIVIC_ACTION.attach_evidence(
             case_id, request.evidence_id, identity=context, source_channel=request.source_channel or "webapp"
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Evidence or case not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return _event_result(result.case, result.case.events[-1].event_type.value)
-
-
-@router.post("/{case_id}/document/review")
-async def review_document(request: DocumentReviewRequestModel, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    try:
-        draft = _CIVIC_ACTION.review_document(
-            DocumentReviewRequest(
-                document_id=request.document_id,
-                subject=request.subject,
-                body=request.body,
-                reason=request.reason,
-            ),
-            identity=context,
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Document draft not found") from exc
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _serialize_draft(draft, case_id=draft.case_id, submission="not_submitted")
-
-
-@router.post("/{case_id}/document/artifact")
-async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    try:
-        artifact = _CIVIC_ACTION.generate_artifact(
-            request.document_id, identity=context, case_id=case_id, document_format=request.document_format
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Document draft not found") from exc
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return {
-        "case_id": case_id,
-        "document_id": request.document_id,
-        "artifact_id": artifact.reference.artifact_id,
-        "format": request.document_format.value,
-        "submission": "not_submitted",
-    }
-
-
-@router.post("/{case_id}/review")
-async def start_review(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    try:
-        result = _CIVIC_ACTION.start_review(case_id, identity=context)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Case not found") from exc
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _event_result(result.case, result.case.events[-1].event_type.value)
-
-
-@router.post("/{case_id}/ready")
-async def mark_ready(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    try:
-        result = _CIVIC_ACTION.approve(case_id, identity=context)
-    except LookupError as exc:
-        message = str(exc)
-        raise HTTPException(status_code=404, detail=message) from exc
-    except PermissionError as exc:
-        message = str(exc)
-        raise HTTPException(status_code=409 if "approval" in message.lower() or "consent" in message.lower() else 403, detail=message) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _event_result(result.case, result.case.events[-1].event_type.value)
-
-
-@router.post("/{case_id}/submitting")
-async def begin_submission(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:begin_submission", request)
-
-
-@router.post("/{case_id}/queued")
-async def queue_submission(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:queue_submission", request)
-
-
-@router.post("/{case_id}/submit")
-async def submit_case(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    """Reject direct lifecycle submission until a Web delivery adapter exists."""
-    _ = case_id, request, context
-    raise HTTPException(
-        status_code=409,
-        detail="Direct case submission is disabled; use the canonical SubmissionCapability with explicit approval, consent, and a delivery transport.",
-    )
-
-
-@router.post("/{case_id}/acknowledge")
-async def acknowledge_case(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:acknowledge", request)
-
-
-def _transition(context: IdentityContext, case_id: str, action: str, request: EventRequest) -> dict[str, object]:
-    try:
-        result = _CAPABILITY.transition(case_id, action=action, identity=context,
-                                       source_channel=request.source_channel or "webapp",
-                                       source_ref=request.source_ref, notes=request.notes)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Case not found") from exc
-    except PermissionError as exc:
-        message = str(exc)
-        raise HTTPException(status_code=409 if "approval" in message.lower() or "consent" in message.lower() else 403, detail=message) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _event_result(result.case, result.case.events[-1].event_type.value)
-
-
-def _event_result(case: CivicCase, event_type: str) -> dict[str, object]:
-    return {"case_id": case.case_id, "status": case.status.value, "event": event_type}
-
-
-def _serialize_draft(draft, *, case_id: str, submission: str) -> dict[str, object]:
-    return {
-        "case_id": case_id,
-        "document_id": draft.document_id,
-        "document_type": draft.document_type,
-        "date": draft.date,
-        "subject": draft.subject,
-        "body": draft.body,
-        "to": {"name": draft.to.name, "address": draft.to.address, "email": draft.to.email, "role": draft.to.role},
-        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in draft.cc],
-        "submission": submission,
-    }
-
-
-def _serialize(case: CivicCase) -> dict[str, object]:
-    return {
-        "case_id": case.case_id, "case_type": case.case_type.value, "subject": case.subject,
-        "narrative": case.narrative, "created_by": case.created_by, "jurisdiction": case.jurisdiction,
-        "related_organisation_id": case.related_organisation_id, "related_office_id": case.related_office_id,
-        "related_official_id": case.related_official_id, "related_representative_id": case.related_representative_id,
-        "claims": list(case.claims), "evidence_refs": list(case.evidence_refs),
-        "document_refs": list(case.document_refs), "consent_refs": list(case.consent_refs),
-        "status": case.status.value,
-        "events": [{"event_id": e.event_id, "event_type": e.event_type.value, "occurred_at": e.occurred_at,
-                    "actor_id": e.actor_id, "source_channel": e.source_channel,
-                    "source_ref": e.source_ref, "notes": e.notes} for e in case.events],
-    }
+    return event_result(result.case, result.case.events[-1].event_type.value)
