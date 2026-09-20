@@ -67,15 +67,16 @@ def test_live_postgres_rls_cross_user_case_isolation_and_owner_integrity():
                 )
                 assert cursor.fetchone() is None
 
-                with pytest.raises(psycopg.errors.InsufficientPrivilege):
-                    cursor.execute(
-                        """
-                        INSERT INTO public.civic_cases
-                        (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at)
-                        VALUES (%s, 'complaint', 'B subject', 'B narrative', %s, 'draft', now(), now())
-                        """,
-                        ("rls-forged-" + uuid4().hex, "principal-a"),
-                    )
+                with connection.transaction():
+                    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                        cursor.execute(
+                            """
+                            INSERT INTO public.civic_cases
+                            (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at)
+                            VALUES (%s, 'complaint', 'B subject', 'B narrative', %s, 'draft', now(), now())
+                            """,
+                            ("rls-forged-" + uuid4().hex, "principal-a"),
+                        )
 
                 cursor.execute(
                     "UPDATE public.civic_cases SET subject = 'B must not mutate A' WHERE case_id = %s",
