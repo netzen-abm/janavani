@@ -61,6 +61,9 @@ class FakeConnection:
     def close(self):
         self.events.append("CLOSE")
 
+    def execute(self, sql, params=None):
+        return None
+
 
 def consent():
     return Consent(
@@ -159,3 +162,24 @@ def test_atomic_consent_case_requires_consent_reference():
         pass
     else:
         raise AssertionError("missing consent reference must be rejected")
+
+
+def test_atomic_consent_case_rejects_case_owned_by_other_principal():
+    conn = FakeConnection()
+    repo = PostgresConsentCaseAtomicRepository(connection_factory=lambda: conn)
+    case = CivicCase(
+        case_id="case-atomic-5",
+        case_type=CaseType.COMPLAINT,
+        subject="Road",
+        narrative="Repair",
+        created_by="other-user",
+        status=CaseStatus.REVIEW,
+        version=1,
+        consent_refs=["consent-1"],
+    )
+    try:
+        repo.save_consent_and_case(consent(), case, principal_id="citizen-1")
+    except PermissionError:
+        pass
+    else:
+        raise AssertionError("cross-user Case must be rejected")
