@@ -36,6 +36,8 @@ def test_canonical_schema_migration_creates_required_tables_and_constraints():
                             "civic_case_document_refs",
                             "civic_case_submissions",
                             "civic_case_audit",
+                            "evidence_objects",
+                            "document_artifacts",
                             "janavani_delegation_grants",
                             "janavani_service_identity_policies",
                         ],
@@ -51,6 +53,8 @@ def test_canonical_schema_migration_creates_required_tables_and_constraints():
                     "civic_case_document_refs",
                     "civic_case_submissions",
                     "civic_case_audit",
+                    "evidence_objects",
+                    "document_artifacts",
                     "janavani_delegation_grants",
                     "janavani_service_identity_policies",
                 }
