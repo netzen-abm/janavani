@@ -22,7 +22,7 @@ from src.core.civic_case import (
     CaseType,
     CivicCase,
 )
-from src.storage.postgres_unit_of_work import postgres_unit_of_work_factory
+from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.unit_of_work import UnitOfWorkFactory
 
 
@@ -142,15 +142,17 @@ class PostgresCivicCaseRepository:
         connection_factory: Callable[[], Any] | None = None,
         dsn: str | None = None,
         unit_of_work_factory: UnitOfWorkFactory | None = None,
+        principal_id: str | None = None,
     ) -> None:
         self._dsn = dsn or os.getenv("JANAVANI_POSTGRES_DSN")
         self._connection_factory = connection_factory
+        self._principal_id = principal_id
         if self._connection_factory is None and not self._dsn:
             raise ValueError(
                 "Provide connection_factory or JANAVANI_POSTGRES_DSN"
             )
         self._unit_of_work_factory = unit_of_work_factory or (
-            postgres_unit_of_work_factory(self._connect)
+            postgres_unit_of_work_factory(self._connect, principal_id=principal_id)
         )
 
     def _connect(self) -> Any:
@@ -168,26 +170,26 @@ class PostgresCivicCaseRepository:
         try:
             with self._connect() as conn:
                 with conn.transaction():
-                    self._set_local_principal(conn, principal_id)
+                    bind_postgres_principal(conn, principal_id)
                     with conn.cursor(row_factory=self._row_factory()) as cur:
-                    cur.execute(
+                        cur.execute(
                         "SELECT * FROM civic_cases WHERE case_id = %s",
                         (case_id,),
                     )
-                    row = cur.fetchone()
-                    if row is None:
+                        row = cur.fetchone()
+                        if row is None:
                         return None
-                    events = self._select_children(cur, "civic_case_events", case_id)
-                    evidence = self._select_children(
+                        events = self._select_children(cur, "civic_case_events", case_id)
+                        evidence = self._select_children(
                         cur, "civic_case_evidence_refs", case_id
                     )
-                    documents = self._select_children(
+                        documents = self._select_children(
                         cur, "civic_case_document_refs", case_id
                     )
-                    consents = self._select_children(
+                        consents = self._select_children(
                         cur, "civic_case_consents", case_id
                     )
-                    return _hydrate(
+                        return _hydrate(
                         row, events, evidence, documents, consents
                     )
         except PostgresCivicCasePersistenceError:
@@ -201,7 +203,7 @@ class PostgresCivicCaseRepository:
         try:
             with self._unit_of_work_factory() as uow:
                 conn = uow.connection
-                self._set_local_principal(conn, principal_id)
+
                 with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
                         "SELECT version, created_at "
