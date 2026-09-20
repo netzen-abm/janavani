@@ -6,6 +6,7 @@ from src.access.authorization import AuthorizationDecision
 from src.core.civic_case import CaseEventType, CivicCase
 
 class CivicCaseLifecycleMixin:
+    CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
     def start_review(self, case_id: str, *, identity: IdentityContext,
                      execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         return self.transition(case_id, action="case:start_review", identity=identity, execution_context=execution_context)
