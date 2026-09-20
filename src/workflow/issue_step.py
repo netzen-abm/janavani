@@ -6,13 +6,9 @@ and moves the workflow to
 document selection.
 """
 
-from workflow.base_step import WorkflowStep
-
-from conversation.constants import (
-    WAITING_FOR_DOCUMENT,
-)
-
+from conversation.constants import WAITING_FOR_DOCUMENT
 from conversation.state import set_state
+from workflow.base_step import WorkflowStep
 
 
 class IssueStep(WorkflowStep):
