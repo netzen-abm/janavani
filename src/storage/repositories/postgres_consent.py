@@ -6,6 +6,7 @@ import os
 from typing import Any, Callable
 
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+from src.storage.postgres_unit_of_work import bind_postgres_principal
 
 
 class PostgresConsentRepository:
@@ -24,7 +25,6 @@ class PostgresConsentRepository:
         import psycopg
         return psycopg.connect(self._dsn)
 
-    @staticmethod
     def _set_local_principal(connection: Any, principal_id: str | None) -> None:
         if principal_id is None:
             return
@@ -57,7 +57,7 @@ class PostgresConsentRepository:
 
     def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute("""
@@ -84,7 +84,7 @@ class PostgresConsentRepository:
 
     def get(self, consent_id: str, *, principal_id: str | None = None) -> Consent | None:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT consent_id, subject_id, purpose, scope, grant_type, "
@@ -97,7 +97,7 @@ class PostgresConsentRepository:
 
     def list_for_subject(self, subject_id: str, *, principal_id: str | None = None) -> list[Consent]:
         with self._connect() as connection:
-            self._set_local_principal(connection, principal_id)
+            bind_postgres_principal(connection, principal_id)
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT consent_id, subject_id, purpose, scope, grant_type, "
