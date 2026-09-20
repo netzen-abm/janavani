@@ -29,14 +29,6 @@ class PostgresDocumentArtifactRepository:
 
         return psycopg.connect(self._dsn)
 
-    def _set_local_principal(connection: Any, principal_id: str | None) -> None:
-        if principal_id is None:
-            return
-        if not principal_id.strip():
-            raise ValueError("principal_id must not be blank")
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", (principal_id,))
-
     def _initialize(self) -> None:
         with self._connect() as connection:
             with connection.cursor() as cursor:
