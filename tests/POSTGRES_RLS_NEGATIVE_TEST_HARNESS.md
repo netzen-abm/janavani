@@ -10,10 +10,10 @@ For principals `alice`, `bob`, `delegate`, and `service-a`:
 2. Bob cannot read Alice's Case.
 3. Bob cannot update Alice's Case.
 4. Alice cannot insert a Case owned by Bob.
-5. Active delegate can read the delegated Case.
+5. Delegated Case access is denied by the candidate DB boundary until application authorization and repository access are wired end-to-end.
 6. Delegate without `case:update` cannot update the Case.
-7. Revoked delegate loses access.
-8. Expired delegate loses access.
+7. Revoked delegate remains denied.
+8. Expired delegate remains denied.
 9. Delegate scoped to another resource cannot access Alice's Case.
 10. Anonymous/no principal sees no private Case.
 11. Service policy rows are not directly readable by ordinary client roles.
