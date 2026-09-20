@@ -47,10 +47,10 @@ class EvidenceRef:
 class EvidenceRepository(Protocol):
     """Provider-neutral evidence metadata contract."""
 
-    def get(self, evidence_id: str) -> EvidenceObject | None:
+    def get(self, evidence_id: str, *, principal_id: str | None = None) -> EvidenceObject | None:
         ...
 
-    def save(self, evidence: EvidenceObject) -> None:
+    def save(self, evidence: EvidenceObject, *, principal_id: str | None = None) -> None:
         ...
 
 
