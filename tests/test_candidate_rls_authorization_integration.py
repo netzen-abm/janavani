@@ -32,7 +32,7 @@ def _bootstrap(connection) -> None:
 def _set_principal(connection, principal: str) -> None:
     with connection.cursor() as cur:
         cur.execute(
-            "SELECT set_config('janavani.principal_id', %s, false)",
+            "SELECT set_config('janavani.principal_id', %s, true)",
             (principal,),
         )
 
@@ -55,7 +55,7 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                 cur.execute(f"CREATE ROLE {public_role} NOLOGIN")
             for role in test_roles:
                 cur.execute(f"DROP ROLE IF EXISTS {role}")
-                cur.execute(f"CREATE ROLE {role} NOLOGIN")
+                cur.execute(f"CREATE ROLE {role} NOLOGIN BYPASSRLS".replace(" BYPASSRLS", ""))
 
     try:
         # Everything below is deliberately transactional. Candidate RLS DDL,
@@ -133,6 +133,12 @@ def test_candidate_rls_real_postgres_owner_delegate_and_isolation():
                             ) VALUES ('service-a', '[]'::jsonb, '[]'::jsonb)
                             """
                         )
+
+                        cur.execute(
+                            "SELECT rolbypassrls FROM pg_roles WHERE rolname = ANY(%s)",
+                            (list(test_roles),),
+                        )
+                        assert all(row[0] is False for row in cur.fetchall())
 
                         cur.execute("SET ROLE " + owner_role)
                         _set_principal(connection, "alice")
