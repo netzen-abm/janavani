@@ -1,6 +1,7 @@
 import redis
 import json
 import logging
+import os
 from typing import Optional, Dict, Any
 from src.core.settings import ai_settings
 
@@ -33,6 +34,14 @@ class TransientStorageEngine:
             )
         except redis.RedisError as e:
             logger.error(f"Failed to commit memory buffer block safely: {str(e)}")
+            return False
+
+    def delete_transient_document(self, task_id: str) -> bool:
+        """Delete one transient document by opaque task identifier."""
+        try:
+            return bool(self.redis_client.delete(f"transient_doc:{task_id}"))
+        except redis.RedisError as e:
+            logger.error("Transient document deletion failed: %s", e)
             return False
 
     def retrieve_transient_document(self, task_id: str) -> Optional[Dict[str, Any]]:
