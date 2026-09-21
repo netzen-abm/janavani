@@ -25,6 +25,7 @@ from src.core.responsibility import ResponsibilityResolution
 from src.documents.document_contract import DocumentDraft
 from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.identity.context import IdentityContext
+from src.core.execution import CapabilityExecutionContext
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -144,7 +145,7 @@ class CivicActionVerticalSlice:
         return self._documents.generate(document_id, **kwargs)
 
     def submit(self, request: SubmissionRequest, *, channel_id: str, identity: IdentityContext,
-               explicit_user_approval: bool) -> CivicCaseResult:
+               explicit_user_approval: bool, execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         """Submit only after resolving a currently verified External Channel.
 
         The channel registry remains control-plane metadata; SubmissionCapability
@@ -165,5 +166,6 @@ class CivicActionVerticalSlice:
             idempotency_key=request.idempotency_key,
         )
         return self._deps.submission_capability.submit(
-            verified_request, identity=identity, explicit_user_approval=explicit_user_approval
+            verified_request, identity=identity, explicit_user_approval=explicit_user_approval,
+            execution_context=execution_context,
         )
