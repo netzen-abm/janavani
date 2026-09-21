@@ -53,3 +53,60 @@ def test_web_and_telegram_can_share_provider_graph_without_sharing_surface_objec
     assert web.case_repository is telegram.case_repository
     assert web.case_capability is not telegram.case_capability
     assert web.civic_action_capability is not telegram.civic_action_capability
+
+
+def test_cross_surface_identity_creates_and_retrieves_same_case_with_ownership_isolation():
+    """Web and Telegram share durable providers, not application objects."""
+    from src.capabilities.civic_case import CAPABILITY_ID, CivicCaseCreateRequest
+    from src.core.civic_case import CaseType
+    from src.identity.context import IdentityContext
+    from src.identity.principal import IdentityMode, Principal
+    from src.platform.composition import create_provider_composition
+
+    providers = create_provider_composition()
+    telegram = create_surface_case_composition(provider_composition=providers)
+    web = create_surface_case_composition(provider_composition=providers)
+
+    citizen_a_telegram = IdentityContext(
+        principal=Principal(
+            principal_id="citizen:cross-surface-a",
+            identity_mode=IdentityMode.AUTHENTICATED,
+            interface="telegram",
+            capabilities=frozenset({CAPABILITY_ID}),
+        )
+    )
+    citizen_a_web = IdentityContext(
+        principal=Principal(
+            principal_id="citizen:cross-surface-a",
+            identity_mode=IdentityMode.AUTHENTICATED,
+            interface="webapp",
+            capabilities=frozenset({CAPABILITY_ID}),
+        )
+    )
+    citizen_b_web = IdentityContext(
+        principal=Principal(
+            principal_id="citizen:cross-surface-b",
+            identity_mode=IdentityMode.AUTHENTICATED,
+            interface="webapp",
+            capabilities=frozenset({CAPABILITY_ID}),
+        )
+    )
+
+    created = telegram.case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Cross-surface case",
+            narrative="Created through Telegram and retrieved through WebApp.",
+        ),
+        identity=citizen_a_telegram,
+        source_channel="telegram",
+    )
+
+    assert telegram.case_repository is web.case_repository
+    assert telegram.case_capability is not web.case_capability
+    assert created.case.created_by == citizen_a_telegram.principal.principal_id
+    assert web.case_capability.get_owned(created.case.case_id, identity=citizen_a_web) is created.case
+    assert web.case_capability.get_owned(created.case.case_id, identity=citizen_b_web) is None
+
+    # The surface boundary must not manufacture a second identity for the same citizen.
+    assert citizen_a_telegram.principal.principal_id == citizen_a_web.principal.principal_id
