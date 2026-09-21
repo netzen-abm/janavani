@@ -46,7 +46,7 @@ WebApp responsibilities:
 - never implementing its own Case persistence;
 - never implementing its own authorization rules.
 
-The thin adapter is `src/web_mvp/services/api_client.py`.
+The thin adapter is `src/webapp/services/api_client.py`.
 
 Identity is carried as a verified assertion and is consumed by the canonical HTTP identity boundary.
 
@@ -141,7 +141,7 @@ The first parallel vertical slice is complete when:
 - Telegram → canonical Case capability: **implemented**.
 - Telegram → shared generation/capability composition: **implemented**.
 - Canonical Web API → shared Civic Case capability: **implemented**.
-- Web MVP thin API client: **implemented**.
+- WebApp thin API client: **implemented**.
 - Web identity assertion boundary: **implemented**.
 - Web/Telegram shared contract tests: **existing foundation + expansion in progress**.
 - Live PostgreSQL/RLS gate: **not yet passed**.
