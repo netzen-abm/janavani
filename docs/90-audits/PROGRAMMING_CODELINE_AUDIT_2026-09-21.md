@@ -89,3 +89,8 @@ The CI branch-budget gate now runs for pushes to every branch, not only `main`, 
 | `src/services/search_directory.py` | 39 | Temporary text adapter; migrate consumers to structured authority capability. |
 
 `src/services/emergency_sos.py` is 56 lines and remains transitional. Do not retire it until cache destruction, credential/session revocation, emergency delivery, evidence/context, and orchestration contracts each have explicit owners and tests.
+
+
+## SOS legacy retirement verification
+
+The legacy `src/services/emergency_sos.py` and its direct Redis test were archived before deletion. Canonical SOS already owns provider-neutral delivery and safety/privacy orchestration. Explicit transient-data destruction and credential/session revocation protocols are now defined in `src/core/sos.py`, with the storage/session implementations and dedicated security-contract tests. The legacy service is no longer an active runtime owner.
