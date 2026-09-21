@@ -5,7 +5,7 @@ from conversation.session import get_session
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
 
-from services.issue_classifier import classify_issue
+from src.capabilities.issue_classification import classify_issue
 from src.commands.shared_case_capability import create_case_from_telegram
 from src.adapters.telegram.identity import identity_for_telegram_user
 
