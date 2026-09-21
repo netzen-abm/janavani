@@ -362,3 +362,35 @@ Do not merge stale generations wholesale. For a divergent branch, inspect unique
 ### Physical deletion status
 
 The complete inventory confirms the repository is **not yet physically at nine branches**. The available GitHub mutation surface still does not expose remote-reference deletion. No force-move or destructive overwrite is being used as a substitute for deletion.
+
+
+## Third convergence gate — 2026-09-21
+
+The sanctioned branches were compared against current `main` before any merge decision. Results:
+
+| Branch | Ahead | Behind | Decision | Rationale |
+|---|---:|---:|---|---|
+| `integration/canonical-platform` | 12 | 1191 | SELECTIVE EXTRACT / RETIRE | Unique case/privacy/agent material exists, but the branch is a stale generation; current main already owns the canonical platform composition. Do not merge wholesale. |
+| `feat/canonical-case-kernel` | 5 | 1208 | SELECTIVE EXTRACT / RETIRE | Its provider-neutral repository protocol is narrower/older than current `CivicCaseRepository`; no wholesale merge justified. |
+| `feat/canonical-capability-execution-envelope` | 0 | 815 | RETIRE | Fully behind current main; no unique delta. |
+| `feat/canonical-civic-action-vertical-slice` | 10 | 858 | RETIRE AFTER VERIFICATION | Its `CivicActionVerticalSlice` is already present and wired into current main at `d0761a0...`; no duplicate implementation should be merged. |
+| `feat/canonical-sos-contract` | 13 | 496 | RETIRE AFTER VERIFICATION | Current main already contains the converged SOS capability/security contract and implementation; historical branch is not a merge target. |
+| `feat/capability-scoped-consent-agent-enforcement` | 25 | 1193 | SELECTIVE EXTRACT / RETIRE | Branch contains useful authorization/consent/agent concepts, but current main already has canonical authorization, consent, policy-composition, safety/privacy, execution-aware consent and threat-model contracts. Avoid duplicate authorization engines. |
+| `audit/postgres-provider-production-gates` | 8 | 994 | SELECTIVE EXTRACT / RETIRE | Durable-provider audit and real-PostgreSQL integration tests are useful evidence, but current main already contains the corresponding readiness audit and production-gate backlog; integrate only verified missing test coverage. |
+| `chore/ecosystem-shared-capability-infrastructure` | 0 | 1193 | RETIRE | Fully behind current main; no unique delta. |
+
+### Convergence decision
+
+No sanctioned branch is currently a safe whole-branch merge target. The correct convergence strategy is **selective extraction into canonical owners**, followed by branch retirement once the extracted evidence is verified.
+
+This preserves the repository's architectural direction: one canonical owner per capability, shared infrastructure behind provider-neutral contracts, and surfaces as adapters rather than independent business-logic implementations.
+
+### Code-line discipline
+
+The existing 180-line CI check remains a **verification gate**, not a refactoring objective. Files are not to be split merely to satisfy the threshold. Any future violation must first be inspected for cohesion, ownership, callers, and testability before deciding whether refactoring is warranted.
+
+### Immediate extraction priorities
+
+1. Compare the unique authorization/consent/security material against current `src/access`, `src/core/consent.py`, `src/capabilities/consent.py`, `src/capabilities/safety_privacy.py`, and execution-aware consent contracts. Extract only demonstrably missing invariants/tests.
+2. Compare the PostgreSQL integration-test branch against current provider tests and migrations; add only missing real-database evidence, keeping production activation gated.
+3. Preserve divergent branch evidence in the retirement register; do not rewrite historical findings as if the branch had never existed.
