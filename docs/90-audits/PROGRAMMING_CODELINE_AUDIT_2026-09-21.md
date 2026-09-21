@@ -9,7 +9,7 @@ Audited the current `main` runtime Python surface and the canonical WebApp/Teleg
 | File | Lines | Assessment |
 |---|---:|---|
 | `src/capabilities/submission.py` | 427 | **Decompose next** — consequential orchestration, reservation, delivery, outcome handling, acknowledgement, and execution validation are too concentrated. |
-| `src/storage/repositories/postgres_civic_case.py` | 389 | **Decompose next** — PostgreSQL mapping/query/transaction concerns are concentrated. |
+| `src/storage/repositories/postgres_civic_case.py` | **112** | **Decomposed** — repository orchestration retained; mapping and SQL persistence extracted. |
 | `src/storage/repositories/postgres_submission_case_transaction.py` | 218 | Reviewable; retain unless a responsibility split becomes clear. |
 | `src/storage/repositories/postgres_submission.py` | 204 | Reviewable; provider adapter remains bounded. |
 | `src/capabilities/civic_action_vertical_slice.py` | 194 | Acceptable for orchestration; monitor growth. |
@@ -55,3 +55,8 @@ and not:
 ## Branch hygiene
 
 The nine sanctioned active roles remain the only active development roles. Historical refs are frozen retirement candidates. Physical deletion still requires a GitHub ref-delete operation; no ref is force-moved as a substitute.
+
+
+## 180-line decomposition progress
+
+`postgres_civic_case.py` was decomposed without changing its public repository contract. Mapping/hydration moved to `postgres_civic_case_codec.py` (59 lines), and SQL persistence primitives moved to `postgres_civic_case_sql.py` (55 lines). The canonical repository façade is now 112 lines. The existing UoW, principal binding, optimistic concurrency, event persistence, and reference persistence remain in the provider path.
