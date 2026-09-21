@@ -8,13 +8,14 @@ from src.core.submission import SubmissionRepository
 from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.accountability_feedback_provider import create_accountability_feedback_repository as create_feedback_repository
 from src.storage.repositories.authority import InMemoryAuthorityRepository
-from src.storage.repositories.authority_csv import CsvAuthorityRepository
+from src.storage.repositories.authority_provider import create_authority_repository as create_authority_repository_for_provider
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.consent_provider import create_consent_repository as create_consent_repository_for_provider
 from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.document_review_provider import create_document_review_repository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
+from src.storage.repositories.evidence_provider import create_evidence_repository as create_evidence_repository_for_provider
 from src.storage.repositories.external_channel_provider import create_external_channel_repository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.provider import create_civic_case_repository
@@ -64,11 +65,16 @@ def create_identity_link_repository(*, provider_composition: ProviderComposition
         return PostgresExternalIdentityLinkRepository(connect)
     return InMemoryExternalIdentityLinkRepository()
 
-def create_authority_repository() -> AuthorityRepository:
-    return CsvAuthorityRepository()
+def create_authority_repository(*, provider_composition: ProviderComposition | None = None) -> AuthorityRepository:
+    composition = provider_composition or create_provider_composition()
+    return create_authority_repository_for_provider(provider=composition.provider_for("authority"))
 
 def create_development_authority_repository() -> AuthorityRepository:
     return InMemoryAuthorityRepository()
+
+def create_evidence_repository(*, provider_composition: ProviderComposition | None = None) -> EvidenceRepository:
+    composition = provider_composition or create_provider_composition()
+    return create_evidence_repository_for_provider(provider=composition.provider_for("evidence"), dsn=os.getenv("JANAVANI_POSTGRES_DSN"))
 
 def create_development_evidence_repository() -> EvidenceRepository:
     return InMemoryEvidenceRepository()
