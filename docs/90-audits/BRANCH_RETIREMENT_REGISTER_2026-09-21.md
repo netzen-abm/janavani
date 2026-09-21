@@ -459,3 +459,33 @@ This closes the operational gap between the retirement policy and a repeatable d
 The historical PostgreSQL integration tests were checked against current `main`. The current branch already contains `tests/test_postgres_integration.py` with real-PostgreSQL round-trip, heterogeneous JSON, stale-version rejection, and transaction-rollback coverage. Current `main` also contains `tests/test_postgres_rls_live.py` and `tests/test_candidate_rls_authorization_integration.py`.
 
 **Decision:** no duplicate test extraction is required from `audit/postgres-provider-production-gates`. The branch remains evidence-only and can be retired once the remaining branch-ref hygiene operation is executed.
+
+
+## Fifth convergence gate — 2026-09-21
+
+A fresh targeted comparison was performed against current `main` for the principal WebApp/Telegram/security/canonical branches.
+
+| Branch | Ahead | Behind | Disposition |
+|---|---:|---:|---|
+| `feat/canonical-case-kernel` | 5 | 1295 | SELECTIVE EXTRACT / RETIRE |
+| `feat/canonical-civic-action-vertical-slice` | 10 | 945 | SELECTIVE EXTRACT / RETIRE |
+| `feat/canonical-sos-contract` | 13 | 583 | SELECTIVE EXTRACT / RETIRE |
+| `feat/capability-scoped-consent-agent-enforcement` | 25 | 1280 | SELECTIVE EXTRACT / RETIRE |
+| `audit/postgres-provider-production-gates` | 8 | 1081 | SELECTIVE EXTRACT / RETIRE |
+| `feat/webapp-civic-action-workspace` | 11 | 1293 | SELECTIVE EXTRACT / RETIRE |
+| `feat/telegram-shared-capability-migration` | 26 | 1289 | SELECTIVE EXTRACT / RETIRE |
+| `test/web-civic-action-e2e` | 1 | 943 | SELECTIVE EXTRACT / RETIRE |
+
+The historical WebApp E2E branch contains one test file, but current `main` already contains `tests/test_web_civic_action_e2e.py` at 194 lines; therefore no whole-branch merge is justified.
+
+The historical consent/agent branch contains useful negative-policy tests, but its authorization engine is a separate generation from current `src/access/*`. Current main already contains canonical authorization, policy composition, consent, safety/privacy and execution-aware consent contracts. The historical authorization implementation is therefore **not merged wholesale**. Its tests remain a source for invariant recovery only where a materially missing current-main test is demonstrated.
+
+The historical canonical-case branch contains an older `src/domain/*` and repository protocol generation. Current main has the canonical `src/core/*` and `src/storage/repositories/*` ownership; the branch is not a merge target.
+
+The historical Telegram branch contains older capability modules and the retired `src/services/search_directory.py` generation. Current main has canonical capability ownership and the service has already been archived. No wholesale merge is permitted.
+
+The historical PostgreSQL branch contains `tests/test_postgres_integration.py`; current main already contains this test at 149 lines. Production PostgreSQL/RLS activation remains a verification gate, not a reason to merge the historical branch.
+
+### Physical branch status
+
+Live inventory remains **249 physical refs: 9 sanctioned roles + 240 retirement candidates**. The connected GitHub mutation surface does not expose remote-ref deletion, so physical deletion is not claimed. No historical branch is force-moved to simulate retirement.
