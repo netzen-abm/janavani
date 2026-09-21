@@ -100,9 +100,12 @@ def create_web_civic_action_composition(
         consent_repository=consent_repo,
         document_review_repository=review_repo,
         case_capability=civic_action._deps.case_capability,
-        authority_capability=civic_action._deps.external_channel_capability and create_authority_capability(authority_repository),
+        authority_capability=create_authority_capability(authority_repository),
         evidence_capability=civic_action._deps.evidence_capability,
-        consent_capability=civic_action._deps.case_capability and create_consent_capability(consent_repository=consent_repo, case_capability=civic_action._deps.case_capability),
+        consent_capability=create_consent_capability(
+            consent_repository=consent_repo,
+            case_capability=civic_action._deps.case_capability,
+        ),
         document_review_capability=civic_action._deps.document_review_capability,
         civic_action=civic_action,
     )
