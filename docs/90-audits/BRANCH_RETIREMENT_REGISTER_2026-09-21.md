@@ -394,3 +394,49 @@ The existing 180-line CI check remains a **verification gate**, not a refactorin
 1. Compare the unique authorization/consent/security material against current `src/access`, `src/core/consent.py`, `src/capabilities/consent.py`, `src/capabilities/safety_privacy.py`, and execution-aware consent contracts. Extract only demonstrably missing invariants/tests.
 2. Compare the PostgreSQL integration-test branch against current provider tests and migrations; add only missing real-database evidence, keeping production activation gated.
 3. Preserve divergent branch evidence in the retirement register; do not rewrite historical findings as if the branch had never existed.
+
+
+## Fourth convergence gate — 2026-09-21
+
+### Authorization / consent extraction result
+
+The historical branch `feat/capability-scoped-consent-agent-enforcement` was inspected at file level.
+
+Useful concepts include agent tool requests bound to capability, purpose, requested fields, provider and processing mode, plus consent evaluation before tool execution. However, the branch's proposed `src/capabilities/consent_policy.py` and `src/capabilities/agent_policy.py` do **not** exist on current main, while current main already has a more mature canonical authorization/consent stack under `src/access/` and `src/core/consent.py`.
+
+Current main explicitly contains:
+- `src/access/authorization.py` — canonical `AuthorizationPolicy`;
+- `src/access/policy_composition.py` — composed policy boundary;
+- `src/access/consent.py` — consent enforcement contract;
+- `src/access/execution_consent.py` — execution-context-bound consent;
+- `src/access/consequential.py` — identity + authorization + consent + approval gate;
+- `src/capabilities/consent.py` — canonical consent capability;
+- `src/capabilities/safety_privacy.py` — purpose-bound sensitive-resource gate.
+
+**Decision:** do not merge the historical policy engine. Recover only missing test cases/invariants if they are not already represented by current tests. The branch remains a retirement candidate after this evidence is archived.
+
+### PostgreSQL extraction result
+
+The historical `audit/postgres-provider-production-gates` branch contains a useful real-PostgreSQL integration test covering:
+- canonical CivicCase round-trip;
+- heterogeneous JSON fixture round-trip;
+- stale-version rejection;
+- transaction rollback after provider failure.
+
+Current main's master checklist already records the separate RLS integration gate and keeps production activation blocked pending real-PostgreSQL evidence. The historical branch does not justify a wholesale merge.
+
+**Decision:** retain the test pattern as a production-gate requirement; extract only tests that are demonstrably absent from current main after direct current-main verification. Do not activate PostgreSQL merely because the test source exists.
+
+### Security architecture conclusion
+
+The current main architecture has already converged the historical concepts into a stronger layered model:
+
+`Identity → Authorization → Consent → Safety/Privacy → Execution Context → Capability → Provider → Truthful Result`
+
+This is the reusable ecosystem security kernel. Future health, wellness, nutrition, research and other applications should consume these contracts rather than create domain-specific authorization/consent engines.
+
+### Branch disposition
+
+The two inspected historical branches are now **evidence sources, not architecture owners**:
+- `feat/capability-scoped-consent-agent-enforcement` → selective test/invariant recovery only, then retire.
+- `audit/postgres-provider-production-gates` → selective production-test recovery only, then retire.
