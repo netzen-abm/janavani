@@ -228,3 +228,7 @@ database/*.jsonl
 .DS_Store?
 Thumbs.db
 Desktop.ini
+
+# Local container state (never commit runtime model/cache data)
+ollama_storage/
+*.pid
