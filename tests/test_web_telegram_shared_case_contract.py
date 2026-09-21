@@ -5,7 +5,7 @@ from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
-from src.web.civic_case_capability_adapter import create_case_capability
+from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 
 
 def identity() -> IdentityContext:
