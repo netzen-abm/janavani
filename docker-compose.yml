@@ -47,7 +47,7 @@ services:
       - janavani-secure-mesh
 
   # First-class WebApp surface (independent client runtime)
-  web-mvp-application:
+  webapp-application:
     image: python:3.11-slim
     container_name: janavani-webapp
     command: sh -c "pip install -r src/web_mvp/requirements.txt && python src/web_mvp/main.py"
