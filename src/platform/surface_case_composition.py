@@ -53,6 +53,7 @@ def create_surface_case_composition(
     evidence_repository: object | None = None,
     consent_repository: object | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
+    provider_composition=None,
 ) -> SurfaceCaseComposition:
     """Compose one provider graph for an access surface.
 
@@ -60,7 +61,7 @@ def create_surface_case_composition(
     are derived from that same provider graph. Explicit repository injection is
     retained for deterministic tests and deployments with pre-built providers.
     """
-    provider_composition = create_provider_composition()
+    provider_composition = provider_composition or create_provider_composition()
 
     case_repository = case_repository or create_case_repository(
         provider_composition=provider_composition
