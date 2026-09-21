@@ -11,7 +11,7 @@ router = APIRouter(tags=["Civic Cases"])
 @router.post("/{case_id}/review")
 async def start_review(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = CIVIC_ACTION.start_review(case_id, identity=context)
+        result = CAPABILITY.start_review(case_id, identity=context)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
@@ -23,7 +23,7 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
 @router.post("/{case_id}/ready")
 async def mark_ready(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = CIVIC_ACTION.approve(case_id, identity=context)
+        result = CAPABILITY.approve(case_id, identity=context)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
