@@ -16,7 +16,6 @@ from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
 from src.platform.surface_case_composition import create_surface_case_composition
-from src.storage.repositories.consent_provider import create_consent_repository
 
 
 def main():
@@ -36,11 +35,15 @@ def main():
     case_repository = composition.case_repository
     case_capability = composition.case_capability
     consent_repository = composition.consent_repository
+    evidence_capability = composition.evidence_capability
+    authority_capability = composition.authority_capability
     civic_action_capability = composition.civic_action_capability
     application.bot_data["case_repository"] = case_repository
     application.bot_data["civic_case_capability"] = case_capability
     application.bot_data["civic_action_capability"] = civic_action_capability
     application.bot_data["consent_repository"] = consent_repository
+    application.bot_data["evidence_capability"] = evidence_capability
+    application.bot_data["authority_capability"] = authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
