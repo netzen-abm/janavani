@@ -215,3 +215,8 @@ Existing SOS implementations are migration sources, not competing canonical owne
 - legacy v3 transport modules.
 
 They remain subject to the repository archive-first rule until dependency/reference evidence supports archival.
+
+
+## 2026-09-21 convergence evidence
+
+The former `src/services/emergency_sos.py` implementation has been archived after establishing and testing explicit canonical boundaries for transient-data destruction and credential/session revocation. Emergency delivery remains behind the existing provider-neutral `SOSDeliveryAdapter` contract. The legacy implementation is no longer an active runtime owner.
