@@ -5,10 +5,7 @@ import os
 
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.civic_action_vertical_slice import (
-    CivicActionVerticalSlice,
-    CivicActionVerticalSliceDependencies,
-)
+from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
@@ -32,21 +29,14 @@ from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
-from .composition_repositories import (
-    create_document_review_repository_for_platform,
-    create_external_channel_repository_for_platform,
-    create_provider_composition,
-    create_submission_repository,
-)
+from .composition_repositories import (create_document_review_repository_for_platform, create_external_channel_repository_for_platform, create_provider_composition, create_submission_repository)
 
 
 def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
     return CivicCaseCapability(repository)
 
 
-def create_consent_capability(
-    *, consent_repository: ConsentRepository, case_capability: CivicCaseCapability
-) -> ConsentCapability:
+def create_consent_capability(*, consent_repository: ConsentRepository, case_capability: CivicCaseCapability) -> ConsentCapability:
     return ConsentCapability(repository=consent_repository, case_capability=case_capability)
 
 
@@ -62,13 +52,8 @@ def create_obligation_capability(resolver: ObligationResolver) -> ObligationCapa
     return ObligationCapability(resolver)
 
 
-def create_external_channel_capability(
-    *, provider_composition: ProviderComposition | None = None
-) -> ExternalChannelCapability:
-    repository = create_external_channel_repository_for_platform(
-        provider_composition=provider_composition
-    )
-    return ExternalChannelCapability(repository)
+def create_external_channel_capability(*, provider_composition: ProviderComposition | None = None) -> ExternalChannelCapability:
+    return ExternalChannelCapability(create_external_channel_repository_for_platform(provider_composition=provider_composition))
 
 
 def create_follow_up_capability() -> FollowUpCapability:
@@ -121,7 +106,6 @@ def create_civic_action_vertical_slice(
     authority_capability = create_authority_capability(authority_repository)
     if evidence_repository is None:
         raise ValueError("An evidence repository is required for the canonical civic-action slice")
-
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
     civic_action_capability = CivicActionCapability(
         case_capability=case_capability,
@@ -129,26 +113,18 @@ def create_civic_action_vertical_slice(
         authority_capability=authority_capability,
         evidence_repository=evidence_repository,
     )
-    review_repository = document_review_repository or create_document_review_repository_for_platform(
-        provider_composition=composition
-    )
+    review_repository = document_review_repository or create_document_review_repository_for_platform(provider_composition=composition)
     document_review_capability = DocumentReviewCapability(
         review_repository, case_capability=case_capability
     )
-    submission_repo = submission_repository or create_submission_repository(
-        provider_composition=composition
-    )
+    submission_repo = submission_repository or create_submission_repository(provider_composition=composition)
     atomic_submission = submission_case_transaction_repository
     if atomic_submission is None and composition.provider_for("submission") == "postgres":
-        from src.storage.repositories.postgres_submission_case_transaction import (
-            PostgresSubmissionCaseTransactionRepository,
-        )
+        from src.storage.repositories.postgres_submission_case_transaction import PostgresSubmissionCaseTransactionRepository
 
         dsn = os.getenv("JANAVANI_POSTGRES_DSN")
         if not dsn:
-            raise ValueError(
-                "JANAVANI_POSTGRES_DSN is required for PostgreSQL submission transactions"
-            )
+            raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL submission transactions")
         atomic_submission = PostgresSubmissionCaseTransactionRepository(dsn=dsn)
 
     submission_capability = SubmissionCapability(
