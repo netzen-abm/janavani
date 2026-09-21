@@ -92,3 +92,19 @@ class SOSDecisionGate(Protocol):
     def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> str:
         """Return the normalized canonical policy outcome for this SOS request."""
         ...
+
+
+class TransientDataDestruction(Protocol):
+    """Canonical boundary for purpose-scoped transient data deletion."""
+
+    def delete_transient_document(self, task_id: str) -> bool:
+        """Delete only the identified transient document."""
+        ...
+
+
+class CredentialSessionRevocation(Protocol):
+    """Canonical boundary for credential/session revocation."""
+
+    def revoke(self, session_id: str) -> None:
+        """Revoke one authenticated session or credential reference."""
+        ...
