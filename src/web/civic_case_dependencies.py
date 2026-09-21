@@ -12,4 +12,5 @@ CIVIC_ACTION = _COMPOSITION.civic_action_capability
 EVIDENCE = _COMPOSITION.evidence_capability
 AUTHORITY = _COMPOSITION.authority_capability
 CONSENT = _COMPOSITION.consent_capability
+DOCUMENT_REVIEW = _COMPOSITION.document_review_capability
 IDENTITY_LINKS = _COMPOSITION.identity_link_repository
