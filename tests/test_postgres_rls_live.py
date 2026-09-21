@@ -38,9 +38,34 @@ def test_live_postgres_rls_cross_user_case_isolation_and_owner_integrity():
                 cursor.execute(
                     f'GRANT SELECT, INSERT, UPDATE ON public.civic_case_consents TO "{role}"'
                 )
+                cursor.execute(
+                    f'GRANT SELECT ON public.evidence_objects, public.document_artifacts TO "{role}"'
+                )
+                cursor.execute(
+                    f'GRANT SELECT, INSERT ON public.civic_case_evidence_refs, public.civic_case_document_refs TO "{role}"'
+                )
 
                 case_id = "rls-case-" + uuid4().hex
+                evidence_id = "rls-evidence-" + uuid4().hex
+                artifact_id = "rls-artifact-" + uuid4().hex
                 now_sql = "now()"
+
+                cursor.execute(
+                    """
+                    INSERT INTO public.evidence_objects
+                    (evidence_id, evidence_type, storage_ref, sha256, received_at, status)
+                    VALUES (%s, 'document', 'local:test-evidence', 'sha256:test', now(), 'active')
+                    """,
+                    (evidence_id,),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO public.document_artifacts
+                    (artifact_id, document_id, case_id, format, storage_ref, state)
+                    VALUES (%s, %s, %s, 'text/plain', 'local:test-document', 'draft')
+                    """,
+                    (artifact_id, "document-" + uuid4().hex, case_id),
+                )
 
                 cursor.execute(f'SET ROLE "{role}"')
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
@@ -60,12 +85,53 @@ def test_live_postgres_rls_cross_user_case_isolation_and_owner_integrity():
                 )
                 assert cursor.fetchone()[0] == case_id
 
+                cursor.execute(
+                    """
+                    INSERT INTO public.civic_case_evidence_refs
+                    (case_id, evidence_id, relationship, created_at)
+                    VALUES (%s, %s, 'supporting', now())
+                    """,
+                    (case_id, evidence_id),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO public.civic_case_document_refs
+                    (case_id, document_id, relationship, created_at)
+                    VALUES (%s, %s, 'draft', now())
+                    """,
+                    (case_id, "document-" + artifact_id),
+                )
+
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-b",))
                 cursor.execute(
                     "SELECT case_id FROM public.civic_cases WHERE case_id = %s",
                     (case_id,),
                 )
                 assert cursor.fetchone() is None
+
+                cursor.execute(
+                    "SELECT evidence_id FROM public.evidence_objects WHERE evidence_id = %s",
+                    (evidence_id,),
+                )
+                assert cursor.fetchone() is None
+
+                cursor.execute(
+                    "SELECT artifact_id FROM public.document_artifacts WHERE artifact_id = %s",
+                    (artifact_id,),
+                )
+                assert cursor.fetchone() is None
+
+                cursor.execute(
+                    "SELECT evidence_id FROM public.civic_case_evidence_refs WHERE case_id = %s",
+                    (case_id,),
+                )
+                assert cursor.fetchall() == []
+
+                cursor.execute(
+                    "SELECT document_id FROM public.civic_case_document_refs WHERE case_id = %s",
+                    (case_id,),
+                )
+                assert cursor.fetchall() == []
 
                 with connection.transaction():
                     with pytest.raises(psycopg.errors.InsufficientPrivilege):
