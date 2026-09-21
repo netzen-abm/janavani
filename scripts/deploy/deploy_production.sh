@@ -43,7 +43,7 @@ if [ "$HEALTH_CHECK_STATUS" -eq 200 ] || [ "$HEALTH_CHECK_STATUS" -eq 404 ]; the
     echo "✔ Health verification successful. Trimming legacy execution nodes..."
     docker compose up -d --no-deps --scale ai-agent-service=1 ai-agent-service >> "$RELEASE_LOG" 2>&1
     docker compose exec -T reverse-proxy-gateway nginx -s reload >> "$RELEASE_LOG" 2>&1
-    docker compose up -d --no-deps web-mvp-application internal-admin-board >> "$RELEASE_LOG" 2>&1
+    docker compose up -d --no-deps webapp-application internal-admin-board >> "$RELEASE_LOG" 2>&1
 else
     echo "❌ Error: Production deployment health validation check failed with status: $HEALTH_CHECK_STATUS"
     echo "Aborting deployment cycle. Triggering defensive fallback recovery routines..."
