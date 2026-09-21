@@ -63,3 +63,15 @@ The nine sanctioned active roles remain the only active development roles. Histo
 
 
 `postgres_case_transaction.py` was reduced from 233 to 115 lines; SQL primitives moved to `postgres_case_transaction_sql.py` (66 lines). `civic_action_vertical_slice.py` was reduced from 194 to 170 lines; document preparation/review/artifact generation moved to `civic_action_vertical_slice_document.py` (55 lines). Public orchestration methods remain available through the canonical façade.
+
+## 2026-09-21 convergence continuation
+
+### Service-layer cleanup
+
+A dependency search found no active imports of the five zero-byte service stubs `ai_service.py`, `classification_service.py`, `complaint_service.py`, `language_service.py`, or `id_generator.py`. Their empty implementations were archived under `archive/legacy/services/` and the active stubs were removed. This was content-preserving retirement: no runtime implementation was deleted.
+
+The remaining `src/services/` files require responsibility-by-responsibility migration because the directory still contains active compatibility/runtime adapters mixed with legacy-era services. No bulk deletion is authorized.
+
+### Branch enforcement
+
+The CI branch-budget gate now runs for pushes to every branch, not only `main`, so creation/use of an unapproved long-lived branch fails CI. The canonical `main` push gate additionally counts remote branch refs and fails unless exactly nine physical refs exist. This does not itself delete historical refs; physical deletion remains an operational GitHub administration step because the connected mutation surface does not expose branch-ref deletion.
