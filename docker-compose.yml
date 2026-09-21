@@ -8,7 +8,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/ssl/certs/janavani_live.crt:/etc/ssl/certs/janavani_live.crt:ro
       - /etc/ssl/private/janavani_live.key:/etc/ssl/private/janavani_live.key:ro
     depends_on:
@@ -46,10 +46,10 @@ services:
     networks:
       - janavani-secure-mesh
 
-  # FastHTML Web MVP Frontend Application
+  # First-class WebApp surface (independent client runtime)
   web-mvp-application:
     image: python:3.11-slim
-    container_name: janavani-web-mvp-app
+    container_name: janavani-webapp
     command: sh -c "pip install -r src/web_mvp/requirements.txt && python src/web_mvp/main.py"
     volumes:
       - .:/workspace
