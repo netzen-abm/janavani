@@ -40,14 +40,14 @@ def create_telegram_generation_dependencies(
     case_repository: CivicCaseRepository,
     case_capability: CivicCaseCapability,
     civic_action_capability: CivicActionCapability,
-    consent_repository: ConsentRepository,
+    consent_capability: ConsentCapability,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
         case_repository=case_repository,
         case_capability=case_capability,
         civic_action_capability=civic_action_capability,
-        consent_capability=ConsentCapability(repository=consent_repository, case_capability=case_capability),
+        consent_capability=consent_capability,
         artifact_repository=create_document_artifact_repository(),
         blob_store=_create_blob_store(),
     )
