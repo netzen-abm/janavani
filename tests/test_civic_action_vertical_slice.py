@@ -217,3 +217,53 @@ def test_vertical_slice_recommends_follow_up_from_canonical_case():
     assert recommendation.action is FollowUpAction.REMINDER
     assert recommendation.status is FollowUpStatus.DUE
     assert recommendation.reason
+
+
+def test_vertical_slice_rejects_submission_for_different_principal():
+    import pytest
+    slice_, _, consents, _, case = build_slice()
+    owner = identity()
+    other = IdentityContext(principal=Principal(
+        principal_id="citizen-2", interface="test", capabilities=owner.principal.capabilities
+    ))
+    consents.save(Consent(
+        consent_id="consent-owner", subject_id="citizen-1", purpose="case_submission",
+        scope=("office:office-1",), grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED, created_at="2026-09-09T10:00:00Z",
+    ))
+    slice_.add_consent(case.case_id, "consent-owner", identity=owner)
+    slice_.prepare_document(case.case_id, identity=owner, document_id="doc-owner")
+    slice_.start_review(case.case_id, identity=owner)
+    slice_.approve(case.case_id, identity=owner)
+
+    with pytest.raises(LookupError):
+        slice_.submit(
+            SubmissionRequest(case.case_id, "doc-owner", "office:office-1", "office:office-1"),
+            channel_id="channel-verified", identity=other, explicit_user_approval=True,
+        )
+
+
+def test_vertical_slice_rejects_forged_execution_context():
+    import pytest
+    from src.core.execution import CapabilityExecutionContext
+    slice_, _, consents, _, case = build_slice()
+    actor = identity()
+    consents.save(Consent(
+        consent_id="consent-context", subject_id="citizen-1", purpose="case_submission",
+        scope=("office:office-1",), grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED, created_at="2026-09-09T10:00:00Z",
+    ))
+    slice_.add_consent(case.case_id, "consent-context", identity=actor)
+    slice_.prepare_document(case.case_id, identity=actor, document_id="doc-context")
+    slice_.start_review(case.case_id, identity=actor)
+    slice_.approve(case.case_id, identity=actor)
+    forged = CapabilityExecutionContext.for_capability(
+        actor, capability_id="wrong:capability", action="case:submit", surface="test",
+        resource_id=case.case_id, side_effect_class="external_side_effect", idempotency_key="forged-key",
+    )
+    with pytest.raises(ValueError):
+        slice_.submit(
+            SubmissionRequest(case.case_id, "doc-context", "office:office-1", "office:office-1", idempotency_key="forged-key"),
+            channel_id="channel-verified", identity=actor, explicit_user_approval=True,
+            execution_context=forged,
+        )
