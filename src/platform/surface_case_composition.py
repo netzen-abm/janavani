@@ -28,6 +28,7 @@ from src.platform.composition_capabilities import (
     create_case_capability,
     create_civic_action_capability,
     create_consent_capability,
+    create_document_review_repository_for_platform,
 )
 
 
@@ -89,7 +90,7 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
-    review_repository = __import__("src.platform.composition_capabilities", fromlist=["create_document_review_repository_for_platform"]).create_document_review_repository_for_platform(provider_composition=provider_composition)
+    review_repository = create_document_review_repository_for_platform(provider_composition=provider_composition)
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
