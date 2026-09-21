@@ -51,8 +51,9 @@ def create_follow_up_capability() -> FollowUpCapability:
 def create_escalation_capability() -> EscalationCapability:
     return EscalationCapability()
 
-def create_civic_action_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository, evidence_repository: EvidenceRepository | None = None) -> CivicActionCapability:
-    return CivicActionCapability(case_capability=create_case_capability(case_repository), case_repository=case_repository, authority_capability=create_authority_capability(authority_repository), evidence_repository=evidence_repository)
+def create_civic_action_capability(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository, evidence_repository: EvidenceRepository | None = None, case_capability: CivicCaseCapability | None = None) -> CivicActionCapability:
+    canonical_case_capability = case_capability or create_case_capability(case_repository)
+    return CivicActionCapability(case_capability=canonical_case_capability, case_repository=case_repository, authority_capability=create_authority_capability(authority_repository), evidence_repository=evidence_repository)
 
 def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, authority_repository: AuthorityRepository, case_capability: CivicCaseCapability | None = None,
                                        consent_repository: ConsentRepository, submission_transport: SubmissionTransport,
