@@ -74,10 +74,11 @@ CURRENT SERVICE DECISIONS
 kml_composer.py       RETAIN — live land-router/test usage.
 legal_agent.py        RETAIN — AI adapter; not legal authority.
 authority_service.py  CANONICAL — authority lookup owner.
-office_service.py     TRANSITIONAL — compatibility adapter.
-search_directory.py   TRANSITIONAL — text adapter.
-watchdog.py            HOLD — consolidate; duplicate implementation detected.
-emergency_sos.py       HOLD — decompose before retirement.
+office_service.py     RETIRED — archived after caller migration.
+search_directory.py   RETIRED — archived after caller migration.
+watchdog.py            RETIRED — archived; no active caller verified.
+emergency_sos.py       RETIRED — archived after SOS contract/test convergence.
+document_service.py    RETIRED — archived after fail-closed legacy boundary had no active caller.
 
 CODE MAINTAINABILITY RULE
 -------------------------
