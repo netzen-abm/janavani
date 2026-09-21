@@ -1,5 +1,8 @@
 from core.civic_case import CaseStatus, CaseType
-from services.case_migration import session_to_civic_case
+from src.capabilities.civic_case import CivicCaseCapability
+
+# Legacy migration behavior is preserved in archive/legacy/tests/test_case_migration.py.
+
 
 
 def test_legacy_session_translates_to_owned_canonical_case():
