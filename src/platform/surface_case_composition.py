@@ -45,13 +45,25 @@ class SurfaceCaseComposition:
     identity_link_repository: ExternalIdentityLinkRepository
 
 
-def create_surface_case_composition() -> SurfaceCaseComposition:
-    """Compose one provider-neutral Case graph for an application process."""
-    case_repository = create_case_repository()
-    authority_repository = create_authority_repository()
-    evidence_repository = create_development_evidence_repository()
-    consent_repository = create_consent_repository()
-    identity_link_repository = create_identity_link_repository()
+def create_surface_case_composition(
+    *,
+    case_repository: object | None = None,
+    authority_repository: object | None = None,
+    evidence_repository: object | None = None,
+    consent_repository: object | None = None,
+    identity_link_repository: ExternalIdentityLinkRepository | None = None,
+) -> SurfaceCaseComposition:
+    """Compose a provider-neutral Case graph for an application surface.
+
+    Callers may inject shared provider instances used by multiple surfaces.
+    Separate application processes remain independent adapters while durable
+    providers (for example PostgreSQL) provide cross-process shared state.
+    """
+    case_repository = case_repository or create_case_repository()
+    authority_repository = authority_repository or create_authority_repository()
+    evidence_repository = evidence_repository or create_development_evidence_repository()
+    consent_repository = consent_repository or create_consent_repository()
+    identity_link_repository = identity_link_repository or create_identity_link_repository()
 
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
