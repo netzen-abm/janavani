@@ -33,3 +33,23 @@ def test_permission_session_is_identity_bound():
     try: lifecycle.activate(s.session_id,identity=other)
     except PermissionError: pass
     else: raise AssertionError("another identity must not activate the permission session")
+
+
+class Adapter:
+    def __init__(self): self.released=[]
+    def release(self, *, session_id, resource): self.released.append((session_id, resource))
+
+class Minimizer:
+    def __init__(self): self.minimized=[]
+    def minimize(self, *, session_id, resource, purpose): self.minimized.append((session_id, resource, purpose))
+
+
+def test_completion_minimizes_data_and_release_stops_resource():
+    identity=_identity(); adapter=Adapter(); minimizer=Minimizer()
+    lifecycle=PurposeBoundPermissionLifecycle(resource_adapter=adapter, data_minimizer=minimizer)
+    s=lifecycle.present(PurposeBoundPermissionRequest(identity,AccessPurpose.EVIDENCE_CAPTURE,SensitiveResource.CAMERA,"Capture one image"))
+    lifecycle.grant(s.session_id); lifecycle.activate(s.session_id,identity=identity)
+    lifecycle.purpose_complete(s.session_id,identity=identity)
+    lifecycle.release(s.session_id,identity=identity)
+    assert len(minimizer.minimized)==1
+    assert len(adapter.released)==1
