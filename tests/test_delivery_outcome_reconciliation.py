@@ -172,3 +172,53 @@ def test_successful_submission_replay_does_not_redeliver():
     assert transport.calls == 1
     records = submissions.list_for_case(case_id)
     assert len([record for record in records if record.idempotency_key == "replay-safe-key"]) == 1
+
+
+class BlockingSubmittedTransport:
+    def __init__(self) -> None:
+        from threading import Event, Lock
+        self.started = Event()
+        self.release = Event()
+        self._lock = Lock()
+        self.calls = 0
+
+    def deliver(self, request) -> DeliveryReceipt:
+        with self._lock:
+            self.calls += 1
+            self.started.set()
+        self.release.wait(timeout=5)
+        return DeliveryReceipt(outcome=DeliveryOutcome.SUBMITTED, transport_reference="concurrent-attempt")
+
+
+def test_concurrent_submission_reserves_idempotency_before_external_delivery():
+    from concurrent.futures import ThreadPoolExecutor
+    from src.storage.repositories.submission_case_transaction import SubmissionCaseConcurrencyError
+
+    cases, consents, submissions, identity, case_id = _prepared()
+    transport = BlockingSubmittedTransport()
+    capability = SubmissionCapability(
+        cases, consents, submission_repository=submissions,
+        delivery_transport=transport, artifact_resolver=Resolver(),
+    )
+    request = _request(case_id, key="concurrent-safe-key")
+
+    def invoke():
+        return capability.submit(request, identity=identity, explicit_user_approval=True)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first_future = executor.submit(invoke)
+        assert transport.started.wait(timeout=5)
+        second_future = executor.submit(invoke)
+        second_error = None
+        try:
+            second_future.result(timeout=5)
+        except Exception as exc:
+            second_error = exc
+        transport.release.set()
+        first = first_future.result(timeout=5)
+
+    assert first.case.status is CaseStatus.SUBMITTED
+    assert isinstance(second_error, (SubmissionCaseConcurrencyError, RuntimeError))
+    assert transport.calls == 1
+    records = submissions.list_for_case(case_id)
+    assert len([record for record in records if record.idempotency_key == "concurrent-safe-key"]) == 1
