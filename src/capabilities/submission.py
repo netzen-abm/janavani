@@ -157,11 +157,8 @@ class SubmissionCapability:
         result = self._atomic.persist_mutation(submission=submission, expected_submission_version=expected_submission_version,
                                                case=projection, expected_case_version=expected_case_version, event=event,
                                                idempotency_key=event_id)
-        # Never perform a consequential external action from a replayed lifecycle
-        # reservation. The transaction repository serializes the reservation.
-        if result.idempotent_replay:
-            raise SubmissionCaseConcurrencyError("Submission lifecycle reservation is already committed")
-        self._synchronize_case_projection(case, projection)
+        if not result.idempotent_replay:
+            self._synchronize_case_projection(case, projection)
         return result
 
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord, evidence_id: str,
