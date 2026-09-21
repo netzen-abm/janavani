@@ -72,6 +72,42 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
+
+    def add_evidence(self, case_id: str, evidence_id: str, *, source_channel: str = "webapp") -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/evidence",
+            json={"evidence_id": evidence_id, "source_channel": source_channel},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def review_document(self, case_id: str, *, document_id: str, subject: str | None = None, body: str | None = None, reason: str | None = None) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/document/review",
+            json={"document_id": document_id, "subject": subject, "body": body, "reason": reason},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def generate_artifact(self, case_id: str, *, document_id: str, document_format: str = "pdf") -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/document/artifact",
+            json={"document_id": document_id, "document_format": document_format},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def mark_ready(self, case_id: str) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/ready",
+            json={}, headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def submit_complaint_draft(self, citizen_input: str) -> dict[str, Any]:
         """Compatibility adapter: create the canonical Case from free-form input."""
         result = self.create_case(subject="Citizen civic issue", narrative=citizen_input)
