@@ -1,6 +1,7 @@
 """Submission orchestration kept outside the public capability façade."""
 from __future__ import annotations
 
+from dataclasses import replace
 from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision
@@ -75,8 +76,7 @@ def _reserve(capability, proposed, request, identity, case):
         )
         if existing is None:
             result = capability._atomic_case_mutation(
-                submission=proposed.model_copy(state="submitting") if hasattr(proposed, "model_copy")
-                else proposed,
+                submission=replace(proposed, state="submitting"),
                 expected_submission_version=0, case=case,
                 expected_case_version=case.version, action="case:begin_submission",
                 identity=identity, source_channel=request.source_channel,
@@ -90,7 +90,7 @@ def _reserve(capability, proposed, request, identity, case):
                         "Idempotent submission reservation is missing"
                     )
                 return _replay_or_raise(capability, existing, request, identity)
-            return proposed.__class__(**{**proposed.__dict__, "state": "submitting"})
+            return replace(proposed, state="submitting")
         return _existing(capability, existing, request, identity)
 
     existing, replay = capability._reserve(proposed)
