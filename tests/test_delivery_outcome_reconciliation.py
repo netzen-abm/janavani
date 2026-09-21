@@ -141,3 +141,34 @@ def test_transport_error_can_explicitly_report_failed() -> None:
 
 def test_delivery_receipt_default_remains_submitted_for_legacy_adapters() -> None:
     assert DeliveryReceipt().outcome is DeliveryOutcome.SUBMITTED
+
+
+class CountingSubmittedTransport:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def deliver(self, request) -> DeliveryReceipt:
+        self.calls += 1
+        return DeliveryReceipt(
+            outcome=DeliveryOutcome.SUBMITTED,
+            transport_reference=f"attempt-{self.calls}",
+        )
+
+
+def test_successful_submission_replay_does_not_redeliver():
+    cases, consents, submissions, identity, case_id = _prepared()
+    transport = CountingSubmittedTransport()
+    capability = SubmissionCapability(
+        cases, consents, submission_repository=submissions,
+        delivery_transport=transport, artifact_resolver=Resolver(),
+    )
+    request = _request(case_id, key="replay-safe-key")
+
+    first = capability.submit(request, identity=identity, explicit_user_approval=True)
+    second = capability.submit(request, identity=identity, explicit_user_approval=True)
+
+    assert first.case.status is CaseStatus.SUBMITTED
+    assert second.case.status is CaseStatus.SUBMITTED
+    assert transport.calls == 1
+    records = submissions.list_for_case(case_id)
+    assert len([record for record in records if record.idempotency_key == "replay-safe-key"]) == 1
