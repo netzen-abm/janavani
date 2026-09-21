@@ -1,6 +1,7 @@
 """SQL primitives for the atomic Submission + Case boundary."""
 from __future__ import annotations
 import json
+from src.storage.repositories.submission_case_transaction import SubmissionCaseConcurrencyError
 
 def lock_state(cur, case_id, submission_id, event_id):
     cur.execute(
@@ -54,7 +55,7 @@ def persist_case(cur, case, expected_version, event):
         case.case_id, expected_version,
     ))
     if cur.rowcount != 1:
-        raise RuntimeError("Case compare-and-swap failed")
+        raise SubmissionCaseConcurrencyError("Case compare-and-swap failed")
     return expected_version + 1
 
 def persist_submission(cur, submission, expected_version):
@@ -85,7 +86,7 @@ def persist_submission(cur, submission, expected_version):
         submission.updated_at, submission.submission_id, expected_version,
     ))
     if cur.rowcount != 1:
-        raise RuntimeError("Submission compare-and-swap failed")
+        raise SubmissionCaseConcurrencyError("Submission compare-and-swap failed")
     return submission.version
 
 def persist_event(cur, event, case_version):
