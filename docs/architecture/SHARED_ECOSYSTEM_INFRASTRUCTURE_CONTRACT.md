@@ -165,3 +165,7 @@ Outcome
 ```
 
 This spine is infrastructure. Individual surfaces are adapters over it.
+
+## Security-kernel convergence
+
+Shared security-sensitive capabilities use explicit provider-neutral boundaries. SOS transient-data destruction is represented by `TransientDataDestruction`; credential/session revocation by `CredentialSessionRevocation`; emergency delivery by `SOSDeliveryAdapter`. Concrete providers remain behind storage, identity/session, and delivery adapters. Surfaces must not construct these providers directly.
