@@ -18,6 +18,7 @@ from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
