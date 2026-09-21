@@ -110,3 +110,24 @@ def test_cross_surface_identity_creates_and_retrieves_same_case_with_ownership_i
 
     # The surface boundary must not manufacture a second identity for the same citizen.
     assert citizen_a_telegram.principal.principal_id == citizen_a_web.principal.principal_id
+
+
+def test_web_and_telegram_share_all_injected_provider_repositories():
+    from src.platform.composition import create_provider_composition
+
+    providers = create_provider_composition()
+    web = create_surface_case_composition(provider_composition=providers)
+    telegram = create_surface_case_composition(provider_composition=providers)
+
+    assert web.case_repository is telegram.case_repository
+    assert web.authority_repository is telegram.authority_repository
+    assert web.evidence_repository is telegram.evidence_repository
+    assert web.consent_repository is telegram.consent_repository
+    assert web.identity_link_repository is telegram.identity_link_repository
+
+    # Sharing durable state must never imply sharing mutable surface capability objects.
+    assert web.case_capability is not telegram.case_capability
+    assert web.authority_capability is not telegram.authority_capability
+    assert web.evidence_capability is not telegram.evidence_capability
+    assert web.consent_capability is not telegram.consent_capability
+    assert web.civic_action_capability is not telegram.civic_action_capability
