@@ -2,8 +2,11 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
-from src.access.authorization import AuthorizationDecision
+from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.civic_case import CaseEventType, CivicCase
+from src.core.execution import CapabilityExecutionContext
+from src.capabilities.civic_case_contract import CivicCaseResult
+from src.identity.context import IdentityContext
 
 class CivicCaseLifecycleMixin:
     CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
