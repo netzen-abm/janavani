@@ -11,7 +11,7 @@ cd "$ROOT_DIR"
 # Exit immediately if any command pipeline encounters an error state
 set -e
 
-BACKUP_DIR="/workspace/backups"
+BACKUP_DIR="${ROOT_DIR}/backups"
 TIMESTAMP=$(date -u +"%Y%m%d_%H%M%SZ")
 EXPORT_FILE="${BACKUP_DIR}/janavani_anonymous_snapshot_${TIMESTAMP}.json"
 ARCHIVE_FILE="${BACKUP_DIR}/janavani_secure_backup_${TIMESTAMP}.tar.gz"
