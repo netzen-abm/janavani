@@ -150,6 +150,32 @@ def test_live_postgres_rls_cross_user_case_isolation_and_owner_integrity():
                 )
                 assert cursor.rowcount == 0
 
+                consent_id = "rls-consent-" + uuid4().hex
+                cursor.execute(
+                    """
+                    INSERT INTO public.civic_case_consents
+                    (consent_id, case_id, purpose, scope, status, subject_id, created_at)
+                    VALUES (%s, %s, 'case-test', '{}'::jsonb, 'active', %s, now())
+                    """,
+                    (consent_id, case_id, "principal-a"),
+                )
+                cursor.execute(
+                    "SELECT consent_id FROM public.civic_case_consents WHERE consent_id = %s",
+                    (consent_id,),
+                )
+                assert cursor.fetchone() is None
+
+                submission_id = "rls-submission-" + uuid4().hex
+                cursor.execute(
+                    """
+                    INSERT INTO public.civic_case_submissions
+                    (submission_id, case_id, destination_ref, channel, state, created_at, updated_at)
+                    VALUES (%s, %s, 'destination:test', 'test', 'pending', now(), now())
+                    """,
+                    (submission_id, case_id),
+                )
+                assert cursor.rowcount == 0
+
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
                     "UPDATE public.civic_cases SET subject = 'A can mutate A' WHERE case_id = %s",
