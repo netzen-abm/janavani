@@ -12,7 +12,7 @@ Audited the current `main` runtime Python surface and the canonical WebApp/Teleg
 | `src/storage/repositories/postgres_civic_case.py` | **112** | **Decomposed** — repository orchestration retained; mapping and SQL persistence extracted. |
 | `src/storage/repositories/postgres_submission_case_transaction.py` | 218 | Reviewable; retain unless a responsibility split becomes clear. |
 | `src/storage/repositories/postgres_submission.py` | 204 | Reviewable; provider adapter remains bounded. |
-| `src/capabilities/civic_action_vertical_slice.py` | 194 | Acceptable for orchestration; monitor growth. |
+| `src/capabilities/civic_action_vertical_slice.py` | **170** | **Decomposed** — document lifecycle extracted to dedicated helper. |
 | `src/core/case_model.py` | 177 | Acceptable domain model. |
 | `src/conversation/steps/generate.py` | 132 | Adapter-sized after provider/capability convergence. |
 | `src/capabilities/civic_case_lifecycle.py` | 118 | Acceptable. |
@@ -60,3 +60,6 @@ The nine sanctioned active roles remain the only active development roles. Histo
 ## 180-line decomposition progress
 
 `postgres_civic_case.py` was decomposed without changing its public repository contract. Mapping/hydration moved to `postgres_civic_case_codec.py` (59 lines), and SQL persistence primitives moved to `postgres_civic_case_sql.py` (55 lines). The canonical repository façade is now 112 lines. The existing UoW, principal binding, optimistic concurrency, event persistence, and reference persistence remain in the provider path.
+
+
+`postgres_case_transaction.py` was reduced from 233 to 115 lines; SQL primitives moved to `postgres_case_transaction_sql.py` (66 lines). `civic_action_vertical_slice.py` was reduced from 194 to 170 lines; document preparation/review/artifact generation moved to `civic_action_vertical_slice_document.py` (55 lines). Public orchestration methods remain available through the canonical façade.
