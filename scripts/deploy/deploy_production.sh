@@ -2,11 +2,10 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
-#!/usr/bin/env bash
 
 # ==============================================================================
 # JANAVANI UNIFIED MULTI-PROTOCOL PRODUCTION DEPLOYMENT MANAGER
-# Orchestrates release packaging for FastHTML web portals, secure FastAPI
+# Orchestrates release packaging for first-class WebApp surfaces, secure FastAPI
 # backend meshes, local air-gapped SLM pods, and Rust Dioxus WebAssembly bundles.
 # ==============================================================================
 
@@ -27,8 +26,8 @@ chmod +x run_all_tests.sh
 ./run_all_tests.sh >> "$RELEASE_LOG" 2>&1
 
 echo "🔹 [2/5] Compiling and Optimizing Production Rust Dioxus WebAssembly Bundle..."
-chmod +x build_wasm.sh
-./build_wasm.sh >> "$RELEASE_LOG" 2>&1
+chmod +x scripts/build/build_wasm.sh
+scripts/build/build_wasm.sh >> "$RELEASE_LOG" 2>&1
 
 echo "🔹 [3/5] Instantiating Background Container System Layer Preparation..."
 docker compose build --no-cache >> "$RELEASE_LOG" 2>&1
