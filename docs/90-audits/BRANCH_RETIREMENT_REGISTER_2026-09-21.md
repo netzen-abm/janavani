@@ -338,3 +338,27 @@ For every candidate: compare with `main`; preserve unique useful work; selective
 
 ## Tooling status
 The connected GitHub mutation surface currently lacks a Delete Reference operation. GitHub's REST API provides that operation with repository Contents write permission. Until such an authorized operation is exposed, physical deletion is intentionally not simulated or falsely reported.
+
+## Second inventory and convergence gate — 2026-09-21
+
+A paginated branch inventory was completed across all three result pages. The repository still contains **249 physical refs**, confirming the original baseline rather than relying on a truncated first page.
+
+The following high-value historical branches were compared directly with current main:
+
+| Branch | Ahead | Behind | Current disposition |
+|---|---:|---:|---|
+| feat/canonical-case-transaction-2026-09 | 0 | 701 | RETIRE; no unique branch delta to merge |
+| feat/canonical-consent-persistence-contract | 0 | 985 | RETIRE; no unique branch delta to merge |
+| feat/submission-case-atomic-orchestration-2026-09 | 0 | 642 | RETIRE; no unique branch delta to merge |
+
+These results reinforce the convergence rule: a branch that is entirely behind current main is not merged merely because its name describes an important capability. Its useful architecture must already exist in main or be recovered from a branch that actually contains unique commits/files.
+
+A comparison request for feat/policy-consent-convergence-2026-09 returned no current ref from the GitHub comparison endpoint; it is therefore **not** treated as verified branch content and is not used as evidence for a merge or retirement decision.
+
+### Current retirement principle
+
+Do not merge stale generations wholesale. For a divergent branch, inspect unique files/commits and extract only material that is absent from the canonical architecture. For a branch with zero commits ahead of main, prefer retirement after confirming no external preservation requirement.
+
+### Physical deletion status
+
+The complete inventory confirms the repository is **not yet physically at nine branches**. The available GitHub mutation surface still does not expose remote-reference deletion. No force-move or destructive overwrite is being used as a substitute for deletion.
