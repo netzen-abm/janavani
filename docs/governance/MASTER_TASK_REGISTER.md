@@ -100,34 +100,37 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 
 ## Branch operating policy — strict nine-branch target
 
-The repository operating target is **exactly nine long-lived branches**. The canonical target is:
+The repository operating target is exactly nine long-lived branches:
 
 1. `main` — canonical convergence line.
-2. `develop/v0.2` — integration/development line retained only while actively useful.
-3. `integration/canonical-platform` — shared platform integration.
-4. `integration/case-main-prep` — bounded Case convergence work.
-5. `integration/telegram-consent-convergence-main-v2` — bounded Telegram/consent convergence work.
-6. `feat/product-vertical-slice-convergence` — product vertical-slice work.
-7. `feat/webapp-authority-evidence-vertical-slice` — WebApp vertical-slice work.
-8. `test/authorization-negative-matrix-2026-09` — authorization/failure verification.
-9. `security/auth-boundary-hardening` — isolated security hardening.
+2. `integration/canonical-platform` — shared platform integration.
+3. `feat/canonical-case-kernel` — canonical Case kernel work.
+4. `feat/canonical-capability-execution-envelope` — shared execution-context contract.
+5. `feat/canonical-civic-action-vertical-slice` — civic-action vertical slice.
+6. `feat/canonical-sos-contract` — SOS contract/decomposition.
+7. `feat/capability-scoped-consent-agent-enforcement` — consent/agent security.
+8. `audit/postgres-provider-production-gates` — durable-provider readiness.
+9. `chore/ecosystem-shared-capability-infrastructure` — shared ecosystem infrastructure.
 
-This list is a **survivor target, not evidence that the repository currently has only nine branches**. Existing branches must be compared against current `main`, useful deltas must be promoted or reimplemented on `main`, and then the source branch must be retired. Do not force-move a stale branch to `main` as a substitute for deletion.
+This is the active survivor target. Existing refs must be compared with `main`; useful deltas are selectively converged, evidence is preserved, and only then are source refs deleted.
 
 ### Branch lifecycle
 
-`one focused branch → verify → merge/promote → delete`
+`one focused branch → verify → converge/promote → archive evidence → delete`
 
 Rules:
 
 1. No `-v2`, `-v3`, `-final`, `-clean` branch generations.
-2. No new long-lived branch unless it matches an approved survivor role.
+2. No new long-lived branch unless it matches an approved role.
 3. Never blindly merge a stale branch merely to reduce branch count.
-4. Archive-first applies to branch retirement: preserve useful code/docs/evidence before deletion.
-5. A branch that is fully behind `main` is a retirement candidate.
-6. A branch whose useful delta has already been promoted to `main` is a retirement candidate.
+4. Archive-first applies to branch retirement.
+5. A branch fully behind `main` is a retirement candidate.
+6. A branch whose useful delta is already on `main` is a retirement candidate.
 7. Open PRs are not canonical merely because they exist.
 8. Current `main` is the convergence authority.
+9. Physical deletion must be real deletion; force-moving a ref is not deletion.
+
+`main` currently has historical refs beyond this nine-role target. The repository must not be reported as physically converged until those refs are actually deleted.
 
 ## Rules for execution
 
