@@ -9,6 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  branch-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce nine-branch policy
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+          REF_BRANCH: ${{ github.ref_name }}
+        run: |
+          branch="${HEAD_BRANCH:-${REF_BRANCH}}"
+          case "$branch" in
+            main|develop/v0.2|integration/canonical-platform|integration/case-main-prep|integration/telegram-consent-convergence-main-v2|feat/product-vertical-slice-convergence|feat/webapp-authority-evidence-vertical-slice|test/authorization-negative-matrix-2026-09|security/auth-boundary-hardening)
+              echo "Allowed branch: $branch"
+              ;;
+            *)
+              echo "::error::Janavani branch budget violation: '$branch' is outside the nine approved branch roles."
+              exit 1
+              ;;
+          esac
+
   test:
     runs-on: ubuntu-latest
     services:
