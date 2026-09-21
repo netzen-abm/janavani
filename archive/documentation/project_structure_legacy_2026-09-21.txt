@@ -1,0 +1,268 @@
+﻿Folder PATH listing for volume OS
+Volume serial number is 000000E1 0A04:6183
+C:.
+ª   .env.example
+ª   .gitignore
+ª   CONTRIBUTING.md
+ª   docker-compose.decentralized.yml
+ª   docker-compose.yml
+ª   Dockerfile
+ª   entrypoint.sh
+ª   LICENSE
+ª   Procfile
+ª   project_structure.txt
+ª   pyproject.toml
+ª   README.md
+ª   redeploy-trigger.txt
+ª   render.yaml
+ª   requirements.txt
+ª   requirements_gpt4all.txt
+ª   ROADMAP.md
+ª   runtime.txt
+ª   SECURITY.md
+ª   
++---.github
+ª   +---workflows
+ª           ci.yml
+ª           codacy.yml
+ª           dependency-review.yml
+ª           django.yml
+ª           docker-image.yml
+ª           docker-publish.yml
+ª           generator-generic-ossf-slsa3-publish.yml
+ª           greetings.yml
+ª           hadolint.yml
+ª           jekyll-docker.yml
+ª           label.yml
+ª           manual.yml
+ª           octopusdeploy.yml
+ª           openshift.yml
+ª           pip-check.yml
+ª           pylint.yml
+ª           python-app.yml
+ª           python-package-conda.yml
+ª           python-package.yml
+ª           python-publish.yml
+ª           stale.yml
+ª           startup-check.yml
+ª           summary.yml
+ª           
++---api
+ª       agent_api.py
+ª       
++---archive
+ª   ª   handler_legacy.py
+ª   ª   workflow_legacy.py
+ª   ª   workflow_steps_legacy.py
+ª   ª   
+ª   +---services_legacy
+ª           agent_runner.py
+ª           agent_tools.py
+ª           blockchain.py
+ª           nostr_client.py
+ª           nym_proxy.py
+ª           open_poc.py
+ª           rag_agent.py
+ª           storage_ipfs.py
+ª           __init__.py
+ª           
++---database
+ª       complaints.jsonl
+ª       offices.csv
+ª       ratings.jsonl
+ª       
++---docs
+ª   ª   ARCHITECTURE.md
+ª   ª   ARCHITECTURE_DECISIONS.md
+ª   ª   CODE_OWNERSHIP.md
+ª   ª   CODE_QUALITY.md
+ª   ª   decentralized.md
+ª   ª   DEPRECATION_PLAN.md
+ª   ª   DEVELOPER_GUIDE.md
+ª   ª   GPT4ALL.md
+ª   ª   PROJECT_MAP.md
+ª   ª   RELEASE_1_CHECKLIST.md
+ª   ª   REPOSITORY_AUDIT.md
+ª   ª   REPOSITORY_RULES.md
+ª   ª   SYSTEM_QUALITY_STANDARD.md
+ª   ª   
+ª   +---legacy
+ª           HOW_ALL_4_FILES_CONNECT_NOW.md
+ª           HOW_THE_FULL_FLOW_WORKS_NOW.md
+ª           
++---planning
+ª       ARCHITECTURE_INDEX.md
+ª       DATABASE_CONTRACT.md
+ª       DATABASE_DESIGN.md
+ª       DATA_DICTIONARY.md
+ª       DOCUMENT_CONTRACT.md
+ª       ENGINEERING_CONSTITUTION.md
+ª       ENGINEERING_PRINCIPLES.md
+ª       FOUNDER_CONSTITUTION.md
+ª       MVP_ACCEPTANCE_TEST.md
+ª       MVP_CONSTITUTION.md
+ª       OFFICE_SCHEMA.md
+ª       PRIVACY_ARCHITECTURE.md
+ª       PRIVACY_CONTRACT.md
+ª       PRODUCT_REQUIREMENTS.md
+ª       RELEASE_BASELINE_v0.1.md
+ª       SERVICE_CONTRACT.md
+ª       SESSION_SCHEMA.md
+ª       SYSTEM_DOMAIN_MODEL.md
+ª       WORKFLOWS.md
+ª       WORKFLOW_CONTRACT.md
+ª       
++---scripts
+ª       install_gpt4all.sh
+ª       run_gpt4all_example.py
+ª       view_complaints.py
+ª       
++---src
+ª   ª   bot_messenger.py
+ª   ª   bot_telegram.py
+ª   ª   bot_whatsapp.py
+ª   ª   legal_brain.py
+ª   ª   main.py
+ª   ª   test_supabase.py
+ª   ª   web.py
+ª   ª   
+ª   +---adapters
+ª   ª   ª   __init__.py
+ª   ª   ª   
+ª   ª   +---telegram
+ª   ª           __init__.py
+ª   ª           
+ª   +---app
+ª   ª       __init__.py
+ª   ª       
+ª   +---commands
+ª   ª       check.py
+ª   ª       complaint.py
+ª   ª       rate.py
+ª   ª       search.py
+ª   ª       start.py
+ª   ª       __init__.py
+ª   ª       
+ª   +---conversation
+ª   ª   ª   constants.py
+ª   ª   ª   engine.py
+ª   ª   ª   router.py
+ª   ª   ª   session.py
+ª   ª   ª   state.py
+ª   ª   ª   __init__.py
+ª   ª   ª   
+ª   ª   +---steps
+ª   ª           address.py
+ª   ª           citizen.py
+ª   ª           district.py
+ª   ª           document.py
+ª   ª           format.py
+ª   ª           generate.py
+ª   ª           identity.py
+ª   ª           issue.py
+ª   ª           name.py
+ª   ª           office.py
+ª   ª           office_fallback.py
+ª   ª           office_manual.py
+ª   ª           preview.py
+ª   ª           select_office.py
+ª   ª           __init__.py
+ª   ª           
+ª   +---core
+ª   ª       config.py
+ª   ª       settings.py
+ª   ª       __init__.py
+ª   ª       
+ª   +---documents
+ª   ª       acknowledgements.py
+ª   ª       complaint.py
+ª   ª       complaint_builder.py
+ª   ª       delivery_profiles.py
+ª   ª       document_engine.py
+ª   ª       document_standards.py
+ª   ª       generate_pdf.py
+ª   ª       grievance.py
+ª   ª       pdf_generator.py
+ª   ª       petition.py
+ª   ª       rti.py
+ª   ª       __init__.py
+ª   ª       
+ª   +---domain
+ª   ª       citizen.py
+ª   ª       department.py
+ª   ª       document.py
+ª   ª       evidence.py
+ª   ª       issue.py
+ª   ª       location.py
+ª   ª       office.py
+ª   ª       remedy.py
+ª   ª       submission.py
+ª   ª       
+ª   +---engine
+ª   ª       state_registry.py
+ª   ª       workflow_context.py
+ª   ª       workflow_engine.py
+ª   ª       workflow_registry.py
+ª   ª       __init__.py
+ª   ª       
+ª   +---models
+ª   ª       complaint.py
+ª   ª       office.py
+ª   ª       rating.py
+ª   ª       
+ª   +---services
+ª   ª       ai_service.py
+ª   ª       classification_service.py
+ª   ª       complaint_service.py
+ª   ª       document_service.py
+ª   ª       escalation_engine.py
+ª   ª       escalation_rules.py
+ª   ª       escalation_runner.py
+ª   ª       id_generator.py
+ª   ª       issue_classifier.py
+ª   ª       language_service.py
+ª   ª       office_service.py
+ª   ª       privacy_service.py
+ª   ª       rate_office.py
+ª   ª       rating_service.py
+ª   ª       search_directory.py
+ª   ª       search_service.py
+ª   ª       storage_service.py
+ª   ª       track_complaint.py
+ª   ª       
+ª   +---storage
+ª   ª   ª   citizen_repository.py
+ª   ª   ª   issue_repository.py
+ª   ª   ª   office_repository.py
+ª   ª   ª   queries.py
+ª   ª   ª   seed.py
+ª   ª   ª   supabase.py
+ª   ª   ª   supabase_client.py
+ª   ª   ª   __init__.py
+ª   ª   ª   
+ª   ª   +---repositories
+ª   ª           __init__.py
+ª   ª           
+ª   +---utils
+ª   ª       helpers.py
+ª   ª       validators.py
+ª   ª       
+ª   +---web
+ª   ª       app.py
+ª   ª       __init__.py
+ª   ª       
+ª   +---whatsapp
+ª   ª       __init__.py
+ª   ª       
+ª   +---workflow
+ª           base_step.py
+ª           issue_step.py
+ª           
++---tests
+        test_documents.py
+        test_engine.py
+        test_registry.py
+        test_services.py
+        test_workflow.py
+        __init__.py
+        
