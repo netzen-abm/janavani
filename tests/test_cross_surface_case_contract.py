@@ -40,3 +40,16 @@ def test_identity_linking_is_explicitly_surface_neutral():
         authentication_method="explicit_verified_link",
     ), verified=True)
     assert a.principal_id == b.principal_id
+
+
+def test_web_and_telegram_can_share_provider_graph_without_sharing_surface_objects():
+    from src.platform.surface_case_composition import create_surface_case_composition
+    from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+
+    shared_cases = InMemoryCivicCaseRepository()
+    web = create_surface_case_composition(case_repository=shared_cases)
+    telegram = create_surface_case_composition(case_repository=shared_cases)
+
+    assert web.case_repository is telegram.case_repository
+    assert web.case_capability is not telegram.case_capability
+    assert web.civic_action_capability is not telegram.civic_action_capability
