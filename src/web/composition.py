@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.submission import SubmissionTransport
-from src.platform.composition import (
+from src.platform.composition import (\n    create_authority_repository,\n    create_case_repository,\n    create_evidence_repository,
     create_civic_action_vertical_slice,
     create_consent_repository,
     create_document_review_repository_for_platform,
@@ -43,8 +43,8 @@ class WebCivicActionComposition:
 
 def create_web_civic_action_composition(
     *,
-    case_repository,
-    authority_repository,
+    case_repository=None,
+    authority_repository=None,
     evidence_repository=None,
     consent_repository: ConsentRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
@@ -60,8 +60,7 @@ def create_web_civic_action_composition(
     still be injected explicitly when a deployment has completed its
     persistence and migration readiness work.
     """
-    composition = provider_composition or create_provider_composition()
-    consent_repo = consent_repository or create_consent_repository(
+    composition = provider_composition or create_provider_composition()\n    case_repository = case_repository or create_case_repository(provider_composition=composition)\n    authority_repository = authority_repository or create_authority_repository(provider_composition=composition)\n    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=composition)\n    consent_repo = consent_repository or create_consent_repository(
         provider_composition=composition
     )
     review_repo = document_review_repository or create_document_review_repository_for_platform(
