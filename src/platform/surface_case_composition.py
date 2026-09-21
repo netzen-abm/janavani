@@ -18,7 +18,7 @@ from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
     create_consent_repository,
-    create_development_evidence_repository,
+    create_evidence_repository,
     create_identity_link_repository,
 )
 from src.platform.composition_capabilities import (
@@ -60,10 +60,15 @@ def create_surface_case_composition(
     providers (for example PostgreSQL) provide cross-process shared state.
     """
     case_repository = case_repository or create_case_repository()
-    authority_repository = authority_repository or create_authority_repository()
-    evidence_repository = evidence_repository or create_development_evidence_repository()
-    consent_repository = consent_repository or create_consent_repository()
-    identity_link_repository = identity_link_repository or create_identity_link_repository()
+    provider_composition = None
+    if case_repository is None or authority_repository is None or evidence_repository is None or consent_repository is None or identity_link_repository is None:
+        from src.platform.composition import create_provider_composition
+        provider_composition = create_provider_composition()
+    case_repository = case_repository or create_case_repository(provider_composition=provider_composition)
+    authority_repository = authority_repository or create_authority_repository(provider_composition=provider_composition)
+    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=provider_composition)
+    consent_repository = consent_repository or create_consent_repository(provider_composition=provider_composition)
+    identity_link_repository = identity_link_repository or create_identity_link_repository(provider_composition=provider_composition)
 
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
