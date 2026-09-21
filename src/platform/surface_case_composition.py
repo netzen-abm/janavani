@@ -14,6 +14,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.evidence import EvidenceCapability
+from src.capabilities.document_review import DocumentReviewCapability
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
@@ -45,6 +46,7 @@ class SurfaceCaseComposition:
     civic_action_capability: CivicActionCapability
     identity_link_repository: ExternalIdentityLinkRepository
     provider_composition: object
+    document_review_capability: DocumentReviewCapability
 
 
 def create_surface_case_composition(
@@ -87,6 +89,8 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
+    review_repository = __import__("src.platform.composition_capabilities", fromlist=["create_document_review_repository_for_platform"]).create_document_review_repository_for_platform(provider_composition=provider_composition)
+    document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
         authority_repository=authority_repository,
@@ -106,4 +110,5 @@ def create_surface_case_composition(
         civic_action_capability=civic_action_capability,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
+        document_review_capability=document_review_capability,
     )
