@@ -1,0 +1,25 @@
+[package]
+name = "janavani_v3"
+version = "3.0.0"
+edition = "2021"
+
+[dependencies]
+dioxus = { version = "0.5", features = ["web", "mobile", "desktop"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+gloo-utils = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Location", "Storage", "Navigator", "Performance", "MemoryInfo"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+hex = "0.4"
+aes-gcm = "0.10" # Cryptographic compile anchors for secure WebAssembly client vaulting
+
+[profile.release]
+opt-level = "z" # Optimize aggressively for minimal binary file footprints
+lto = true
+codegen-units = 1
+panic = "abort"
