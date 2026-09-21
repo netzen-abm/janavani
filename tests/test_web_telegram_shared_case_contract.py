@@ -63,3 +63,44 @@ def test_cross_surface_continuation_is_owner_scoped() -> None:
         CivicCaseCreateRequest(CaseType.COMPLAINT, "Water leak", "A public pipe is leaking."),
         identity=owner,
     ).authorization is AuthorizationDecision.ALLOW
+
+
+
+def test_web_and_telegram_expose_the_same_vertical_slice_contract():
+    from src.platform.surface_case_composition import create_surface_case_composition
+    from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
+
+    web = create_surface_case_composition()
+    telegram = create_surface_case_composition()
+
+    assert isinstance(web.civic_action_vertical_slice, CivicActionVerticalSlice)
+    assert isinstance(telegram.civic_action_vertical_slice, CivicActionVerticalSlice)
+    assert web.civic_action_vertical_slice is not telegram.civic_action_vertical_slice
+
+
+def test_vertical_slice_submission_is_fail_closed_without_delivery_configuration():
+    from src.platform.surface_case_composition import create_surface_case_composition
+    from src.capabilities.civic_case import CivicCaseCreateRequest
+    from src.core.civic_case import CaseType
+
+    composition = create_surface_case_composition()
+    identity_context = identity()
+    case = composition.case_capability.create(
+        CivicCaseCreateRequest(CaseType.COMPLAINT, "Test", "Test narrative"),
+        identity=identity_context,
+        source_channel="webapp",
+    ).case
+
+    import pytest
+    with pytest.raises(RuntimeError, match="Submission transport is not configured"):
+        composition.civic_action_vertical_slice.submit(
+            request=__import__("src.capabilities.submission", fromlist=["SubmissionRequest"]).SubmissionRequest(
+                case_id=case.case_id,
+                document_id="doc-test",
+                destination_ref="office:test",
+                consent_scope="office:test",
+            ),
+            channel_id="missing-channel",
+            identity=identity_context,
+            explicit_user_approval=True,
+        )
