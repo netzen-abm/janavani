@@ -84,16 +84,6 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext,
-                    execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
-        self._validate_execution_context(execution_context, identity, action="case:consent", resource_id=case_id)
-        case = self._owned(case_id, identity)
-        self._require(identity, "case:write", "case:consent")
-        if consent_id not in case.consent_refs:
-            case.consent_refs.append(consent_id)
-        self._repository.save(case, principal_id=identity.principal.principal_id)
-        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
-
     @staticmethod
     def _validate_execution_context(execution_context, identity, *, action, resource_id=None) -> None:
         if execution_context is None:
