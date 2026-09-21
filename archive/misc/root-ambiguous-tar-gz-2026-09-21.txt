@@ -1,0 +1,7 @@
+[ Volatile In-Memory Redis Grid ] ──► Extracts Anonymized Aggregates (No PII)
+                                                 │
+                                                 ▼
+                                   [ AES-256 Encrypted Gzip ]
+                                                 │
+                                                 ▼
+                                   [ Local Secure Backup Storage ]
