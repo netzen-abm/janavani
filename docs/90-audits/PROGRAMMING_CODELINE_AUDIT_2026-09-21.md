@@ -54,7 +54,7 @@ and not:
 
 ## Branch hygiene
 
-The nine sanctioned active roles remain the only active development roles. Historical refs are frozen retirement candidates. Physical deletion still requires a GitHub ref-delete operation; no ref is force-moved as a substitute.
+The nine sanctioned active roles are the only permitted development roles: `main`, `integration/canonical-platform`, `feat/canonical-case-kernel`, `feat/canonical-capability-execution-envelope`, `feat/canonical-civic-action-vertical-slice`, `feat/canonical-sos-contract`, `feat/capability-scoped-consent-agent-enforcement`, `audit/postgres-provider-production-gates`, and `chore/ecosystem-shared-capability-infrastructure`. Historical refs are frozen retirement candidates. Physical deletion still requires a GitHub ref-delete operation; no ref is force-moved as a substitute.
 
 
 ## 180-line decomposition progress
@@ -75,3 +75,17 @@ The remaining `src/services/` files require responsibility-by-responsibility mig
 ### Branch enforcement
 
 The CI branch-budget gate now runs for pushes to every branch, not only `main`, so creation/use of an unapproved long-lived branch fails CI. The canonical `main` push gate additionally counts remote branch refs and fails unless exactly nine physical refs exist. This does not itself delete historical refs; physical deletion remains an operational GitHub administration step because the connected mutation surface does not expose branch-ref deletion.
+
+
+## Service ownership verification — 2026-09-21
+
+| File | Current lines | Decision |
+|---|---:|---|
+| `src/services/kml_composer.py` | 56 | Retain; live land-router caller and tests. |
+| `src/services/legal_agent.py` | 96 | Retain as provider-neutral AI adapter; not legal authority. |
+| `src/services/watchdog.py` | 127 | Hold/consolidate; duplicate class and no confirmed active caller. |
+| `src/services/authority_service.py` | 36 | Canonical owner for authority lookup. |
+| `src/services/office_service.py` | 47 | Temporary compatibility adapter; migrate consumers to canonical authority contract. |
+| `src/services/search_directory.py` | 39 | Temporary text adapter; migrate consumers to structured authority capability. |
+
+`src/services/emergency_sos.py` is 56 lines and remains transitional. Do not retire it until cache destruction, credential/session revocation, emergency delivery, evidence/context, and orchestration contracts each have explicit owners and tests.
