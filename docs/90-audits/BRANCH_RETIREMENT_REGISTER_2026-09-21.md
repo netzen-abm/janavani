@@ -440,3 +440,22 @@ This is the reusable ecosystem security kernel. Future health, wellness, nutriti
 The two inspected historical branches are now **evidence sources, not architecture owners**:
 - `feat/capability-scoped-consent-agent-enforcement` → selective test/invariant recovery only, then retire.
 - `audit/postgres-provider-production-gates` → selective production-test recovery only, then retire.
+
+
+## Physical retirement execution control — 2026-09-21
+
+A deterministic retirement runner is now present at `scripts/retire_legacy_branches.py`.
+
+- Default mode is **dry-run**.
+- A candidate is automatically eligible only when it is outside the nine sanctioned roles, has **zero commits ahead of `main`**, and has **no open pull request**.
+- Divergent branches remain HOLD/SELECTIVE-EXTRACT candidates; the script does not delete them automatically.
+- `--execute` uses GitHub's remote-reference deletion API and must be run with an authorized repository credential after reviewing the dry-run output.
+- The connected ChatGPT GitHub mutation interface used for this audit still does not expose Delete Reference, so this session does not falsely report physical deletion.
+
+This closes the operational gap between the retirement policy and a repeatable deletion mechanism without weakening the archive-first evidence rule.
+
+## PostgreSQL convergence verification — 2026-09-21
+
+The historical PostgreSQL integration tests were checked against current `main`. The current branch already contains `tests/test_postgres_integration.py` with real-PostgreSQL round-trip, heterogeneous JSON, stale-version rejection, and transaction-rollback coverage. Current `main` also contains `tests/test_postgres_rls_live.py` and `tests/test_candidate_rls_authorization_integration.py`.
+
+**Decision:** no duplicate test extraction is required from `audit/postgres-provider-production-gates`. The branch remains evidence-only and can be retired once the remaining branch-ref hygiene operation is executed.
