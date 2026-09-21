@@ -50,6 +50,11 @@ def submit(capability, request: SubmissionRequest, *, identity, explicit_user_ap
         channel=request.source_channel or "shared", idempotency_key=key,
     )
     submission = _reserve(capability, proposed, request, identity, case)
+    if submission.state in {"submitted", "acknowledged"}:
+        final = capability._cases.get_owned(request.case_id, identity=identity)
+        if final is None:
+            raise LookupError("Case not found after idempotent replay")
+        return final
     submission = _mark_submitting(capability, submission, request, identity, execution_context)
 
     external_ref, evidence_id, notes = deliver(capability, submission, request, case)
