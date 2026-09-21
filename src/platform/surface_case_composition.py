@@ -20,6 +20,7 @@ from src.platform.composition import (
     create_consent_repository,
     create_evidence_repository,
     create_identity_link_repository,
+    create_provider_composition,
 )
 from src.platform.composition_capabilities import (
     create_authority_capability,
@@ -53,22 +54,29 @@ def create_surface_case_composition(
     consent_repository: object | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
 ) -> SurfaceCaseComposition:
-    """Compose a provider-neutral Case graph for an application surface.
+    """Compose one provider graph for an access surface.
 
-    Callers may inject shared provider instances used by multiple surfaces.
-    Separate application processes remain independent adapters while durable
-    providers (for example PostgreSQL) provide cross-process shared state.
+    A single ProviderComposition is resolved first and all omitted repositories
+    are derived from that same provider graph. Explicit repository injection is
+    retained for deterministic tests and deployments with pre-built providers.
     """
-    case_repository = case_repository or create_case_repository()
-    provider_composition = None
-    if case_repository is None or authority_repository is None or evidence_repository is None or consent_repository is None or identity_link_repository is None:
-        from src.platform.composition import create_provider_composition
-        provider_composition = create_provider_composition()
-    case_repository = case_repository or create_case_repository(provider_composition=provider_composition)
-    authority_repository = authority_repository or create_authority_repository(provider_composition=provider_composition)
-    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=provider_composition)
-    consent_repository = consent_repository or create_consent_repository(provider_composition=provider_composition)
-    identity_link_repository = identity_link_repository or create_identity_link_repository(provider_composition=provider_composition)
+    provider_composition = create_provider_composition()
+
+    case_repository = case_repository or create_case_repository(
+        provider_composition=provider_composition
+    )
+    authority_repository = authority_repository or create_authority_repository(
+        provider_composition=provider_composition
+    )
+    evidence_repository = evidence_repository or create_evidence_repository(
+        provider_composition=provider_composition
+    )
+    consent_repository = consent_repository or create_consent_repository(
+        provider_composition=provider_composition
+    )
+    identity_link_repository = identity_link_repository or create_identity_link_repository(
+        provider_composition=provider_composition
+    )
 
     case_capability = create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
