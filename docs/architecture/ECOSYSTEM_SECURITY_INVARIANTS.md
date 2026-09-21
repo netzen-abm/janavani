@@ -88,4 +88,4 @@ A shared capability is ecosystem-ready only when: the contract is provider-neutr
 
 Surface -> Identity Context -> Capability Gateway -> Authorization + Consent + Safety -> Execution Envelope -> Shared Capability -> Provider Contract -> Provider -> Truthful Result + Audit Evidence
 
-This contract is infrastructure-level so future health, wellness, research, nutrition, civic and other ecosystem applications can reuse the same security model without inheriting Janavani-specific transport or UI assumptions.
+This contract is infrastructure-level so future applications in other domains can reuse the same security model without inheriting Janavani-specific transport or UI assumptions.
