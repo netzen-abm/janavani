@@ -21,39 +21,30 @@ app, rt = fast_app(
 
 @rt("/")
 def get():
-    """Render the first-class Janavani WebApp citizen interface."""
-    return Titled("🇮🇳 Janavani — Citizen Action Hub",
+    """Render the first-class Janavani WebApp civic Case workspace."""
+    return Titled(
+        "🇮🇳 Janavani — Citizen Action Hub",
         Container(
             Div(
                 H1("JANAVANI"),
-                P("Transform civic grievances into structured legal actions through privacy-first workflows."),
-                style="text-align: center; margin-bottom: 3rem;"
+                P("Create and review a civic Case through the shared Janavani platform."),
+                style="text-align: center; margin-bottom: 3rem;",
             ),
-            
-            # Form Section for Citizen Plain-Text Issue Entry
             Div(
-                H3("📝 Submit Your Civic Grievance or Issue"),
-                P("Describe the problem in plain natural language (e.g., Malayalam, Kannada, Assamese, or English). Personal data will be scrubbed locally before submission."),
+                H3("📝 Create a Civic Case"),
+                P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
                 Form(action="/submit-issue", method="post")(
-                    Textarea(name="citizen_input", placeholder="Type your issue here... (e.g., Broken sewage pipeline in ward 4 causing water logging since 2 weeks.)", rows=5, required=True),
-                    Button("Analyze Issue & Draft Document", type="submit", cls="button-primary")
+                    Textarea(
+                        name="citizen_input",
+                        placeholder="Describe the civic issue...",
+                        rows=6,
+                        required=True,
+                    ),
+                    Button("Create Case", type="submit", cls="button-primary"),
                 ),
-                cls="card"
+                cls="card",
             ),
-            
-            # Featured Legislative Compliance Section
-            Div(
-                H3("⚖️ Live Legislative Compliance Monitor"),
-                P("Tracking bills and amendments against the 'Golden Triangle' (Articles 14, 19, 21) of the Indian Constitution."),
-                Div(
-                    H4("Kerala Public Spaces Regulatory (Amendment) Bill, 2026"),
-                    Span("⚠️ Non-Compliant with Golden Triangle", cls="triangle-badge"),
-                    P("Proposes strict licensing checks over public gatherings. Infringes upon basic peaceful assembly rights under Article 19."),
-                    A("Review Report & File Formal Objection", href="/bill-review/BILL-2026-KL-04", cls="button secondary")
-                , style="border-left: 4px solid #cc0000; padding-left: 1rem; margin-top: 1rem;"),
-                cls="card"
-            )
-        )
+        ),
     )
 
 @rt("/submit-issue")
