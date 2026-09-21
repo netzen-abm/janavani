@@ -16,7 +16,8 @@ db/migrations/                  Durable schema migrations
 docs/                            Canonical architecture, governance, security,
                                  audits and evidence
 planning/                        Active detailed contracts/specifications
-scripts/                         Deterministic developer/CI verification tools
+scripts/                         Deterministic build, deploy, operations and CI tools
+infra/                           Deployment, proxy, monitoring and infrastructure configuration
 tests/                           Automated verification
 src/                             Canonical Python application runtime
 crates/                          Canonical Rust/core direction
@@ -51,8 +52,8 @@ Access Surface
 
 SURFACE INDEPENDENCE
 --------------------
-WebApp, Telegram, Android, iOS, WhatsApp, Messenger, DApp and future surfaces
-are independent consumers. No surface owns a second Case, Evidence, Authority,
+WebApp and Telegram are first-class product surfaces, not MVP/throwaway layers.
+Android, iOS, WhatsApp, Messenger, DApp and future surfaces are independent consumers. No surface owns a second Case, Evidence, Authority,
 Document, Submission, authorization or provider-selection implementation.
 
 SHARED INFRASTRUCTURE SPINE
@@ -82,7 +83,7 @@ document_service.py    RETIRED — archived after fail-closed legacy boundary ha
 
 CODE MAINTAINABILITY RULE
 -------------------------
-Active Python/Rust source files must remain <= 180 lines.
+Active Python/Rust source files must remain <= 180 lines where a coherent responsibility boundary permits.
 Enforcement: scripts/check_code_line_limits.py + CI.
 Historical archive content is excluded from this ceiling.
 
