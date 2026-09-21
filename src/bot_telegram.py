@@ -45,6 +45,7 @@ def main():
     application.bot_data["evidence_capability"] = evidence_capability
     application.bot_data["authority_capability"] = authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
+    application.bot_data["civic_action_vertical_slice"] = composition.civic_action_vertical_slice
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
             case_repository=case_repository,
