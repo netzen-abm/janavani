@@ -69,3 +69,22 @@ def test_telegram_generation_dependencies_are_composed_once():
     assert deps.consent_capability is not None
     assert deps.artifact_repository is not None
     assert deps.blob_store is not None
+
+
+def test_web_and_telegram_share_capability_contracts_without_surface_coupling():
+    from src.platform.surface_case_composition import create_surface_case_composition
+    from src.capabilities.civic_case import CivicCaseCapability
+    from src.capabilities.civic_action_capability import CivicActionCapability
+    from src.identity.linking import InMemoryExternalIdentityLinkRepository
+
+    web = create_surface_case_composition()
+    telegram = create_surface_case_composition()
+
+    assert isinstance(web.case_capability, CivicCaseCapability)
+    assert isinstance(telegram.case_capability, CivicCaseCapability)
+    assert isinstance(web.civic_action_capability, CivicActionCapability)
+    assert isinstance(telegram.civic_action_capability, CivicActionCapability)
+    assert isinstance(web.identity_link_repository, InMemoryExternalIdentityLinkRepository)
+    assert isinstance(telegram.identity_link_repository, InMemoryExternalIdentityLinkRepository)
+    assert web.case_capability is not telegram.case_capability
+    assert web.case_repository is not telegram.case_repository
