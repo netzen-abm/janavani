@@ -43,9 +43,9 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(f'GRANT SELECT, INSERT ON public.civic_case_evidence_refs, public.civic_case_document_refs TO "{role}"')
                 cursor.execute(f'GRANT SELECT ON public.evidence_objects, public.document_artifacts TO "{role}"')
 
-                cursor.execute(f'SET ROLE "{role}"')
-                cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
-
+                # Seed backend-owned child metadata before switching to the
+                # restricted application role; ordinary clients cannot register
+                # evidence/document metadata directly under the candidate policy.
                 cursor.execute(
                     """
                     INSERT INTO public.civic_cases
@@ -54,9 +54,11 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     """,
                     (case_id, "principal-a"),
                 )
+                cursor.execute(f'SET ROLE "{role}"')
+                cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
                     """
-                    INSERT INTO public.evidence_objects
+                    INSERT INTO public.civic_case_evidence_refs
                     (evidence_id, evidence_type, storage_ref, sha256, received_at, status)
                     VALUES (%s, 'document', 'local:test-evidence', 'sha256:test', now(), 'active')
                     """,
@@ -69,22 +71,6 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     VALUES (%s, %s, %s, 'text/plain', 'local:test-document', 'draft')
                     """,
                     (artifact_id, document_id, case_id),
-                )
-                cursor.execute(
-                    """
-                    INSERT INTO public.civic_case_evidence_refs
-                    (case_id, evidence_id, relationship, created_at)
-                    VALUES (%s, %s, 'supporting', now())
-                    """,
-                    (case_id, evidence_id),
-                )
-                cursor.execute(
-                    """
-                    INSERT INTO public.civic_case_document_refs
-                    (case_id, document_id, relationship, created_at)
-                    VALUES (%s, %s, 'draft', now())
-                    """,
-                    (case_id, document_id),
                 )
                 cursor.execute(
                     """
