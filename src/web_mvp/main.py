@@ -21,7 +21,7 @@ app, rt = fast_app(
 
 @rt("/")
 def get():
-    """Renders the main layout interface dashboard of the Janavani Web MVP platform."""
+    """Render the first-class Janavani WebApp citizen interface."""
     return Titled("🇮🇳 Janavani — Citizen Action Hub",
         Container(
             Div(
