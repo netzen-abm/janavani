@@ -10,7 +10,16 @@ from dataclasses import dataclass
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.submission import SubmissionTransport
-from src.platform.composition import (\n    create_authority_repository,\n    create_case_repository,\n    create_evidence_repository,
+from src.capabilities.authority import AuthorityCapability
+from src.capabilities.evidence import EvidenceCapability
+from src.capabilities.consent import ConsentCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.platform.composition import (
+    create_authority_capability,
+    create_consent_capability,
+    create_authority_repository,
+    create_case_repository,
+    create_evidence_repository,
     create_civic_action_vertical_slice,
     create_consent_repository,
     create_document_review_repository_for_platform,
@@ -38,6 +47,10 @@ class WebCivicActionComposition:
     consent_repository: ConsentRepository
     document_review_repository: DocumentReviewRepository
     case_capability: CivicCaseCapability
+    authority_capability: AuthorityCapability
+    evidence_capability: EvidenceCapability
+    consent_capability: ConsentCapability
+    document_review_capability: DocumentReviewCapability
     civic_action: CivicActionVerticalSlice
 
 
@@ -60,7 +73,11 @@ def create_web_civic_action_composition(
     still be injected explicitly when a deployment has completed its
     persistence and migration readiness work.
     """
-    composition = provider_composition or create_provider_composition()\n    case_repository = case_repository or create_case_repository(provider_composition=composition)\n    authority_repository = authority_repository or create_authority_repository(provider_composition=composition)\n    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=composition)\n    consent_repo = consent_repository or create_consent_repository(
+    composition = provider_composition or create_provider_composition()
+    case_repository = case_repository or create_case_repository(provider_composition=composition)
+    authority_repository = authority_repository or create_authority_repository(provider_composition=composition)
+    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=composition)
+    consent_repo = consent_repository or create_consent_repository(
         provider_composition=composition
     )
     review_repo = document_review_repository or create_document_review_repository_for_platform(
@@ -83,5 +100,9 @@ def create_web_civic_action_composition(
         consent_repository=consent_repo,
         document_review_repository=review_repo,
         case_capability=civic_action._deps.case_capability,
+        authority_capability=civic_action._deps.external_channel_capability and create_authority_capability(authority_repository),
+        evidence_capability=civic_action._deps.evidence_capability,
+        consent_capability=civic_action._deps.case_capability and create_consent_capability(consent_repository=consent_repo, case_capability=civic_action._deps.case_capability),
+        document_review_capability=civic_action._deps.document_review_capability,
         civic_action=civic_action,
     )
