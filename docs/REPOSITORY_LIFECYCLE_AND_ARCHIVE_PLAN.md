@@ -32,6 +32,10 @@ RUN REGRESSION
 
 **Deletion is not the default.** Archive first; delete only after an explicit retention decision.
 
+## 2026-09-21 structural convergence update
+
+The content-first verification gate has now been applied to the legacy generation roots and orphaned placeholder modules. `janavani_v2/` and `janavani_v3/` were inspected before being copied to `archive/generations/` and removed from their root locations. Empty `src/domain/` and `src/models/` placeholders plus orphaned `src/engine/` and `src/workflow/` modules were inspected and quarantined under `archive/legacy/quarantined/`. `src/web_mvp/` was retained because an active test imports its canonical-API client. `src/services/` was intentionally not bulk-moved because it contains a mixture of active compatibility adapters and retired/transitional boundaries.
+
 ## Current repository findings
 
 The existing reconciliation audit describes the repository as structurally rich but architecturally divergent, with a root implementation plus `janavani_v2` and `janavani_v3` parallel workspaces. It specifically recommends controlled convergence and says not to delete those workspaces until references, runtime, tests, deployment and canonical ownership are established. citeturn857file0
