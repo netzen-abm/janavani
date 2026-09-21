@@ -35,7 +35,7 @@ async def handle_preview(
     case_id = str(session.get("case_id") or "")
 
     try:
-        capability = CivicCaseCapability(context.bot_data["case_repository"])
+        capability = context.application.bot_data.get("civic_case_capability")\n        if capability is None:\n            raise RuntimeError("Canonical Telegram Case capability was not composed")
         preview_text = build_case_preview(
             capability=capability,
             case_id=case_id,
