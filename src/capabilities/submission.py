@@ -80,6 +80,10 @@ class SubmissionCapability:
     def _acknowledge(self, **kwargs):
         return self._state.acknowledge(**kwargs)
 
+    def _begin_submission_atomically(self, **kwargs):
+        """Persist the submission reservation and Case transition as one mutation."""
+        return self._state.atomic_mutation(**kwargs)
+
     def _consequential_submission_decision(self, **kwargs):
         return self._security.decision(**kwargs)
 
