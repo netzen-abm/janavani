@@ -54,3 +54,14 @@ Search results can retain historical/indexed references temporarily; those are d
 ## Next structural gate
 
 Do not bulk-move `src/services/`, `src/web/`, deployment files, or documentation until their active consumers and ownership are individually verified.
+
+## Security boundary extraction from historical branch
+
+The security/auth-boundary-hardening branch was reviewed at file-content level before extraction. Its duplicate authorization-policy implementation was not adopted because src/access/authorization.py and related canonical access modules already provide the active authorization kernel. The following narrowly scoped, provider-neutral controls were not present on main and were therefore reimplemented under canonical ownership:
+
+- src/identity/session.py — opaque bearer session lifecycle; only token hashes are retained.
+- src/core/interface_credentials.py — runtime-only service/interface credentials.
+- src/security/abuse_control.py — bounded capability-scoped abuse/rate control.
+- src/security/input_policy.py — explicit shared input bounds.
+
+Dedicated negative/positive tests were added for each boundary. This is selective migration, not a branch merge, and avoids creating a second authorization system.
