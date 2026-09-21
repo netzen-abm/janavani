@@ -25,6 +25,12 @@ Janavani maintains exactly nine active development branch roles:
 - A branch is retired only after its useful delta is verified on `main` and the branch ref is actually deleted.
 - WebApp and Telegram must consume shared capability/provider infrastructure; surface-specific branches must not introduce duplicate domain implementations.
 
+## Enforcement status
+
+The nine names above are the only authorized active development roles. CI enforcement rejects work from unapproved branch names. Historical refs outside this set are retirement candidates and must receive no new development.
+
+Physical ref deletion remains an operational prerequisite for declaring the repository at exactly nine physical branches; the connected GitHub mutation surface currently exposes no branch-delete operation, so no ref is force-moved or falsely treated as deleted.
+
 ## Current cleanup status
 
 The repository currently contains historical refs beyond the nine active roles. The connected GitHub automation used for repository maintenance does not expose a branch-ref deletion mutation. Until an authorized ref-deletion capability is available, those refs must be treated as frozen historical evidence and must not receive new development.
