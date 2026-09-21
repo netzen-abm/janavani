@@ -19,7 +19,7 @@ jobs:
         run: |
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
-            main|develop/v0.2|integration/canonical-platform|integration/case-main-prep|integration/telegram-consent-convergence-main-v2|feat/product-vertical-slice-convergence|feat/webapp-authority-evidence-vertical-slice|test/authorization-negative-matrix-2026-09|security/auth-boundary-hardening)
+            main|integration/canonical-platform|feat/canonical-case-kernel|feat/canonical-capability-execution-envelope|feat/canonical-civic-action-vertical-slice|feat/canonical-sos-contract|feat/capability-scoped-consent-agent-enforcement|audit/postgres-provider-production-gates|chore/ecosystem-shared-capability-infrastructure)
               echo "Allowed branch role: $branch"
               ;;
             *)
@@ -78,6 +78,9 @@ jobs:
 
       - name: Python syntax check
         run: python -m compileall -q src
+
+      - name: Enforce active-source 180-line ceiling
+        run: python scripts/check_code_line_limits.py --limit 180
 
       - name: Dependency integrity check
         run: python -m pip check
