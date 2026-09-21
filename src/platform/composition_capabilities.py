@@ -63,7 +63,7 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
                                        obligation_records: dict[str, list[dict[str, object]]] | None = None,
                                        external_channel_capability: ExternalChannelCapability | None = None,
                                        follow_up_capability: FollowUpCapability | None = None, escalation_capability: EscalationCapability | None = None,
-                                       provider_composition: ProviderComposition | None = None) -> CivicActionVerticalSlice:
+                                       provider_composition: ProviderComposition | None = None,\n                                       submission_case_transaction_repository: SubmissionCaseTransactionRepository | None = None) -> CivicActionVerticalSlice:
     composition = provider_composition or create_provider_composition()
     case_capability = case_capability or create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -74,7 +74,7 @@ def create_civic_action_vertical_slice(*, case_repository: CivicCaseRepository, 
     review_repository = document_review_repository or create_document_review_repository_for_platform(provider_composition=composition)
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     submission_repo = submission_repository or create_submission_repository(provider_composition=composition)
-    submission_capability = SubmissionCapability(case_capability, consent_repository, submission_transport, submission_repository=submission_repo)
+    atomic_submission = submission_case_transaction_repository\n    if atomic_submission is None and composition.provider_for("submission") == "postgres":\n        from src.storage.repositories.postgres_submission_case_transaction import PostgresSubmissionCaseTransactionRepository\n        import os\n        dsn = os.getenv("JANAVANI_POSTGRES_DSN")\n        if not dsn:\n            raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL submission transactions")\n        atomic_submission = PostgresSubmissionCaseTransactionRepository(dsn=dsn)\n    submission_capability = SubmissionCapability(case_capability, consent_repository, submission_transport, submission_repository=submission_repo, submission_case_transaction_repository=atomic_submission)
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
     return CivicActionVerticalSlice(CivicActionVerticalSliceDependencies(
