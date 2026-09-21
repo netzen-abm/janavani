@@ -15,6 +15,8 @@ from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.submission import SubmissionTransport
+from src.platform.composition_capabilities import create_civic_action_vertical_slice
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
@@ -33,6 +35,14 @@ from src.platform.composition_capabilities import (
 
 
 @dataclass(frozen=True)
+class FailClosedSubmissionTransport(SubmissionTransport):
+    """Shared default transport that prevents unconfigured external delivery."""
+
+    def send(self, *, case, document_id: str, destination_ref: str):
+        raise RuntimeError("Submission transport is not configured; no external delivery was attempted")
+
+
+@dataclass(frozen=True)
 class SurfaceCaseComposition:
     """Canonical shared Case dependency graph consumed by access surfaces."""
 
@@ -48,6 +58,7 @@ class SurfaceCaseComposition:
     identity_link_repository: ExternalIdentityLinkRepository
     provider_composition: object
     document_review_capability: DocumentReviewCapability
+    civic_action_vertical_slice: object
 
 
 def create_surface_case_composition(
@@ -99,6 +110,16 @@ def create_surface_case_composition(
         case_capability=case_capability,
     )
 
+    civic_action_vertical_slice = create_civic_action_vertical_slice(
+        case_repository=case_repository,
+        authority_repository=authority_repository,
+        consent_repository=consent_repository,
+        submission_transport=FailClosedSubmissionTransport(),
+        evidence_repository=evidence_repository,
+        document_review_repository=review_repository,
+        provider_composition=provider_composition,
+    )
+
     return SurfaceCaseComposition(
         case_repository=case_repository,
         authority_repository=authority_repository,
@@ -112,4 +133,5 @@ def create_surface_case_composition(
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
         document_review_capability=document_review_capability,
+        civic_action_vertical_slice=civic_action_vertical_slice,
     )
