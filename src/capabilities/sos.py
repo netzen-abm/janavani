@@ -1,36 +1,21 @@
-"""Canonical SOS capability orchestration boundary.
-
-The capability coordinates authorization, the canonical safety/privacy gate,
-and provider-neutral delivery adapters. It does not implement transport or
-create a competing policy/approval engine.
-"""
+"""Canonical SOS capability orchestration boundary."""
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
-
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.capabilities.safety_privacy import (
-    AccessPurpose,
-    SafetyPrivacyDecision,
-    SafetyPrivacyRequest,
-    SensitiveResource,
+    AccessPurpose, SafetyPrivacyDecision, SafetyPrivacyRequest, SensitiveResource,
     evaluate_safety_privacy,
 )
 from src.core.execution import SideEffectClass
 from src.core.sos import (
-    DeliveryRequest,
-    DeliveryResult,
-    SOSDeliveryAdapter,
-    SOSDeliveryState,
-    SOSRequest,
-    TransportKind,
+    DeliveryRequest, DeliveryResult, SOSDeliveryAdapter, SOSDeliveryState,
+    SOSRequest, TransportKind,
 )
 from src.identity.context import IdentityContext
 
 CAPABILITY_ID = "sos:trigger"
-
 
 @dataclass(frozen=True)
 class SOSResult:
@@ -38,103 +23,84 @@ class SOSResult:
     state: SOSDeliveryState
     deliveries: tuple[DeliveryResult, ...] = ()
 
-
 class CanonicalSOSSafetyPrivacyGate:
-    """Adapt the canonical Safety/Privacy boundary to the SOS decision contract."""
-
-    def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> SafetyPrivacyDecision:
+    """Adapt the canonical Safety/Privacy boundary to SOS decisions."""
+    def evaluate(self, request: SOSRequest, *, identity: IdentityContext):
         purpose = AccessPurpose.SOS_TRANSMISSION if request.remote_transmission else AccessPurpose.SOS
-        result = evaluate_safety_privacy(
-            SafetyPrivacyRequest(
-                identity=identity,
-                purpose=purpose,
-                resource=SensitiveResource.FILES if request.evidence_refs else None,
-                capability=CAPABILITY_ID,
-                explicit_user_choice=request.explicit_user_choice,
-                remote_transmission=request.remote_transmission,
-                consequential_action=request.consequential_action,
-                execution_context=request.execution_context,
-                explicit_user_approval=request.explicit_user_approval,
-            )
-        )
-        return result.decision
-
+        return evaluate_safety_privacy(SafetyPrivacyRequest(
+            identity=identity, purpose=purpose,
+            resource=SensitiveResource.FILES if request.evidence_refs else None,
+            capability=CAPABILITY_ID, explicit_user_choice=request.explicit_user_choice,
+            remote_transmission=request.remote_transmission,
+            consequential_action=request.consequential_action,
+            execution_context=request.execution_context,
+            explicit_user_approval=request.explicit_user_approval,
+        )).decision
 
 class SOSCapability:
     """Surface-independent SOS orchestration."""
-
-    def __init__(self, *, decision_gate=None, delivery_adapters: tuple[SOSDeliveryAdapter, ...] = ()) -> None:
+    def __init__(self, *, decision_gate=None, delivery_adapters=()):
         self._decision_gate = decision_gate or CanonicalSOSSafetyPrivacyGate()
-        self._adapters = {adapter.transport_kind: adapter for adapter in delivery_adapters}
+        self._adapters = {a.transport_kind: a for a in delivery_adapters}
 
     def trigger(self, request: SOSRequest, *, identity: IdentityContext) -> SOSResult:
-        """Authorize and execute an SOS request without claiming unverified delivery."""
         self._validate_request(request, identity=identity)
-
-        if not request.consequential_action:
-            decision = authorize(AuthorizationRequest(
-                context=identity,
-                capability=CAPABILITY_ID,
-                action="sos:trigger",
-                resource_id=request.sos_id,
-            ))
-            if decision is AuthorizationDecision.DENY:
-                raise PermissionError("Identity is not authorized to trigger SOS")
-            if decision is AuthorizationDecision.REQUIRE_APPROVAL:
-                raise PermissionError("SOS action requires approval")
-
-        policy_outcome = self._decision_gate.evaluate(request, identity=identity)
-        if policy_outcome is not SafetyPrivacyDecision.ALLOW and policy_outcome != "ALLOW":
-            raise PermissionError(f"SOS safety/privacy decision is {policy_outcome}")
-
+        self._authorize(request, identity)
+        self._check_safety(request, identity)
         if not request.remote_transmission or not request.destination_refs:
-            return SOSResult(sos_id=request.sos_id, state=SOSDeliveryState.LOCAL_ONLY)
+            return SOSResult(request.sos_id, SOSDeliveryState.LOCAL_ONLY)
+        return self._deliver(request)
 
-        payload_ref = self._payload_ref(request)
-        deliveries: list[DeliveryResult] = []
+    @staticmethod
+    def _authorize(request, identity):
+        if request.consequential_action:
+            return
+        decision = authorize(AuthorizationRequest(
+            context=identity, capability=CAPABILITY_ID, action=CAPABILITY_ID,
+            resource_id=request.sos_id,
+        ))
+        if decision is AuthorizationDecision.DENY:
+            raise PermissionError("Identity is not authorized to trigger SOS")
+        if decision is AuthorizationDecision.REQUIRE_APPROVAL:
+            raise PermissionError("SOS action requires approval")
+
+    def _check_safety(self, request, identity):
+        decision = self._decision_gate.evaluate(request, identity=identity)
+        if decision is not SafetyPrivacyDecision.ALLOW and decision != "ALLOW":
+            raise PermissionError(f"SOS safety/privacy decision is {decision}")
+
+    def _deliver(self, request):
         now = datetime.now(timezone.utc).isoformat()
+        payload_ref = self._payload_ref(request)
+        deliveries = []
         for index, destination_ref in enumerate(request.destination_refs):
             adapter = self._select_adapter(request, index)
+            delivery_id = f"delivery-{request.sos_id}-{index}"
             if adapter is None:
                 deliveries.append(DeliveryResult(
-                    delivery_id=f"delivery-{request.sos_id}-{index}",
-                    transport_kind=TransportKind.OTHER,
-                    state=SOSDeliveryState.UNKNOWN,
-                    attempted_at=now,
+                    delivery_id=delivery_id, transport_kind=TransportKind.OTHER,
+                    state=SOSDeliveryState.UNKNOWN, attempted_at=now,
                     error_code="NO_ELIGIBLE_TRANSPORT",
                 ))
                 continue
-            delivery_request = DeliveryRequest(
-                delivery_id=f"delivery-{request.sos_id}-{index}",
-                sos_id=request.sos_id,
-                destination_ref=destination_ref,
-                payload_ref=payload_ref,
-                transport_kind=adapter.transport_kind,
-                requested_at=now,
-            )
             try:
-                deliveries.append(adapter.deliver(delivery_request))
+                deliveries.append(adapter.deliver(DeliveryRequest(
+                    delivery_id=delivery_id, sos_id=request.sos_id,
+                    destination_ref=destination_ref, payload_ref=payload_ref,
+                    transport_kind=adapter.transport_kind, requested_at=now,
+                )))
             except Exception:
                 deliveries.append(DeliveryResult(
-                    delivery_id=delivery_request.delivery_id,
-                    transport_kind=adapter.transport_kind,
-                    state=SOSDeliveryState.FAILED,
-                    attempted_at=now,
+                    delivery_id=delivery_id, transport_kind=adapter.transport_kind,
+                    state=SOSDeliveryState.FAILED, attempted_at=now,
                     error_code="TRANSPORT_EXCEPTION",
                 ))
-
-        return SOSResult(
-            sos_id=request.sos_id,
-            state=self._aggregate_state(deliveries),
-            deliveries=tuple(deliveries),
-        )
+        return SOSResult(request.sos_id, self._aggregate_state(deliveries), tuple(deliveries))
 
     @staticmethod
-    def _validate_request(request: SOSRequest, *, identity: IdentityContext) -> None:
-        if not request.sos_id.strip():
-            raise ValueError("sos_id is required")
-        if not request.incident_context.strip():
-            raise ValueError("incident_context is required")
+    def _validate_request(request, *, identity):
+        if not request.sos_id.strip() or not request.incident_context.strip():
+            raise ValueError("sos_id and incident_context are required")
         if not request.explicit_user_choice:
             raise PermissionError("Explicit user choice is required")
         if request.remote_transmission and not request.destination_refs:
@@ -145,45 +111,33 @@ class SOSCapability:
         if request.consequential_action:
             if context is None:
                 raise ValueError("Consequential SOS requires a CapabilityExecutionContext")
-            if context.capability_id != CAPABILITY_ID or context.action != "sos:trigger":
+            if context.capability_id != CAPABILITY_ID or context.action != CAPABILITY_ID:
                 raise ValueError("SOS execution context does not match capability")
             if context.resource_id not in {None, request.sos_id}:
                 raise ValueError("SOS execution context resource does not match request")
             if context.side_effect_class is not SideEffectClass.EXTERNAL_SIDE_EFFECT:
                 raise ValueError("Consequential SOS requires an external side-effect context")
 
-    def _select_adapter(self, request: SOSRequest, index: int) -> SOSDeliveryAdapter | None:
-        """Select only a transport explicitly requested by the caller, when constrained."""
+    def _select_adapter(self, request, index):
         if request.requested_transport_kinds:
-            for kind in request.requested_transport_kinds:
-                adapter = self._adapters.get(kind)
-                if adapter is not None:
-                    return adapter
-            return None
+            return next((self._adapters[k] for k in request.requested_transport_kinds if k in self._adapters), None)
         if not self._adapters:
             return None
         return tuple(self._adapters.values())[index % len(self._adapters)]
 
     @staticmethod
-    def _payload_ref(request: SOSRequest) -> str:
+    def _payload_ref(request):
         material = "|".join((request.sos_id, request.incident_context, *request.evidence_refs))
         return f"sos-payload-{sha256(material.encode()).hexdigest()[:32]}"
 
     @staticmethod
-    def _aggregate_state(deliveries: list[DeliveryResult]) -> SOSDeliveryState:
+    def _aggregate_state(deliveries):
         if not deliveries:
             return SOSDeliveryState.UNKNOWN
-        states = {delivery.state for delivery in deliveries}
-        if SOSDeliveryState.ACKNOWLEDGED in states:
-            return SOSDeliveryState.ACKNOWLEDGED
-        if SOSDeliveryState.DELIVERED in states:
-            return SOSDeliveryState.DELIVERED
-        if SOSDeliveryState.ACCEPTED in states:
-            return SOSDeliveryState.ACCEPTED
-        if SOSDeliveryState.TRANSMITTING in states:
-            return SOSDeliveryState.TRANSMITTING
-        if SOSDeliveryState.QUEUED in states:
-            return SOSDeliveryState.QUEUED
-        if states == {SOSDeliveryState.FAILED}:
-            return SOSDeliveryState.FAILED
-        return SOSDeliveryState.UNKNOWN
+        states = {d.state for d in deliveries}
+        for state in (SOSDeliveryState.ACKNOWLEDGED, SOSDeliveryState.DELIVERED,
+                      SOSDeliveryState.ACCEPTED, SOSDeliveryState.TRANSMITTING,
+                      SOSDeliveryState.QUEUED):
+            if state in states:
+                return state
+        return SOSDeliveryState.FAILED if states == {SOSDeliveryState.FAILED} else SOSDeliveryState.UNKNOWN
