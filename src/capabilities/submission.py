@@ -25,7 +25,10 @@ from src.delivery.contract import (
     DeliveryTransportError,
 )
 from src.identity.context import IdentityContext
-from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
+from src.storage.repositories.submission_case_transaction import (
+    SubmissionCaseConcurrencyError,
+    SubmissionCaseTransactionRepository,
+)
 
 CAPABILITY_ID = "case:submit"
 CONSENT_PURPOSE = "case_submission"
@@ -127,7 +130,7 @@ class SubmissionCapability:
     def _atomic_case_mutation(self, *, submission: SubmissionRecord, expected_submission_version: int,
                               case: CivicCase, expected_case_version: int, action: str,
                               identity: IdentityContext, source_channel: str | None,
-                              source_ref: str | None = None, notes: str | None = None) -> None:
+                              source_ref: str | None = None, notes: str | None = None):
         if self._atomic is None:
             raise RuntimeError("Atomic Submission-Case repository is required")
         now = self._now()
@@ -151,10 +154,15 @@ class SubmissionCapability:
                                    source_ref=source_ref, notes=notes)
         else:
             raise ValueError(f"Unsupported atomic Submission-Case action: {action}")
-        self._atomic.persist_mutation(submission=submission, expected_submission_version=expected_submission_version,
-                                      case=projection, expected_case_version=expected_case_version, event=event,
-                                      idempotency_key=event_id)
+        result = self._atomic.persist_mutation(submission=submission, expected_submission_version=expected_submission_version,
+                                               case=projection, expected_case_version=expected_case_version, event=event,
+                                               idempotency_key=event_id)
+        # Never perform a consequential external action from a replayed lifecycle
+        # reservation. The transaction repository serializes the reservation.
+        if result.idempotent_replay:
+            raise SubmissionCaseConcurrencyError("Submission lifecycle reservation is already committed")
         self._synchronize_case_projection(case, projection)
+        return result
 
     def _acknowledge(self, *, case: CivicCase, submission: SubmissionRecord, evidence_id: str,
                      identity: IdentityContext, source_channel: str | None, notes: str | None,
@@ -229,10 +237,22 @@ class SubmissionCapability:
             submission = self._submissions.get_by_idempotency_key(key)
             replay = submission is not None
             if submission is None:
-                self._atomic_case_mutation(submission=replace(proposed, state="submitting"),
-                                           expected_submission_version=0, case=case,
-                                           expected_case_version=case.version, action="case:begin_submission",
-                                           identity=identity, source_channel=request.source_channel)
+                reservation = self._atomic_case_mutation(
+                    submission=replace(proposed, state="submitting"),
+                    expected_submission_version=0, case=case,
+                    expected_case_version=case.version, action="case:begin_submission",
+                    identity=identity, source_channel=request.source_channel,
+                )
+                if reservation.idempotent_replay:
+                    existing = self._submissions.get_by_idempotency_key(key)
+                    if existing is None:
+                        raise SubmissionCaseConcurrencyError("Idempotent submission reservation is missing")
+                    if existing.state in {"submitted", "acknowledged"}:
+                        final_case = self._cases.get_owned(request.case_id, identity=identity)
+                        if final_case is None:
+                            raise LookupError("Case not found after idempotent replay")
+                        return CivicCaseResult(final_case, AuthorizationDecision.ALLOW)
+                    raise RuntimeError("Submission is already reserved by another operation")
                 submission = replace(proposed, state="submitting")
             elif submission.state in {"submitted", "acknowledged"}:
                 final_case = self._cases.get_owned(request.case_id, identity=identity)
