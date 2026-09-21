@@ -46,7 +46,7 @@ WebApp responsibilities:
 - never implementing its own Case persistence;
 - never implementing its own authorization rules.
 
-The thin adapter is `src/webapp/services/api_client.py`.
+The thin adapter is `src/web_mvp/services/api_client.py`.
 
 Identity is carried as a verified assertion and is consumed by the canonical HTTP identity boundary.
 
