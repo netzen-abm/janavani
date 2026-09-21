@@ -1,1 +1,1 @@
-"""Web MVP adapter services."""
+"""First-class WebApp adapter services."""
