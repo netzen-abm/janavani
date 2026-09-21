@@ -433,7 +433,7 @@ The current main architecture has already converged the historical concepts into
 
 `Identity → Authorization → Consent → Safety/Privacy → Execution Context → Capability → Provider → Truthful Result`
 
-This is the reusable ecosystem security kernel. Future health, wellness, nutrition, research and other applications should consume these contracts rather than create domain-specific authorization/consent engines.
+This is the reusable ecosystem security kernel. Future applications should consume these contracts rather than create parallel authorization/consent engines.
 
 ### Branch disposition
 
