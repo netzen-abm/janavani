@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 permissions:
@@ -20,13 +20,26 @@ jobs:
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
             main|develop/v0.2|integration/canonical-platform|integration/case-main-prep|integration/telegram-consent-convergence-main-v2|feat/product-vertical-slice-convergence|feat/webapp-authority-evidence-vertical-slice|test/authorization-negative-matrix-2026-09|security/auth-boundary-hardening)
-              echo "Allowed branch: $branch"
+              echo "Allowed branch role: $branch"
               ;;
             *)
               echo "::error::Janavani branch budget violation: '$branch' is outside the nine approved branch roles."
               exit 1
               ;;
           esac
+
+      - name: Enforce physical branch budget on canonical line
+        if: github.ref_name == 'main' && github.event_name == 'push'
+        run: |
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | sed '/^$/d' | sort)
+          count="${#branches[@]}"
+          echo "Observed remote branch refs: $count"
+          printf '%s\n' "${branches[@]}"
+          if [ "$count" -ne 9 ]; then
+            echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
+            exit 1
+          fi
 
   test:
     runs-on: ubuntu-latest
