@@ -1,0 +1,23 @@
+# Dev docker-compose with optional services for decentralized integrations
+# Use this for local testing only. Keep the main docker-compose.yml intact.
+
+version: '3.7'
+services:
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    container_name: janavani_ipfs
+    ports:
+      - "5001:5001"   # API
+      - "8080:8080"   # Gateway
+    volumes:
+      - ipfs_data:/data/ipfs
+
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    container_name: janavani_ganache
+    command: ["-h", "0.0.0.0", "-p", "8545", "--mnemonic", "test test test test test test test test test test test junk"]
+    ports:
+      - "8545:8545"
+
+volumes:
+  ipfs_data:
