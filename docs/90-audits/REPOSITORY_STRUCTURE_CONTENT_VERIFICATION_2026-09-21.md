@@ -65,3 +65,9 @@ The security/auth-boundary-hardening branch was reviewed at file-content level b
 - src/security/input_policy.py — explicit shared input bounds.
 
 Dedicated negative/positive tests were added for each boundary. This is selective migration, not a branch merge, and avoids creating a second authorization system.
+
+## Case-migration convergence
+
+`src/services/case_migration.py` was inspected before retirement. Its callers had already migrated away: repository search found no active caller of `session_to_civic_case` or `persist_generated_complaint`; the remaining `record_submission_consent` reference is superseded by the canonical `ConsentCapability` path used by the Telegram consent step. The legacy implementation and its test were preserved under `archive/legacy/services/` and `archive/legacy/tests/` before the active files were removed. The active runtime therefore no longer owns Case lifecycle or consent through the legacy service layer.
+
+`src/services/emergency_sos.py` remains retained because current executable tests still import it and the SOS migration matrix identifies cache deletion, token revocation and Nostr notification as separate unresolved ownership decisions. It is not safe to retire yet.
