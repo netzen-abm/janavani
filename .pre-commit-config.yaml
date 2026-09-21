@@ -1,6 +1,6 @@
 # Local security enforcement matrix. Prevents commits if validation constraints fail.
 repos:
-  - repo: https://github.com
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: check-yaml
@@ -12,7 +12,7 @@ repos:
       - id: check-added-large-files
         name: Block Accidental Binary Blobs Ingestion
 
-  - repo: https://github.com
+  - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.2
     hooks:
       - id: gitleaks
