@@ -131,3 +131,72 @@ def test_web_and_telegram_share_all_injected_provider_repositories():
     assert web.evidence_capability is not telegram.evidence_capability
     assert web.consent_capability is not telegram.consent_capability
     assert web.civic_action_capability is not telegram.civic_action_capability
+
+
+def test_cross_surface_case_evidence_and_consent_converge_on_shared_provider_state():
+    from src.capabilities.civic_case import CAPABILITY_ID, CivicCaseCreateRequest
+    from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+    from src.core.civic_case import CaseType
+    from src.core.evidence import EvidenceObject, EvidenceSource
+    from src.identity.context import IdentityContext
+    from src.identity.principal import IdentityMode, Principal
+    from src.platform.composition import create_provider_composition
+
+    providers = create_provider_composition()
+    telegram = create_surface_case_composition(provider_composition=providers)
+    web = create_surface_case_composition(provider_composition=providers)
+
+    citizen_a = IdentityContext(principal=Principal(
+        principal_id="citizen:vertical-a", identity_mode=IdentityMode.AUTHENTICATED,
+        interface="telegram", capabilities=frozenset({CAPABILITY_ID}),
+    ))
+    citizen_a_web = IdentityContext(principal=Principal(
+        principal_id="citizen:vertical-a", identity_mode=IdentityMode.AUTHENTICATED,
+        interface="webapp", capabilities=frozenset({CAPABILITY_ID}),
+    ))
+    citizen_b = IdentityContext(principal=Principal(
+        principal_id="citizen:vertical-b", identity_mode=IdentityMode.AUTHENTICATED,
+        interface="webapp", capabilities=frozenset({CAPABILITY_ID}),
+    ))
+
+    created = telegram.case_capability.create(CivicCaseCreateRequest(
+        case_type=CaseType.COMPLAINT,
+        subject="Shared evidence and consent",
+        narrative="Cross-surface state must converge without crossing ownership.",
+    ), identity=citizen_a, source_channel="telegram")
+    case_id = created.case.case_id
+
+    web.evidence_repository.save(EvidenceObject(
+        evidence_id="evidence:shared-vertical",
+        evidence_type="photo",
+        storage_ref="local://shared-vertical",
+        sha256="b" * 64,
+        received_at="2026-09-21T00:00:00Z",
+        provenance=(EvidenceSource(source_id="capture:shared", source_type="citizen"),),
+    ))
+    attached = web.evidence_capability.attach(
+        case_id, "evidence:shared-vertical", identity=citizen_a_web, source_channel="webapp"
+    )
+    assert "evidence:shared-vertical" in attached.case.evidence_refs
+
+    telegram_view = telegram.case_capability.get_owned(case_id, identity=citizen_a)
+    assert telegram_view is not None
+    assert "evidence:shared-vertical" in telegram_view.evidence_refs
+    assert web.case_capability.get_owned(case_id, identity=citizen_b) is None
+
+    web.consent_repository.save(Consent(
+        consent_id="consent:shared-vertical",
+        subject_id="citizen:vertical-a",
+        purpose="case_submission",
+        scope=("case_submission",),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-09-21T00:01:00Z",
+    ))
+    consented = web.case_capability.add_consent(
+        case_id, "consent:shared-vertical", identity=citizen_a_web,
+    )
+    assert "consent:shared-vertical" in consented.case.consent_refs
+    assert "consent:shared-vertical" in telegram.case_capability.get_owned(
+        case_id, identity=citizen_a
+    ).consent_refs
