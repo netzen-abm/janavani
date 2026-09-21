@@ -44,6 +44,7 @@ class SurfaceCaseComposition:
     consent_capability: ConsentCapability
     civic_action_capability: CivicActionCapability
     identity_link_repository: ExternalIdentityLinkRepository
+    provider_composition: object
 
 
 def create_surface_case_composition(
@@ -104,4 +105,5 @@ def create_surface_case_composition(
         consent_capability=consent_capability,
         civic_action_capability=civic_action_capability,
         identity_link_repository=identity_link_repository,
+        provider_composition=provider_composition,
     )
