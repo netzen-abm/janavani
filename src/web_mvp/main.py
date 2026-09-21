@@ -58,29 +58,7 @@ def post(citizen_input: str):
             Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
         )
         
-    doc = result.get("document", {})
-    facts_list = Ul(*[Li(f) for f in doc.get("factual_points", [])])
-    prayers_list = Ul(*[Li(p) for p in doc.get("specific_prayers_or_requests", [])])
-    
-    return Container(
-        Div(
-            H2("📄 Generated Legal Framework Draft Summary"),
-            P(f"**Tracking ID:** {result.get('tracking_id')} (Valid for 30 minutes in transient memory)"),
-            Hr(),
-            H4("Subject Heading Line:"),
-            P(I(doc.get("subject_line"))),
-            H4("Identified Authority:"),
-            P(doc.get("suggested_ministry_or_department")),
-            H4("Parsed Factual Disclosures:"),
-            facts_list,
-            H4("Constitutional or Regulatory Foundations:"),
-            P(", ".join(doc.get("legal_or_policy_basis", []))),
-            H4("Specific Remedial Demands:"),
-            prayers_list,
-            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
-            cls="card"
-        )
-    )
+    return Container(\n        Div(\n            H2("📁 Civic Case Created"),\n            P(f"Case ID: {result.get('case_id')}"),\n            P(f"Status: {result.get('status')}"),\n            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),\n            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),\n            cls="card",\n        )\n    )
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
