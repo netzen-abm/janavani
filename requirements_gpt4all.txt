@@ -1,3 +1,0 @@
-# Additional requirements for GPT4All
-
-gpt4all
