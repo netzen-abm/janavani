@@ -94,3 +94,8 @@ The CI branch-budget gate now runs for pushes to every branch, not only `main`, 
 ## SOS legacy retirement verification
 
 The legacy `src/services/emergency_sos.py` and its direct Redis test were archived before deletion. Canonical SOS already owns provider-neutral delivery and safety/privacy orchestration. Explicit transient-data destruction and credential/session revocation protocols are now defined in `src/core/sos.py`, with the storage/session implementations and dedicated security-contract tests. The legacy service is no longer an active runtime owner.
+
+
+## Additional service convergence — 2026-09-21
+
+The legacy `src/services/document_service.py` was verified at 31 lines. Exact symbol/import search found no active runtime caller; only its dedicated fail-closed legacy test imported it. The service and test were archived before retirement. Canonical document generation remains owned by the shared civic-action capability.
