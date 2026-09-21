@@ -32,6 +32,26 @@ janavani/
 └── ROADMAP.md
 ```
 
+## 2A. Current canonical source layout (2026-09-21)
+
+```text
+src/
+├── platform/       # shared ecosystem composition/runtime
+├── identity/       # canonical identity and external linking
+├── access/         # authorization, consent and consequential-operation gates
+├── capabilities/   # canonical capability contracts and orchestration
+├── core/           # stable domain primitives and execution context
+├── storage/        # provider composition, repositories and UoW
+├── documents/      # document lifecycle and artifacts
+├── delivery/       # external delivery contracts
+├── adapters/       # surface/provider adapters
+├── web/            # canonical Web application adapter
+├── conversation/   # conversation runtime
+└── app/             # application bootstrap
+```
+
+Historical generations are retained under `archive/generations/`. Quarantined obsolete placeholders are retained under `archive/legacy/quarantined/`. `src/services/` remains a compatibility/transitional area and is being migrated capability-by-capability rather than moved wholesale.
+
 ## 3. Architectural flow
 
 ```text
