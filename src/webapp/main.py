@@ -113,4 +113,4 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("src.webapp.main:app", host="0.0.0.0", port=8080, reload=True)
