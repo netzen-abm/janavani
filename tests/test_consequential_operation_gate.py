@@ -5,6 +5,7 @@ from src.access.consequential import (
     gate_consequential_operation,
 )
 from src.access.consent import ConsentRequirement
+from src.access.scoped_execution_policy import ScopedExecutionPolicy, ScopedExecutionRequest
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.identity.context import IdentityContext
@@ -28,30 +29,40 @@ def _context(*, side_effect: SideEffectClass = SideEffectClass.EXTERNAL_SIDE_EFF
         request_id="req-1",
     )
     return identity, CapabilityExecutionContext.for_capability(
-        identity,
-        capability_id=CAPABILITY,
-        action=ACTION,
-        surface="web",
+        identity, capability_id=CAPABILITY, action=ACTION, surface="web",
         resource_id="case-1",
         idempotency_key="idem-1" if side_effect is SideEffectClass.EXTERNAL_SIDE_EFFECT else None,
         side_effect_class=side_effect,
     )
 
 
-def _request(*, approval=False, consent=None, side_effect=SideEffectClass.EXTERNAL_SIDE_EFFECT):
+def _request(*, approval=False, consent=None, side_effect=SideEffectClass.EXTERNAL_SIDE_EFFECT,
+             scoped_execution=None):
     identity, execution = _context(side_effect=side_effect)
     return ConsequentialOperationRequest(
         authorization=AuthorizationRequest(
-            context=identity,
-            capability=CAPABILITY,
-            action=ACTION,
-            resource_id="case-1",
-            requires_approval=approval,
-            execution_context=execution,
+            context=identity, capability=CAPABILITY, action=ACTION,
+            resource_id="case-1", requires_approval=approval, execution_context=execution,
         ),
-        execution_context=execution,
-        consent_requirement=consent,
-        explicit_user_approval=approval,
+        execution_context=execution, consent_requirement=consent,
+        explicit_user_approval=approval, scoped_execution=scoped_execution,
+    )
+
+
+def _scope(*, fields=frozenset({"case_text"}), provider="local",
+           processing_mode="deterministic", purpose="submit civic case"):
+    return ScopedExecutionRequest(
+        capability=CAPABILITY, purpose=purpose, requested_fields=fields,
+        provider=provider, processing_mode=processing_mode,
+    )
+
+
+def _policy():
+    return ScopedExecutionPolicy(
+        capability=CAPABILITY, allowed_fields=frozenset({"case_text"}),
+        allowed_providers=frozenset({"local"}),
+        allowed_processing_modes=frozenset({"deterministic"}),
+        allowed_purposes=frozenset({"submit civic case"}),
     )
 
 
@@ -59,15 +70,10 @@ def test_external_side_effect_requires_explicit_approval_when_policy_requires_it
     request = _request(approval=True)
     request = ConsequentialOperationRequest(
         authorization=AuthorizationRequest(
-            context=request.authorization.context,
-            capability=CAPABILITY,
-            action=ACTION,
-            resource_id="case-1",
-            requires_approval=True,
-            execution_context=request.execution_context,
+            context=request.authorization.context, capability=CAPABILITY, action=ACTION,
+            resource_id="case-1", requires_approval=True, execution_context=request.execution_context,
         ),
-        execution_context=request.execution_context,
-        explicit_user_approval=False,
+        execution_context=request.execution_context, explicit_user_approval=False,
     )
     assert gate_consequential_operation(request) is ConsequentialDecision.REQUIRE_APPROVAL
 
@@ -75,8 +81,7 @@ def test_external_side_effect_requires_explicit_approval_when_policy_requires_it
 def test_explicit_approval_allows_authorized_operation():
     request = _request(approval=True)
     request = ConsequentialOperationRequest(
-        authorization=request.authorization,
-        execution_context=request.execution_context,
+        authorization=request.authorization, execution_context=request.execution_context,
         explicit_user_approval=True,
     )
     assert gate_consequential_operation(request) is ConsequentialDecision.ALLOW
@@ -85,53 +90,61 @@ def test_explicit_approval_allows_authorized_operation():
 def test_missing_consent_fails_closed():
     requirement = ConsentRequirement("citizen-1", "case_submission", "submit")
     repository = InMemoryConsentRepository()
-    assert (
-        gate_consequential_operation(
-            _request(consent=requirement), consent_repository=repository
-        )
-        is ConsequentialDecision.CONSENT_REQUIRED
-    )
+    assert gate_consequential_operation(_request(consent=requirement),
+                                        consent_repository=repository) is ConsequentialDecision.CONSENT_REQUIRED
 
 
 def test_matching_consent_and_approval_allow():
     requirement = ConsentRequirement("citizen-1", "case_submission", "submit")
     repository = InMemoryConsentRepository()
-    repository.save(
-        Consent(
-            consent_id="consent-1",
-            subject_id="citizen-1",
-            purpose="case_submission",
-            scope=("submit",),
-            grant_type=ConsentGrantType.EXPLICIT,
-            status=ConsentStatus.GRANTED,
-            created_at="2026-09-11T00:00:00Z",
-        )
-    )
+    repository.save(Consent(
+        consent_id="consent-1", subject_id="citizen-1", purpose="case_submission",
+        scope=("submit",), grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED, created_at="2026-09-11T00:00:00Z",
+    ))
     request = _request(approval=True, consent=requirement)
     request = ConsequentialOperationRequest(
-        authorization=request.authorization,
-        execution_context=request.execution_context,
-        consent_requirement=requirement,
-        explicit_user_approval=True,
+        authorization=request.authorization, execution_context=request.execution_context,
+        consent_requirement=requirement, explicit_user_approval=True,
     )
-    assert (
-        gate_consequential_operation(request, consent_repository=repository)
-        is ConsequentialDecision.ALLOW
-    )
+    assert gate_consequential_operation(request, consent_repository=repository) is ConsequentialDecision.ALLOW
 
 
 def test_authorization_denial_wins_over_consent_and_approval():
     identity, execution = _context()
     request = ConsequentialOperationRequest(
         authorization=AuthorizationRequest(
-            context=identity,
-            capability="case:forbidden",
-            action=ACTION,
-            resource_id="case-1",
-            requires_approval=True,
-            execution_context=execution,
+            context=identity, capability="case:forbidden", action=ACTION,
+            resource_id="case-1", requires_approval=True, execution_context=execution,
         ),
-        execution_context=execution,
-        explicit_user_approval=True,
+        execution_context=execution, explicit_user_approval=True,
     )
     assert gate_consequential_operation(request) is ConsequentialDecision.DENY
+
+
+def test_scoped_execution_must_pass_before_consequential_operation():
+    request = _request(approval=True, scoped_execution=_scope())
+    assert gate_consequential_operation(
+        request, scoped_execution_policy=_policy()
+    ) is ConsequentialDecision.REQUIRE_APPROVAL
+
+
+def test_scoped_execution_field_escape_is_denied():
+    request = _request(approval=True, scoped_execution=_scope(fields=frozenset({"case_text", "phone"})))
+    assert gate_consequential_operation(
+        request, scoped_execution_policy=_policy()
+    ) is ConsequentialDecision.DENY
+
+
+def test_scoped_execution_provider_escape_is_denied():
+    request = _request(approval=True, scoped_execution=_scope(provider="external"))
+    assert gate_consequential_operation(
+        request, scoped_execution_policy=_policy()
+    ) is ConsequentialDecision.DENY
+
+
+def test_scoped_execution_requires_request_when_policy_is_configured():
+    request = _request(approval=True)
+    assert gate_consequential_operation(
+        request, scoped_execution_policy=_policy()
+    ) is ConsequentialDecision.DENY
