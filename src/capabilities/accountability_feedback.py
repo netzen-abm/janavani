@@ -54,3 +54,7 @@ class AccountabilityFeedbackCapability:
             source_channel=source_channel,
         )
         return self._repository.save(feedback)
+
+    def list_for_office(self, office_id: str) -> list[AccountabilityFeedback]:
+        """Return feedback through the capability-owned read boundary."""
+        return self._repository.list_for_office(str(office_id).strip())
