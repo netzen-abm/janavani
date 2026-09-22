@@ -85,7 +85,8 @@ Current repository layers include:
 - `src/models/` — application models
 - `src/core/` — configuration and shared core services
 - `src/adapters/` — external interface adapters
-- `src/web/` — Web interface and API assembly
+- `src/web/` — canonical Web API assembly and surface routers
+- `src/webapp/` — first-class citizen WebApp presentation surface and API adapter
 
 These are implementation locations, not reasons for cosmetic restructuring.
 
