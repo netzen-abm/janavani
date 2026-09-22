@@ -62,6 +62,14 @@ class CapabilityExecutionContext:
     provenance: tuple[ProvenanceRecord, ...] = field(default_factory=tuple)
     metadata: Mapping[str, str] = field(default_factory=dict)
 
+    def requires_explicit_approval(self) -> bool:
+        """Return whether this context represents a consequential external action."""
+        return self.side_effect_class is SideEffectClass.EXTERNAL_SIDE_EFFECT
+
+    def has_consent_reference(self, consent_ref: str) -> bool:
+        """Check for an exact, pre-bound consent reference."""
+        return bool(consent_ref) and consent_ref in self.consent_refs
+
     def __post_init__(self) -> None:
         if not self.capability_id.strip() or not self.action.strip():
             raise ValueError("capability_id and action must not be blank")
