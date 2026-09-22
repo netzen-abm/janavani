@@ -22,9 +22,11 @@ def repository():
         pytest.skip("JANAVANI_POSTGRES_TEST_DSN is not configured")
     import psycopg
 
-    schema = Path("docs/architecture/POSTGRESQL_MIGRATION_DRAFT.sql").read_text(
-        encoding="utf-8"
-    )
+    # Integration tests must exercise the same canonical migration boundary
+    # used by the live RLS gate; the retired draft schema is not authoritative.
+    schema = Path(
+        "db/migrations/20260912100000_canonical_case_policy_schema.sql"
+    ).read_text(encoding="utf-8")
     with psycopg.connect(dsn) as conn:
         conn.execute(schema)
     return PostgresCivicCaseRepository(dsn=dsn)
