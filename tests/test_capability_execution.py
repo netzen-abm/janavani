@@ -66,3 +66,22 @@ def test_failed_operation_requires_error_code() -> None:
         pass
     else:
         raise AssertionError("failed operation without error code must fail")
+
+
+
+def test_execution_envelope_exposes_consequential_and_consent_predicates():
+    identity = anonymous_context("citizen-1", request_id="req-envelope")
+    context = CapabilityExecutionContext.for_capability(
+        identity,
+        capability_id="case:submit",
+        action="submit",
+        surface="web",
+        resource_id="case-1",
+        idempotency_key="idem-envelope",
+        consent_refs=("consent-1",),
+        side_effect_class=SideEffectClass.EXTERNAL_SIDE_EFFECT,
+    )
+
+    assert context.requires_explicit_approval()
+    assert context.has_consent_reference("consent-1")
+    assert not context.has_consent_reference("consent-2")
