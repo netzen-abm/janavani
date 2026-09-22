@@ -604,3 +604,14 @@ Responsibility splitting is now governed by architectural boundaries rather than
 ### Physical branch state
 
 Fresh GitHub branch inventory confirms 249 physical refs: the exact nine sanctioned roles plus 240 retirement candidates. No branch-delete/ref-delete mutation is exposed by the connected GitHub tool surface. No physical deletion is claimed; moving a ref is not deletion. The nine-role policy remains enforced by CI/governance, with physical cleanup pending an actual delete-ref operation.
+
+
+## Eleventh convergence gate — 2026-09-22
+
+### WebApp naming convergence
+
+The active product direction explicitly identifies WebApp as a first-class surface, not an MVP. A new canonical package boundary `src/webapp/` has been established for the citizen-facing presentation/adapter layer. `src/web/` remains the canonical API assembly/router layer. The historical `src/web_mvp/` package is therefore transitional and will be retired only after all imports, deployment/process startup, tests and runtime references are migrated and verified. No blind rename/delete is performed.
+
+### Responsibility rule
+
+Future code is split only when the split creates an independent architectural boundary of change, trust, persistence, provider dependency or reuse. Cohesive invariants and orchestration remain together even when they exceed an arbitrary line threshold.
