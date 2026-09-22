@@ -39,7 +39,7 @@ source venv/bin/activate
 
 echo "📦 Upgrading pip packages and installing foundational library pools..."
 pip install --upgrade pip
-pip install -r src/web_mvp/requirements.txt
+pip install -r src/webapp/requirements.txt
 pip install pytest fakeredis pydantic pydantic-settings requests redis pre-commit httpx
 
 # --- Step 3: WebAssembly Toolchain Compilation Profiles ---
