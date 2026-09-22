@@ -56,36 +56,30 @@ jobs:
             return 1
           }
 
-          page=1
-          while :; do
-            mapfile -t branches < <(
-              gh api --paginate "repos/$repo/branches?per_page=100&page=$page"                 --jq '.[].name'
-            )
-            [ "${#branches[@]}" -eq 0 ] && break
+          mapfile -t branches < <(
+            gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name'
+          )
 
-            for branch in "${branches[@]}"; do
-              is_sanctioned "$branch" && continue
+          for branch in "${branches[@]}"; do
+            is_sanctioned "$branch" && continue
 
-              ahead="$(gh api "repos/$repo/compare/$base...$branch" --jq '.ahead_by')"
-              prs="$(gh api --method GET                 -H 'Accept: application/vnd.github+json'                 "repos/$repo/pulls?state=open&head=$repo:$branch&per_page=100"                 --jq 'length')"
+            ahead="$(gh api "repos/$repo/compare/$base...$branch" --jq '.ahead_by')"
+            prs="$(gh api               "repos/$repo/pulls?state=open&head=$repo:$branch&per_page=100"               --jq 'length')"
 
-              if [ "$ahead" = "0" ] && [ "$prs" = "0" ]; then
-                echo "ELIGIBLE: $branch"
-                if [ "$EXECUTE" = "true" ]; then
-                  gh api --method DELETE "repos/$repo/git/refs/heads/$branch"
-                  echo "DELETED: $branch"
-                fi
-              else
-                echo "HOLD: $branch (ahead=$ahead open_prs=$prs)"
+            if [ "$ahead" = "0" ] && [ "$prs" = "0" ]; then
+              echo "ELIGIBLE: $branch"
+              if [ "$EXECUTE" = "true" ]; then
+                gh api --method DELETE "repos/$repo/git/refs/heads/$branch"
+                echo "DELETED: $branch"
               fi
-            done
-
-            [ "${#branches[@]}" -lt 100 ] && break
-            page=$((page + 1))
+            else
+              echo "HOLD: $branch (ahead=$ahead open_prs=$prs)"
+            fi
           done
 
-          remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq 'length' | awk '{s+=$1} END {print s+0}')"
+          remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
           echo "Remaining physical branch refs: $remaining"
+
           if [ "$EXECUTE" = "true" ] && [ "$remaining" -ne 9 ]; then
             echo "Retirement incomplete: divergent branches still require selective extraction."
             exit 2
