@@ -28,7 +28,7 @@ This is a **full-product ecosystem control document**, not an MVP completion che
 | Surface | Current role | Current state | Rule |
 |---|---|---|---|
 | Public Website | Public information/discoverability surface | ACTIVE | Never become the platform business-logic owner |
-| WebApp / Dioxus | Primary interactive product surface | PARTIAL | Consume shared capabilities; no business logic duplication |
+| WebApp | Primary interactive product surface | PARTIAL | Consume shared capabilities; no business logic duplication |
 | Telegram Bot | Messaging access surface | PARTIAL | Adapter only; consume the same Case/Authority/Document capabilities |
 | Telegram Mini App | Rich Telegram UI | MISSING | Consume the same shared capability contracts |
 | Android | Native product surface | ARCHITECTURE | Consume shared contracts; own only native UX/integration |
@@ -116,7 +116,7 @@ This is **not an MVP boundary**. It is the first end-to-end capability chain use
 
 ### WebApp
 
-The current Dioxus application is a **product surface under convergence**, not a disposable MVP shell. It currently sends free-form text to a legacy `/agent/draft` path and contains a hard-coded example location plus a simulated decentralized result. That behavior must not become the canonical Case implementation.
+The current WebApp is a **first-class product surface**, not an MVP boundary. It must consume canonical capability/API contracts and must not become a second domain implementation. Any retained legacy UI behavior is transitional evidence and must not become a new canonical dependency.
 
 Target:
 
@@ -172,3 +172,8 @@ Before a capability is marked `COMPLETE`:
 ## Completion rule
 
 This matrix is a planning/control artifact. It does not promote implementation status by itself. A capability becomes `COMPLETE` only when implementation, tests, runtime verification, security/privacy review and documentation satisfy the master completion gate.
+
+
+## Deployment-provider neutrality
+
+Render and Vercel are temporary testing/validation environments at the current stage. They are not part of the Janavani architecture and must not become runtime, persistence, identity, authorization, consent, or capability dependencies. Deployment-specific settings belong at the edge; canonical application and ecosystem contracts remain provider-neutral.
