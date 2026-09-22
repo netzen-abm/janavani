@@ -71,3 +71,8 @@ Dedicated negative/positive tests were added for each boundary. This is selectiv
 `src/services/case_migration.py` was inspected before retirement. Its callers had already migrated away: repository search found no active caller of `session_to_civic_case` or `persist_generated_complaint`; the remaining `record_submission_consent` reference is superseded by the canonical `ConsentCapability` path used by the Telegram consent step. The legacy implementation and its test were preserved under `archive/legacy/services/` and `archive/legacy/tests/` before the active files were removed. The active runtime therefore no longer owns Case lifecycle or consent through the legacy service layer.
 
 `src/services/emergency_sos.py` remains retained because current executable tests still import it and the SOS migration matrix identifies cache deletion, token revocation and Nostr notification as separate unresolved ownership decisions. It is not safe to retire yet.
+
+
+## WebApp naming convergence — 2026-09-22
+
+`src/webapp/` is now the canonical first-class WebApp package. Active test, dependency-installation and Docker startup references have been migrated from `src/web_mvp/` to `src/webapp/`. The old package remains pending final archive/delete only after a complete repository-wide reference sweep. Historical audit language that described `web_mvp` as retained because of its active test dependency is now stale and must be treated as historical evidence, not current ownership.
