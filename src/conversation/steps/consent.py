@@ -36,7 +36,9 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         dependencies.consent_capability.record_submission_consent(
-            case_id, scope=f"office:{office_id}", identity=_identity(user_id)
+            case_id,
+            scope=f"office:{office_id}",
+            identity=_identity(user_id, links=dependencies.identity_link_repository),
         )
     except Exception as exc:
         print("ERROR in handle_consent:", exc)
