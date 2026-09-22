@@ -1,7 +1,7 @@
 # Janavani Master Task Register
 
-**Canonical baseline:** `main` @ `c855773061b96bdab3793b2b31632192f788bd58`
-**Last re-baselined:** 2026-09-20
+**Canonical baseline:** `main` @ `d5c3ae0336cf1d9fb92c0eca2dd87d475a1ae107`
+**Last re-baselined:** 2026-09-22
 
 This is the execution register. Older checklists, roadmaps, issue lists, and branch plans remain historical evidence unless explicitly referenced here.
 
@@ -18,7 +18,7 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Identify remaining legacy bypasses and archive only after evidence.
 - [ ] Update Source of Truth and architecture decision records from audit evidence.
 - [x] Establish strict nine-branch operating target; no new long-lived branch without explicit architectural purpose.
-- [ ] Safely retire all non-survivor branches; deletion remains pending until repository tooling exposes branch-ref deletion.
+- [x] Safely retire all non-survivor branches; GitHub branch inventory currently verifies exactly nine active branch refs. Historical work is preserved as archive evidence; no extra active branch refs remain.
 - [x] Promote Civic Case Python/Rust lifecycle parity evidence to `main`.
 
 ## P0 — Canonical runtime and persistence boundary
@@ -145,3 +145,8 @@ Rules:
 9. Do not create a new abstraction when an existing canonical contract can be strengthened.
 10. Every completed item must reference code/test/evidence where applicable.
 11. Never report green unless the exact current commit has verified green evidence.
+
+
+## 2026-09-22 branch hygiene re-verification
+
+GitHub's live branch inventory for `netzen-abm/janavani` was queried directly and returned exactly the nine sanctioned active branch refs. No additional active branch ref remains. The earlier 249-ref retirement baseline is historical evidence and must not be used as the current active-branch count. Responsibility-boundary audits continue independently; branch hygiene is now at the nine-branch target.
