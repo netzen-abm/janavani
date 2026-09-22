@@ -628,3 +628,30 @@ The WebApp module now starts through `src.webapp.main:app`, eliminating the old 
 ### Architectural split rule
 
 Responsibility separation remains boundary-driven: change ownership, trust, persistence, provider dependency, independent reuse or deployment boundary. Cohesive invariants and orchestration remain intact when splitting would weaken them.
+
+
+## Thirteenth convergence gate — 2026-09-22 — current physical branch verification
+
+A fresh GitHub branch inventory was performed against the repository's live refs. The connected GitHub branch search returned exactly these **9 physical active branches**:
+
+1. `main`
+2. `integration/canonical-platform`
+3. `feat/canonical-case-kernel`
+4. `feat/canonical-capability-execution-envelope`
+5. `feat/canonical-civic-action-vertical-slice`
+6. `feat/canonical-sos-contract`
+7. `feat/capability-scoped-consent-agent-enforcement`
+8. `audit/postgres-provider-production-gates`
+9. `chore/ecosystem-shared-capability-infrastructure`
+
+No open pull requests were returned for the repository.
+
+**Important evidence reconciliation:** earlier sections of this historical register record a prior inventory of 249 physical refs. That count is preserved as historical evidence and is not the current physical state. The fresh live inventory on 2026-09-22 returns exactly nine refs. The nine-branch CI policy therefore matches the currently observed repository state.
+
+No branch is to be mechanically split, renamed, merged, or deleted merely to satisfy a line-count or naming preference. The nine sanctioned roles remain the only active development lanes.
+
+## Thirteenth convergence gate — deployment-provider neutrality
+
+Render and Vercel are currently treated as **temporary testing/validation environments only**. They are not architectural authorities and no Janavani domain, capability, persistence, identity, authorization, consent, or workflow contract may depend on either provider.
+
+Provider-specific deployment configuration may remain at the deployment edge. The platform must remain runnable and testable through provider-neutral application contracts so that Render/Vercel can be replaced, removed, or supplemented without redesigning the shared ecosystem infrastructure.
