@@ -20,6 +20,7 @@ class AccountabilityFeedbackCapability:
         office_id: str,
         rating: int,
         issue: str,
+        department_name: str | None = None,
         actor_ref: str | None = None,
         source_channel: str | None = None,
     ) -> AccountabilityFeedback:
@@ -33,6 +34,9 @@ class AccountabilityFeedbackCapability:
         if not 1 <= rating_value <= 5:
             raise ValueError("Rating must be between 1 and 5")
 
+        department = str(department_name).strip() if department_name is not None else None
+        if department == "":
+            department = None
         narrative = ContentSanitizationEngine.sanitize_commentary(str(issue))
         if not narrative:
             raise ValueError("Feedback issue is required")
@@ -45,6 +49,7 @@ class AccountabilityFeedbackCapability:
             rating=rating_value,
             issue=narrative,
             submitted_at=datetime.now(timezone.utc).isoformat(),
+            department_name=department,
             actor_ref=actor_ref,
             source_channel=source_channel,
         )
