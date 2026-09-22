@@ -148,3 +148,39 @@ def test_scoped_execution_requires_request_when_policy_is_configured():
     assert gate_consequential_operation(
         request, scoped_execution_policy=_policy()
     ) is ConsequentialDecision.DENY
+
+
+
+def test_capability_data_scope_denies_provider_escape_before_approval():
+    from src.access.capability_scope import (
+        CapabilityDataScopePolicy,
+        DataClassification,
+        DataRequirement,
+    )
+
+    identity, execution = _context()
+    request = ConsequentialOperationRequest(
+        authorization=AuthorizationRequest(
+            context=identity,
+            capability=CAPABILITY,
+            action=ACTION,
+            resource_id="case-1",
+            requires_approval=True,
+            execution_context=execution,
+        ),
+        execution_context=execution,
+        explicit_user_approval=True,
+        data_scope_policy=CapabilityDataScopePolicy(
+            capability_id=CAPABILITY,
+            purpose="submit",
+            requirements=(
+                DataRequirement("case_text", DataClassification.PERSONAL),
+            ),
+        ),
+        requested_data_fields=frozenset({"case_text"}),
+        data_provider="cloud",
+        processing_mode="remote",
+        data_scope=None,
+    )
+
+    assert gate_consequential_operation(request) is ConsequentialDecision.CONSENT_REQUIRED
