@@ -530,3 +530,29 @@ CI execution is **not claimed**: no new workflow run was available through the c
 
 The repository still has **249 physical branch refs: 9 sanctioned roles + 240 retirement candidates**. Physical deletion remains pending because the connected GitHub mutation surface still lacks a remote-reference delete operation. The repository's deletion runner remains the authorized operational path when executed with repository credentials.
 
+
+## Seventh convergence gate — 2026-09-22
+
+### Consequential execution boundary
+
+The canonical consequential-operation gate was extended to accept the provider-neutral ScopedExecutionPolicy boundary. When a scope policy is configured, execution now fails closed unless a matching scoped request satisfies capability, purpose, requested fields, provider and processing-mode constraints.
+
+This composes with, rather than replaces:
+- canonical authorization;
+- execution-context validation;
+- consent enforcement;
+- explicit approval for consequential operations.
+
+New coverage verifies that a scoped execution may proceed to the existing approval gate, while field/provider escape or a missing scoped request is denied before the consequential operation can proceed.
+
+### Architectural decision
+
+The reusable ecosystem kernel now has an explicit scoped-execution gate between execution context and capability/provider execution:
+
+Identity → Authorization → Consent → Safety/Privacy → Execution Context → Scoped Execution → Capability → Provider → Truthful Result
+
+The gate remains provider- and surface-neutral. WebApp and Telegram continue to consume the same capability contract rather than implementing separate security policy.
+
+### Branch hygiene
+
+No branch was force-moved or falsely marked deleted. Physical inventory remains 249 refs: 9 sanctioned roles + 240 retirement candidates until an authorized remote-reference deletion operation is available.
