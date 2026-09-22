@@ -615,3 +615,16 @@ The active product direction explicitly identifies WebApp as a first-class surfa
 ### Responsibility rule
 
 Future code is split only when the split creates an independent architectural boundary of change, trust, persistence, provider dependency or reuse. Cohesive invariants and orchestration remain together even when they exceed an arbitrary line threshold.
+
+
+## Twelfth convergence gate — 2026-09-22
+
+### WebApp migration execution
+
+The first-class `src/webapp/` package is now the active WebApp code boundary. The migrated API client, requirements manifest, Docker startup path, development setup path, browser-asset test path, and shared WebApp adapter test path have been moved to the new package. The former `src/web_mvp/` implementation files have been removed after migration. Repository search may still return stale historical/indexed references; these must be reconciled only where they are active source/configuration, while historical audit documents remain evidence.
+
+The WebApp module now starts through `src.webapp.main:app`, eliminating the old MVP-named runtime entrypoint.
+
+### Architectural split rule
+
+Responsibility separation remains boundary-driven: change ownership, trust, persistence, provider dependency, independent reuse or deployment boundary. Cohesive invariants and orchestration remain intact when splitting would weaken them.
