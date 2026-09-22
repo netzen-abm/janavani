@@ -3,7 +3,7 @@ from fasthtml.common import (
     I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li,
     fast_app,
 )
-from services.api_client import JanavaniWebAPIClient
+from src.web_mvp.services.api_client import JanavaniWebAPIClient
 
 # Initialize the stateless web interface client
 app, rt = fast_app(
@@ -58,7 +58,9 @@ def post(citizen_input: str):
             Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
         )
         
-    return Container(\n        Div(\n            H2("📁 Civic Case Created"),\n            P(f"Case ID: {result.get('case_id')}"),\n            P(f"Status: {result.get('status')}"),\n            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),\n            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),\n            cls="card",\n        )\n    )
+    return Container(
+        Div(
+            H2("📁 Civic Case Created"),\n            P(f"Case ID: {result.get('case_id')}"),\n            P(f"Status: {result.get('status')}"),\n            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),\n            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),\n            cls="card",\n        )\n    )
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
