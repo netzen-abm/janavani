@@ -1,0 +1,92 @@
+name: Branch Retirement
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Actually delete eligible non-sanctioned refs"
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: "Type RETIRE-LEGACY-BRANCHES to permit deletion"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retire eligible legacy branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUTE: ${{ inputs.execute }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+
+          if [ "$CONFIRMATION" != "RETIRE-LEGACY-BRANCHES" ]; then
+            echo "Invalid confirmation phrase; no refs will be changed."
+            exit 1
+          fi
+
+          repo="${{ github.repository }}"
+          base="main"
+          sanctioned=(
+            "main"
+            "integration/canonical-platform"
+            "feat/canonical-case-kernel"
+            "feat/canonical-capability-execution-envelope"
+            "feat/canonical-civic-action-vertical-slice"
+            "feat/canonical-sos-contract"
+            "feat/capability-scoped-consent-agent-enforcement"
+            "audit/postgres-provider-production-gates"
+            "chore/ecosystem-shared-capability-infrastructure"
+          )
+
+          is_sanctioned() {
+            local branch="$1"
+            for allowed in "${sanctioned[@]}"; do
+              [ "$branch" = "$allowed" ] && return 0
+            done
+            return 1
+          }
+
+          page=1
+          while :; do
+            mapfile -t branches < <(
+              gh api --paginate "repos/$repo/branches?per_page=100&page=$page"                 --jq '.[].name'
+            )
+            [ "${#branches[@]}" -eq 0 ] && break
+
+            for branch in "${branches[@]}"; do
+              is_sanctioned "$branch" && continue
+
+              ahead="$(gh api "repos/$repo/compare/$base...$branch" --jq '.ahead_by')"
+              prs="$(gh api --method GET                 -H 'Accept: application/vnd.github+json'                 "repos/$repo/pulls?state=open&head=$repo:$branch&per_page=100"                 --jq 'length')"
+
+              if [ "$ahead" = "0" ] && [ "$prs" = "0" ]; then
+                echo "ELIGIBLE: $branch"
+                if [ "$EXECUTE" = "true" ]; then
+                  gh api --method DELETE "repos/$repo/git/refs/heads/$branch"
+                  echo "DELETED: $branch"
+                fi
+              else
+                echo "HOLD: $branch (ahead=$ahead open_prs=$prs)"
+              fi
+            done
+
+            [ "${#branches[@]}" -lt 100 ] && break
+            page=$((page + 1))
+          done
+
+          remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq 'length' | awk '{s+=$1} END {print s+0}')"
+          echo "Remaining physical branch refs: $remaining"
+          if [ "$EXECUTE" = "true" ] && [ "$remaining" -ne 9 ]; then
+            echo "Retirement incomplete: divergent branches still require selective extraction."
+            exit 2
+          fi
