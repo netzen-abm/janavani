@@ -655,3 +655,22 @@ No branch is to be mechanically split, renamed, merged, or deleted merely to sat
 Render and Vercel are currently treated as **temporary testing/validation environments only**. They are not architectural authorities and no Janavani domain, capability, persistence, identity, authorization, consent, or workflow contract may depend on either provider.
 
 Provider-specific deployment configuration may remain at the deployment edge. The platform must remain runnable and testable through provider-neutral application contracts so that Render/Vercel can be replaced, removed, or supplemented without redesigning the shared ecosystem infrastructure.
+
+
+## Fourteenth convergence gate — 2026-09-22 — persistence test authority alignment
+
+The canonical PostgreSQL integration test was rechecked against the repository's current migration ownership. The test previously loaded the retired `docs/architecture/POSTGRESQL_MIGRATION_DRAFT.sql` fixture even though current RLS/live verification uses the canonical migration under `db/migrations/`.
+
+The integration test has now been corrected to load:
+
+`db/migrations/20260912100000_canonical_case_policy_schema.sql`
+
+This is a responsibility-boundary correction, not a refactor: schema lifecycle remains owned by migrations, while the PostgreSQL repository remains responsible only for persistence behavior. No second schema authority is introduced.
+
+Commit: `1491248bdfbc2a0a17771c20817f90cb16ae33b0`.
+
+The test still covers real-PostgreSQL round trip, heterogeneous JSON, stale-version rejection and rollback behavior when a PostgreSQL test DSN is supplied. CI execution is not claimed until a workflow run verifies the updated commit.
+
+## Fourteenth branch-state verification
+
+The live branch inventory remains governed by the nine-role policy. No additional branch is to be created, force-moved, merged, or deleted merely to satisfy file-size or naming preferences.
