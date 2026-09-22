@@ -556,3 +556,29 @@ The gate remains provider- and surface-neutral. WebApp and Telegram continue to 
 ### Branch hygiene
 
 No branch was force-moved or falsely marked deleted. Physical inventory remains 249 refs: 9 sanctioned roles + 240 retirement candidates until an authorized remote-reference deletion operation is available.
+
+## Eighth convergence gate — 2026-09-22
+
+### Accountability feedback provider-boundary convergence
+
+A live canonical route audit found that `src/web/feedback_router.py` was still writing directly to Redis even though the repository already contained `AccountabilityFeedbackCapability` and a provider composition boundary.
+
+The route has now been converged onto the canonical capability. The capability owns validation/sanitization and persistence; provider selection remains in shared composition. The JSONL adapter preserves the existing historical data shape while carrying canonical department metadata.
+
+This removes a remaining surface-owned persistence path and establishes the reusable pattern:
+
+Access Surface → Capability → Repository Contract → Provider
+
+No direct Redis dependency remains in the canonical feedback route.
+
+### Security implication
+
+The route continues to require the configured interface token. The capability remains responsible for canonical validation and sanitization, so future WebApp/Telegram/other surfaces do not need to reproduce the persistence or validation implementation.
+
+### Verification limitation
+
+This gate was verified through direct current-main source inspection and content updates. A fresh CI execution is not claimed because no connected workflow run was available during this pass.
+
+### Branch hygiene
+
+Physical branch inventory remains **249 refs: 9 sanctioned roles + 240 retirement candidates**. No branch was force-moved or falsely marked deleted. The remote-ref deletion capability remains the outstanding operational dependency for reducing the physical count to nine.
