@@ -363,7 +363,6 @@ Do not merge stale generations wholesale. For a divergent branch, inspect unique
 
 The complete inventory confirms the repository is **not yet physically at nine branches**. The available GitHub mutation surface still does not expose remote-reference deletion. No force-move or destructive overwrite is being used as a substitute for deletion.
 
-
 ## Third convergence gate — 2026-09-21
 
 The sanctioned branches were compared against current `main` before any merge decision. Results:
@@ -394,7 +393,6 @@ The existing 180-line CI check remains a **verification gate**, not a refactorin
 1. Compare the unique authorization/consent/security material against current `src/access`, `src/core/consent.py`, `src/capabilities/consent.py`, `src/capabilities/safety_privacy.py`, and execution-aware consent contracts. Extract only demonstrably missing invariants/tests.
 2. Compare the PostgreSQL integration-test branch against current provider tests and migrations; add only missing real-database evidence, keeping production activation gated.
 3. Preserve divergent branch evidence in the retirement register; do not rewrite historical findings as if the branch had never existed.
-
 
 ## Fourth convergence gate — 2026-09-21
 
@@ -441,7 +439,6 @@ The two inspected historical branches are now **evidence sources, not architectu
 - `feat/capability-scoped-consent-agent-enforcement` → selective test/invariant recovery only, then retire.
 - `audit/postgres-provider-production-gates` → selective production-test recovery only, then retire.
 
-
 ## Physical retirement execution control — 2026-09-21
 
 A deterministic retirement runner is now present at `scripts/retire_legacy_branches.py`.
@@ -459,7 +456,6 @@ This closes the operational gap between the retirement policy and a repeatable d
 The historical PostgreSQL integration tests were checked against current `main`. The current branch already contains `tests/test_postgres_integration.py` with real-PostgreSQL round-trip, heterogeneous JSON, stale-version rejection, and transaction-rollback coverage. Current `main` also contains `tests/test_postgres_rls_live.py` and `tests/test_candidate_rls_authorization_integration.py`.
 
 **Decision:** no duplicate test extraction is required from `audit/postgres-provider-production-gates`. The branch remains evidence-only and can be retired once the remaining branch-ref hygiene operation is executed.
-
 
 ## Fifth convergence gate — 2026-09-21
 
@@ -489,3 +485,48 @@ The historical PostgreSQL branch contains `tests/test_postgres_integration.py`; 
 ### Physical branch status
 
 Live inventory remains **249 physical refs: 9 sanctioned roles + 240 retirement candidates**. The connected GitHub mutation surface does not expose remote-ref deletion, so physical deletion is not claimed. No historical branch is force-moved to simulate retirement.
+
+## Sixth convergence gate — 2026-09-22
+
+### Scoped agent/security invariant recovery
+
+The historical `feat/capability-scoped-consent-agent-enforcement` branch was re-inspected against current `main`. Its useful invariant set is:
+
+- capability must be explicit;
+- purpose must be non-empty and bounded;
+- requested data fields must remain within capability scope;
+- provider must be allow-listed;
+- processing mode must be allow-listed;
+- consent must not silently expand those bounds.
+
+Current `main` already owns authorization, consent, safety/privacy and execution-context enforcement, so the historical agent-policy engine was **not** imported. Instead, the missing provider-neutral scope invariant was recovered as a small independent gate:
+
+- `src/access/scoped_execution_policy.py`
+- `tests/test_scoped_execution_policy.py`
+
+The new gate is deliberately not an agent framework and does not replace `src/access/authorization.py` or `src/access/policy_composition.py`. It provides a reusable boundary for future agentic/automated capability execution and is independently testable for field, provider, processing-mode, purpose and capability escape.
+
+### WebApp / Telegram convergence result
+
+Current `main` was directly inspected for both surfaces. Both compose `create_surface_case_composition()` and expose the canonical `CivicActionVerticalSlice`; Telegram additionally composes `TelegramGenerationDependencies`. Existing tests verify:
+
+- independent Web and Telegram composition instances;
+- shared Case/Civic Action capability contracts;
+- owner-scoped continuation;
+- fail-closed submission transport;
+- Telegram generation dependency composition;
+- Web end-to-end Case → Evidence → Consent → Document → Review → Ready → Artifact lifecycle;
+- Web direct submission remains blocked without the required consequential gate.
+
+No duplicate WebApp or Telegram business-logic engine was introduced in this gate.
+
+### Verification status
+
+Static source inspection and GitHub content verification completed. The new scoped policy source and tests are both below the 180-line maintainability threshold.
+
+CI execution is **not claimed**: no new workflow run was available through the connected execution surface, and the local environment could not establish a network clone of GitHub.
+
+### Branch status
+
+The repository still has **249 physical branch refs: 9 sanctioned roles + 240 retirement candidates**. Physical deletion remains pending because the connected GitHub mutation surface still lacks a remote-reference delete operation. The repository's deletion runner remains the authorized operational path when executed with repository credentials.
+
