@@ -8,6 +8,7 @@ from src.access.authorization import AuthorizationDecision, AuthorizationPolicy,
 from src.access.consent import ConsentRepositoryReader, ConsentRequiredError, ConsentRequirement, require_consent
 from src.access.scoped_execution_policy import ScopedExecutionPolicy, ScopedExecutionRequest
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
+from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, CapabilityScopeDecision
 
 
 class ConsequentialDecision(str, Enum):
@@ -28,6 +29,11 @@ class ConsequentialOperationRequest:
     consent_requirement: ConsentRequirement | None = None
     explicit_user_approval: bool = False
     scoped_execution: ScopedExecutionRequest | None = None
+    data_scope_policy: CapabilityDataScopePolicy | None = None
+    data_scope: CapabilityDataScope | None = None
+    requested_data_fields: frozenset[str] = frozenset()
+    data_provider: str | None = None
+    processing_mode: str | None = None
 
 
 class ConsequentialOperationGate:
@@ -44,6 +50,17 @@ class ConsequentialOperationGate:
         scoped_execution_policy: ScopedExecutionPolicy | None = None,
     ) -> ConsequentialDecision:
         """Fail closed unless every required control permits the operation."""
+        if request.data_scope_policy is not None:
+            scope_decision = request.data_scope_policy.evaluate(
+                purpose=request.authorization.action,
+                requested_fields=request.requested_data_fields,
+                provider=request.data_provider,
+                processing_mode=request.processing_mode,
+                consent_scope=request.data_scope,
+            )
+            if scope_decision is not CapabilityScopeDecision.ALLOW:
+                return ConsequentialDecision.CONSENT_REQUIRED if scope_decision is CapabilityScopeDecision.REQUIRE_CONSENT else ConsequentialDecision.DENY
+
         if scoped_execution_policy is not None:
             scoped_request = request.scoped_execution
             if scoped_request is None or not scoped_execution_policy.allows(scoped_request):
