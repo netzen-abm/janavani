@@ -14,6 +14,7 @@ class AccountabilityFeedback:
     rating: int
     issue: str
     submitted_at: str
+    department_name: str | None = None
     actor_ref: str | None = None
     source_channel: str | None = None
 
