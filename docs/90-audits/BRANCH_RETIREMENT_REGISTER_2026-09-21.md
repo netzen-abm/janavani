@@ -582,3 +582,14 @@ This gate was verified through direct current-main source inspection and content
 ### Branch hygiene
 
 Physical branch inventory remains **249 refs: 9 sanctioned roles + 240 retirement candidates**. No branch was force-moved or falsely marked deleted. The remote-ref deletion capability remains the outstanding operational dependency for reducing the physical count to nine.
+
+
+## Ninth convergence gate — 2026-09-22
+
+### Responsibility-boundary convergence
+
+The active Telegram runtime was re-audited against the canonical shared capability architecture. The conversation engine had referenced a quarantined state registry, and authority discovery advanced directly into the manual-office state. The active state registry was restored under src/conversation/state_registry.py; office discovery and office selection were separated into distinct states/handlers. Telegram document generation and consent now receive the composed external-identity link repository and resolve Telegram subjects only through the verified identity-link boundary. This preserves the fail-closed identity contract rather than introducing a Telegram-specific identity bypass.
+
+### Branch hygiene status
+
+The physical branch inventory remains 249 refs: exactly 9 sanctioned active roles plus 240 retirement candidates. No GitHub branch-delete/ref-delete operation is available through the connected mutation surface, so no physical branch deletion is claimed. Candidate branches remain subject to AUDIT → EXTRACT → CONVERGE → VERIFY → ARCHIVE EVIDENCE → DELETE.
