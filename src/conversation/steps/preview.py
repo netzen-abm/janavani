@@ -35,7 +35,10 @@ async def handle_preview(
     case_id = str(session.get("case_id") or "")
 
     try:
-        capability = context.application.bot_data.get("civic_case_capability")\n        if capability is None:\n            raise RuntimeError("Canonical Telegram Case capability was not composed")
+        capability = context.application.bot_data.get("civic_case_capability")
+        identity_links = context.application.bot_data.get("identity_link_repository")
+        if capability is None or identity_links is None:
+            raise RuntimeError("Canonical Telegram identity/case dependencies were not composed")
         preview_text = build_case_preview(
             capability=capability,
             case_id=case_id,
