@@ -60,7 +60,14 @@ def post(citizen_input: str):
         
     return Container(
         Div(
-            H2("📁 Civic Case Created"),\n            P(f"Case ID: {result.get('case_id')}"),\n            P(f"Status: {result.get('status')}"),\n            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),\n            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),\n            cls="card",\n        )\n    )
+            H2("📁 Civic Case Created"),
+            P(f"Case ID: {result.get('case_id')}"),
+            P(f"Status: {result.get('status')}"),
+            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
+            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
+            cls="card",
+        )
+    )
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
