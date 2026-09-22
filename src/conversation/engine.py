@@ -8,7 +8,7 @@ to the appropriate workflow step.
 """
 
 from conversation.state import get_state
-from engine.state_registry import get_handler
+from conversation.state_registry import get_handler
 
 
 async def run_step(update, context):
