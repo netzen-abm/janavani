@@ -2,7 +2,18 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
-from uuid import uuid4\nfrom typing import Protocol\n\n\nclass SensitiveResourceAdapter(Protocol):\n    """Surface adapter hook for stopping/closing the platform resource."""\n    def release(self, *, session_id: str, resource: SensitiveResource) -> None: ...\n\n\nclass SensitiveDataMinimizer(Protocol):\n    """Hook for applying retention/minimisation rules at purpose completion."""\n    def minimize(self, *, session_id: str, resource: SensitiveResource, purpose: AccessPurpose) -> None: ...
+from uuid import uuid4
+from typing import Protocol
+
+
+class SensitiveResourceAdapter(Protocol):
+    """Surface adapter hook for stopping/closing the platform resource."""
+    def release(self, *, session_id: str, resource: SensitiveResource) -> None: ...
+
+
+class SensitiveDataMinimizer(Protocol):
+    """Hook for applying retention/minimisation rules at purpose completion."""
+    def minimize(self, *, session_id: str, resource: SensitiveResource, purpose: AccessPurpose) -> None: ...
 from src.capabilities.safety_privacy import AccessPurpose, SensitiveResource
 from src.identity.context import IdentityContext
 
