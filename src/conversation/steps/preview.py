@@ -8,9 +8,9 @@ from src.capabilities.civic_case import CivicCaseCapability
 from src.adapters.telegram.identity import identity_for_telegram_user
 
 
-def build_case_preview(*, capability: CivicCaseCapability, case_id: str, user_id: int) -> str:
+def build_case_preview(*, capability: CivicCaseCapability, case_id: str, user_id: int, identity_links) -> str:
     """Build preview text from the canonical owned Case without legacy reconstruction."""
-    case = capability.get_owned(case_id, identity=identity_for_telegram_user(user_id))
+    case = capability.get_owned(case_id, identity=identity_for_telegram_user(user_id, links=identity_links))
     if case is None:
         raise LookupError("Case not found")
 
@@ -40,6 +40,7 @@ async def handle_preview(
             capability=capability,
             case_id=case_id,
             user_id=user_id,
+            identity_links=identity_links,
         )
     except (LookupError, ValueError) as exc:
         print("❌ PREVIEW ERROR:", exc)
