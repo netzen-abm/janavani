@@ -40,7 +40,7 @@
 - [x] 1.7 Lock archive-over-delete principle.
 - [x] 1.8 Create capability registry — DESIGN COMPLETE: `docs/CAPABILITY_REGISTRY.md`.
 - [x] 1.9 Create core data contracts — DESIGN COMPLETE: `docs/DATA_CONTRACTS.md`.
-- [ ] 1.10 Create permission/consent contracts.
+- [x] 1.10 Create permission/consent contracts — APPLICATION SESSION LIFECYCLE IMPLEMENTED; platform-adapter verification remains open.
 - [ ] 1.11 Create transport abstraction contracts.
 - [ ] 1.12 Create failure/dependency matrix.
 - [ ] 1.13 Create system-wide threat model.
@@ -613,6 +613,7 @@ Archive requires:
 | 2026-09-20 | PostgreSQL RLS integration gate expanded with non-BYPASSRLS roles, delegation expiry/revocation, DELETE denial, and transaction-local principal context isolation | `tests/test_candidate_rls_authorization_integration.py` |
 | 2026-09-20 | Candidate RLS hardened with FORCE ROW LEVEL SECURITY on protected tables; production activation remains blocked pending real-PostgreSQL evidence | `db/migrations/CANDIDATE_20260919_rls_authorization.sql` |
 | 2026-09-20 | PostgreSQL security gate prioritized ahead of broader capability mapping | Current master execution queue |
+| 2026-09-22 | Purpose-bound capability session lifecycle implemented as shared ecosystem infrastructure; platform-specific permission/revocation verification remains open | `src/access/capability_session.py`, `tests/test_capability_session.py`, `docs/architecture/CAPABILITY_SESSION_CONTRACT.md` |
 | 2026-08-23 | Checklist reconciled against verified status register | `docs/MASTER_TASK_CHECKLIST_RECONCILIATION_2026-08-23.md` |
 
 ---
