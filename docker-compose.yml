@@ -50,7 +50,7 @@ services:
   webapp-application:
     image: python:3.11-slim
     container_name: janavani-webapp
-    command: sh -c "pip install -r src/web_mvp/requirements.txt && python src/web_mvp/main.py"
+    command: sh -c "pip install -r src/webapp/requirements.txt && python src/webapp/main.py"
     volumes:
       - .:/workspace
     working_dir: /workspace
