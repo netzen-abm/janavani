@@ -22,6 +22,7 @@ class JsonlAccountabilityFeedbackRepository:
             "complaint_id": feedback.feedback_id,
             "timestamp": feedback.submitted_at,
             "office_id": feedback.office_id,
+            "department_name": feedback.department_name,
             "rating": feedback.rating,
             "issue": feedback.issue,
             "user_hash": actor_hash,
@@ -76,6 +77,7 @@ def _from_entry(entry: dict[str, object]) -> AccountabilityFeedback:
         rating=int(entry.get("rating", 0)),
         issue=str(entry.get("issue", "")),
         submitted_at=str(entry.get("timestamp", "")),
+        department_name=str(entry.get("department_name")) if entry.get("department_name") else None,
         actor_ref=None,
         source_channel=None,
     )
