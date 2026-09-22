@@ -46,7 +46,7 @@ WebApp responsibilities:
 - never implementing its own Case persistence;
 - never implementing its own authorization rules.
 
-The thin adapter is `src/web_mvp/services/api_client.py`.
+The thin adapter is `src/webapp/services/api_client.py`.
 
 Identity is carried as a verified assertion and is consumed by the canonical HTTP identity boundary.
 
@@ -150,3 +150,8 @@ The first parallel vertical slice is complete when:
 ## Engineering rule
 
 Build the surfaces in parallel, but make the infrastructure the rate-limiting authority. If a feature cannot safely use the shared contract, fix the shared contract before adding a surface-specific workaround.
+
+
+## Deployment/testing boundary
+
+Render and Vercel are temporary testing/validation environments only. They are not product architecture constraints. Janavani code must not be shaped around their free-tier behavior, deployment model, runtime limits, or provider-specific APIs. Hosting remains replaceable at the outer deployment boundary while shared capabilities, contracts, persistence, security and surface independence remain provider-neutral.
