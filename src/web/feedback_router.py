@@ -58,7 +58,7 @@ async def fetch_office_performance_summary(
 ) -> dict[str, Any]:
     """Expose canonical feedback records through the provider-neutral repository."""
     del token
-    records = _capability()._repository.list_for_office(office_id)
+    records = _capability().list_for_office(office_id)
     return {
         "office_id": office_id,
         "aggregate_telemetry": {
