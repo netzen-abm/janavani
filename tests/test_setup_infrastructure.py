@@ -11,5 +11,5 @@ def test_development_setup_script_is_valid():
 
 def test_global_requirements_file_integrity():
     """Required active client dependency manifests remain present."""
-    assert Path("src/web_mvp/requirements.txt").is_file()
+    assert Path("src/webapp/requirements.txt").is_file()
     assert Path("src/web_dioxus/Cargo.toml").is_file()
