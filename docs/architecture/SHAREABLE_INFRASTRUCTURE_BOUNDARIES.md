@@ -123,3 +123,7 @@ The next engineering work should preferentially be:
 A capability is not considered complete merely because its code exists. Promote it through:
 
 VISION -> DESIGNED -> IMPLEMENTED -> FUNCTIONAL -> TESTED -> SECURITY-VERIFIED -> PRIVACY-VERIFIED -> FAILURE-ISOLATED -> PRODUCTION-READY
+
+## Repository hygiene enforcement
+
+The nine sanctioned branches are the only active development lanes. Legacy branches are archived by immutable tag before deletion; this preserves recoverability without retaining parallel active development lines.
