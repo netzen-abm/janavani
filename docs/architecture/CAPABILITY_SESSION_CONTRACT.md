@@ -1,6 +1,6 @@
 # Capability Session Contract
 
-**Status:** Proposed canonical cross-capability infrastructure contract
+**Status:** IMPLEMENTED — canonical lifecycle kernel added; runtime/platform verification remains open
 
 ## Purpose
 
@@ -42,4 +42,6 @@ Consequential external actions additionally require the canonical execution-cont
 
 ## Verification
 
-Production readiness requires tests for purpose declaration, refusal/fallback, identity isolation, activation, purpose completion, minimisation, release, terminal-state enforcement, platform-revocation limitations, and absence of unintended background access.
+The canonical application-level lifecycle kernel is implemented in `src/access/capability_session.py` with regression coverage in `tests/test_capability_session.py` for purpose presentation, grant/activation, purpose completion, release, terminal-state enforcement, denied/unavailable terminal states, and invalid transitions.
+
+Production readiness still requires platform-adapter tests for purpose declaration, refusal/fallback, identity isolation, activation, purpose completion, minimisation, release, OS permission-revocation limitations, and absence of unintended background access.
