@@ -127,3 +127,10 @@ VISION -> DESIGNED -> IMPLEMENTED -> FUNCTIONAL -> TESTED -> SECURITY-VERIFIED -
 ## Repository hygiene enforcement
 
 The nine sanctioned branches are the only active development lanes. Legacy branches are archived by immutable tag before deletion; this preserves recoverability without retaining parallel active development lines.
+
+
+## Deployment-provider neutrality
+
+Render and Vercel are currently used only as temporary testing/validation environments. They are deployment adapters, not architectural dependencies. Do not introduce code paths, domain abstractions, persistence assumptions, identity flows, authorization rules, consent semantics, or capability contracts specifically to accommodate either provider.
+
+The canonical platform must remain provider-neutral so that hosting can be changed without changing the shared ecosystem architecture. Deployment configuration belongs at the outer deployment boundary; application/domain/provider contracts remain independently testable.
