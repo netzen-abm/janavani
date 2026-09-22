@@ -3,7 +3,10 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 from src.storage.postgres_unit_of_work import bind_postgres_principal
-from src.core.submission import (\n    RECOVERABLE_SUBMISSION_STATE, SubmissionRecord, SubmissionConcurrencyError,\n    SubmissionIdempotencyConflictError,\n)
+from src.core.submission import (
+    RECOVERABLE_SUBMISSION_STATE, SubmissionRecord, SubmissionConcurrencyError,
+    SubmissionIdempotencyConflictError,
+)
 from src.storage.repositories.postgres_submission_codec import SELECT_FIELDS, hydrate, same_operation
 from src.storage.repositories.postgres_submission_sql import (
     initialize, recoverable_state, reserve, save, update,
