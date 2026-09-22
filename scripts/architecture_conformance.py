@@ -10,7 +10,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY_LIFECYCLE = ROOT / "src/core/case_lifecycle.py"
-PY_DOMAIN = ROOT / "src/core/civic_case.py"
+PY_DOMAIN = ROOT / "src/core/case_types.py"
 RUST_CORE = ROOT / "crates/janavani-core/src/civic_case.rs"
 RUST_CONSENT = ROOT / "crates/janavani-core/src/consent.rs"
 RUST_APP = ROOT / "crates/janavani-application/src"
