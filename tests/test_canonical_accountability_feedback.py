@@ -21,6 +21,7 @@ def test_record_creates_canonical_feedback():
     assert feedback.office_id == "KL-TVM-01"
     assert feedback.rating == 4
     assert feedback.source_channel == "telegram"
+    assert feedback.department_name is None
 
 
 def test_rating_bounds_are_enforced():
