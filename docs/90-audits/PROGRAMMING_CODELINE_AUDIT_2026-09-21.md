@@ -99,3 +99,32 @@ The legacy `src/services/emergency_sos.py` and its direct Redis test were archiv
 ## Additional service convergence — 2026-09-21
 
 The legacy `src/services/document_service.py` was verified at 31 lines. Exact symbol/import search found no active runtime caller; only its dedicated fail-closed legacy test imported it. The service and test were archived before retirement. Canonical document generation remains owned by the shared civic-action capability.
+
+
+## 2026-09-22 responsibility-splitting gate
+
+The current canonical runtime was re-measured before decomposition. The previously recorded 427-line `src/capabilities/submission.py` is stale: current `main` has already decomposed the public submission façade to **139 lines**, with flow, security, state, contract, and transport concerns moved behind dedicated modules.
+
+Current measured boundaries:
+
+| File | Current lines | Decision |
+|---|---:|---|
+| `src/capabilities/submission.py` | 139 | Retain; stable façade |
+| `src/capabilities/submission_flow.py` | verified as delegated flow boundary | Retain |
+| `src/capabilities/submission_security.py` | verified as delegated security boundary | Retain |
+| `src/capabilities/submission_state.py` | verified as delegated state boundary | Retain |
+| `src/storage/repositories/postgres_submission.py` | 129 | Retain; provider adapter already split |
+| `src/storage/repositories/postgres_submission_case_transaction.py` | 113 | Retain; transaction boundary already split |
+| `src/core/case_model.py` | 177 | Retain; cohesive domain model |
+| `src/platform/surface_case_composition.py` | 138 | Retain; shared composition boundary |
+| `src/platform/composition_capabilities.py` | 175 | Retain; cohesive factory boundary |
+
+### Decision
+
+Do **not** perform mechanical splitting merely to satisfy the 180-line rule. The current canonical submission and provider paths are already responsibility-split. `case_model.py` remains below the limit and represents one cohesive domain model. `surface_case_composition.py` and `composition_capabilities.py` remain below the limit and own explicit composition responsibilities.
+
+Future decomposition is triggered by a responsibility boundary, not line count alone.
+
+### Branch retirement control
+
+The guarded GitHub branch-retirement workflow was corrected to use one deterministic paginated branch inventory before evaluation, avoiding duplicate page traversal. It remains confirmation-gated, preserves the nine sanctioned roles, holds divergent branches, and requires exactly nine physical refs after execution.
