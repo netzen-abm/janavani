@@ -15,7 +15,8 @@ from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
-from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
+from src.identity.linking import ExternalIdentityLinkRepository
+from src.adapters.telegram.identity import identity_for_telegram_user
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.provider_composition import ProviderComposition
@@ -34,6 +35,7 @@ class TelegramGenerationDependencies:
     consent_capability: ConsentCapability
     artifact_repository: DocumentArtifactRepository
     blob_store: ArtifactBlobStore
+    identity_link_repository: ExternalIdentityLinkRepository
 
 
 def create_telegram_generation_dependencies(
@@ -45,6 +47,7 @@ def create_telegram_generation_dependencies(
     artifact_repository: DocumentArtifactRepository | None = None,
     blob_store: ArtifactBlobStore | None = None,
     provider_composition: ProviderComposition | None = None,
+    identity_link_repository: ExternalIdentityLinkRepository | None = None,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
@@ -56,7 +59,16 @@ def create_telegram_generation_dependencies(
             provider=(provider_composition.provider_for("document_artifact") if provider_composition else None)
         ),
         blob_store=blob_store or _create_blob_store(),
+        identity_link_repository=identity_link_repository or _MissingIdentityLinkRepository(),
     )
+
+
+class _MissingIdentityLinkRepository:
+    def find(self, provider: str, subject: str):
+        return None
+
+    def save(self, identity) -> None:
+        raise PermissionError("Telegram identity linking is required")
 
 
 def _create_blob_store() -> ArtifactBlobStore:
@@ -64,19 +76,9 @@ def _create_blob_store() -> ArtifactBlobStore:
     return create_artifact_blob_store()
 
 
-def _identity(user_id: int) -> IdentityContext:
-    """Map a Telegram user to the canonical Telegram principal identity."""
-    return IdentityContext(
-        principal=Principal(
-            principal_id=f"telegram:{user_id}",
-            identity_mode=IdentityMode.ANONYMOUS,
-            interface="telegram",
-            authentication_method=AuthenticationMethod.NONE,
-            session_id=str(user_id),
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:consent"}),
-        )
-    )
-
+def _identity(user_id: int, *, links: ExternalIdentityLinkRepository) -> IdentityContext:
+    """Resolve a Telegram subject only after an explicit verified link."""
+    return identity_for_telegram_user(user_id, links=links)
 
 def _document_format(value: str) -> DocumentFormat:
     return DocumentFormat.DOCX if value.strip().lower() == "docx" else DocumentFormat.PDF
@@ -95,7 +97,7 @@ def build_canonical_complaint_artifact(
 
     artifact = dependencies.civic_action_capability.generate_reviewable_artifact(
         case_id,
-        identity=_identity(user_id),
+        identity=_identity(user_id, links=dependencies.identity_link_repository),
         document_format=_document_format(str(session.get("format", "pdf"))),
         output_dir=Path("/tmp") / "janavani-artifacts" / "rendered",
         document_id=str(session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"),
