@@ -593,3 +593,14 @@ The active Telegram runtime was re-audited against the canonical shared capabili
 ### Branch hygiene status
 
 The physical branch inventory remains 249 refs: exactly 9 sanctioned active roles plus 240 retirement candidates. No GitHub branch-delete/ref-delete operation is available through the connected mutation surface, so no physical branch deletion is claimed. Candidate branches remain subject to AUDIT → EXTRACT → CONVERGE → VERIFY → ARCHIVE EVIDENCE → DELETE.
+
+
+## Tenth convergence gate — 2026-09-22
+
+### Boundary-of-change review
+
+Responsibility splitting is now governed by architectural boundaries rather than file size: split only where change ownership, trust boundary, persistence/provider dependency, or independent reuse is distinct; keep tightly coupled invariants and orchestration together. The WebApp adapter import was corrected to the canonical package path and a malformed response block in the retained WebApp surface was repaired without moving legacy constitutional routes. Telegram generation/consent remain composed through the shared verified identity-link boundary.
+
+### Physical branch state
+
+Fresh GitHub branch inventory confirms 249 physical refs: the exact nine sanctioned roles plus 240 retirement candidates. No branch-delete/ref-delete mutation is exposed by the connected GitHub tool surface. No physical deletion is claimed; moving a ref is not deletion. The nine-role policy remains enforced by CI/governance, with physical cleanup pending an actual delete-ref operation.
