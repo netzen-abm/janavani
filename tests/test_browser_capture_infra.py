@@ -3,7 +3,7 @@ import pytest
 
 def test_browser_capture_tool_script_existance_and_integrity():
     """Confirms the frontend javascript vertex extraction utility exists and contains required functions."""
-    target_script_path = "src/web_mvp/public/bhunaksha_capture_tool.js"
+    target_script_path = "src/webapp/public/bhunaksha_capture_tool.js"
     
     # Assert path parameters inside project directories
     assert os.path.exists(target_script_path) is True
