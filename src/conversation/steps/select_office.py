@@ -6,10 +6,10 @@ from conversation.state import set_state
 
 from conversation.constants import (
     WAITING_FOR_OFFICE_FALLBACK,
-    WAITING_FOR_OFFICE_MANUAL,
+    WAITING_FOR_OFFICE_SELECTION,
 )
 
-from services.authority_service import find_authorities
+from src.services.authority_service import find_authorities
 
 
 async def handle_select_office(
@@ -70,5 +70,4 @@ async def handle_select_office(
     msg += "\nReply with office number."
     await update.message.reply_text(msg)
 
-    # TEMP: route to manual handler until selection step is built.
-    set_state(user_id, WAITING_FOR_OFFICE_MANUAL)
+    set_state(user_id, WAITING_FOR_OFFICE_SELECTION)
