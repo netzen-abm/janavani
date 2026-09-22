@@ -8,6 +8,10 @@ Janavani is a **full civic-governance ecosystem**, not an MVP project.
 
 The WebApp and Telegram Bot are active product surfaces being developed in parallel. Neither is the product core. The platform core is the shared capability/domain infrastructure consumed by independent access surfaces.
 
+## 2.1 WebApp naming and ownership
+
+The first-class citizen WebApp is named **WebApp** in active architecture and code. The historical `web_mvp` package name is transitional terminology and must not be used for new implementation. The canonical package boundary is `src/webapp/`; `src/web/` remains the canonical API assembly/router boundary. Historical `web_mvp` material is migrated only after import, deployment, test and runtime verification.
+
 ## 2. Product law
 
 > **Build the capability once. Govern it once. Reuse it everywhere.**
