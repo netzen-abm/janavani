@@ -4,19 +4,18 @@ from .postgres_submission_codec import SELECT_FIELDS, params
 from .postgres_submission_contract import PostgresSubmissionConcurrencyError, PostgresSubmissionIdempotencyConflictError
 
 def initialize(connection):
+    """Validate the canonical schema; migrations own PostgreSQL DDL."""
     with connection.cursor() as cursor:
-        cursor.execute("""CREATE TABLE IF NOT EXISTS civic_case_submissions (
-            submission_id TEXT PRIMARY KEY, case_id TEXT NOT NULL REFERENCES civic_cases(case_id),
-            destination_ref TEXT NOT NULL, document_ref TEXT, channel TEXT NOT NULL,
-            state TEXT NOT NULL, attempted_at TIMESTAMPTZ, submitted_at TIMESTAMPTZ,
-            acknowledged_at TIMESTAMPTZ, external_reference TEXT, ack_ref TEXT,
-            error_code TEXT, retry_count INTEGER NOT NULL DEFAULT 0,
-            version BIGINT NOT NULL DEFAULT 1, created_at TIMESTAMPTZ NOT NULL,
-            updated_at TIMESTAMPTZ NOT NULL, idempotency_key TEXT NOT NULL UNIQUE,
-            CONSTRAINT civic_case_submissions_retry_nonnegative CHECK (retry_count >= 0),
-            CONSTRAINT civic_case_submissions_version_positive CHECK (version > 0))""")
-        cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_case_attempted_idx ON civic_case_submissions(case_id, attempted_at)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS civic_case_submissions_destination_idx ON civic_case_submissions(destination_ref)")
+        cursor.execute(
+            """SELECT 1
+               FROM information_schema.tables
+               WHERE table_schema = %s AND table_name = %s""",
+            ("public", "civic_case_submissions"),
+        )
+        if cursor.fetchone() is None:
+            raise RuntimeError(
+                "Canonical submission schema is missing; apply db/migrations before starting the provider"
+            )
 
 def save(cursor, submission):
     cursor.execute(f"""INSERT INTO civic_case_submissions (
