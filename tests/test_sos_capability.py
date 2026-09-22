@@ -189,6 +189,22 @@ def test_consequential_action_requires_canonical_approval() -> None:
         )
 
 
+def test_consequential_action_routes_through_shared_gate_before_safety_gate() -> None:
+    identity_context = identity()
+    class FailingSafetyGate:
+        def evaluate(self, request: SOSRequest, *, identity: IdentityContext) -> str:
+            return "ALLOW"
+    result = SOSCapability(decision_gate=FailingSafetyGate()).trigger(
+        request(
+            consequential_action=True,
+            execution_context=consequential_context(identity_context),
+            explicit_user_approval=True,
+        ),
+        identity=identity_context,
+    )
+    assert result.state is SOSDeliveryState.LOCAL_ONLY
+
+
 def test_consequential_action_with_approval_can_reach_sos_gate() -> None:
     identity_context = identity()
     result = SOSCapability(decision_gate=AllowGate()).trigger(
