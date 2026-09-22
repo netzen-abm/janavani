@@ -1,4 +1,4 @@
-from src.web_mvp.services.api_client import JanavaniWebAPIClient
+from src.webapp.services.api_client import JanavaniWebAPIClient
 
 
 def test_web_client_requires_verified_identity_assertion():
