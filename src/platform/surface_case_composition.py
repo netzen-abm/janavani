@@ -69,6 +69,7 @@ def create_surface_case_composition(
     consent_repository: object | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
     provider_composition=None,
+    submission_transport: SubmissionTransport | None = None,
 ) -> SurfaceCaseComposition:
     """Compose one provider graph for an access surface.
 
@@ -114,7 +115,7 @@ def create_surface_case_composition(
         case_repository=case_repository,
         authority_repository=authority_repository,
         consent_repository=consent_repository,
-        submission_transport=FailClosedSubmissionTransport(),
+        submission_transport=submission_transport or FailClosedSubmissionTransport(),
         evidence_repository=evidence_repository,
         document_review_repository=review_repository,
         provider_composition=provider_composition,
