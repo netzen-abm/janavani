@@ -1,57 +1,16 @@
 """Web composition boundary for the canonical civic-action capability slice.
 
-The HTTP adapter receives shared capabilities from this module rather than
-constructing parallel Case, review, consent, or submission paths.
+The HTTP adapter receives the same surface-neutral capability graph used by
+other access surfaces. Web-specific behavior remains limited to HTTP concerns.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
-from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.submission import SubmissionTransport
-from src.capabilities.authority import AuthorityCapability
-from src.capabilities.evidence import EvidenceCapability
-from src.capabilities.consent import ConsentCapability
-from src.capabilities.document_review import DocumentReviewCapability
-from src.platform.composition import (
-    create_authority_capability,
-    create_consent_capability,
-    create_authority_repository,
-    create_case_repository,
-    create_evidence_repository,
-    create_civic_action_vertical_slice,
-    create_consent_repository,
-    create_document_review_repository_for_platform,
-    create_provider_composition,
+from src.platform.surface_case_composition import (
+    FailClosedSubmissionTransport,
+    SurfaceCaseComposition,
+    create_surface_case_composition,
 )
-from src.storage.provider_composition import ProviderComposition
-from src.storage.repositories.consent import ConsentRepository
-from src.storage.repositories.document_review import DocumentReviewRepository
-
-
-class UnconfiguredWebSubmissionTransport(SubmissionTransport):
-    """Fail-closed Web transport until a real delivery adapter is configured."""
-
-    def send(self, case, document_id: str, destination_ref: str):
-        raise RuntimeError(
-            "Web submission transport is not configured; no external delivery was attempted"
-        )
-
-
-@dataclass(frozen=True)
-class WebCivicActionComposition:
-    """Shared Web dependencies and the canonical civic-action slice."""
-
-    case_repository: object
-    consent_repository: ConsentRepository
-    document_review_repository: DocumentReviewRepository
-    case_capability: CivicCaseCapability
-    authority_capability: AuthorityCapability
-    evidence_capability: EvidenceCapability
-    consent_capability: ConsentCapability
-    document_review_capability: DocumentReviewCapability
-    civic_action: CivicActionVerticalSlice
 
 
 def create_web_civic_action_composition(
@@ -59,53 +18,58 @@ def create_web_civic_action_composition(
     case_repository=None,
     authority_repository=None,
     evidence_repository=None,
-    consent_repository: ConsentRepository | None = None,
-    document_review_repository: DocumentReviewRepository | None = None,
-    artifact_repository=None,
-    blob_store=None,
+    consent_repository=None,
+    identity_link_repository=None,
+    provider_composition=None,
     submission_transport: SubmissionTransport | None = None,
-    provider_composition: ProviderComposition | None = None,
-) -> WebCivicActionComposition:
-    """Build the Web adapter's one canonical civic-action dependency graph.
+) -> SurfaceCaseComposition:
+    """Build the Web adapter's canonical surface-neutral dependency graph.
 
-    The default submission transport is deliberately fail-closed. Provider
-    defaults come from the shared platform composition; durable providers can
-    still be injected explicitly when a deployment has completed its
-    persistence and migration readiness work.
+    Repository and capability ownership deliberately lives in the shared
+    platform composition boundary. Web may inject deterministic providers for
+    tests, but it does not own a second capability graph.
     """
-    composition = provider_composition or create_provider_composition()
-    case_repository = case_repository or create_case_repository(provider_composition=composition)
-    authority_repository = authority_repository or create_authority_repository(provider_composition=composition)
-    evidence_repository = evidence_repository or create_evidence_repository(provider_composition=composition)
-    consent_repo = consent_repository or create_consent_repository(
-        provider_composition=composition
-    )
-    review_repo = document_review_repository or create_document_review_repository_for_platform(
-        provider_composition=composition
-    )
-    transport = submission_transport or UnconfiguredWebSubmissionTransport()
-    civic_action = create_civic_action_vertical_slice(
+    composition = create_surface_case_composition(
         case_repository=case_repository,
         authority_repository=authority_repository,
-        consent_repository=consent_repo,
-        submission_transport=transport,
         evidence_repository=evidence_repository,
-        document_review_repository=review_repo,
+        consent_repository=consent_repository,
+        identity_link_repository=identity_link_repository,
+        provider_composition=provider_composition,
+    )
+    if submission_transport is None:
+        return composition
+
+    # Keep Web transport selection at the surface adapter boundary while
+    # retaining the same repository/capability graph.
+    from src.platform.composition_capabilities import create_civic_action_vertical_slice
+
+    review_repository = getattr(composition.civic_action_vertical_slice._deps, "document_review_repository", None)
+    artifact_repository = getattr(composition.civic_action_vertical_slice._deps, "artifact_repository", None)
+    blob_store = getattr(composition.civic_action_vertical_slice._deps, "blob_store", None)
+    vertical_slice = create_civic_action_vertical_slice(
+        case_repository=composition.case_repository,
+        authority_repository=composition.authority_repository,
+        consent_repository=composition.consent_repository,
+        submission_transport=submission_transport,
+        evidence_repository=composition.evidence_repository,
+        document_review_repository=review_repository,
         artifact_repository=artifact_repository,
         blob_store=blob_store,
-        provider_composition=composition,
+        provider_composition=composition.provider_composition,
     )
-    return WebCivicActionComposition(
-        case_repository=case_repository,
-        consent_repository=consent_repo,
-        document_review_repository=review_repo,
-        case_capability=civic_action._deps.case_capability,
-        authority_capability=create_authority_capability(authority_repository),
-        evidence_capability=civic_action._deps.evidence_capability,
-        consent_capability=create_consent_capability(
-            consent_repository=consent_repo,
-            case_capability=civic_action._deps.case_capability,
-        ),
-        document_review_capability=civic_action._deps.document_review_capability,
-        civic_action=civic_action,
+    return SurfaceCaseComposition(
+        case_repository=composition.case_repository,
+        authority_repository=composition.authority_repository,
+        evidence_repository=composition.evidence_repository,
+        consent_repository=composition.consent_repository,
+        case_capability=composition.case_capability,
+        authority_capability=composition.authority_capability,
+        evidence_capability=composition.evidence_capability,
+        consent_capability=composition.consent_capability,
+        civic_action_capability=composition.civic_action_capability,
+        identity_link_repository=composition.identity_link_repository,
+        provider_composition=composition.provider_composition,
+        document_review_capability=composition.document_review_capability,
+        civic_action_vertical_slice=vertical_slice,
     )
