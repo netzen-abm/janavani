@@ -99,3 +99,22 @@ def test_agent_metadata_never_replaces_human_identity():
     assert gateway().evaluate(
         request(identity=other, execution_context=execution)
     ) is AgentGatewayDecision.DENY
+
+
+def test_consequential_agent_request_is_not_auto_approved():
+    execution = CapabilityExecutionContext.for_capability(
+        identity(),
+        capability_id="case:document",
+        action="submit",
+        surface="agent",
+        idempotency_key="idem-agent-submit",
+        side_effect_class="external_side_effect",
+        risk_level="high",
+    )
+    result = gateway().evaluate(
+        request(
+            execution_context=execution,
+            requires_consequential_approval=True,
+        )
+    )
+    assert result is AgentGatewayDecision.REQUIRE_APPROVAL
