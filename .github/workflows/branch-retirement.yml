@@ -1,11 +1,6 @@
 name: Branch Retirement
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/branch-retirement.yml
   workflow_dispatch:
     inputs:
       execute:
@@ -29,8 +24,8 @@ jobs:
       - name: Archive and retire legacy branches
         env:
           GH_TOKEN: ${{ github.token }}
-          EXECUTE: ${{ github.event_name == 'push' && 'true' || inputs.execute }}
-          CONFIRMATION: ${{ github.event_name == 'push' && 'RETIRE-LEGACY-BRANCHES' || inputs.confirmation }}
+          EXECUTE: ${{ inputs.execute }}
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
 
