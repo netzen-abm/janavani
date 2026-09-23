@@ -86,3 +86,14 @@ def test_vertical_slice_default_transport_is_fail_closed():
         FailClosedSubmissionTransport().send(
             case=object(), document_id="doc-test", destination_ref="office:test"
         )
+
+def test_web_composition_delegates_to_surface_neutral_graph() -> None:
+    from src.web.composition import create_web_civic_action_composition
+
+    web = create_web_civic_action_composition()
+    telegram = create_surface_case_composition()
+
+    assert type(web) is type(telegram)
+    assert type(web.case_capability) is type(telegram.case_capability)
+    assert type(web.civic_action_vertical_slice) is type(telegram.civic_action_vertical_slice)
+\n
