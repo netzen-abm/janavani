@@ -1,7 +1,7 @@
 from src.access.agent_gateway import AgentCapabilityGateway, AgentGatewayDecision, AgentToolExecutionRequest
 from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, DataClassification, DataRequirement
 from src.access.scoped_execution_policy import ScopedExecutionPolicy
-from src.core.execution import CapabilityExecutionContext
+from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 
@@ -108,7 +108,7 @@ def test_consequential_agent_request_is_not_auto_approved():
         action="submit",
         surface="agent",
         idempotency_key="idem-agent-submit",
-        side_effect_class="external_side_effect",
+        side_effect_class=SideEffectClass.EXTERNAL_SIDE_EFFECT,
         risk_level="high",
     )
     result = gateway().evaluate(
