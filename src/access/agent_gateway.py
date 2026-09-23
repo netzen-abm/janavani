@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy
 from src.access.consequential import ConsequentialOperationGate
 from src.access.scoped_execution_policy import ScopedExecutionPolicy, ScopedExecutionRequest
@@ -66,6 +67,20 @@ class AgentCapabilityGateway:
             return AgentGatewayDecision.DENY
         if request.execution_context.capability_id != request.capability_id:
             return AgentGatewayDecision.DENY
+
+        authorization = authorize(AuthorizationRequest(
+            context=request.identity,
+            capability=request.capability_id,
+            action=request.execution_context.action,
+            resource_id=request.execution_context.resource_id,
+            risk_level=request.execution_context.risk_level,
+            requires_approval=request.requires_consequential_approval,
+            execution_context=request.execution_context,
+        ))
+        if authorization is AuthorizationDecision.DENY:
+            return AgentGatewayDecision.DENY
+        if authorization is AuthorizationDecision.REQUIRE_APPROVAL:
+            return AgentGatewayDecision.REQUIRE_APPROVAL
 
         scoped_request = ScopedExecutionRequest(
             capability=request.capability_id,
