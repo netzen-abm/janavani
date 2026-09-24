@@ -4,12 +4,14 @@ import pytest
 
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
+from src.capabilities.document_review import DocumentReviewCapability
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 
 
 def identity(principal_id="test-principal"):
@@ -64,6 +66,18 @@ def capability(cases):
         authority_repository=authority_repo(),
         bill_profile_loader=bill_loader,
     )
+
+
+def capability_with_review(cases):
+    reviews = InMemoryDocumentReviewRepository()
+    review = DocumentReviewCapability(reviews, case_capability=CivicCaseCapability(cases))
+    return ConstitutionalObjectionCapability(
+        case_capability=CivicCaseCapability(cases),
+        case_repository=cases,
+        authority_repository=authority_repo(),
+        bill_profile_loader=bill_loader,
+        document_review_capability=review,
+    ), reviews
 
 
 def create_objection_case(cases, principal="test-principal"):
@@ -180,3 +194,22 @@ def test_rejects_unverified_authority():
             bill_code="BILL-TEST",
             citizen_comments="Must fail closed.",
         )
+
+
+def test_artifact_generation_persists_draft_through_document_review(tmp_path):
+    from src.documents.document_contract import DocumentFormat
+
+    cases = InMemoryCivicCaseRepository()
+    case = create_objection_case(cases)
+    action, reviews = capability_with_review(cases)
+    artifact = action.generate_reviewable_artifact(
+        case.case_id,
+        identity=identity(),
+        bill_code="BILL-TEST",
+        citizen_comments="The proposed restriction is disproportionate.",
+        document_format=DocumentFormat.PDF,
+        output_dir=tmp_path,
+        document_id="doc-review-boundary",
+    )
+    assert artifact.reference.artifact_id
+    assert reviews.get("doc-review-boundary") is not None
