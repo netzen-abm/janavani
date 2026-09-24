@@ -26,6 +26,8 @@ def submit(capability, request: SubmissionRequest, *, identity, explicit_user_ap
         raise ValueError("Document is not attached to the case")
     if not request.destination_ref.strip():
         raise ValueError("A submission destination is required")
+    if not request.external_channel_id:
+        raise ValueError("A verified external channel is required for submission")
 
     key = request.idempotency_key or (
         execution_context.idempotency_key if execution_context is not None else None
