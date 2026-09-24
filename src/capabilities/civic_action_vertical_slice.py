@@ -164,6 +164,7 @@ class CivicActionVerticalSlice:
             source_channel=request.source_channel,
             artifact_id=request.artifact_id,
             idempotency_key=request.idempotency_key,
+            external_channel_id=channel.channel_id,
         )
         return self._deps.submission_capability.submit(
             verified_request, identity=identity, explicit_user_approval=explicit_user_approval,
