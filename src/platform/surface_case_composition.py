@@ -30,6 +30,7 @@ from src.platform.composition_capabilities import (
     create_authority_capability,
     create_case_capability,
     create_civic_action_capability,
+    create_letter_drafting_capability,
     create_consent_capability,
     create_document_review_repository_for_platform,
 )
@@ -113,7 +114,7 @@ def create_surface_case_composition(
         case_capability=case_capability,
     )
 
-    letter_drafting_capability = LetterDraftingCapability(civic_action_capability)
+    letter_drafting_capability = create_letter_drafting_capability(civic_action_capability)
 
     civic_action_vertical_slice = create_civic_action_vertical_slice(
         case_repository=case_repository,
