@@ -1,17 +1,16 @@
-"""Canonical, surface-neutral civic letter drafting capability."""
+"""Canonical, surface-neutral civic letter drafting capability.
+
+Letter composition owns only the structured content/template boundary. Persistence,
+review state, approval and submission remain with their canonical owners.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from enum import Enum
 
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.document_review import DocumentReviewCapability
 from src.documents.document_contract import DocumentDraft
-
-
-class LetterDraftStatus(str, Enum):
-    DRAFT = "draft"
-    REVIEWED = "reviewed"
-    APPROVED = "approved"
+from src.identity.context import IdentityContext
 
 
 @dataclass(frozen=True)
@@ -38,8 +37,13 @@ class LetterDraftRequest:
 
 @dataclass(frozen=True)
 class LetterDraftResult:
+    """Persisted, reviewable document plus trace references.
+
+    Review and approval are intentionally not represented as a second state
+    machine here. DocumentReviewCapability and the Case lifecycle are canonical.
+    """
+
     document: DocumentDraft
-    status: LetterDraftStatus
     evidence_refs: tuple[str, ...]
     provenance_refs: tuple[str, ...]
     language: str
@@ -47,17 +51,22 @@ class LetterDraftResult:
 
 
 class LetterDraftingCapability:
-    """Compose structured civic letters without asserting unsupported legal effects."""
+    """Compose structured civic letters and hand them to canonical document review."""
 
-    def __init__(self, civic_action: CivicActionCapability) -> None:
+    def __init__(
+        self,
+        civic_action: CivicActionCapability,
+        document_review: DocumentReviewCapability,
+    ) -> None:
         self._civic_action = civic_action
+        self._document_review = document_review
 
     def create_draft(
         self,
         case_id: str,
         request: LetterDraftRequest,
         *,
-        identity,
+        identity: IdentityContext,
         document_id: str | None = None,
         date: str | None = None,
     ) -> LetterDraftResult:
@@ -78,32 +87,14 @@ class LetterDraftingCapability:
             subject=request.subject.strip(),
             body=self._compose_body(request),
         )
+        persisted = self._document_review.save_draft(document, identity=identity)
         return LetterDraftResult(
-            document=document,
-            status=LetterDraftStatus.DRAFT,
+            document=persisted,
             evidence_refs=tuple(request.evidence_refs),
             provenance_refs=tuple(request.provenance_refs),
             language=request.language,
             references=tuple(request.references),
         )
-
-    @staticmethod
-    def mark_reviewed(result: LetterDraftResult) -> LetterDraftResult:
-        if result.status is not LetterDraftStatus.DRAFT:
-            raise ValueError("Only a draft can transition to reviewed")
-        return replace(result, status=LetterDraftStatus.REVIEWED)
-
-    @staticmethod
-    def approve(result: LetterDraftResult) -> LetterDraftResult:
-        if result.status is not LetterDraftStatus.REVIEWED:
-            raise ValueError("Explicit review is required before approval")
-        return replace(result, status=LetterDraftStatus.APPROVED)
-
-    @staticmethod
-    def require_approved(result: LetterDraftResult) -> DocumentDraft:
-        if result.status is not LetterDraftStatus.APPROVED:
-            raise PermissionError("Explicit citizen approval is required")
-        return result.document
 
     @staticmethod
     def _compose_body(request: LetterDraftRequest) -> str:
