@@ -178,4 +178,5 @@ def create_constitutional_objection_capability(
         authority_repository=authority_repository,
         bill_profile_loader=bill_profile_loader,
         evidence_repository=evidence_repository,
+        document_review_capability=document_review_capability,
     )
