@@ -1,19 +1,17 @@
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
-from src.capabilities.letter_drafting import (
-    LetterDraftRequest,
-    LetterDraftStatus,
-    LetterDraftingCapability,
-)
+from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
-from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.storage.repositories.authority import InMemoryAuthorityRepository
+from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 
 
-def test_letter_draft_requires_review_before_approval() -> None:
+def test_letter_draft_persists_into_canonical_review_boundary() -> None:
     cases = InMemoryCivicCaseRepository()
     authorities = InMemoryAuthorityRepository([
         AuthorityRecord(
@@ -22,10 +20,8 @@ def test_letter_draft_requires_review_before_approval() -> None:
             authority_type="office",
             jurisdiction={"city": "Kochi"},
             primary_contact=AuthorityContact(
-                name="Authority",
-                address="Address",
-                email="authority@example.test",
-                verified=True,
+                name="Authority", address="Address",
+                email="authority@example.test", verified=True,
             ),
             verification_status="VERIFIED",
         )
@@ -34,9 +30,7 @@ def test_letter_draft_requires_review_before_approval() -> None:
         principal=Principal(
             principal_id="letter-principal",
             interface="test",
-            capabilities=frozenset(
-                {"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}
-            ),
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
         )
     )
     case = CivicCaseCapability(cases).create(
@@ -50,20 +44,22 @@ def test_letter_draft_requires_review_before_approval() -> None:
         source_channel="test",
     ).case
 
+    case_capability = CivicCaseCapability(cases)
     action = CivicActionCapability(
-        case_capability=CivicCaseCapability(cases),
+        case_capability=case_capability,
         case_repository=cases,
         authority_repository=authorities,
     )
-    capability = LetterDraftingCapability(action)
+    review_repository = InMemoryDocumentReviewRepository()
+    review = DocumentReviewCapability(review_repository, case_capability=case_capability)
+    capability = LetterDraftingCapability(action, review)
 
     result = capability.create_draft(
         case.case_id,
         LetterDraftRequest(
             subject="Notice and demand for resolution",
-            issue="I do not consent to proceeding without a documented response.",
+            issue="I request a documented response.",
             legal_framework=("Article 21", "Precautionary Principle"),
-            requested_conditions=("Provide adequate public participation.",),
             evidence_refs=("evidence-1",),
             provenance_refs=("source-1",),
             response_period="28 days",
@@ -73,19 +69,16 @@ def test_letter_draft_requires_review_before_approval() -> None:
         date="2026-09-24",
     )
 
-    assert result.status is LetterDraftStatus.DRAFT
-    assert "Article 21" in result.document.body
-    assert "evidence-1" in result.evidence_refs
+    assert review.get_owned("letter-1", identity=identity) == result.document
+    assert result.evidence_refs == ("evidence-1",)
+    assert result.provenance_refs == ("source-1",)
 
-    try:
-        capability.require_approved(result)
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError("Unreviewed draft must not be treated as approved")
-
-    reviewed = capability.mark_reviewed(result)
-    approved = capability.approve(reviewed)
-
-    assert approved.status is LetterDraftStatus.APPROVED
-    assert capability.require_approved(approved).document_id == "letter-1"
+    edited = review.edit(
+        DocumentReviewRequest(
+            document_id="letter-1",
+            body="Citizen-reviewed replacement text.",
+            reason="Citizen correction",
+        ),
+        identity=identity,
+    )
+    assert edited.body == "Citizen-reviewed replacement text."
