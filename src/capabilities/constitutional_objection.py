@@ -13,6 +13,7 @@ from typing import Any, BinaryIO, Callable
 from uuid import uuid4
 
 from src.capabilities.civic_case import CivicCaseCapability
+from src.capabilities.document_review import DocumentReviewCapability
 from src.core.authority import AuthorityRepository, require_destination
 from src.core.civic_case import CaseType
 from src.core.evidence import EvidenceRepository
@@ -41,6 +42,7 @@ class ConstitutionalObjectionCapability:
                  authority_repository: AuthorityRepository,
                  bill_profile_loader: Callable[[str], dict[str, Any] | None],
                  evidence_repository: EvidenceRepository | None = None,
+                 document_review_capability: DocumentReviewCapability | None = None,
                  artifact_repository: DocumentArtifactRepository | None = None,
                  blob_store: ArtifactBlobStore | None = None) -> None:
         self._case_capability = case_capability
@@ -48,6 +50,7 @@ class ConstitutionalObjectionCapability:
         self._authority_repository = authority_repository
         self._bill_profile_loader = bill_profile_loader
         self._evidence_repository = evidence_repository
+        self._document_review = document_review_capability
         self._artifact_repository = artifact_repository
         self._blob_store = blob_store
 
@@ -103,6 +106,8 @@ class ConstitutionalObjectionCapability:
                                      document_id: str | None = None) -> DocumentArtifact:
         result = self.build_document(case_id, identity=identity, bill_code=bill_code,
                                      citizen_comments=citizen_comments, document_id=document_id)
+        if self._document_review is not None:
+            self._document_review.save_draft(result.draft, identity=identity)
         artifact = generate_artifact(result.draft, document_format, output_dir, blob_store=self._blob_store)
         repository = self._artifact_repository or create_document_artifact_repository()
         repository.save(artifact.reference)
