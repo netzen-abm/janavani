@@ -13,6 +13,8 @@ from typing import Any, Dict
 
 import requests
 
+from src.ai.provider import AIRequest, AIProvider
+from src.ai.providers.openrouter import OpenRouterProvider
 from src.core.municipal_profiles import fetch_profile_by_code
 from src.core.settings import ai_settings
 
@@ -29,9 +31,10 @@ class JanavaniLegalAgent:
         "Mark claims requiring source verification and human review."
     )
 
-    def __init__(self, http_session: requests.Session | None = None) -> None:
+    def __init__(self, http_session: requests.Session | None = None, provider: AIProvider | None = None) -> None:
         self._session = http_session or requests.Session()
         self._timeout = (3, 15)
+        self._provider = provider or OpenRouterProvider(self._session)
 
     @staticmethod
     def _fallback(citizen_issue: str) -> Dict[str, Any]:
@@ -101,14 +104,9 @@ class JanavaniLegalAgent:
         if not ai_settings.OPENROUTER_API_KEY or not ai_settings.LEGAL_DRAFTING_MODEL:
             return self._fallback(issue)
 
-        endpoint = ai_settings.OPENROUTER_URL.rstrip("/")
-        headers = {
-            "Authorization": f"Bearer {ai_settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": ai_settings.LEGAL_DRAFTING_MODEL,
-            "messages": [
+        request = AIRequest(
+            purpose="civic_document_drafting",
+            messages=(
                 {
                     "role": "system",
                     "content": (
@@ -118,26 +116,20 @@ class JanavaniLegalAgent:
                     ),
                 },
                 {"role": "user", "content": issue},
-            ],
-            "response_format": {"type": "json_object"},
-        }
+            ),
+            model=ai_settings.LEGAL_DRAFTING_MODEL,
+            data_scope=("citizen_issue", "regional_routing_metadata"),
+        )
 
         try:
-            response = self._session.post(
-                f"{endpoint}/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=self._timeout,
-            )
-            response.raise_for_status()
-            body = response.json()
+            generated = self._provider.generate(request)
             return {
                 "status": "available",
                 "ai_used": True,
-                "provider": "openrouter",
-                "model": ai_settings.LEGAL_DRAFTING_MODEL,
+                "provider": generated.provider_id,
+                "model": generated.model,
                 "regional_profile": regional_profile,
-                "result": body,
+                "result": generated.payload,
             }
-        except (requests.RequestException, ValueError):
+        except (requests.RequestException, ValueError, TypeError):
             return self._fallback(issue)
