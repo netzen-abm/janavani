@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from src.capabilities.authority import AuthorityCapability
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.evidence import EvidenceCapability
@@ -55,6 +56,7 @@ class SurfaceCaseComposition:
     evidence_capability: EvidenceCapability
     consent_capability: ConsentCapability
     civic_action_capability: CivicActionCapability
+    letter_drafting_capability: LetterDraftingCapability
     identity_link_repository: ExternalIdentityLinkRepository
     provider_composition: object
     document_review_capability: DocumentReviewCapability
@@ -111,6 +113,8 @@ def create_surface_case_composition(
         case_capability=case_capability,
     )
 
+    letter_drafting_capability = LetterDraftingCapability(civic_action_capability)
+
     civic_action_vertical_slice = create_civic_action_vertical_slice(
         case_repository=case_repository,
         authority_repository=authority_repository,
@@ -131,6 +135,7 @@ def create_surface_case_composition(
         evidence_capability=evidence_capability,
         consent_capability=consent_capability,
         civic_action_capability=civic_action_capability,
+        letter_drafting_capability=letter_drafting_capability,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
         document_review_capability=document_review_capability,
