@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from src.capabilities.authority import AuthorityCapability
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.evidence import EvidenceCapability
