@@ -35,6 +35,7 @@ def test_submission_propagates_stable_idempotency_key_to_delivery_transport() ->
         source_channel="web",
         artifact_id="artifact-1",
         idempotency_key="stable-submit-key",
+        external_channel_id="channel-verified",
     )
     capability.submit(request, identity=identity, explicit_user_approval=True)
 
