@@ -5,6 +5,7 @@ import os
 
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
@@ -62,6 +63,10 @@ def create_follow_up_capability() -> FollowUpCapability:
 
 def create_escalation_capability() -> EscalationCapability:
     return EscalationCapability()
+
+
+def create_letter_drafting_capability(civic_action_capability: CivicActionCapability) -> LetterDraftingCapability:
+    return LetterDraftingCapability(civic_action_capability)
 
 
 def create_civic_action_capability(
