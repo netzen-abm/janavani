@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.document_review import DocumentReviewRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CIVIC_ACTION, DOCUMENT_REVIEW
+from src.web.civic_case_dependencies import CIVIC_ACTION, CIVIC_ACTION_VERTICAL_SLICE, DOCUMENT_REVIEW
 from src.web.civic_case_models import ArtifactRequest, DocumentReviewRequestModel, serialize_draft
 
 router = APIRouter(tags=["Civic Cases"])
@@ -37,7 +37,7 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
 @router.post("/{case_id}/document/artifact")
 async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        artifact = CIVIC_ACTION.generate_reviewable_artifact(
+        artifact = CIVIC_ACTION_VERTICAL_SLICE.generate_artifact(
             request.document_id, identity=context, case_id=case_id, document_format=request.document_format
         )
     except LookupError as exc:
