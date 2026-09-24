@@ -12,21 +12,29 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
+from src.capabilities.civic_case import CivicCaseCapability
+from src.capabilities.document_review import DocumentReviewCapability
 from src.core.legislative_monitor import fetch_active_bill_profile
 from src.documents.document_contract import DocumentFormat
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.platform.composition import create_constitutional_objection_capability
+from src.platform.composition import create_constitutional_objection_capability, create_provider_composition
+from src.platform.composition_repositories import create_document_review_repository_for_platform
 from src.platform.runtime import AUTHORITY_REPOSITORY, CASE_REPOSITORY
 
 router = APIRouter(prefix="/api/v1/constitutional", tags=["Constitutional Oversight Engine"])
 
 _REPOSITORY = CASE_REPOSITORY
 _AUTHORITY_REPOSITORY = AUTHORITY_REPOSITORY
+_DOCUMENT_REVIEW = DocumentReviewCapability(
+    create_document_review_repository_for_platform(provider_composition=create_provider_composition()),
+    case_capability=CivicCaseCapability(_REPOSITORY),
+)
 _CAPABILITY: ConstitutionalObjectionCapability = create_constitutional_objection_capability(
     case_repository=_REPOSITORY,
     authority_repository=_AUTHORITY_REPOSITORY,
     bill_profile_loader=fetch_active_bill_profile,
+    document_review_capability=_DOCUMENT_REVIEW,
 )
 
 
