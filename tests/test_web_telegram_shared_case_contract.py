@@ -97,3 +97,14 @@ def test_web_composition_delegates_to_surface_neutral_graph() -> None:
     assert type(web.case_capability) is type(telegram.case_capability)
     assert type(web.civic_action_vertical_slice) is type(telegram.civic_action_vertical_slice)
 \n
+
+def test_web_and_telegram_expose_the_same_letter_drafting_capability() -> None:
+    from src.capabilities.letter_drafting import LetterDraftingCapability
+    from src.platform.surface_case_composition import create_surface_case_composition
+
+    web = create_surface_case_composition()
+    telegram = create_surface_case_composition()
+
+    assert isinstance(web.letter_drafting_capability, LetterDraftingCapability)
+    assert isinstance(telegram.letter_drafting_capability, LetterDraftingCapability)
+    assert type(web.letter_drafting_capability) is type(telegram.letter_drafting_capability)
