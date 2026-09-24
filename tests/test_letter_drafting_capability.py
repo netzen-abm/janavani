@@ -82,3 +82,57 @@ def test_letter_draft_persists_into_canonical_review_boundary() -> None:
         identity=identity,
     )
     assert edited.body == "Citizen-reviewed replacement text."
+
+
+def test_letter_drafting_requires_jurisdiction_for_legal_framework() -> None:
+    # The existing fixture intentionally does not attach evidence; use a minimal
+    # request so this test isolates the jurisdiction gate.
+    cases = InMemoryCivicCaseRepository()
+    authorities = InMemoryAuthorityRepository([
+        AuthorityRecord(
+            authority_id="office-jurisdiction",
+            name="Office",
+            authority_type="office",
+            jurisdiction={"city": "Kochi"},
+            primary_contact=AuthorityContact(name="Authority", address="Address", verified=True),
+            verification_status="VERIFIED",
+        )
+    ])
+    identity = IdentityContext(
+        principal=Principal(
+            principal_id="jurisdiction-principal",
+            interface="test",
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
+        )
+    )
+    case = CivicCaseCapability(cases).create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.REPRESENTATION,
+            subject="Consultation",
+            narrative="Documented response requested.",
+            related_office_id="office-jurisdiction",
+        ),
+        identity=identity,
+        source_channel="test",
+    ).case
+    case_capability = CivicCaseCapability(cases)
+    action = CivicActionCapability(
+        case_capability=case_capability,
+        case_repository=cases,
+        authority_repository=authorities,
+    )
+    review = DocumentReviewCapability(
+        InMemoryDocumentReviewRepository(), case_capability=case_capability
+    )
+    capability = LetterDraftingCapability(action, review)
+    import pytest
+    with pytest.raises(ValueError, match="Jurisdiction is required"):
+        capability.create_draft(
+            case.case_id,
+            LetterDraftRequest(
+                subject="Notice",
+                issue="Please respond.",
+                legal_framework=("Article 21",),
+            ),
+            identity=identity,
+        )
