@@ -65,8 +65,8 @@ def create_escalation_capability() -> EscalationCapability:
     return EscalationCapability()
 
 
-def create_letter_drafting_capability(civic_action_capability: CivicActionCapability) -> LetterDraftingCapability:
-    return LetterDraftingCapability(civic_action_capability)
+def create_letter_drafting_capability(civic_action_capability: CivicActionCapability, document_review_capability) -> LetterDraftingCapability:
+    return LetterDraftingCapability(civic_action_capability, document_review_capability)
 
 
 def create_civic_action_capability(
