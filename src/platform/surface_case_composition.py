@@ -113,7 +113,7 @@ def create_surface_case_composition(
         case_capability=case_capability,
     )
 
-    letter_drafting_capability = create_letter_drafting_capability(civic_action_capability)
+    letter_drafting_capability = create_letter_drafting_capability(civic_action_capability, document_review_capability)
 
     civic_action_vertical_slice = create_civic_action_vertical_slice(
         case_repository=case_repository,
