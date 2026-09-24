@@ -83,6 +83,7 @@ def _request(case_id: str, key: str = "stable-delivery-key") -> SubmissionReques
         case_id=case_id, document_id="doc-delivery-outcome", destination_ref="authority:email:test",
         consent_scope="email:government", source_channel="web", artifact_id="artifact-delivery-outcome",
         idempotency_key=key,
+        external_channel_id="channel-verified",
     )
 
 
