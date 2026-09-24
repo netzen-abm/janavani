@@ -18,6 +18,7 @@ class SubmissionRequest:
     source_channel: str | None = None
     artifact_id: str | None = None
     idempotency_key: str | None = None
+    external_channel_id: str | None = None
 
 
 @dataclass(frozen=True)
