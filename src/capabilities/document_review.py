@@ -47,6 +47,33 @@ class DocumentReviewCapability:
             return None
         return draft
 
+    def save_draft(
+        self,
+        draft: DocumentDraft,
+        *,
+        identity: IdentityContext,
+        execution_context: CapabilityExecutionContext | None = None,
+    ) -> DocumentDraft:
+        """Persist a newly composed draft through the canonical review repository."""
+        self._validate_execution_context(
+            execution_context,
+            identity,
+            action="document:create",
+            resource_id=draft.document_id,
+        )
+        case = self._case_capability.get_owned(draft.case_id, identity=identity)
+        if case is None:
+            raise LookupError("Case not found")
+        if draft.document_id not in case.document_refs:
+            self._case_capability.add_document(
+                draft.case_id,
+                draft.document_id,
+                identity=identity,
+                source_channel="shared",
+            )
+        self._repository.save(draft)
+        return draft
+
     def edit(
         self,
         request: DocumentReviewRequest,
