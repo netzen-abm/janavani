@@ -82,6 +82,7 @@ def create_civic_action_capability(
         case_repository=case_repository,
         authority_capability=create_authority_capability(authority_repository),
         evidence_repository=evidence_repository,
+        document_review_capability=document_review_capability,
     )
 
 
@@ -169,6 +170,7 @@ def create_constitutional_objection_capability(
     authority_repository: AuthorityRepository,
     bill_profile_loader,
     evidence_repository: EvidenceRepository | None = None,
+    document_review_capability: DocumentReviewCapability | None = None,
 ) -> ConstitutionalObjectionCapability:
     return ConstitutionalObjectionCapability(
         case_capability=create_case_capability(case_repository),
