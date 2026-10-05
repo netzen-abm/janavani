@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from hashlib import sha256
 from src.core.sos import DeliveryRequest, DeliveryResult, SOSDeliveryState
+from src.core.sos import TransportKind
 
 class SOSDeliveryCoordinator:
     def __init__(self, adapters):
@@ -16,7 +17,7 @@ class SOSDeliveryCoordinator:
             adapter = self._select_adapter(request, index)
             delivery_id = f"delivery-{request.sos_id}-{index}"
             if adapter is None:
-                deliveries.append(DeliveryResult(delivery_id=delivery_id, transport_kind="other", state=SOSDeliveryState.UNKNOWN, attempted_at=now, error_code="NO_ELIGIBLE_TRANSPORT"))
+                deliveries.append(DeliveryResult(delivery_id=delivery_id, transport_kind=TransportKind.OTHER, state=SOSDeliveryState.UNKNOWN, attempted_at=now, error_code="NO_ELIGIBLE_TRANSPORT"))
                 continue
             try:
                 deliveries.append(adapter.deliver(DeliveryRequest(
