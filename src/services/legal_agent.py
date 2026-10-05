@@ -18,7 +18,7 @@ from src.access.scoped_execution_policy import ScopedExecutionPolicy
 from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
 from src.ai.provider import AIRequest, AIProvider
 from src.capabilities.translation import TranslationCapability
-from src.ai.providers.openrouter import OpenRouterProvider
+from src.ai.composition import create_openrouter_provider
 from src.core.municipal_profiles import fetch_profile_by_code
 from src.core.settings import ai_settings
 
@@ -38,7 +38,7 @@ class JanavaniLegalAgent:
     def __init__(self, http_session: requests.Session | None = None, provider: AIProvider | None = None) -> None:
         self._session = http_session or requests.Session()
         self._timeout = (3, 15)
-        self._provider = provider or OpenRouterProvider(self._session)
+        self._provider = provider or create_openrouter_provider(self._session)
         self._translation = TranslationCapability(self._session)
         self._ai_gateway = AIExecutionGateway(
             provider=self._provider,
