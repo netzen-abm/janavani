@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import os
+
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
+from src.capabilities.evidence import EvidenceCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -9,13 +14,21 @@ from src.capabilities.external_channel import ExternalChannelCapability
 from src.capabilities.follow_up import FollowUpCapability
 from src.capabilities.escalation import EscalationCapability
 from src.storage.provider_composition import ProviderComposition
+from src.storage.repositories.consent import ConsentRepository
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
+from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
+from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
 from src.storage.repositories.submission import SubmissionRepository
 from src.core.responsibility import ResponsibilityResolver
+from src.core.authority import AuthorityRepository
+from src.core.evidence import EvidenceRepository
+from src.core.submission import SubmissionRepository
 from src.core.obligation import ObligationResolver
 from .composition_repositories import create_document_review_repository_for_platform, create_submission_repository, create_provider_composition
+from .composition_capabilities import create_case_capability, create_authority_capability, create_responsibility_capability, create_obligation_capability, create_external_channel_capability, create_follow_up_capability, create_escalation_capability
 
 def create_civic_action_vertical_slice(
     *,
