@@ -29,12 +29,15 @@ class SOSResult:
     deliveries: tuple[DeliveryResult, ...] = ()
 
 from src.capabilities.sos_safety_gate import CanonicalSOSSafetyPrivacyGate
+from src.capabilities.sos_validation import validate_sos_request
+from src.capabilities.sos_delivery import SOSDeliveryCoordinator
 
 class SOSCapability:
     """Surface-independent SOS orchestration."""
     def __init__(self, *, decision_gate=None, delivery_adapters=()):
         self._decision_gate = decision_gate or CanonicalSOSSafetyPrivacyGate()
         self._adapters = {a.transport_kind: a for a in delivery_adapters}
+        self._delivery = SOSDeliveryCoordinator(self._adapters)
 
     def trigger(self, request: SOSRequest, *, identity: IdentityContext) -> SOSResult:
         self._validate_request(request, identity=identity)
@@ -128,47 +131,8 @@ class SOSCapability:
                 ))
         return SOSResult(request.sos_id, self._aggregate_state(deliveries), tuple(deliveries))
 
-    @staticmethod
-    def _validate_request(request, *, identity):
-        if not request.sos_id.strip() or not request.incident_context.strip():
-            raise ValueError("sos_id and incident_context are required")
-        if not request.explicit_user_choice:
-            raise PermissionError("Explicit user choice is required")
-        if request.remote_transmission and not request.destination_refs:
-            raise ValueError("A destination is required for remote transmission")
-        context = request.execution_context
-        if context is not None and context.identity is not identity:
-            raise PermissionError("SOS execution identity does not match request identity")
-        if request.consequential_action:
-            if context is None:
-                raise ValueError("Consequential SOS requires a CapabilityExecutionContext")
-            if context.capability_id != CAPABILITY_ID or context.action != CAPABILITY_ID:
-                raise ValueError("SOS execution context does not match capability")
-            if context.resource_id not in {None, request.sos_id}:
-                raise ValueError("SOS execution context resource does not match request")
-            if context.side_effect_class is not SideEffectClass.EXTERNAL_SIDE_EFFECT:
-                raise ValueError("Consequential SOS requires an external side-effect context")
+    def _validate_request(self, request, *, identity):
+        validate_sos_request(request, identity=identity)
 
-    def _select_adapter(self, request, index):
-        if request.requested_transport_kinds:
-            return next((self._adapters[k] for k in request.requested_transport_kinds if k in self._adapters), None)
-        if not self._adapters:
-            return None
-        return tuple(self._adapters.values())[index % len(self._adapters)]
-
-    @staticmethod
-    def _payload_ref(request):
-        material = "|".join((request.sos_id, request.incident_context, *request.evidence_refs))
-        return f"sos-payload-{sha256(material.encode()).hexdigest()[:32]}"
-
-    @staticmethod
-    def _aggregate_state(deliveries):
-        if not deliveries:
-            return SOSDeliveryState.UNKNOWN
-        states = {d.state for d in deliveries}
-        for state in (SOSDeliveryState.ACKNOWLEDGED, SOSDeliveryState.DELIVERED,
-                      SOSDeliveryState.ACCEPTED, SOSDeliveryState.TRANSMITTING,
-                      SOSDeliveryState.QUEUED):
-            if state in states:
-                return state
-        return SOSDeliveryState.FAILED if states == {SOSDeliveryState.FAILED} else SOSDeliveryState.UNKNOWN
+    def _deliver(self, request):
+        return self._delivery.deliver(request)
