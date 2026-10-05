@@ -16,7 +16,8 @@ from src.access.capability_scope import (
 from src.access.scoped_execution_policy import ScopedExecutionPolicy
 from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
 from src.ai.provider import AIRequest
-from src.ai.providers.huggingface_translation import HuggingFaceTranslationProvider
+from src.ai.provider import AIProvider
+from src.ai.composition import create_translation_provider
 from src.core.execution import CapabilityExecutionContext
 from src.core.settings import ai_settings
 from src.identity.context import IdentityContext
@@ -29,9 +30,9 @@ PURPOSE = "civic_translation"
 class TranslationCapability:
     """Translate citizen text without owning provider or authorization policy."""
 
-    def __init__(self, http_session: requests.Session | None = None) -> None:
+    def __init__(self, http_session: requests.Session | None = None, provider: AIProvider | None = None) -> None:
         session = http_session or requests.Session()
-        self._provider = HuggingFaceTranslationProvider(session)
+        self._provider = provider or create_translation_provider(session)
         self._gateway = AIExecutionGateway(
             provider=self._provider,
             scoped_policy=ScopedExecutionPolicy(
