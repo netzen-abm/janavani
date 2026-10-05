@@ -75,6 +75,7 @@ def create_civic_action_capability(
     authority_repository: AuthorityRepository,
     evidence_repository: EvidenceRepository | None = None,
     case_capability: CivicCaseCapability | None = None,
+    document_review_capability: DocumentReviewCapability | None = None,
 ) -> CivicActionCapability:
     canonical_case_capability = case_capability or create_case_capability(case_repository)
     return CivicActionCapability(
