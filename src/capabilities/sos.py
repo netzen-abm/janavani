@@ -18,7 +18,6 @@ from src.capabilities.sos_contract import CAPABILITY_ID
 from src.capabilities.sos_delivery import SOSDeliveryCoordinator
 from src.capabilities.sos_safety_gate import CanonicalSOSSafetyPrivacyGate
 from src.capabilities.sos_validation import validate_sos_request
-from src.core.execution import SideEffectClass
 from src.core.sos import DeliveryResult, SOSDeliveryState, SOSRequest
 from src.identity.context import IdentityContext
 
