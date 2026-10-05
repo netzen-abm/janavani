@@ -8,7 +8,7 @@ import time
 from fastapi.testclient import TestClient
 
 from src.web.canonical_app import app
-from src.web.civic_case_router import _REPOSITORY
+from src.web.civic_case_dependencies import _COMPOSITION
 
 
 SECRET = "test-identity-secret"
@@ -16,8 +16,9 @@ client = TestClient(app)
 
 
 def setup_function() -> None:
-    if hasattr(_REPOSITORY, "clear"):
-        _REPOSITORY.clear()
+    repository = _COMPOSITION.case_repository
+    if hasattr(repository, "clear"):
+        repository.clear()
     os.environ["JANAVANI_IDENTITY_ASSERTION_SECRET"] = SECRET
 
 
