@@ -625,6 +625,7 @@ Archive requires:
 | 2026-09-20 | Candidate RLS hardened with FORCE ROW LEVEL SECURITY on protected tables; production activation remains blocked pending real-PostgreSQL evidence | `db/migrations/CANDIDATE_20260919_rls_authorization.sql` |
 | 2026-09-20 | PostgreSQL security gate prioritized ahead of broader capability mapping | Current master execution queue |
 | 2026-09-22 | Purpose-bound capability session lifecycle implemented as shared ecosystem infrastructure; platform-specific permission/revocation verification remains open | `src/access/capability_session.py`, `tests/test_capability_session.py`, `docs/architecture/CAPABILITY_SESSION_CONTRACT.md` |
+| 2026-10-05 | Responsibility-based convergence: AI provider/translation boundary, Ollama conformance, active-source line-limit remediation, CivicCase lifecycle decomposition, and duplicate capability registry archived | `docs/90-audits/PROGRAMMING_AND_MARKDOWN_AUDIT_2026-10-05.md` + current `main` evidence |
 | 2026-08-23 | Checklist reconciled against verified status register | `docs/MASTER_TASK_CHECKLIST_RECONCILIATION_2026-08-23.md` |
 
 ---
