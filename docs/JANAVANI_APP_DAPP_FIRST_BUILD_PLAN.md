@@ -1,12 +1,12 @@
 # 🇮🇳 JANAVANI — APP + DAPP FIRST BUILD PLAN
 
-**Status:** ACTIVE — FIRST PRODUCT BUILD PRIORITY  
+**Status:** ACTIVE — LATER PRODUCT SURFACE PRIORITY  
 **Date:** 24 August 2026  
 **Scope:** Android, iOS and DApp/Web3, built as independent access surfaces over shared Janavani capability contracts.
 
 ## 1. Decision
 
-The first product-building focus is **Janavani App + DApp**.
+The current first-user production focus is **WebApp + Telegram**. App + DApp remain independent later surfaces over the same shared infrastructure.
 
 This does **not** change the full-ecosystem destination. It changes the implementation order so that the native mobile applications and DApp establish the first complete user-facing product surfaces while the Dynamic Web/WebApp, APIs, messaging and other interfaces continue as independent ecosystem surfaces.
 
