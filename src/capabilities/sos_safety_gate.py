@@ -3,10 +3,8 @@ from __future__ import annotations
 
 from src.capabilities.safety_privacy import AccessPurpose, SafetyPrivacyDecision, SafetyPrivacyRequest, SensitiveResource, evaluate_safety_privacy
 from src.core.sos import SOSRequest
-from src.core.execution import SideEffectClass
 from src.identity.context import IdentityContext
-
-CAPABILITY_ID = "sos:trigger"
+from src.capabilities.sos_contract import CAPABILITY_ID
 
 class CanonicalSOSSafetyPrivacyGate:
     """Adapt the canonical Safety/Privacy boundary to SOS decisions."""
