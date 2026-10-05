@@ -39,6 +39,14 @@ class PostgresCivicCaseRepository:
             ) from exc
         return psycopg.connect(self._dsn)
 
+    def _resolve_principal(self, principal_id: str | None) -> str | None:
+        """Prevent per-call identity from bypassing a provider-bound principal."""
+        if self._principal_id is not None:
+            if principal_id is not None and principal_id != self._principal_id:
+                raise PermissionError("Repository principal does not match configured principal")
+            return self._principal_id
+        return principal_id
+
     @staticmethod
     def _row_factory() -> Any:
         try:
@@ -49,9 +57,10 @@ class PostgresCivicCaseRepository:
 
     def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         try:
+            effective_principal = self._resolve_principal(principal_id)
             with self._connect() as conn:
                 with conn.transaction():
-                    bind_postgres_principal(conn, principal_id)
+                    bind_postgres_principal(conn, effective_principal)
                     with conn.cursor(row_factory=self._row_factory()) as cur:
                         cur.execute("SELECT * FROM civic_cases WHERE case_id = %s", (case_id,))
                         row = cur.fetchone()
@@ -74,9 +83,10 @@ class PostgresCivicCaseRepository:
 
     def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
         try:
+            effective_principal = self._resolve_principal(principal_id)
             with self._unit_of_work_factory() as uow:
                 conn = uow.connection
-                bind_postgres_principal(conn, principal_id)
+                bind_postgres_principal(conn, effective_principal)
                 with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
                         "SELECT version, created_at FROM civic_cases WHERE case_id = %s FOR UPDATE",
