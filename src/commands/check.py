@@ -14,19 +14,23 @@ def _case_capability(context: ContextTypes.DEFAULT_TYPE) -> CivicCaseCapability:
     return capability
 
 
-def _telegram_identity(update: Update) -> IdentityContext:
+def _telegram_identity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> IdentityContext:
     user_id = getattr(update.effective_user, "id", None)
     if user_id is None:
         raise ValueError("Telegram user identity is required")
-    return identity_for_telegram_user(user_id)
+    links = context.application.bot_data.get("identity_link_repository")
+    if links is None:
+        raise RuntimeError("Telegram identity dependencies were not composed")
+    return identity_for_telegram_user(user_id, links=links)
 
 
 def _owned_case(
     update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
     capability: CivicCaseCapability,
     case_id: str,
 ) -> CivicCase | None:
-    return capability.get_owned(case_id, identity=_telegram_identity(update))
+    return capability.get_owned(case_id, identity=_telegram_identity(update, context))
 
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,7 +51,7 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        case = _owned_case(update, _case_capability(context), case_id)
+        case = _owned_case(update, context, _case_capability(context), case_id)
     except Exception:
         await update.message.reply_text("⚠️ Case tracking is temporarily unavailable.")
         return
