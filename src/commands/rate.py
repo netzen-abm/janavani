@@ -47,7 +47,12 @@ Rating
     issue = " ".join(context.args[2:])
     actor_ref = None
     if update.effective_user is not None:
-        actor_ref = identity_for_telegram_user(update.effective_user.id).principal.principal_id
+        links = context.application.bot_data.get("identity_link_repository")
+        if links is None:
+            raise RuntimeError("Canonical Telegram identity dependencies are not composed")
+        actor_ref = identity_for_telegram_user(
+            update.effective_user.id, links=links
+        ).principal.principal_id
 
     try:
         feedback = feedback_capability.record(
