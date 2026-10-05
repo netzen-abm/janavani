@@ -55,7 +55,7 @@ services:
       - .:/workspace
     working_dir: /workspace
     environment:
-      - JANAVANI_BACKEND_URL=http://ai-agent-service:8000/api/v1
+      - JANAVANI_WEB_API_URL=http://ai-agent-service:8000
       - WEB_INTERFACE_TOKEN=${WEB_INTERFACE_TOKEN:?WEB_INTERFACE_TOKEN must be set}
     ports:
       - "8080:8080"
