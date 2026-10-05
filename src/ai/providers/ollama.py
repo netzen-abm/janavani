@@ -1,9 +1,7 @@
-"""Optional local Ollama AI provider adapter.
+"""Ollama local provider adapter for the canonical AI provider contract.
 
-Ollama is intentionally treated as an AI provider, not as a Janavani domain
-runtime. The adapter keeps local model execution behind the existing AI
-provider boundary so citizens/developers can choose local inference without
-coupling the product core to Ollama.
+Ollama is an execution provider only. Authorization, consent, purpose, data scope
+and capability ownership remain outside this module.
 """
 from __future__ import annotations
 
@@ -12,6 +10,8 @@ import os
 from typing import Any
 
 import httpx
+
+from src.ai.provider import AIRequest, AIResponse
 
 
 @dataclass(frozen=True)
@@ -22,21 +22,30 @@ class OllamaSettings:
 
 
 class OllamaProvider:
-    """Minimal chat-generation adapter for an Ollama server."""
+    """Canonical synchronous AIProvider adapter for a local Ollama server."""
 
     provider_id = "ollama-local"
 
-    def __init__(self, settings: OllamaSettings | None = None, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(self, settings: OllamaSettings | None = None, client: httpx.Client | None = None) -> None:
         self.settings = settings or OllamaSettings()
-        self._client = client or httpx.AsyncClient(timeout=self.settings.timeout_seconds)
+        self._client = client or httpx.Client(timeout=self.settings.timeout_seconds)
 
-    async def generate(self, messages: list[dict[str, str]], *, model: str | None = None) -> dict[str, Any]:
-        selected_model = model or self.settings.model
+    def generate(self, request: AIRequest) -> AIResponse:
+        selected_model = request.model or self.settings.model
         if not selected_model:
             raise ValueError("JANAVANI_OLLAMA_MODEL must be configured for Ollama generation")
-        response = await self._client.post(
+        response = self._client.post(
             f"{self.settings.base_url.rstrip('/')}/api/chat",
-            json={"model": selected_model, "messages": messages, "stream": False},
+            json={
+                "model": selected_model,
+                "messages": [dict(message) for message in request.messages],
+                "stream": False,
+            },
         )
         response.raise_for_status()
-        return response.json()
+        body: dict[str, Any] = response.json()
+        return AIResponse(
+            provider_id=self.provider_id,
+            model=selected_model,
+            payload=body,
+        )
