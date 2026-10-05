@@ -6,7 +6,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PY_CASE = ROOT / "src/core/civic_case.py"
+PY_CASE = ROOT / "src/core/case_model.py"
+PY_EVENT = ROOT / "src/core/case_events.py"
 RUST_CASE = ROOT / "crates/janavani-core/src/civic_case.rs"
 DB_CONTRACT = ROOT / "docs/architecture/CIVIC_CASE_DATABASE_CONTRACT.md"
 
@@ -109,6 +110,7 @@ def check_db_mapping(contract: str) -> None:
 
 def main() -> None:
     py_source = PY_CASE.read_text(encoding="utf-8")
+    py_event_source = PY_EVENT.read_text(encoding="utf-8")
     rust_source = RUST_CASE.read_text(encoding="utf-8")
     contract = DB_CONTRACT.read_text(encoding="utf-8")
 
@@ -119,7 +121,7 @@ def main() -> None:
     )
     assert_equal(
         "Python CaseEvent",
-        dataclass_fields(py_source, "CaseEvent"),
+        dataclass_fields(py_event_source, "CaseEvent"),
         EVENT_FIELDS,
     )
     assert_equal(
