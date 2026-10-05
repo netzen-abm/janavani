@@ -1,12 +1,18 @@
 services:
   - type: web
-    name: janavani-bot
+    name: janavani-web-api
     env: python
-
     plan: free
-
     buildCommand: pip install -r requirements.txt
-
-    # Canonical production API runtime. Telegram is an independent surface
-    # and must not be spawned as a child process of the web runtime.
+    # Canonical Web/API runtime. Telegram is an independent service.
     startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
+
+  - type: worker
+    name: janavani-telegram
+    env: python
+    # Telegram has an independent process and failure domain.
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/bot_telegram.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
