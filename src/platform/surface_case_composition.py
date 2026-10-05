@@ -56,6 +56,7 @@ class SurfaceCaseComposition:
     evidence_capability: EvidenceCapability
     consent_capability: ConsentCapability
     civic_action_capability: CivicActionCapability
+    civic_action: CivicActionCapability
     letter_drafting_capability: LetterDraftingCapability
     identity_link_repository: ExternalIdentityLinkRepository
     provider_composition: object
@@ -135,6 +136,7 @@ def create_surface_case_composition(
         evidence_capability=evidence_capability,
         consent_capability=consent_capability,
         civic_action_capability=civic_action_capability,
+        civic_action=civic_action_capability,
         letter_drafting_capability=letter_drafting_capability,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
