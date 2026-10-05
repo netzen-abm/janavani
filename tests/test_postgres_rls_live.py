@@ -43,9 +43,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(f'GRANT SELECT, INSERT ON public.civic_case_evidence_refs, public.civic_case_document_refs TO "{role}"')
                 cursor.execute(f'GRANT SELECT ON public.evidence_objects, public.document_artifacts TO "{role}"')
 
-                # Seed backend-owned child metadata before switching to the
-                # restricted application role; ordinary clients cannot register
-                # evidence/document metadata directly under the candidate policy.
+                # Seed backend-owned case/evidence/document metadata before
+                # switching to the restricted application role. Ordinary clients
+                # cannot register evidence/document metadata directly under the
+                # candidate policy.
                 cursor.execute(
                     """
                     INSERT INTO public.civic_cases
@@ -54,15 +55,23 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     """,
                     (case_id, "principal-a"),
                 )
+                cursor.execute(
+                    """
+                    INSERT INTO public.evidence_objects
+                    (evidence_id, evidence_type, storage_ref, sha256, received_at, status)
+                    VALUES (%s, 'document', 'local:test-evidence', 'sha256:test', now(), 'active')
+                    """,
+                    (evidence_id,),
+                )
                 cursor.execute(f'SET ROLE "{role}"')
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
                     """
                     INSERT INTO public.civic_case_evidence_refs
-                    (evidence_id, evidence_type, storage_ref, sha256, received_at, status)
-                    VALUES (%s, 'document', 'local:test-evidence', 'sha256:test', now(), 'active')
+                    (case_id, evidence_id, relationship, created_at, created_by)
+                    VALUES (%s, %s, 'primary', now(), %s)
                     """,
-                    (evidence_id,),
+                    (case_id, evidence_id, "principal-a"),
                 )
                 cursor.execute(
                     """
