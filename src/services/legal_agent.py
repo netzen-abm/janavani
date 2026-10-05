@@ -18,6 +18,7 @@ from src.access.scoped_execution_policy import ScopedExecutionPolicy
 from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
 from src.ai.provider import AIRequest, AIProvider
 from src.ai.providers.openrouter import OpenRouterProvider
+from src.ai.providers.huggingface_translation import HuggingFaceTranslationProvider
 from src.core.municipal_profiles import fetch_profile_by_code
 from src.core.settings import ai_settings
 
@@ -38,6 +39,7 @@ class JanavaniLegalAgent:
         self._session = http_session or requests.Session()
         self._timeout = (3, 15)
         self._provider = provider or OpenRouterProvider(self._session)
+        self._translation_provider = HuggingFaceTranslationProvider(self._session)
         self._ai_gateway = AIExecutionGateway(
             provider=self._provider,
             scoped_policy=ScopedExecutionPolicy(
@@ -80,27 +82,63 @@ class JanavaniLegalAgent:
         if not token or not model:
             return text
 
-        endpoint = f"https://api-inference.huggingface.co/models/{model}"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         try:
-            response = self._session.post(
-                endpoint,
-                headers=headers,
-                json={"inputs": text},
-                timeout=self._timeout,
+            from src.core.execution import CapabilityExecutionContext
+            from src.identity.context import IdentityContext
+            from src.identity.principal import Principal
+
+            identity = IdentityContext(
+                principal=Principal(
+                    principal_id="translation-service",
+                    capabilities=frozenset({"civic:translation"}),
+                )
             )
-            if response.status_code != 200:
-                return text
-            body = response.json()
-            if isinstance(body, list) and body and isinstance(body[0], dict):
-                translated = body[0].get("generated_text")
-                if translated:
-                    return translated
-            if isinstance(body, dict) and body.get("generated_text"):
-                return body["generated_text"]
-        except (requests.RequestException, ValueError, TypeError):
-            pass
-        return text
+            context = CapabilityExecutionContext.for_capability(
+                identity,
+                capability_id="civic:translation",
+                action="translate",
+                surface="service",
+            )
+            gateway = AIExecutionGateway(
+                provider=self._translation_provider,
+                scoped_policy=ScopedExecutionPolicy(
+                    capability="civic:translation",
+                    allowed_fields=frozenset({"citizen_text"}),
+                    allowed_providers=frozenset({self._translation_provider.provider_id}),
+                    allowed_processing_modes=frozenset({"remote_model"}),
+                    allowed_purposes=frozenset({"civic_translation"}),
+                ),
+                data_scope_policy=CapabilityDataScopePolicy(
+                    capability_id="civic:translation",
+                    requirements=(
+                        DataRequirement("citizen_text", DataClassification.PERSONAL),
+                    ),
+                ),
+            )
+            generated = gateway.generate(
+                AIExecutionRequest(
+                    identity=identity,
+                    execution_context=context,
+                    request=AIRequest(
+                        purpose="civic_translation",
+                        messages=({"role": "user", "content": text},),
+                        model=model,
+                        data_scope=("citizen_text",),
+                    ),
+                    provider=self._translation_provider.provider_id,
+                    processing_mode="remote_model",
+                ),
+                consent_scope=CapabilityDataScope(
+                    capability_id="civic:translation",
+                    purpose="civic_translation",
+                    approved_fields=frozenset({"citizen_text"}),
+                    provider=self._translation_provider.provider_id,
+                    processing_mode="remote_model",
+                ),
+            )
+            return str(generated.payload["translated_text"])
+        except (requests.RequestException, ValueError, TypeError, PermissionError):
+            return text
 
     def draft_legal_document(
         self, citizen_issue: str, location_code: str | None = None, consent_scope: CapabilityDataScope | None = None
