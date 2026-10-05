@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LEGACY_DIRS = ("janavani_v2", "janavani_v3")
 SKIP_PARTS = {".git", "target", "node_modules", "__pycache__", "archive"}
 SCANNABLE = {".py", ".rs", ".js", ".ts", ".tsx", ".jsx", ".yml", ".yaml", ".sh", ".toml"}
+TEXTUAL_ONLY = {".md", ".txt"}
 EVIDENCE_SCRIPTS = {
     "archive_safety_evidence.py",
     "architecture_conformance.py",
@@ -49,8 +50,12 @@ def active_references(files: list[Path], legacy: str) -> list[str]:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        if legacy in text:
-            matches.append(path.relative_to(ROOT).as_posix())
+        if legacy not in text:
+            continue
+        # Documentation/evidence mentions are not runtime dependency edges.
+        if path.suffix.lower() in TEXTUAL_ONLY:
+            continue
+        matches.append(path.relative_to(ROOT).as_posix())
     return matches
 
 
