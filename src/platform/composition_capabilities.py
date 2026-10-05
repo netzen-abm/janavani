@@ -83,7 +83,6 @@ def create_civic_action_capability(
         case_repository=case_repository,
         authority_capability=create_authority_capability(authority_repository),
         evidence_repository=evidence_repository,
-        document_review_capability=document_review_capability,
     )
 
 
