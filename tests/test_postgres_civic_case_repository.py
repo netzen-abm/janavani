@@ -193,3 +193,17 @@ def test_postgres_rejects_stale_version():
         pass
     else:
         raise AssertionError("stale version must be rejected")
+
+def test_configured_principal_cannot_be_overridden():
+    db = FakeDb()
+    repository = PostgresCivicCaseRepository(
+        connection_factory=lambda: FakeConnection(db),
+        principal_id="principal-a",
+    )
+    case = make_case()
+    try:
+        repository.save(case, principal_id="principal-b")
+    except PermissionError:
+        pass
+    else:
+        raise AssertionError("configured repository principal must not be overridable")
