@@ -11,6 +11,8 @@ from commands.check import check
 from commands.start import start
 from commands.search import search
 from commands.rate import rate
+from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
+from src.platform.composition import create_accountability_feedback_repository
 from commands.complaint import complaint
 from conversation.router import route
 from conversation.steps.format import handle_format
@@ -45,6 +47,9 @@ def main():
     application.bot_data["evidence_capability"] = evidence_capability
     application.bot_data["authority_capability"] = authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
+    application.bot_data["accountability_feedback_capability"] = AccountabilityFeedbackCapability(
+        create_accountability_feedback_repository(provider_composition=composition.provider_composition)
+    )
     application.bot_data["civic_action_vertical_slice"] = composition.civic_action_vertical_slice
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
