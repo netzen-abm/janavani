@@ -14,6 +14,7 @@ TEXTUAL_ONLY = {".md", ".txt"}
 EVIDENCE_SCRIPTS = {
     "archive_safety_evidence.py",
     "architecture_conformance.py",
+    "check_code_line_limits.py",
 }
 
 
