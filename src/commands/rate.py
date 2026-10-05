@@ -4,10 +4,14 @@ from telegram.ext import ContextTypes
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
 from src.platform.composition import create_accountability_feedback_repository
+from src.platform.surface_case_composition import create_surface_case_composition
 
 
+composition = create_surface_case_composition()
 feedback_capability = AccountabilityFeedbackCapability(
-    create_accountability_feedback_repository()
+    create_accountability_feedback_repository(
+        provider_composition=composition.provider_composition
+    )
 )
 
 
