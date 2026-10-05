@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB_ENTRYPOINT = ROOT / "src" / "web.py"
 LEGACY_ENTRYPOINT = ROOT / "src" / "main.py"
 TELEGRAM_ENTRYPOINT = ROOT / "src" / "bot_telegram.py"
+TELEGRAM_ENTRYPOINT = ROOT / "src" / "bot_telegram.py"
 
 
 def test_web_surface_does_not_spawn_telegram_process() -> None:
@@ -19,6 +20,14 @@ def test_web_surface_documents_canonical_runtime() -> None:
     source = WEB_ENTRYPOINT.read_text(encoding="utf-8")
 
     assert "src.web.canonical_app:app" in source
+
+
+def test_telegram_surface_has_its_own_runtime_bootstrap() -> None:
+    source = TELEGRAM_ENTRYPOINT.read_text(encoding="utf-8")
+
+    assert "def main(" in source
+    assert "create_surface_case_composition" in source
+    assert "src.web.canonical_app" not in source
 
 
 def test_legacy_entrypoint_is_not_a_surface_composition_authority() -> None:
