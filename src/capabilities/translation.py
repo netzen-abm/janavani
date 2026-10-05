@@ -49,7 +49,13 @@ class TranslationCapability:
             ),
         )
 
-    def translate(self, text: str, *, identity: IdentityContext) -> str:
+    def translate(
+        self,
+        text: str,
+        *,
+        identity: IdentityContext,
+        consent_scope: CapabilityDataScope | None = None,
+    ) -> str:
         if not text.strip():
             return text
         model = ai_settings.IIT_MADRAS_TRANSLATION_MODEL
@@ -74,12 +80,6 @@ class TranslationCapability:
                 provider=self._provider.provider_id,
                 processing_mode="remote_model",
             ),
-            consent_scope=CapabilityDataScope(
-                capability_id=CAPABILITY_ID,
-                purpose=PURPOSE,
-                approved_fields=frozenset({"citizen_text"}),
-                provider=self._provider.provider_id,
-                processing_mode="remote_model",
-            ),
+            consent_scope=consent_scope,
         )
         return str(result.payload["translated_text"])
