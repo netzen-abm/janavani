@@ -62,14 +62,14 @@ Further splitting without a new architectural boundary would increase orchestrat
 
 ## High-value findings
 
-### P0 — AI/provider boundary is not yet closed
+### P0 — AI/provider boundary closure (addressed; verification pending)
 
-1. `src/services/legal_agent.py` correctly uses `AIExecutionGateway` for legal-document generation, but it also performs a direct Hugging Face HTTP request for translation.
-2. This creates an alternate AI/provider execution path outside the canonical AI gateway.
-3. `src/ai/providers/ollama.py` is provider-shaped but does not currently implement the canonical `AIProvider.generate(AIRequest) -> AIResponse` contract; it exposes a separate async method and therefore cannot be treated as a drop-in canonical provider.
-4. OpenRouter is instantiated inside `legal_agent.py`; provider selection should ultimately be composed at the shared platform boundary rather than becoming service-owned policy.
+1. Direct Hugging Face translation HTTP was moved behind the shared `TranslationCapability` and `AIExecutionGateway`.
+2. `TranslationCapability` now requires explicit consent for remote processing and fails closed when consent is absent.
+3. `src/ai/providers/ollama.py` now conforms to the canonical synchronous `AIProvider.generate(AIRequest) -> AIResponse` contract.
+4. Provider conformance tests were added in `tests/test_ai_provider_conformance.py`.
 
-**Required outcome:** every AI/model/translation provider invocation must cross a canonical capability execution/trust boundary. Provider adapters may perform network I/O; they must not become authorization or capability owners.
+**Verification still required:** CI/runtime execution must prove the new paths work in the repository environment. No provider is allowed to bypass the canonical execution/trust boundary.
 
 ### P0 — PostgreSQL/runtime evidence still outranks new capability work
 
@@ -158,7 +158,7 @@ Maintain exactly nine active branches. A branch may be merged/retired only after
 
 **Architecture quality: strong. Repository hygiene: improving and currently branch-compliant. Product implementation: still behind architecture.**
 
-The next engineering work should reduce architectural entropy, not add another abstraction generation.
+The next engineering work should reduce architectural entropy, not add another abstraction generation. The AI boundary correction is implemented on `main`; production completion remains gated on CI/runtime evidence.
 
 ## Evidence
 
