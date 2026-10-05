@@ -539,8 +539,7 @@ Architectural decision: Janavani owns the capability; PostgreSQL is the relation
 ## Immediate unresolved sequence
 
 1. P0.6 PostgreSQL conformance/security gate: execute real cross-user authorization + candidate RLS tests; keep RLS unactivated until evidence passes.
-2. Close every remaining direct AI/provider invocation path; make provider adapters conform to the canonical `AIProvider` contract before registration.
-3. Verify canonical Web/API runtime and independent surface startup evidence.
+2. Verify canonical Web/API runtime and independent surface startup evidence.
 4. P0.6g/P0.6h restart, outage/recovery and backup/restore evidence.
 5. M2-B Capability → Repository → Test → Deployment Map.
 6. M2-C Storage Ownership decision/verification layer.
