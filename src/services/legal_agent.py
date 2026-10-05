@@ -13,6 +13,9 @@ from typing import Any, Dict
 
 import requests
 
+from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, DataClassification, DataRequirement
+from src.access.scoped_execution_policy import ScopedExecutionPolicy
+from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
 from src.ai.provider import AIRequest, AIProvider
 from src.ai.providers.openrouter import OpenRouterProvider
 from src.core.municipal_profiles import fetch_profile_by_code
@@ -35,6 +38,23 @@ class JanavaniLegalAgent:
         self._session = http_session or requests.Session()
         self._timeout = (3, 15)
         self._provider = provider or OpenRouterProvider(self._session)
+        self._ai_gateway = AIExecutionGateway(
+            provider=self._provider,
+            scoped_policy=ScopedExecutionPolicy(
+                capability="civic:ai-draft",
+                allowed_fields=frozenset({"citizen_issue", "regional_routing_metadata"}),
+                allowed_providers=frozenset({self._provider.provider_id}),
+                allowed_processing_modes=frozenset({"remote_model"}),
+                allowed_purposes=frozenset({"civic_document_drafting"}),
+            ),
+            data_scope_policy=CapabilityDataScopePolicy(
+                capability_id="civic:ai-draft",
+                requirements=(
+                    DataRequirement("citizen_issue", DataClassification.PERSONAL),
+                    DataRequirement("regional_routing_metadata", DataClassification.NON_SENSITIVE),
+                ),
+            ),
+        )
 
     @staticmethod
     def _fallback(citizen_issue: str) -> Dict[str, Any]:
@@ -83,7 +103,7 @@ class JanavaniLegalAgent:
         return text
 
     def draft_legal_document(
-        self, citizen_issue: str, location_code: str | None = None
+        self, citizen_issue: str, location_code: str | None = None, consent_scope: CapabilityDataScope | None = None
     ) -> Dict[str, Any]:
         """Draft a structured civic document when an AI provider is available.
 
@@ -122,7 +142,32 @@ class JanavaniLegalAgent:
         )
 
         try:
-            generated = self._provider.generate(request)
+            from src.core.execution import CapabilityExecutionContext
+            from src.identity.context import IdentityContext
+            from src.identity.principal import Principal
+
+            execution_identity = IdentityContext(
+                principal=Principal(
+                    principal_id="legal-agent",
+                    capabilities=frozenset({"civic:ai-draft"}),
+                )
+            )
+            execution_context = CapabilityExecutionContext.for_capability(
+                execution_identity,
+                capability_id="civic:ai-draft",
+                action="draft",
+                surface="service",
+            )
+            generated = self._ai_gateway.generate(
+                AIExecutionRequest(
+                    identity=execution_identity,
+                    execution_context=execution_context,
+                    request=request,
+                    provider=self._provider.provider_id,
+                    processing_mode="remote_model",
+                ),
+                consent_scope=consent_scope,
+            )
             return {
                 "status": "available",
                 "ai_used": True,
@@ -130,6 +175,12 @@ class JanavaniLegalAgent:
                 "model": generated.model,
                 "regional_profile": regional_profile,
                 "result": generated.payload,
+            }
+        except PermissionError as exc:
+            return {
+                "status": "consent_required",
+                "ai_used": False,
+                "message": str(exc),
             }
         except (requests.RequestException, ValueError, TypeError):
             return self._fallback(issue)
