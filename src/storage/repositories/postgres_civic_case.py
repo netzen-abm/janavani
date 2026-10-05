@@ -6,15 +6,10 @@ from src.core.civic_case import CivicCase
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.unit_of_work import UnitOfWorkFactory
 from src.storage.repositories.postgres_civic_case_codec import hydrate, now
+from src.storage.repositories.postgres_civic_case_errors import PostgresCivicCaseConcurrencyError, PostgresCivicCasePersistenceError
 from src.storage.repositories.postgres_civic_case_sql import (
     insert_case, persist_events, persist_refs, select_children, update_case,
 )
-
-class PostgresCivicCasePersistenceError(RuntimeError):
-    """Raised when PostgreSQL Civic Case persistence fails."""
-
-class PostgresCivicCaseConcurrencyError(PostgresCivicCasePersistenceError):
-    """Raised when optimistic concurrency detects a stale case version."""
 
 class PostgresCivicCaseRepository:
     """Atomic PostgreSQL implementation of the CivicCaseRepository contract."""
