@@ -14,13 +14,10 @@ from src.capabilities.safety_privacy import (
     evaluate_safety_privacy,
 )
 from src.core.execution import SideEffectClass
-from src.core.sos import (
-    DeliveryRequest, DeliveryResult, SOSDeliveryAdapter, SOSDeliveryState,
-    SOSRequest, TransportKind,
-)
+from src.core.sos import SOSDeliveryAdapter, SOSDeliveryState, SOSRequest
 from src.identity.context import IdentityContext
 
-CAPABILITY_ID = "sos:trigger"
+from src.capabilities.sos_contract import CAPABILITY_ID
 
 @dataclass(frozen=True)
 class SOSResult:
