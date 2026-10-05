@@ -1,4 +1,5 @@
 from src.services.legal_agent import JanavaniLegalAgent
+from src.access.capability_scope import CapabilityDataScope
 
 
 def test_legal_agent_degrades_without_ai_credentials(monkeypatch):
@@ -96,7 +97,14 @@ def test_legal_agent_regional_context_is_metadata_not_authority(monkeypatch):
 
     session = FakeSession()
     result = JanavaniLegalAgent(http_session=session).draft_legal_document(
-        "Roads in my area are damaged.", "KA-BLR-02"
+        "Roads in my area are damaged.", "KA-BLR-02",
+        consent_scope=CapabilityDataScope(
+            capability_id="civic:ai-draft",
+            purpose="civic_document_drafting",
+            approved_fields=frozenset({"citizen_issue", "regional_routing_metadata"}),
+            provider="openrouter",
+            processing_mode="remote_model",
+        ),
     )
 
     assert result["status"] == "available"
@@ -104,3 +112,21 @@ def test_legal_agent_regional_context_is_metadata_not_authority(monkeypatch):
     prompt = session.calls[0][1]["json"]["messages"][0]["content"]
     assert "contextual routing metadata" in prompt
     assert "verified legal authority" in prompt
+
+
+
+def test_legal_agent_requires_consent_before_remote_ai(monkeypatch):
+    from src.core.settings import ai_settings
+
+    monkeypatch.setattr(ai_settings, "OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(ai_settings, "LEGAL_DRAFTING_MODEL", "test-model")
+
+    class Session:
+        def post(self, *args, **kwargs):
+            raise AssertionError("provider must not be called without consent")
+
+    result = JanavaniLegalAgent(http_session=Session()).draft_legal_document(
+        "Citizen supplied issue."
+    )
+    assert result["status"] == "consent_required"
+    assert result["ai_used"] is False
