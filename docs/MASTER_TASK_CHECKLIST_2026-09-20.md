@@ -60,14 +60,15 @@ Remaining work is concentrated in convergence, production evidence, shared-infra
 - [ ] Service identity authorization matrix finalized.
 
 ## Phase 3 — Runtime / deployment convergence
-- [ ] Verify canonical API/Web runtime entrypoint.
+- [x] Verify canonical API/Web runtime entrypoint.
 - [ ] Verify worker/background process requirements.
 - [ ] Verify Redis runtime path.
 - [ ] Verify PostgreSQL runtime configuration.
 - [ ] Verify storage/blob runtime path.
 - [ ] Verify production environment-variable contract.
 - [ ] Verify startup/readiness/health checks.
-- [ ] Verify deployment configuration against canonical runtime.
+- [x] Verify deployment configuration against canonical runtime.
+- [x] Establish independent Telegram deployment runtime contract.
 - [ ] Consolidate competing CI workflows.
 - [ ] Make CI the authoritative repeatable verification mechanism.
 - [ ] Execute complete Python + Rust/Dioxus CI gate successfully.
@@ -119,6 +120,7 @@ Remaining work is concentrated in convergence, production evidence, shared-infra
 
 ## Phase 5 — Independent ecosystem surfaces
 - [ ] Web application production slice.
+- [x] Telegram adapter canonical runtime/deployment boundary.
 - [ ] Telegram adapter production slice.
 - [ ] WhatsApp adapter.
 - [ ] Messenger adapter.
@@ -218,6 +220,6 @@ PostgreSQL live security gate → Authorization convergence → Runtime/deployme
 
 ## Next 2 engineering steps
 1. Execute the existing live PostgreSQL RLS/integration suites against the CI PostgreSQL service and fix every real failure rather than expanding the candidate policy prematurely.
-2. Complete the active-code Supabase dependency sweep + CI/runtime convergence immediately after the database gate.
+2. Complete the authenticated Web ↔ Telegram Case-continuity vertical slice using shared identity, Case and capability contracts.
 
 **Master rule:** archive historical implementations; never let archived architecture silently become an active dependency; never promote a candidate security policy based on static inspection alone.
