@@ -8,7 +8,7 @@ import pytest
 from src.capabilities.civic_case import CAPABILITY_ID, CivicCaseCreateRequest
 from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
-from src.identity.linking import IdentityLinkRequest, IdentityLinkingService
+from src.identity.linking import IdentityLinkRequest, IdentityLinkingService, IdentityLinkResolver
 from src.identity.principal import IdentityMode, Principal
 from src.platform.surface_case_composition import create_surface_case_composition
 from src.storage.provider_composition import ProviderComposition
@@ -72,6 +72,8 @@ def test_web_and_telegram_share_durable_identity_and_case_state():
     assert linked is not None
     assert linked.principal_id == principal_id
     assert linked.verified is True
+    resolved = IdentityLinkResolver(links).resolve("telegram", "e2e-telegram-user")
+    assert resolved.principal_id == principal_id
 
     created = telegram.case_capability.create(
         CivicCaseCreateRequest(
