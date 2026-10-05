@@ -22,6 +22,12 @@ from src.identity.context import IdentityContext
 
 CAPABILITY_ID = "sos:trigger"
 
+@dataclass(frozen=True)
+class SOSResult:
+    sos_id: str
+    state: SOSDeliveryState
+    deliveries: tuple[DeliveryResult, ...] = ()
+
 from src.capabilities.sos_safety_gate import CanonicalSOSSafetyPrivacyGate
 
 class SOSCapability:
