@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
+from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionTransport
