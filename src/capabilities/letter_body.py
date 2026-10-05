@@ -1,7 +1,10 @@
 """Pure civic-letter body composition; no persistence or authorization."""
 from __future__ import annotations
 
-from .letter_drafting import LetterDraftRequest
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .letter_drafting import LetterDraftRequest
 
 
 def compose_letter_body(request: LetterDraftRequest) -> str:
