@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
 
+from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy
+
 
 @dataclass(frozen=True)
 class AIRequest:
@@ -31,4 +33,18 @@ class AIProvider(Protocol):
 
     def generate(self, request: AIRequest) -> AIResponse:
         """Generate only the requested task output; no authorization semantics."""
+        ...
+
+
+class ScopedAIProvider(Protocol):
+    provider_id: str
+
+    def generate_scoped(
+        self,
+        request: AIRequest,
+        *,
+        scope_policy: CapabilityDataScopePolicy,
+        consent_scope: CapabilityDataScope | None = None,
+    ) -> AIResponse:
+        """Generate only after the capability data scope permits execution."""
         ...
