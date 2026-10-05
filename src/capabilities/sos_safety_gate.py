@@ -1,11 +1,12 @@
 """SOS-specific adapter for the shared safety/privacy decision boundary."""
 from __future__ import annotations
 
-@dataclass(frozen=True)
-class SOSResult:
-    sos_id: str
-    state: SOSDeliveryState
-    deliveries: tuple[DeliveryResult, ...] = ()
+from src.capabilities.safety_privacy import AccessPurpose, SafetyPrivacyDecision, SafetyPrivacyRequest, SensitiveResource, evaluate_safety_privacy
+from src.core.sos import SOSRequest
+from src.core.execution import SideEffectClass
+from src.identity.context import IdentityContext
+
+CAPABILITY_ID = "sos:trigger"
 
 class CanonicalSOSSafetyPrivacyGate:
     """Adapt the canonical Safety/Privacy boundary to SOS decisions."""
