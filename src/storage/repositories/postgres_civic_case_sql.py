@@ -1,7 +1,7 @@
 """SQL persistence primitives for the PostgreSQL Civic Case provider."""
 from __future__ import annotations
 from src.storage.repositories.postgres_civic_case_codec import case_values, event_values, encode, now
-from src.storage.repositories.postgres_civic_case import PostgresCivicCaseConcurrencyError
+from src.storage.repositories.postgres_civic_case_errors import PostgresCivicCaseConcurrencyError
 
 def select_children(cur, table: str, case_id: str):
     order = " ORDER BY occurred_at, event_id" if table == "civic_case_events" else ""
