@@ -59,3 +59,20 @@ def test_active_deployment_manifests_select_canonical_runtime():
     assert expected in docker
     assert expected in entrypoint
     assert "src/web.py" not in render
+
+
+def test_render_declares_independent_web_and_telegram_services():
+    render = (ROOT / "render.yaml").read_text(encoding="utf-8")
+
+    assert "name: janavani-web-api" in render
+    assert "name: janavani-telegram" in render
+    assert "type: web" in render
+    assert "type: worker" in render
+    assert "src.web.canonical_app:app" in render
+    assert "python src/bot_telegram.py" in render
+
+    web_start = "uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT"
+    telegram_start = "python src/bot_telegram.py"
+    assert web_start in render
+    assert telegram_start in render
+    assert "subprocess" not in render
