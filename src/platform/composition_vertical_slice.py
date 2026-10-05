@@ -28,7 +28,6 @@ from src.core.evidence import EvidenceRepository
 from src.core.submission import SubmissionRepository
 from src.core.obligation import ObligationResolver
 from .composition_repositories import create_document_review_repository_for_platform, create_submission_repository, create_provider_composition
-from .composition_capabilities import create_case_capability, create_authority_capability, create_responsibility_capability, create_obligation_capability, create_external_channel_capability, create_follow_up_capability, create_escalation_capability
 
 def create_civic_action_vertical_slice(
     *,
@@ -51,6 +50,12 @@ def create_civic_action_vertical_slice(
     provider_composition: ProviderComposition | None = None,
     submission_case_transaction_repository: SubmissionCaseTransactionRepository | None = None,
 ) -> CivicActionVerticalSlice:
+    from .composition_capabilities import (
+        create_case_capability, create_authority_capability,
+        create_responsibility_capability, create_obligation_capability,
+        create_external_channel_capability, create_follow_up_capability,
+        create_escalation_capability,
+    )
     composition = provider_composition or create_provider_composition()
     case_capability = case_capability or create_case_capability(case_repository)
     authority_capability = create_authority_capability(authority_repository)
