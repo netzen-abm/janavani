@@ -12,6 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY_LIFECYCLE = ROOT / "src/core/case_lifecycle.py"
 PY_DOMAIN = ROOT / "src/core/case_types.py"
 RUST_CORE = ROOT / "crates/janavani-core/src/civic_case.rs"
+RUST_CASE_MODULES = sorted((ROOT / "crates/janavani-core/src/civic_case").glob("*.rs"))
 RUST_CONSENT = ROOT / "crates/janavani-core/src/consent.rs"
 RUST_APP = ROOT / "crates/janavani-application/src"
 
@@ -178,7 +179,7 @@ def check_enum_parity() -> list[str]:
 
 
 def check_lifecycle_parity() -> list[str]:
-    rust = RUST_CORE.read_text(encoding="utf-8")
+    rust = "\n".join([RUST_CORE.read_text(encoding="utf-8")] + [p.read_text(encoding="utf-8") for p in RUST_CASE_MODULES])
     expected = {(rust_name(a), rust_name(b)) for a, b in lifecycle_pairs()}
     actual = rust_lifecycle_pairs(rust)
     return [] if expected == actual else ["lifecycle transition parity mismatch"]
