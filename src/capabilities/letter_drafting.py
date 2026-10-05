@@ -122,8 +122,7 @@ class LetterDraftingCapability:
                 "Letter evidence references are not attached to the case: "
                 + ", ".join(missing_evidence)
             )
-        content = "
-".join((request.subject, request.issue, request.proposal_or_notice))
+        content = "\n".join((request.subject, request.issue, request.proposal_or_notice))
         forbidden_placeholders = ("[Insert ", "{{", "Dear X", "<recipient>")
         if any(token.lower() in content.lower() for token in forbidden_placeholders):
             raise ValueError("Draft contains unresolved placeholder text")
