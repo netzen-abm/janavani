@@ -5,7 +5,6 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB_ENTRYPOINT = ROOT / "src" / "web.py"
 LEGACY_ENTRYPOINT = ROOT / "src" / "main.py"
 TELEGRAM_ENTRYPOINT = ROOT / "src" / "bot_telegram.py"
-TELEGRAM_ENTRYPOINT = ROOT / "src" / "bot_telegram.py"
 
 
 def test_web_surface_does_not_spawn_telegram_process() -> None:
