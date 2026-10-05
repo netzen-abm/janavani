@@ -1,7 +1,7 @@
 """SOS request trust validation boundary."""
 from __future__ import annotations
 from src.core.execution import SideEffectClass
-from src.capabilities.sos import CAPABILITY_ID
+from src.capabilities.sos_contract import CAPABILITY_ID
 
 def validate_sos_request(request, *, identity):
     if not request.sos_id.strip() or not request.incident_context.strip():
