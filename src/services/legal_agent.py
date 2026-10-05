@@ -17,8 +17,8 @@ from src.access.capability_scope import CapabilityDataScope, CapabilityDataScope
 from src.access.scoped_execution_policy import ScopedExecutionPolicy
 from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
 from src.ai.provider import AIRequest, AIProvider
+from src.capabilities.translation import TranslationCapability
 from src.ai.providers.openrouter import OpenRouterProvider
-from src.ai.providers.huggingface_translation import HuggingFaceTranslationProvider
 from src.core.municipal_profiles import fetch_profile_by_code
 from src.core.settings import ai_settings
 
@@ -39,7 +39,7 @@ class JanavaniLegalAgent:
         self._session = http_session or requests.Session()
         self._timeout = (3, 15)
         self._provider = provider or OpenRouterProvider(self._session)
-        self._translation_provider = HuggingFaceTranslationProvider(self._session)
+        self._translation = TranslationCapability(self._session)
         self._ai_gateway = AIExecutionGateway(
             provider=self._provider,
             scoped_policy=ScopedExecutionPolicy(
@@ -69,21 +69,10 @@ class JanavaniLegalAgent:
         }
 
     def translate_input_if_needed(self, text: str, target_lang: str = "en") -> str:
-        """Optionally translate citizen input via the configured Hugging Face model.
-
-        Translation is isolated from legal drafting. Missing configuration or provider
-        failure returns the original citizen text so civic participation is not blocked.
-        """
+        """Compatibility wrapper over the shared Translation capability."""
         if not text or not text.strip() or target_lang != "en":
             return text
-
-        token = ai_settings.HF_TOKEN
-        model = ai_settings.IIT_MADRAS_TRANSLATION_MODEL
-        if not token or not model:
-            return text
-
         try:
-            from src.core.execution import CapabilityExecutionContext
             from src.identity.context import IdentityContext
             from src.identity.principal import Principal
 
@@ -93,50 +82,7 @@ class JanavaniLegalAgent:
                     capabilities=frozenset({"civic:translation"}),
                 )
             )
-            context = CapabilityExecutionContext.for_capability(
-                identity,
-                capability_id="civic:translation",
-                action="translate",
-                surface="service",
-            )
-            gateway = AIExecutionGateway(
-                provider=self._translation_provider,
-                scoped_policy=ScopedExecutionPolicy(
-                    capability="civic:translation",
-                    allowed_fields=frozenset({"citizen_text"}),
-                    allowed_providers=frozenset({self._translation_provider.provider_id}),
-                    allowed_processing_modes=frozenset({"remote_model"}),
-                    allowed_purposes=frozenset({"civic_translation"}),
-                ),
-                data_scope_policy=CapabilityDataScopePolicy(
-                    capability_id="civic:translation",
-                    requirements=(
-                        DataRequirement("citizen_text", DataClassification.PERSONAL),
-                    ),
-                ),
-            )
-            generated = gateway.generate(
-                AIExecutionRequest(
-                    identity=identity,
-                    execution_context=context,
-                    request=AIRequest(
-                        purpose="civic_translation",
-                        messages=({"role": "user", "content": text},),
-                        model=model,
-                        data_scope=("citizen_text",),
-                    ),
-                    provider=self._translation_provider.provider_id,
-                    processing_mode="remote_model",
-                ),
-                consent_scope=CapabilityDataScope(
-                    capability_id="civic:translation",
-                    purpose="civic_translation",
-                    approved_fields=frozenset({"citizen_text"}),
-                    provider=self._translation_provider.provider_id,
-                    processing_mode="remote_model",
-                ),
-            )
-            return str(generated.payload["translated_text"])
+            return self._translation.translate(text, identity=identity)
         except (requests.RequestException, ValueError, TypeError, PermissionError):
             return text
 
