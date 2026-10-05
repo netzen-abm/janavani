@@ -1,8 +1,8 @@
 # 🇮🇳 JANAVANI — MASTER TASK CHECKLIST
 
 **Status:** LIVE MASTER CONTROL DOCUMENT  
-**Version:** 1.1  
-**Date:** 23 August 2026  
+**Version:** 1.2  
+**Date:** 05 October 2026  
 **Scope:** COMPLETE JANAVANI ECOSYSTEM — NOT AN MVP
 
 **Purpose:** Single authoritative checklist for tracking the complete Janavani ecosystem. It records master workstreams, subtasks, dependencies, verification status, and completion evidence.
@@ -166,20 +166,22 @@ Remaining: capability → repository → tests → deployment → security/priva
 
 # 8. RAG / SLM / LLM / AGENTIC AI
 
-**Status: NOT STARTED — POC COMPONENTS EXIST**
+**Status: IN PROGRESS — SHARED AI CONTRACT/GATEWAY IMPLEMENTED; PROVIDER CONVERGENCE + RUNTIME VERIFICATION OPEN**
 
-- [ ] 8.1 AI provider abstraction.
-- [ ] 8.2 Local/SLM capability assessment.
+- [x] 8.1 AI provider abstraction — `src/ai/provider.py`.
+- [ ] 8.2 Local/SLM capability assessment and canonical Ollama provider conformance.
 - [ ] 8.3 RAG architecture.
 - [ ] 8.4 Source citation requirements.
 - [ ] 8.5 Knowledge freshness policy.
 - [ ] 8.6 LLM routing policy.
-- [ ] 8.7 Agentic AI tool permissions.
-- [ ] 8.8 Human approval gates.
-- [ ] 8.9 AI failure fallback.
+- [x] 8.7 Agentic AI tool permissions — shared policy/gateway foundation exists.
+- [x] 8.8 Human approval gates — consequential-operation boundary exists.
+- [x] 8.9 AI failure fallback — deterministic/degraded path exists for current drafting flow.
 - [ ] 8.10 AI safety/evaluation suite.
 - [ ] 8.11 Prompt/version registry.
 - [ ] 8.12 Hallucination/error reporting.
+
+**Immediate AI convergence finding:** `src/services/legal_agent.py` still performs direct Hugging Face translation HTTP outside the canonical AI gateway. No additional AI provider path may be added until this alternate path is removed or placed behind the same canonical capability/trust boundary.
 
 # 9. CIVIC DOCUMENT & LETTER ENGINE
 
@@ -535,6 +537,15 @@ Architectural decision: Janavani owns the capability; PostgreSQL is the relation
 - [ ] P0.6h Backup/restore evidence is executed.
 
 ## Immediate unresolved sequence
+
+1. P0.6 PostgreSQL conformance/security gate: execute real cross-user authorization + candidate RLS tests; keep RLS unactivated until evidence passes.
+2. Close every remaining direct AI/provider invocation path; make provider adapters conform to the canonical `AIProvider` contract before registration.
+3. Verify canonical Web/API runtime and independent surface startup evidence.
+4. P0.6g/P0.6h restart, outage/recovery and backup/restore evidence.
+5. M2-B Capability → Repository → Test → Deployment Map.
+6. M2-C Storage Ownership decision/verification layer.
+7. Only then approve targeted consolidation/archive candidates.
+
 
 1. P0.6 PostgreSQL conformance/security gate: execute real cross-user authorization + candidate RLS tests; keep RLS unactivated until evidence passes.
 2. P0.6g/P0.6h restart, outage/recovery and backup/restore evidence.
