@@ -72,7 +72,7 @@ impl CaseStatus {
         match self {
             Draft => matches!(target, Review),
             Review => matches!(target, Review | Ready),
-            Ready => matches!(target, Ready | Submitting),
+            Ready => matches!(target, Ready | Submitting | Submitted),
             Submitting => matches!(target, Submitting | Queued | Submitted),
             Queued => matches!(target, Queued | Submitted),
             Submitted => matches!(target, Acknowledged),
