@@ -86,15 +86,3 @@ class CivicCaseDeliveryMixin:
             occurred_at, actor_id, source_channel, source_ref, notes,
         ))
 
-    def follow_up(
-        self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
-        notes: str | None = None,
-    ) -> CaseEvent:
-        if self.status not in {CaseStatus.ACKNOWLEDGED, CaseStatus.IN_PROGRESS, CaseStatus.RESPONDED}:
-            raise ValueError("Case is not ready for follow-up")
-        self.status = CaseStatus.FOLLOW_UP
-        return self._record(CaseEvent(
-            event_id, self.case_id, CaseEventType.FOLLOW_UP,
-            occurred_at, actor_id, notes=notes,
-        ))
-
