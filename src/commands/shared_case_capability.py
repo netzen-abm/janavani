@@ -21,11 +21,13 @@ def create_case_from_telegram(
     # repository remains a compatibility seam for isolated tests/legacy callers;
     # it is used only when no composed capability is supplied.
     capability = case_capability or CivicCaseCapability(repository)
-    return capability.create(
+    # Telegram citizen content is transport-transient. Create only a metadata
+    # shell in Janavani persistence; never persist the raw narrative.
+    return capability.create_shell(
         CivicCaseCreateRequest(
             case_type=CaseType.COMPLAINT,
             subject=subject,
-            narrative=narrative,
+            narrative="",
         ),
         identity=identity,
         source_channel="telegram",
