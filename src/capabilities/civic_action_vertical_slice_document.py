@@ -86,6 +86,18 @@ class CivicActionDocuments:
             case_id=case_id, document_type=document_type, draft=typed, artifacts=artifacts
         )
 
+    def open_artifact(self, artifact_id: str, *, case_id: str, identity: IdentityContext):
+        repository = self._deps.artifact_repository or create_document_artifact_repository()
+        artifact = repository.get(artifact_id)
+        if artifact is None or artifact.case_id != case_id:
+            raise LookupError("Document artifact not found")
+        case = self._deps.case_capability.get_owned(case_id, identity=identity)
+        if case is None or artifact_id not in case.document_refs:
+            raise LookupError("Document artifact not found")
+        if self._deps.blob_store is None:
+            raise RuntimeError("Artifact blob storage is not configured")
+        return artifact, self._deps.blob_store.open(artifact.storage_ref)
+
     def generate(
         self, document_id: str, *, identity: IdentityContext,
         case_id: str | None = None,
