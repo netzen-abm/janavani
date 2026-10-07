@@ -48,6 +48,9 @@ class CivicCaseLifecycleMixin:
         transitions = {
             "case:start_review": ("case:review", CivicCase.start_review, False),
             "case:mark_ready": ("case:write", CivicCase.mark_ready, False),
+            "case:begin_submission": ("case:write", CivicCase.begin_submission, False),
+            "case:queue_submission": ("case:write", CivicCase.queue_submission, False),
+            "case:submit": ("case:write", CivicCase.submit, True),
             "case:report_sent": ("case:write", CivicCase.report_sent_by_citizen, False),
             "case:report_response": ("case:write", CivicCase.report_response_received, False),
             "case:report_no_response": ("case:write", CivicCase.report_no_response, False),
