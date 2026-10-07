@@ -153,9 +153,11 @@ def test_submission_gate_requires_matching_idempotency_context_at_capability_bou
     context = _context(identity, key="context-key")
     from src.capabilities.submission import SubmissionCapability
 
+    capability = SubmissionCapability(
+        case_capability=object(), consent_repository=object(), transport=object()
+    )
     with pytest.raises(ValueError, match="idempotency key"):
-        SubmissionCapability._consequential_submission_decision(
-            object.__new__(SubmissionCapability),
+        capability._consequential_submission_decision(
             identity=identity,
             case_id="case-1",
             consent_scope="email:government",
