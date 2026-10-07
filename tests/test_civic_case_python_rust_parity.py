@@ -25,7 +25,7 @@ def _rust_enum_values(source: str, enum_name: str):
         if not name or name.startswith("#"):
             continue
         snake = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-        values[name.upper()] = snake
+        values[snake.upper()] = snake
     return values
 
 
