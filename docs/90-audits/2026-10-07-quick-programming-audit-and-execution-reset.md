@@ -138,3 +138,37 @@ The nine-branch invariant remains satisfied. Two branches are exact ancestors of
 The latest workflow evidence exposed through GitHub is from 2026-09-24. Architecture Guard and Architecture Conformance passed. The CI job failed only at Archive Safety Evidence because that historical run detected `scripts/check_code_line_limits.py` as an active reference to `janavani_v2`/`janavani_v3`. The current `scripts/archive_safety_evidence.py` explicitly excludes the evidence scripts themselves from active-reference scanning, so this historical failure is not treated as evidence of a current architecture failure. A fresh workflow run is still required before CI health is declared green for the current `main` commits.
 
 The Docker workflow on the same 2026-09-24 baseline succeeded. No current CI success is claimed for the 2026-10-07 commits because the connected GitHub execution surface does not expose a workflow-dispatch operation and the repository-content mutation path does not itself provide fresh Actions evidence.
+
+
+## 2026-10-07 continuation — composition and privacy convergence
+
+### Verified
+- Exactly nine active branches remain; no branch was created.
+- Architecture Guard, Security CI, Docker and Push-on-main all passed on the preceding privacy/lifecycle correction baseline.
+- The current commit has a fresh CI/security/Docker/Architecture workflow set queued.
+
+### Implemented
+- Rust Case lifecycle parity corrected for the canonical `READY → SUBMITTED` citizen-sent state.
+- Web document router now imports the canonical `DocumentPackageRequest` model explicitly.
+- PostgreSQL Case inserts and updates both enforce the provider-level privacy redaction boundary.
+- Canonical PostgreSQL Case schema now expresses the redacted narrative invariant directly.
+- PostgreSQL integration and RLS fixtures were aligned with the metadata-only Case contract.
+- In-memory and PostgreSQL persistence tests now distinguish the transient working Case object from its redacted durable representation.
+- Telegram preview now reads citizen narrative from the short-lived ephemeral workflow boundary rather than durable Case storage.
+- Telegram rate command now resolves identity through the shared surface composition.
+- Telegram generation bootstrap no longer passes an unsupported dependency-construction argument.
+- Build/setup tests now reference the canonical script and dependency-manifest locations.
+- Rust/Python enum parity test now compares canonical member names correctly rather than treating Rust's PascalCase source names as Python enum names.
+- PostgreSQL provider-conformance scanning no longer self-matches its own forbidden-provider test source.
+
+### Architectural rule reaffirmed
+The repository is split only where the boundary is independently meaningful:
+- `src/core`: domain invariants and canonical vocabulary.
+- `src/capabilities`: reusable trust/authorization/application capabilities.
+- `src/platform`: shared provider/capability composition.
+- `src/storage`: persistence and provider dependency.
+- `src/identity` / `src/access`: trust and authorization boundaries.
+- `src/web` / Telegram adapters: independent access surfaces.
+- transient citizen content remains outside durable Case persistence.
+
+No new orchestration/service layer was introduced merely to reduce file size or satisfy tests.
