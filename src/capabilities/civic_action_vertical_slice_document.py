@@ -1,5 +1,6 @@
 """Document preparation, review and artifact helpers for the civic-action slice."""
 from __future__ import annotations
+from dataclasses import dataclass
 from pathlib import Path
 from src.capabilities.document_review import DocumentReviewRequest
 from src.core.execution import CapabilityExecutionContext
@@ -52,6 +53,7 @@ class CivicActionDocuments:
         draft = self._deps.civic_action_capability.build_document(
             case_id, identity=identity, document_id=document_id
         ).draft
+        from src.documents.document_contract import DocumentParty
         typed = DocumentDraft(
             document_id=draft.document_id,
             document_type=document_type,
@@ -61,7 +63,7 @@ class CivicActionDocuments:
             body=draft.body,
             to=draft.to,
             cc=draft.cc,
-            sender=draft.sender or __import__("src.documents.document_contract", fromlist=["DocumentParty"]).DocumentParty(
+            sender=draft.sender or DocumentParty(
                 name="[YOUR NAME]",
                 address="[YOUR FULL POSTAL ADDRESS]",
                 email="[YOUR EMAIL ADDRESS]",
