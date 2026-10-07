@@ -33,6 +33,10 @@ class ArtifactRequest(BaseModel):
     document_id: str = Field(min_length=1)
     document_format: DocumentFormat = DocumentFormat.PDF
 
+class DocumentPackageRequest(BaseModel):
+    document_type: str = Field(pattern="^(petition|rti)$")
+    formats: tuple[DocumentFormat, ...] = (DocumentFormat.PDF, DocumentFormat.DOCX)
+
 class EventRequest(BaseModel):
     source_channel: str | None = None
     source_ref: str | None = None
