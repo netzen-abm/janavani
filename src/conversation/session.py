@@ -1,20 +1,23 @@
-"""Conversation session storage.
+"""Ephemeral Telegram workflow state.
 
-The current runtime keeps session state in memory.  The storage boundary is
-kept behind these functions so the implementation can later move to a shared
-persistent adapter without changing conversation steps.
+Privacy invariant:
+- This state is process-local only.
+- It must never contain citizen names, addresses, contact details, identity
+  documents, raw issue narratives, evidence bytes, or other personal/sensitive
+  content.
+- Citizen content is consumed from the current Telegram update when required
+  and is not copied into this session store.
 """
+from __future__ import annotations
 
-user_sessions = {}
+user_sessions: dict[int, dict] = {}
 
 
-def get_session(user_id):
-    """Return the mutable session for a user, creating it on first access."""
+def get_session(user_id: int) -> dict:
+    """Return minimal non-sensitive workflow state for a Telegram user."""
     if user_id not in user_sessions:
         user_sessions[user_id] = {
             "workflow": "Complaint",
-            "issue": "",
-            "document": "",
             "district": "",
             "department": "",
             "offices": [],
@@ -26,15 +29,13 @@ def get_session(user_id):
                 "district": "",
             },
             "identity_mode": "anonymous",
-            "name": "",
-            "address": "",
-            "phone": "",
-            "email": "",
-            "photo": None,
+            "case_id": "",
+            "format": "",
+            "document_id": "",
         }
     return user_sessions[user_id]
 
 
-def clear_session(user_id):
-    """Discard a user's in-memory session."""
+def clear_session(user_id: int) -> None:
+    """Discard all ephemeral workflow state."""
     user_sessions.pop(user_id, None)
