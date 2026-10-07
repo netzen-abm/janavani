@@ -36,15 +36,15 @@ async def mark_ready(case_id: str, request: EventRequest, context: IdentityConte
 
 @router.post("/{case_id}/submitting")
 async def begin_submission(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:begin_submission", request)
+    raise HTTPException(status_code=409, detail="Janavani never submits documents or petitions. Download the document and send it yourself.")
 
 @router.post("/{case_id}/queued")
 async def queue_submission(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    return _transition(context, case_id, "case:queue_submission", request)
+    raise HTTPException(status_code=409, detail="Janavani never queues or transmits document submissions. Download the document and send it yourself.")
 
 @router.post("/{case_id}/submit")
 async def submit_case(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    raise HTTPException(status_code=409, detail="Direct case submission is disabled; use the canonical SubmissionCapability with explicit approval, consent, and a delivery transport.")
+    raise HTTPException(status_code=409, detail="Janavani never submits documents or petitions. Download the document and send it yourself.")
 
 @router.post("/{case_id}/acknowledge")
 async def acknowledge_case(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
