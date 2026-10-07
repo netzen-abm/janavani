@@ -10,7 +10,10 @@ Privacy invariant:
 """
 from __future__ import annotations
 
+from time import monotonic
+
 user_sessions: dict[int, dict] = {}
+_EPHEMERAL_TTL_SECONDS = 15 * 60
 
 
 def get_session(user_id: int) -> dict:
@@ -32,6 +35,8 @@ def get_session(user_id: int) -> dict:
             "case_id": "",
             "format": "",
             "document_id": "",
+            "_ephemeral_issue": None,
+            "_ephemeral_issue_expires": 0.0,
         }
     return user_sessions[user_id]
 
@@ -41,7 +46,29 @@ def clear_session(user_id: int) -> None:
     user_sessions.pop(user_id, None)
 
 
-# IMPORTANT: values added by future workflow steps must remain ephemeral.
+# IMPORTANT: citizen content may exist only through the explicit ephemeral helpers above. It must never be persisted, serialized, logged, or sent to a durable Janavani repository.
 # Do not persist this mapping, serialize it, log it, or send it to a storage adapter.
 # A Telegram transport necessarily receives message content transiently; Janavani
 # treats that processing as an ephemeral transport boundary, not citizen storage.
+
+
+def set_ephemeral_issue(user_id: int, value: str) -> None:
+    """Keep citizen content only in process memory for a short workflow window."""
+    session = get_session(user_id)
+    session["_ephemeral_issue"] = value
+    session["_ephemeral_issue_expires"] = monotonic() + _EPHEMERAL_TTL_SECONDS
+
+
+def get_ephemeral_issue(user_id: int) -> str | None:
+    """Return transient issue content only while its short TTL is valid."""
+    session = get_session(user_id)
+    if monotonic() >= float(session.get("_ephemeral_issue_expires", 0.0)):
+        clear_ephemeral_issue(user_id)
+        return None
+    return session.get("_ephemeral_issue")
+
+
+def clear_ephemeral_issue(user_id: int) -> None:
+    session = get_session(user_id)
+    session["_ephemeral_issue"] = None
+    session["_ephemeral_issue_expires"] = 0.0
