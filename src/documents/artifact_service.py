@@ -73,3 +73,48 @@ def _media_type(document_format: DocumentFormat) -> str:
     if document_format is DocumentFormat.DOCX:
         return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     raise ValueError(f"Unsupported document format: {document_format}")
+
+
+@dataclass(frozen=True)
+class DocumentArtifactPayload:
+    """Ephemeral document bytes for immediate citizen download; never persisted."""
+
+    document_id: str
+    case_id: str
+    format: DocumentFormat
+    filename: str
+    media_type: str
+    content: bytes
+    content_sha256: str
+
+
+def render_artifact_payload(
+    draft: DocumentDraft,
+    document_format: DocumentFormat,
+    *,
+    temp_root: str | Path = "/tmp/janavani-ephemeral-artifacts",
+) -> DocumentArtifactPayload:
+    """Render an artifact to ephemeral server memory and return it for immediate download.
+
+    This path deliberately does not use ArtifactBlobStore or DocumentArtifactRepository.
+    It is the preferred WebApp boundary while fully device-local rendering is being
+    introduced at the presentation layer.
+    """
+    import tempfile
+
+    root = Path(temp_root)
+    root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="render-", dir=root) as workdir:
+        path = render_document(draft, document_format, workdir)
+        content = Path(path).read_bytes()
+    digest = hashlib.sha256(content).hexdigest()
+    filename = f"{draft.document_id}.{document_format.value}"
+    return DocumentArtifactPayload(
+        document_id=draft.document_id,
+        case_id=draft.case_id,
+        format=document_format,
+        filename=filename,
+        media_type=_media_type(document_format),
+        content=content,
+        content_sha256=digest,
+    )
