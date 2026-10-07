@@ -18,7 +18,7 @@ def decode(value: Any, default: Any) -> Any:
 
 def case_values(case, *, created_at: str, updated_at: str, version: int):
     return (
-        case.case_id, case.case_type.value, case.case_type.value, "",
+        case.case_id, case.case_type.value, case.subject, case.narrative,
         case.created_by, encode(case.jurisdiction), case.related_organisation_id,
         case.related_office_id, case.related_official_id,
         case.related_representative_id, encode(case.claims), case.status.value,
@@ -34,7 +34,7 @@ def event_values(event):
 def hydrate(row, events, evidence, documents, consents) -> CivicCase:
     return CivicCase(
         case_id=str(row["case_id"]), case_type=CaseType(row["case_type"]),
-        subject=str(row["case_type"]), narrative="",
+        subject=str(row["subject"]), narrative=str(row["narrative"]),
         created_by=row.get("created_by"),
         jurisdiction=decode(row.get("jurisdiction_json"), {}),
         related_organisation_id=row.get("related_organisation_id"),
