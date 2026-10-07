@@ -105,7 +105,12 @@ def test_cross_surface_identity_creates_and_retrieves_same_case_with_ownership_i
     assert telegram.case_repository is web.case_repository
     assert telegram.case_capability is not web.case_capability
     assert created.case.created_by == citizen_a_telegram.principal.principal_id
-    assert web.case_capability.get_owned(created.case.case_id, identity=citizen_a_web) is created.case
+    shared = web.case_capability.get_owned(created.case.case_id, identity=citizen_a_web)
+    assert shared is not None
+    assert shared.case_id == created.case.case_id
+    assert shared.created_by == created.case.created_by
+    assert shared.subject == CaseType.COMPLAINT.value
+    assert shared.narrative == ""
     assert web.case_capability.get_owned(created.case.case_id, identity=citizen_b_web) is None
 
     # The surface boundary must not manufacture a second identity for the same citizen.
