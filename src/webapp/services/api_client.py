@@ -136,9 +136,9 @@ class JanavaniWebAPIClient:
         return response.json()
 
     def submit_complaint_draft(self, citizen_input: str) -> dict[str, Any]:
-        """Compatibility adapter: create the canonical Case from free-form input."""
+        """Deprecated compatibility adapter; submission is never performed by Janavani."""
         result = self.create_case(subject="Citizen civic issue", narrative=citizen_input)
-        return {"case_id": result["case_id"], "status": result["status"]}
+        return {"case_id": result["case_id"], "status": result["status"], "delivery": "citizen_download_and_self_send"}
 
     def download_constitutional_objection(
         self, bill_code: str, comments: str, format_choice: str
