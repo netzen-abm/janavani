@@ -35,7 +35,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "jti": f"web-e2e-{principal_id}-{now}",
         "capabilities": [
             "JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review",
-            "case:evidence", "case:submit", "evidence:register", "evidence:read",
+            "case:evidence", "evidence:register", "evidence:read",
             "document:review",
         ],
     }
@@ -151,12 +151,14 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         json={"document_id": document_id, "document_format": "pdf"},
     )
     assert artifact.status_code == 200
-    artifact_body = artifact.json()
-    assert artifact_body["case_id"] == case_id
-    assert artifact_body["document_id"] == document_id
-    assert artifact_body["format"] == "pdf"
-    assert artifact_body["submission"] == "not_submitted"
-    assert artifacts.get(artifact_body["artifact_id"]) is not None
+    assert artifact.headers["X-Janavani-Delivery"] == "citizen-download-only"
+    assert artifact.headers["Cache-Control"] == "no-store, private"
+    assert artifact.headers["Content-Type"].startswith("application/pdf")
+    assert artifact.content.startswith(b"%PDF")
+    assert artifact.headers["X-Artifact-SHA256"]
+
+    # The primary WebApp path must not create a durable artifact reference.
+    assert artifacts.list_for_case(case_id) == []
 
     final_case = client.get(f"/civic/cases/{case_id}", headers=headers)
     assert final_case.status_code == 200
@@ -164,7 +166,6 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert body["status"] == "ready"
     assert "evidence-e2e" in body["evidence_refs"]
     assert document_id in body["document_refs"]
-    assert artifact_body["artifact_id"] in body["document_refs"]
 
     direct_submit = client.post(f"/civic/cases/{case_id}/submit", headers=headers, json={})
     assert direct_submit.status_code == 409
