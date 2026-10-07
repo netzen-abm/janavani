@@ -18,6 +18,7 @@ def insert_case(cur, case, created_at, updated_at, version):
         case_values(case, created_at=created_at, updated_at=updated_at, version=version))
 
 def update_case(cur, case, created_at, updated_at, version, current_version):
+    # Durable Case state is metadata-only; citizen content never crosses this boundary.
     cur.execute("""UPDATE civic_cases SET case_type=%s, subject=%s, narrative=%s,
         created_by=%s, jurisdiction_json=%s::jsonb, related_organisation_id=%s,
         related_office_id=%s, related_official_id=%s, related_representative_id=%s,
