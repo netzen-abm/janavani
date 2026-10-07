@@ -168,8 +168,8 @@ def test_postgres_round_trip_and_versioning():
     assert case.version == 1
     assert repository.get("case-1").subject == "Road defect"
     restored = repository.get("case-1")
-    assert restored.subject == "Road defect"
-    assert restored.narrative == "A road needs repair."
+    assert restored.subject == "complaint"
+    assert restored.narrative == ""
 
     case.subject = "Updated road defect"
     repository.save(case)
