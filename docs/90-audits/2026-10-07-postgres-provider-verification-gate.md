@@ -14,13 +14,18 @@ This pass did not activate production persistence or RLS.
 
 `UnitOfWork` is provider-neutral and `PostgresUnitOfWork` owns connection/transaction lifecycle and transaction-local principal binding.
 
-### 2. Case + event atomicity — IMPLEMENTED, requires fresh real-DB evidence
+
+### 2. Case serialization — CORRECTED
+
+Verification found a concrete mapping defect in the PostgreSQL Case codec: `case_type` had been supplied for the `subject` field and the narrative had been replaced with an empty string during both write and hydration. The provider boundary has been corrected to preserve the canonical `subject` and `narrative` fields, and a regression assertion now covers the round-trip.
+
+### 3. Case + event atomicity — IMPLEMENTED, requires fresh real-DB evidence
 
 `PostgresCaseTransactionRepository` locks the Case, checks idempotency, applies the projection mutation, appends the lifecycle event, and commits through one Unit of Work.
 
 The canonical contract still requires real PostgreSQL evidence for rollback, retry, concurrency, restart and unknown-outcome behavior.
 
-### 3. Consent + Case atomicity — IMPLEMENTED, schema reconciliation required
+### 4. Consent + Case atomicity — IMPLEMENTED, schema reconciliation required
 
 `PostgresConsentCaseAtomicRepository` writes consent metadata and the Case projection in one transaction.
 
@@ -28,15 +33,15 @@ The canonical migration already defines `civic_case_consents.case_id` and `grant
 
 This change does **not** authorize production migration execution.
 
-### 4. Evidence — provider boundary exists
+### 5. Evidence — provider boundary exists
 
 Evidence metadata is separate from the Case aggregate and includes SHA-256/provenance/access/retention references. Production authorization/RLS coverage remains a gate.
 
-### 5. Document artifact persistence — correctly isolated
+### 6. Document artifact persistence — correctly isolated
 
 Durable artifact persistence remains an explicit provider boundary. Primary WebApp/Telegram document download paths are ephemeral and do not require this durable path.
 
-### 6. Schema authority — NOT YET PRODUCTION-VERIFIED
+### 7. Schema authority — NOT YET PRODUCTION-VERIFIED
 
 The repository contains both the canonical schema contract and a controlled migration. They still require reconciliation against the actual target PostgreSQL environment before production activation.
 
