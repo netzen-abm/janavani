@@ -61,39 +61,14 @@ async def generate_document_artifact(case_id: str, request: ArtifactRequest, con
 
 
 @router.post("/{case_id}/document/package")
-async def prepare_document_package(case_id: str, request: DocumentPackageRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    try:
-        package = CIVIC_ACTION_VERTICAL_SLICE.prepare_delivery_package(
-            case_id, identity=context, document_types=request.document_types,
-            formats=tuple(format.value for format in request.formats),
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Case not found") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {
-        "case_id": case_id,
-        "document_types": [item.document_type for item in package.items],
-        "delivery": "citizen_download_and_self_send",
-        "submission": "never_submitted_by_janavani",
-        "from_address": "citizen_must_fill_before_sending",
-        "to": {"name": package.items[0].draft.to.name, "address": package.items[0].draft.to.address, "email": package.items[0].draft.to.email},
-        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in package.items[0].draft.cc],
-        "artifacts": [
-            {"artifact_id": artifact.reference.artifact_id, "format": artifact.format.value,
-             "download": f"/civic/cases/{case_id}/document/artifact/{artifact.reference.artifact_id}/download"}
-            for item in package.items for artifact in item.artifacts
-        ],
-    }
+async def prepare_document_package(case_id: str, request: DocumentPackageRequest, context: IdentityContext = Depends(require_authenticated_identity)):
+    """Retired server-side package path; package generation must not create durable document payloads."""
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Server-side document packages are retired. Generate and download each document through "
+            "the ephemeral document endpoint; Janavani never stores or submits finished documents."
+        ),
+    )
 
-@router.get("/{case_id}/document/artifact/{artifact_id}/download")
-async def download_document_artifact(case_id: str, artifact_id: str, context: IdentityContext = Depends(require_authenticated_identity)):
-    try:
-        artifact, stream = CIVIC_ACTION_VERTICAL_SLICE.open_delivery_artifact(
-            artifact_id, case_id=case_id, identity=context
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Document artifact not found") from exc
-    media_type = "application/pdf" if artifact.format == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    filename = f"{artifact.document_id}.{artifact.format}"
-    return StreamingResponse(stream, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
