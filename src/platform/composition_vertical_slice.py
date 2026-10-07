@@ -6,7 +6,6 @@ from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlic
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
-from src.capabilities.submission import SubmissionCapability, SubmissionTransport
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -35,7 +34,6 @@ def create_civic_action_vertical_slice(
     case_repository: CivicCaseRepository,
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
-    submission_transport: SubmissionTransport,
     case_capability: CivicCaseCapability | None = None,
     submission_repository: SubmissionRepository | None = None,
     evidence_repository: EvidenceRepository | None = None,
@@ -83,13 +81,6 @@ def create_civic_action_vertical_slice(
             raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL submission transactions")
         atomic_submission = PostgresSubmissionCaseTransactionRepository(dsn=dsn)
 
-    submission_capability = SubmissionCapability(
-        case_capability,
-        consent_repository,
-        submission_transport,
-        submission_repository=submission_repo,
-        submission_case_transaction_repository=atomic_submission,
-    )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
 
@@ -99,7 +90,6 @@ def create_civic_action_vertical_slice(
             civic_action_capability=civic_action_capability,
             evidence_capability=evidence_capability,
             document_review_capability=document_review_capability,
-            submission_capability=submission_capability,
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
             external_channel_capability=external_channel_capability
