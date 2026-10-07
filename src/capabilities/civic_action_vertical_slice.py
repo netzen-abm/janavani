@@ -42,10 +42,10 @@ class CivicActionVerticalSliceDependencies:
     document_review_capability: DocumentReviewCapability
     responsibility_capability: ResponsibilityCapability
     obligation_capability: ObligationCapability
-    submission_capability: SubmissionCapability | None = None
     external_channel_capability: ExternalChannelCapability
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
+    submission_capability: SubmissionCapability | None = None
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
     follow_up_capability: FollowUpCapability | None = None
