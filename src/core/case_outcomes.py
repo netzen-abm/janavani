@@ -12,6 +12,12 @@ from src.core.case_delivery import CivicCaseDeliveryMixin
 
 
 class CivicCaseOutcomeMixin(CivicCaseDeliveryMixin):
+ventType.FOLLOW_UP,
+            occurred_at, actor_id, notes=notes,
+        ))
+
+    def respond(
+        self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
         notes: str | None = None,
     ) -> CaseEvent:
         if self.status not in {
