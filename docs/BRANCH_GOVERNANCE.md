@@ -37,6 +37,6 @@ A branch that is fully behind `main`, or whose useful delta is already present o
 
 CI rejects work from unapproved branch names and the canonical `main` gate requires exactly nine physical remote branch refs.
 
-The repository currently still contains historical refs beyond the nine-role target. Physical branch-ref deletion is an operational GitHub administration step not exposed by the connected mutation surface. Until those refs are actually deleted, the repository is not reported as having nine physical branches.
+The current live GitHub inventory has been rechecked and contains exactly the nine sanctioned physical branches listed above. Historical branch inventories in older audit documents are retained as historical evidence only and must not be treated as the current physical branch count.
 
-No historical ref is force-moved as a substitute for deletion.
+No historical ref is force-moved as a substitute for deletion. Future retirement work must use the archive-first retirement workflow and must re-inventory the live refs after deletion.
