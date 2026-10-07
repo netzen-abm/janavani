@@ -63,3 +63,14 @@ Janavani must not create or maintain a durable repository of citizen personal or
 ### Architectural consequence
 
 The Case aggregate is a civic workflow/control record, not a personal-data vault. Any future capability that requires raw citizen content must define a separate transient/device-local content boundary and must prove that the content is not persisted by Janavani before integration.
+
+
+## Persistence-boundary enforcement
+
+The privacy rule is enforced at the provider boundary, not only by callers. Case persistence adapters must redact citizen subject/narrative content before durable storage. A caller passing raw content to a repository must therefore not be able to turn the Case repository into a citizen-content store.
+
+The same principle applies to document/evidence artifacts: references and hashes may be retained when required for a selected lifecycle capability, but citizen document/evidence payloads must remain device-local or transiently destination-bound unless a separate, explicit retention contract is approved.
+
+### Identity minimization
+
+A surface identifier such as a Telegram user ID is not a general-purpose citizen identity record. Cross-surface continuity should prefer citizen-held opaque capability proofs/tokens over a durable channel-to-citizen profile. Any persistent identity link requires a separate privacy/security contract and explicit necessity.
