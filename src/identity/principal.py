@@ -29,6 +29,7 @@ class AuthenticationMethod(str, Enum):
     VERIFIED_PHONE = "verified_phone"
     CRYPTOGRAPHIC_SIGNATURE = "cryptographic_signature"
     SERVICE_CREDENTIAL = "service_credential"
+    EXPLICIT_VERIFIED_LINK = "explicit_verified_link"
 
 
 @dataclass(frozen=True)
