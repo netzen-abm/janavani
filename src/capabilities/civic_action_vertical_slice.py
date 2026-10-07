@@ -141,6 +141,10 @@ class CivicActionVerticalSlice:
         if output_dir is not None: kwargs["output_dir"] = output_dir
         return self._documents.generate(document_id, **kwargs)
 
+    def open_delivery_artifact(self, artifact_id: str, *, case_id: str, identity: IdentityContext):
+        """Open a citizen-owned generated artifact for download only."""
+        return self._documents.open_artifact(artifact_id, case_id=case_id, identity=identity)
+
     def prepare_delivery_package(
         self, case_id: str, *, identity: IdentityContext, document_type: str,
         formats=("pdf", "docx"),
