@@ -18,14 +18,12 @@ from src.capabilities.external_channel import ExternalChannelCapability, Externa
 from src.capabilities.follow_up import FollowUpCapability, FollowUpContext, FollowUpRecommendation
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
-from src.capabilities.submission import SubmissionCapability, SubmissionRequest
 from src.core.delivery_channel import ExternalChannel
 from src.core.obligation import ObligationResolution
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.document_contract import DocumentDraft
 from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.identity.context import IdentityContext
-from src.core.execution import CapabilityExecutionContext
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
@@ -41,7 +39,6 @@ class CivicActionVerticalSliceDependencies:
     civic_action_capability: CivicActionCapability
     evidence_capability: EvidenceCapability
     document_review_capability: DocumentReviewCapability
-    submission_capability: SubmissionCapability
     responsibility_capability: ResponsibilityCapability
     obligation_capability: ObligationCapability
     external_channel_capability: ExternalChannelCapability
@@ -144,29 +141,13 @@ class CivicActionVerticalSlice:
         if output_dir is not None: kwargs["output_dir"] = output_dir
         return self._documents.generate(document_id, **kwargs)
 
-    def submit(self, request: SubmissionRequest, *, channel_id: str, identity: IdentityContext,
-               explicit_user_approval: bool, execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
-        """Submit only after resolving a currently verified External Channel.
-
-        The channel registry remains control-plane metadata; SubmissionCapability
-        remains responsible for authorization, consent, approval, idempotency,
-        delivery and reconciliation. The caller cannot supply an arbitrary
-        destination through this canonical orchestration boundary.
-        """
-        channel = self._deps.external_channel_capability.get_verified(channel_id)
-        if request.destination_ref and request.destination_ref != channel.destination_ref:
-            raise ValueError("Submission destination does not match the verified external channel")
-        verified_request = request.__class__(
-            case_id=request.case_id,
-            document_id=request.document_id,
-            destination_ref=channel.destination_ref,
-            consent_scope=request.consent_scope,
-            source_channel=request.source_channel,
-            artifact_id=request.artifact_id,
-            idempotency_key=request.idempotency_key,
-            external_channel_id=channel.channel_id,
-        )
-        return self._deps.submission_capability.submit(
-            verified_request, identity=identity, explicit_user_approval=explicit_user_approval,
-            execution_context=execution_context,
+    def prepare_delivery_package(
+        self, case_id: str, *, identity: IdentityContext, document_type: str,
+        formats=("pdf", "docx"),
+    ):
+        """Prepare downloadable citizen-owned documents; never transmit them."""
+        from src.documents.document_contract import DocumentFormat
+        selected = tuple(DocumentFormat(value) for value in formats)
+        return self._documents.generate_package(
+            case_id, identity=identity, document_type=document_type, formats=selected
         )
