@@ -110,22 +110,10 @@ class JanavaniWebAPIClient:
         return response.json()
 
     def begin_submission(self, case_id: str) -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/submitting",
-            json={"source_channel": "webapp"},
-            headers=self._headers(), timeout=20.0,
-        )
-        response.raise_for_status()
-        return response.json()
+        raise RuntimeError("Janavani never submits documents. Download and send it yourself.")
 
     def queue_submission(self, case_id: str) -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/queued",
-            json={"source_channel": "webapp"},
-            headers=self._headers(), timeout=20.0,
-        )
-        response.raise_for_status()
-        return response.json()
+        raise RuntimeError("Janavani never queues document submission. Download and send it yourself.")
 
     def acknowledge_case(self, case_id: str, *, source_ref: str | None = None) -> dict[str, Any]:
         response = httpx.post(
