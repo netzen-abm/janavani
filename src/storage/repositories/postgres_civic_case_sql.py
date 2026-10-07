@@ -23,7 +23,7 @@ def update_case(cur, case, created_at, updated_at, version, current_version):
         related_office_id=%s, related_official_id=%s, related_representative_id=%s,
         subject_claims_json=%s::jsonb, status=%s, created_at=%s, updated_at=%s,
         version=%s WHERE case_id=%s AND version=%s""", (
-        case.case_type.value, case.subject, case.narrative, case.created_by,
+        case.case_type.value, case.case_type.value, "", case.created_by,
         encode(case.jurisdiction), case.related_organisation_id,
         case.related_office_id, case.related_official_id,
         case.related_representative_id, encode(case.claims), case.status.value,
