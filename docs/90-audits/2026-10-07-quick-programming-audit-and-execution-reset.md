@@ -105,3 +105,20 @@ Janavani is not a citizen personal-data repository. Personal/sensitive citizen c
 ### Important remaining privacy gate
 
 Document/evidence artifact payloads and channel identity links still require a dedicated convergence pass. The target architecture is device-local content plus destination-bound transient transfer, with opaque citizen-held capability proofs preferred over durable channel-to-citizen identity graphs.
+
+
+## 2026-10-07 continuation — privacy and responsibility convergence
+
+### Implemented
+- WebApp document generation now returns an ephemeral PDF/DOCX response with Cache-Control: no-store, private.
+- The WebApp artifact endpoint no longer writes the finished payload to DocumentArtifactRepository or ArtifactBlobStore.
+- Telegram document generation now renders an ephemeral payload and sends the bytes directly to the user rather than reopening a persisted artifact.
+- Legacy WebApp submission client methods are hard-stopped.
+- Submission lifecycle HTTP routes remain hard-disabled.
+- An automated guard test now exercises the ephemeral artifact contract.
+
+### Deliberate non-change
+The canonical artifact repository/provider abstractions remain because they are legitimate persistence/provider boundaries and are still used by compatibility and non-WebApp paths. They are not being deleted merely to make the tree smaller.
+
+### Remaining gap
+This is ephemeral server-side generation, not yet true browser/device-local generation. Achieving true device-local generation requires a client-side PDF/DOCX rendering boundary and is therefore a separate presentation/runtime architecture task. It must not be falsely represented as complete.
