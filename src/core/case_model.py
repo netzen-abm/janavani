@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from src.core.case_types import CaseEventType, CaseStatus, CaseType, CITIZEN_VERIFIED_EVENT, CITIZEN_REOPENED_EVENT
 from src.core.case_events import CaseEvent
+from src.core.case_helpers import confirmed_delivery
 
 @dataclass
 class CivicCase:
