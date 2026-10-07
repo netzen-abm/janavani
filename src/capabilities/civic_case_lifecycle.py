@@ -67,7 +67,7 @@ class CivicCaseLifecycleMixin:
         if action in {"case:report_sent", "case:report_response", "case:report_no_response", "case:acknowledge",
                       "case:verify_resolution", "case:reopen_resolution"}:
             kwargs["source_channel"] = source_channel
-        if action in {"case:acknowledge", "case:verify_resolution"}:
+        if action in {"case:report_response", "case:acknowledge", "case:verify_resolution"}:
             kwargs["source_ref"] = source_ref
             kwargs["notes"] = notes
         if action == "case:reopen_resolution":
