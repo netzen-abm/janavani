@@ -1,12 +1,12 @@
 """Document preparation, review, and artifact HTTP routes."""
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import Response
 from src.capabilities.document_review import DocumentReviewRequest
 from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CIVIC_ACTION, CIVIC_ACTION_VERTICAL_SLICE, DOCUMENT_REVIEW
+from src.web.civic_case_dependencies import CIVIC_ACTION, DOCUMENT_REVIEW
 from src.web.civic_case_models import ArtifactRequest, DocumentPackageRequest, DocumentReviewRequestModel, serialize_draft
 
 router = APIRouter(tags=["Civic Cases"])
