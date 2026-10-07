@@ -66,3 +66,13 @@ Implementation + tests + failure behavior + security/privacy verification + user
 2. Complete Telegram document → review → consent → submission-preparation flow using the existing shared composition.
 3. Add cross-surface continuation tests against a durable provider.
 4. Verify PostgreSQL authorization/RLS and restart/recovery evidence before declaring durable production readiness.
+
+
+## Deployment architecture confirmation
+
+The canonical deployment configuration already keeps Web/API and Telegram as separate Render services/processes and therefore separate failure domains:
+
+- Web/API: `uvicorn src.web.canonical_app:app`
+- Telegram: `python src/bot_telegram.py`
+
+This is the desired independence model: either surface can fail without requiring the other surface to terminate. Shared infrastructure remains below both runtimes.
