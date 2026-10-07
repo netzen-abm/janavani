@@ -6,18 +6,14 @@ from drafting, evidence, and document-reference mutation.
 """
 from __future__ import annotations
 
-from uuid import uuid4
-
 from src.core.case_events import CaseEvent
 from src.core.case_types import (
-    CITIZEN_REOPENED_EVENT,
-    CITIZEN_VERIFIED_EVENT,
     CaseEventType,
     CaseStatus,
 )
 
 
-class CivicCaseOutcomeMixin:
+class CivicCaseDeliveryMixin:
     def begin_submission(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
         if self.status is not CaseStatus.READY:
             raise ValueError("Only a ready case can begin submission")
@@ -102,5 +98,3 @@ class CivicCaseOutcomeMixin:
             occurred_at, actor_id, notes=notes,
         ))
 
-    def respond(
-        self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
