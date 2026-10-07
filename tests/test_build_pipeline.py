@@ -3,7 +3,7 @@ from pathlib import Path
 
 def test_production_build_script_is_valid():
     """The WASM build script exists and has a shell entrypoint."""
-    path = Path("build_wasm.sh")
+    path = Path("scripts/build/build_wasm.sh")
 
     assert path.is_file()
     assert path.read_text(encoding="utf-8").startswith("#!/usr/bin/env bash")
