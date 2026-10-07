@@ -39,3 +39,21 @@ def test_case_lifecycle_routes_explicitly_disable_submission():
 
     assert "Janavani never submits documents or petitions" in source
     assert "Janavani never queues or transmits document submissions" in source
+
+
+def test_ephemeral_artifact_payload_is_not_persisted():
+    from src.documents.artifact_service import render_artifact_payload
+
+    draft = DocumentDraft(
+        document_id="DOC-EPHEMERAL",
+        document_type="complaint",
+        case_id="CASE-EPHEMERAL",
+        date="2026-10-07",
+        subject="Ephemeral test",
+        body="Do not persist this payload.",
+        to=DocumentParty(name="Test Office"),
+    )
+    payload = render_artifact_payload(draft, __import__("src.documents.document_contract", fromlist=["DocumentFormat"]).DocumentFormat.PDF)
+    assert payload.content
+    assert payload.content_sha256
+    assert "storage_ref" not in payload.__dataclass_fields__
