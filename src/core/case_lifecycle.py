@@ -13,7 +13,7 @@ from src.core.civic_case import CaseStatus
 CASE_STATUS_TRANSITIONS: Mapping[CaseStatus, frozenset[CaseStatus]] = {
     CaseStatus.DRAFT: frozenset({CaseStatus.REVIEW}),
     CaseStatus.REVIEW: frozenset({CaseStatus.REVIEW, CaseStatus.READY}),
-    CaseStatus.READY: frozenset({CaseStatus.READY, CaseStatus.SUBMITTING}),
+    CaseStatus.READY: frozenset({CaseStatus.READY, CaseStatus.SUBMITTING, CaseStatus.SUBMITTED}),
     CaseStatus.SUBMITTING: frozenset({CaseStatus.SUBMITTING, CaseStatus.QUEUED, CaseStatus.SUBMITTED}),
     CaseStatus.QUEUED: frozenset({CaseStatus.QUEUED, CaseStatus.SUBMITTED}),
     CaseStatus.SUBMITTED: frozenset({CaseStatus.ACKNOWLEDGED}),
