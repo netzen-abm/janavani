@@ -14,7 +14,10 @@ from src.storage.artifact_blob_factory import create_artifact_blob_store
 
 @dataclass(frozen=True)
 class DocumentArtifact:
-    """Generated artifact intended for user review/download."""
+    """Generated artifact intended only for user review/download.
+
+    The artifact service has no delivery/submission responsibility.
+    """
 
     document_id: str
     case_id: str
