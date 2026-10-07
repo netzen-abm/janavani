@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from io import BytesIO
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -14,6 +15,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
+from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.adapters.telegram.identity import identity_for_telegram_user
@@ -33,8 +35,8 @@ class TelegramGenerationDependencies:
     case_capability: CivicCaseCapability
     civic_action_capability: CivicActionCapability
     consent_capability: ConsentCapability
-    artifact_repository: DocumentArtifactRepository
-    blob_store: ArtifactBlobStore
+    artifact_repository: DocumentArtifactRepository | None
+    blob_store: ArtifactBlobStore | None
     identity_link_repository: ExternalIdentityLinkRepository
 
 
@@ -90,44 +92,17 @@ def build_canonical_complaint_artifact(
     dependencies: TelegramGenerationDependencies,
     user_id: int,
 ):
-    """Build a canonical artifact through Case → Evidence → Authority → Document."""
+    """Build an ephemeral artifact payload through shared capabilities."""
     case_id = str(session.get("case_id") or session.get("complaint_id") or "")
     if not case_id:
         raise ValueError("No canonical case is associated with this Telegram session")
-
-    artifact = dependencies.civic_action_capability.generate_reviewable_artifact(
+    draft = dependencies.civic_action_capability.build_document(
         case_id,
         identity=_identity(user_id, links=dependencies.identity_link_repository),
-        document_format=_document_format(str(session.get("format", "pdf"))),
-        output_dir=Path("/tmp") / "janavani-artifacts" / "rendered",
         document_id=str(session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"),
+    ).draft
+    return render_artifact_payload(
+        draft,
+        _document_format(str(session.get("format", "pdf"))),
     )
-    return artifact
 
-
-async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        user_id = update.callback_query.from_user.id
-        message = update.callback_query.message
-    else:
-        user_id = update.effective_user.id
-        message = update.message
-
-    session = get_session(user_id)
-    dependencies = context.application.bot_data.get("telegram_generation_dependencies")
-    if dependencies is None:
-        raise RuntimeError("Telegram generation dependencies were not composed")
-
-    try:
-        await message.reply_text("Generating document for your review...")
-        artifact = build_canonical_complaint_artifact(session, dependencies=dependencies, user_id=user_id)
-        with dependencies.blob_store.open(artifact.reference.storage_ref) as handle:
-            await message.reply_document(
-                document=handle,
-                filename=Path(artifact.reference.storage_ref).name,
-                caption="Your document is ready for review.",
-            )
-        set_state(user_id, COMPLETED)
-    except Exception as exc:
-        print("ERROR in handle_generate:", exc)
-        await message.reply_text("❌ Could not generate the document. Please try again.")
