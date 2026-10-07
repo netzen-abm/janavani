@@ -134,3 +134,22 @@ fabricate submission/acknowledgement evidence.
 Any future transport integration that could transmit documents must be
 rejected unless this policy is explicitly changed at the product-governance
 level.
+
+
+## Locked product decision — citizen is the sender
+
+**Status: ACCEPTED / HARD INVARIANT**
+
+Janavani may help the citizen discover the correct authority, prepare and review a complaint, petition, RTI application or other civic document, and generate PDF/DOCX for download. Janavani must not send, email, upload, post, file, queue, or otherwise transmit the generated document to the authority or any other external destination.
+
+The lifecycle ends at:
+
+```
+Citizen input → local/reviewable draft → verified authority information → document generation → citizen review → download → USER SENDS
+```
+
+There is deliberately no Janavani submission transport in the canonical product boundary.
+
+Janavani must not infer or fabricate a submission, delivery, receipt, filing, acknowledgement or government response from download telemetry, document generation, user intent, or a lifecycle flag.
+
+Any future proposal to add automated submission is a new product/security decision and must not be implemented by reusing the current document-generation path.
