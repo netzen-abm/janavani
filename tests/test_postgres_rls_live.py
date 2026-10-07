@@ -53,7 +53,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     """
                     INSERT INTO public.civic_cases
                     (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at)
-                    VALUES (%s, 'complaint', 'A subject', 'A narrative', %s, 'draft', now(), now())
+                    VALUES (%s, 'complaint', 'complaint', '', %s, 'draft', now(), now())
                     """,
                     (case_id, "principal-a"),
                 )
