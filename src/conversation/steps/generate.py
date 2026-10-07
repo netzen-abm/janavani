@@ -32,7 +32,7 @@ class TelegramGenerationDependencies:
     consent_capability: ConsentCapability
     artifact_repository: DocumentArtifactRepository | None
     blob_store: ArtifactBlobStore | None
-    identity_link_repository: ExternalIdentityLinkRepository
+    identity_link_repository: ExternalIdentityLinkRepository | None = None
 
 
 def create_telegram_generation_dependencies(
@@ -66,8 +66,10 @@ class _MissingIdentityLinkRepository:
 
 
 
-def _identity(user_id: int, *, links: ExternalIdentityLinkRepository) -> IdentityContext:
+def _identity(user_id: int, *, links: ExternalIdentityLinkRepository | None) -> IdentityContext:
     """Resolve a Telegram subject only after an explicit verified link."""
+    if links is None:
+        raise PermissionError("Telegram identity linking is required")
     return identity_for_telegram_user(user_id, links=links)
 
 def _document_format(value: str) -> DocumentFormat:
