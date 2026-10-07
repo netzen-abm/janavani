@@ -13,7 +13,9 @@ class SensitiveResourceAdapter(Protocol):
 
 class SensitiveDataMinimizer(Protocol):
     """Hook for applying retention/minimisation rules at purpose completion."""
-    def minimize(self, *, session_id: str, resource: SensitiveResource, purpose: AccessPurpose) -> None: ...
+    def minimize(
+        self, *, session_id: str, resource: SensitiveResource, purpose: AccessPurpose
+    ) -> None: ...
 from src.capabilities.safety_privacy import AccessPurpose, SensitiveResource
 from src.identity.context import IdentityContext
 
