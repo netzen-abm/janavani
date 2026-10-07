@@ -27,6 +27,7 @@ def test_production_accepts_durable_configuration():
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_POSTGRES_DSN": "postgresql://example",
         "JANAVANI_ARTIFACT_S3_BUCKET": "janavani-artifacts",
     }
