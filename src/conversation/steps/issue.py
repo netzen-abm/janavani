@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from conversation.session import get_session
+from conversation.session import get_session, set_ephemeral_issue
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
 
@@ -25,7 +25,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = get_session(user_id)
     # Raw citizen content is retained only in the process-local Telegram workflow
     # boundary until the selected action completes. It must never be persisted.
-    session["ephemeral_issue"] = user_input
+    set_ephemeral_issue(user_id, user_input)
 
     classification = classify_issue(user_input)
     session["category"] = classification["category"]
