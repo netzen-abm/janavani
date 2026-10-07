@@ -19,7 +19,10 @@ def test_in_memory_repository_round_trip() -> None:
 
     repository.save(case)
 
-    assert repository.get(case.case_id) is case
+    stored = repository.get(case.case_id)
+    assert stored is not case
+    assert stored.subject == CaseType.COMPLAINT.value
+    assert stored.narrative == ""
 
 
 def test_in_memory_repository_missing_case() -> None:
