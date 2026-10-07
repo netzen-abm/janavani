@@ -48,9 +48,9 @@ class CivicCaseLifecycleMixin:
         transitions = {
             "case:start_review": ("case:review", CivicCase.start_review, False),
             "case:mark_ready": ("case:write", CivicCase.mark_ready, False),
-            "case:begin_submission": ("case:submit", CivicCase.begin_submission, False),
-            "case:queue_submission": ("case:submit", CivicCase.queue_submission, False),
-            "case:submit": ("case:submit", CivicCase.submit, False),
+            "case:report_sent": ("case:write", CivicCase.report_sent_by_citizen, False),
+            "case:report_response": ("case:write", CivicCase.report_response_received, False),
+            "case:report_no_response": ("case:write", CivicCase.report_no_response, False),
             "case:acknowledge": ("case:write", CivicCase.acknowledge, False),
             "case:verify_resolution": ("case:write", CivicCase.verify_resolution, False),
             "case:reopen_resolution": ("case:write", CivicCase.reopen_after_citizen_verification, False),
@@ -64,7 +64,7 @@ class CivicCaseLifecycleMixin:
         now = datetime.now(timezone.utc).isoformat()
         kwargs: dict[str, object] = {"event_id": f"event-{uuid4().hex}", "occurred_at": now,
                                      "actor_id": identity.principal.principal_id}
-        if action in {"case:begin_submission", "case:queue_submission", "case:submit", "case:acknowledge",
+        if action in {"case:report_sent", "case:report_response", "case:report_no_response", "case:acknowledge",
                       "case:verify_resolution", "case:reopen_resolution"}:
             kwargs["source_channel"] = source_channel
         if action in {"case:acknowledge", "case:verify_resolution"}:
