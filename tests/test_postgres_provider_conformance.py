@@ -26,6 +26,7 @@ def test_active_build_and_runtime_graph_has_no_supabase_import_or_configuration(
         if root.exists()
         for path in root.rglob("*")
         if path.is_file()
+        and path != ROOT / "tests/test_postgres_provider_conformance.py"
         and path.suffix in {".py", ".yml", ".yaml", ".toml", ".txt", ".sh", ".json"}
     ]
 
