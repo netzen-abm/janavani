@@ -19,6 +19,7 @@ pub enum CaseType {
     Petition,
     Representation,
     Objection,
+    NonConsent,
     Appeal,
     Corruption,
     Misbehaviour,
@@ -65,6 +66,9 @@ pub enum CaseEventType {
     Correction,
     CitizenVerified,
     CitizenReopened,
+    SentByCitizen,
+    ResponseReceived,
+    NoResponseReported,
     Closed,
     Archived,
 }
