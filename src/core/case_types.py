@@ -20,7 +20,7 @@ class CaseStatus(str, Enum):
     READY = "ready"
     SUBMITTING = "submitting"
     QUEUED = "queued"
-    SUBMITTED = "submitted"
+    SUBMITTED = "submitted"  # legacy serialized state; now means citizen-reported sent
     ACKNOWLEDGED = "acknowledged"
     FOLLOW_UP = "follow_up"
     IN_PROGRESS = "in_progress"
@@ -40,6 +40,9 @@ class CaseEventType(str, Enum):
     SUBMITTING = "submitting"
     QUEUED = "queued"
     SUBMITTED = "submitted"
+    SENT_BY_CITIZEN = "sent_by_citizen"
+    RESPONSE_RECEIVED = "response_received"
+    NO_RESPONSE_REPORTED = "no_response_reported"
     ACKNOWLEDGED = "acknowledged"
     FOLLOW_UP = "follow_up"
     RESPONSE = "response"
