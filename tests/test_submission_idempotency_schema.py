@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 MIGRATION = Path(__file__).parents[1] / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
+SQL_PROVIDER = Path(__file__).parents[1] / "src" / "storage" / "repositories" / "postgres_submission_sql.py"
 REPOSITORY = Path(__file__).parents[1] / "src" / "storage" / "repositories" / "postgres_submission.py"
 
 
@@ -15,7 +16,7 @@ def test_submission_idempotency_migration_is_additive_and_unique() -> None:
 
 
 def test_postgres_provider_has_atomic_idempotency_and_cas_boundaries() -> None:
-    source = REPOSITORY.read_text(encoding="utf-8")
+    source = SQL_PROVIDER.read_text(encoding="utf-8")
     assert "ON CONFLICT (idempotency_key) DO NOTHING RETURNING" in source
     assert "WHERE submission_id=%s AND version=%s AND idempotency_key=%s" in source
     assert "SubmissionConcurrencyError" in source
