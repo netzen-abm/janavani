@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from io import BytesIO
 
 from telegram import Update
@@ -20,10 +19,7 @@ from src.identity.context import IdentityContext
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.storage.artifact_blob import ArtifactBlobStore
-from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.civic_case import CivicCaseRepository
-from src.storage.repositories.consent import ConsentRepository
-from src.storage.repositories.document_artifact import DocumentArtifactRepository
 
 
 @dataclass(frozen=True)
