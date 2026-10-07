@@ -11,14 +11,20 @@ from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 
 @dataclass(frozen=True)
-class DocumentPackage:
-    """User-delivery package containing only reviewable downloadable artifacts."""
+class DocumentPackageItem:
+    """One citizen-reviewable petition or RTI with its downloadable artifacts."""
 
-    case_id: str
     document_type: str
     draft: DocumentDraft
     artifacts: tuple[DocumentArtifact, ...]
 
+
+@dataclass(frozen=True)
+class DocumentPackage:
+    """Citizen-delivery package containing one or more reviewed document types."""
+
+    case_id: str
+    items: tuple[DocumentPackageItem, ...]
 class CivicActionDocuments:
     def __init__(self, deps): self._deps = deps
 
@@ -43,49 +49,53 @@ class CivicActionDocuments:
 
     def generate_package(
         self, case_id: str, *, identity: IdentityContext,
-        document_type: str, formats: tuple[DocumentFormat, ...] = (
+        document_types: tuple[str, ...] = ("petition",),
+        formats: tuple[DocumentFormat, ...] = (
             DocumentFormat.PDF, DocumentFormat.DOCX,
         ), output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
-        document_id: str | None = None,
     ) -> DocumentPackage:
-        if document_type not in {"petition", "rti"}:
-            raise ValueError("document_type must be 'petition' or 'rti'")
-        draft = self._deps.civic_action_capability.build_document(
-            case_id, identity=identity, document_id=document_id
-        ).draft
-        from src.documents.document_contract import DocumentParty
-        typed = DocumentDraft(
-            document_id=draft.document_id,
-            document_type=document_type,
-            case_id=draft.case_id,
-            date=draft.date,
-            subject=draft.subject,
-            body=draft.body,
-            to=draft.to,
-            cc=draft.cc,
-            sender=draft.sender or DocumentParty(
-                name="[YOUR NAME]",
-                address="[YOUR FULL POSTAL ADDRESS]",
-                email="[YOUR EMAIL ADDRESS]",
-                role="Applicant — fill before sending",
-            ),
-            legal_ground=draft.legal_ground,
-        )
-        self._deps.document_review_repository.save(typed)
-        artifacts = tuple(
-            generate_artifact(typed, fmt, output_dir, blob_store=self._deps.blob_store)
-            for fmt in formats
-        )
-        repository = self._deps.artifact_repository or create_document_artifact_repository()
-        for artifact in artifacts:
-            repository.save(artifact.reference)
-            self._deps.case_capability.add_document(
-                case_id, artifact.reference.artifact_id, identity=identity, source_channel="shared"
+        """Prepare one or both citizen-delivery document types; never transmit."""
+        selected_types = tuple(dict.fromkeys(document_types))
+        if not selected_types or any(item not in {"petition", "rti"} for item in selected_types):
+            raise ValueError("document_types must contain petition, rti, or both")
+        case = self._deps.civic_action_capability.build_document(case_id, identity=identity).case
+        items = []
+        for document_type in selected_types:
+            result = self._deps.civic_action_capability.build_document(case_id, identity=identity)
+            from src.documents.document_contract import DocumentParty
+            draft = DocumentDraft(
+                document_id=f"{result.draft.document_id}-{document_type}",
+                document_type=document_type,
+                case_id=result.draft.case_id,
+                date=result.draft.date,
+                subject=result.draft.subject,
+                body=result.draft.body,
+                to=result.draft.to,
+                cc=result.draft.cc,
+                sender=result.draft.sender or DocumentParty(
+                    name="[YOUR NAME]",
+                    address="[YOUR FULL POSTAL ADDRESS]",
+                    email="[YOUR EMAIL ADDRESS]",
+                    role="Applicant — fill before sending",
+                ),
+                legal_ground=result.draft.legal_ground,
             )
-        return DocumentPackage(
-            case_id=case_id, document_type=document_type, draft=typed, artifacts=artifacts
-        )
-
+            self._deps.document_review_repository.save(draft)
+            artifacts = tuple(
+                generate_artifact(draft, fmt, output_dir, blob_store=self._deps.blob_store)
+                for fmt in formats
+            )
+            repository = self._deps.artifact_repository or create_document_artifact_repository()
+            for artifact in artifacts:
+                repository.save(artifact.reference)
+                self._deps.case_capability.add_document(
+                    case_id, artifact.reference.artifact_id,
+                    identity=identity, source_channel="shared",
+                )
+            items.append(DocumentPackageItem(
+                document_type=document_type, draft=draft, artifacts=artifacts
+            ))
+        return DocumentPackage(case_id=case.case_id, items=tuple(items))
     def open_artifact(self, artifact_id: str, *, case_id: str, identity: IdentityContext):
         repository = self._deps.artifact_repository or create_document_artifact_repository()
         artifact = repository.get(artifact_id)
