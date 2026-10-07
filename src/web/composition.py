@@ -5,7 +5,6 @@ other access surfaces. Web-specific behavior remains limited to HTTP concerns.
 """
 from __future__ import annotations
 
-from src.capabilities.submission import SubmissionTransport
 from src.platform.surface_case_composition import (
     SurfaceCaseComposition,
     create_surface_case_composition,
@@ -20,7 +19,6 @@ def create_web_civic_action_composition(
     consent_repository=None,
     identity_link_repository=None,
     provider_composition=None,
-    submission_transport: SubmissionTransport | None = None,
     document_review_repository=None,
     artifact_repository=None,
     blob_store=None,
@@ -38,7 +36,6 @@ def create_web_civic_action_composition(
         consent_repository=consent_repository,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
-        submission_transport=submission_transport,
         document_review_repository=document_review_repository,
         artifact_repository=artifact_repository,
         blob_store=blob_store,
