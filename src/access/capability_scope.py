@@ -86,7 +86,7 @@ class CapabilityDataScopePolicy:
         if self.capability_id.strip() == "" or not purpose.strip():
             return CapabilityScopeDecision.DENY
 
-        requirements = self.requirement_map()
+        if self.purpose is not None and purpose != self.purpose:\n            return CapabilityScopeDecision.DENY\n\n        requirements = self.requirement_map()
         if requested_fields - requirements.keys():
             return CapabilityScopeDecision.DENY
 
