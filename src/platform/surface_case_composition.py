@@ -17,6 +17,7 @@ from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
+from src.capabilities.submission import SubmissionCapability
 from src.platform.composition_capabilities import create_civic_action_vertical_slice
 from src.storage.artifact_blob_factory import create_artifact_blob_store
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
@@ -77,6 +78,7 @@ class SurfaceCaseComposition:
     provider_composition: object
     document_review_capability: DocumentReviewCapability
     civic_action_vertical_slice: object
+    submission_capability: SubmissionCapability | None = None
 
 
 def create_surface_case_composition(
@@ -152,6 +154,7 @@ def create_surface_case_composition(
         provider_composition=provider_composition,
         artifact_repository=artifact_repository,
         blob_store=blob_store,
+        submission_transport=None,
     )
 
     return SurfaceCaseComposition(
