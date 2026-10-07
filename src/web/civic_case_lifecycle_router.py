@@ -1,4 +1,4 @@
-"""Review, approval, and submission-lifecycle HTTP routes."""
+"""Review and approval lifecycle HTTP routes; external document submission is not a Janavani capability."""
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from src.identity.context import IdentityContext
