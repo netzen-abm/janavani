@@ -42,7 +42,7 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
                         jurisdiction_json, subject_claims_json, status,
                         created_at, updated_at, version
                     ) VALUES (%s,%s,%s,%s,%s,'{}'::jsonb,'[]'::jsonb,%s,now(),now(),1)""",
-                    (case_id, CaseType.COMPLAINT.value, "Atomic test", "Atomic persistence", "pg-atomic-user", CaseStatus.READY.value),
+                    (case_id, CaseType.COMPLAINT.value, "complaint", "", "pg-atomic-user", CaseStatus.READY.value),
                 )
                 cursor.execute(
                     """INSERT INTO civic_case_submissions (
