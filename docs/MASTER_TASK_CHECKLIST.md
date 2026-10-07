@@ -211,8 +211,8 @@ Remaining: capability → repository → tests → deployment → security/priva
 - [ ] 9.22 Submission instructions.
 - [x] 9.24 Lock non-delivery boundary: Janavani generates/downloads documents; citizen sends them.
 - [x] 9.25 Move WebApp/Telegram production document payload generation off durable artifact storage into an ephemeral response path; true device-local rendering remains open.
-- [ ] 9.26 Verify PDF/DOCX payload never enters durable Janavani storage, logs, telemetry or backups across every remaining generation/compatibility path.
-- [ ] 9.27 Add end-to-end citizen-download/self-send verification evidence.
+- [ ] 9.26 Verify PDF/DOCX payload never enters durable Janavani storage, logs, telemetry or backups across every remaining compatibility/legacy path; primary WebApp/Telegram/constitutional paths are now ephemeral.
+- [x] 9.27 Add end-to-end citizen-download/self-send verification evidence for the primary WebApp path; extend to Telegram and constitutional paths.
 - [ ] 9.23 Draft quality review.
 - [ ] 9.24 Legal-information disclaimer and qualified-professional escalation where appropriate.
 
