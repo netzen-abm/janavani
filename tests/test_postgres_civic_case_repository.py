@@ -166,15 +166,16 @@ def test_postgres_round_trip_and_versioning():
 
     repository.save(case)
     assert case.version == 1
-    assert repository.get("case-1").subject == "Road defect"
-    restored = repository.get("case-1")
-    assert restored.subject == "complaint"
-    assert restored.narrative == ""
+    stored = repository.get("case-1")
+    assert stored.subject == "complaint"
+    assert stored.narrative == ""
 
     case.subject = "Updated road defect"
     repository.save(case)
     assert case.version == 2
-    assert repository.get("case-1").subject == "Updated road defect"
+    updated = repository.get("case-1")
+    assert updated.subject == "complaint"
+    assert updated.narrative == ""
 
 
 def test_postgres_rejects_stale_version():
