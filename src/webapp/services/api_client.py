@@ -91,14 +91,15 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
-    def generate_artifact(self, case_id: str, *, document_id: str, document_format: str = "pdf") -> dict[str, Any]:
+    def generate_artifact(self, case_id: str, *, document_id: str, document_format: str = "pdf") -> bytes:
+        """Generate and immediately download an ephemeral document artifact."""
         response = httpx.post(
             f"{self.base_url}/civic/cases/{case_id}/document/artifact",
             json={"document_id": document_id, "document_format": document_format},
-            headers=self._headers(), timeout=20.0,
+            headers=self._headers(), timeout=30.0,
         )
         response.raise_for_status()
-        return response.json()
+        return response.content
 
     def mark_ready(self, case_id: str) -> dict[str, Any]:
         response = httpx.post(
