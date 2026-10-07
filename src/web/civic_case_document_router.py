@@ -81,7 +81,7 @@ async def prepare_document_package(case_id: str, request: DocumentPackageRequest
 @router.get("/{case_id}/document/artifact/{artifact_id}/download")
 async def download_document_artifact(case_id: str, artifact_id: str, context: IdentityContext = Depends(require_authenticated_identity)):
     try:
-        artifact, stream = CIVIC_ACTION_VERTICAL_SLICE._documents.open_artifact(
+        artifact, stream = CIVIC_ACTION_VERTICAL_SLICE.open_delivery_artifact(
             artifact_id, case_id=case_id, identity=context
         )
     except LookupError as exc:
