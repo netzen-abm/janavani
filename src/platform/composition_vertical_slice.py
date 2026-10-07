@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.submission import SubmissionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.civic_case import CivicCaseCapability
@@ -66,6 +67,13 @@ def create_civic_action_vertical_slice(
     )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
+    if submission_capability is None and submission_transport is not None:
+        submission_capability = SubmissionCapability(
+            case_capability=case_capability,
+            consent_repository=consent_repository,
+            transport=submission_transport,
+            evidence_repository=evidence_repository,
+        )
 
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
@@ -75,6 +83,7 @@ def create_civic_action_vertical_slice(
             document_review_capability=document_review_capability,
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
+            submission_capability=submission_capability,
             external_channel_capability=external_channel_capability
             or create_external_channel_capability(provider_composition=composition),
             case_repository=case_repository,
