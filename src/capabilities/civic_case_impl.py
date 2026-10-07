@@ -19,6 +19,11 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
     def __init__(self, repository: CivicCaseRepository) -> None:
         self._repository = repository
 
+    @property
+    def repository(self) -> CivicCaseRepository:
+        """Expose the capability-owned repository for composition/test boundaries."""
+        return self._repository
+
     def create(self, request: CivicCaseCreateRequest, *, identity: IdentityContext,
                source_channel: str | None = None,
                execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
