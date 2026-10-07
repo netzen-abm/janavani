@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from psycopg import sql
 
 ROOT = Path(__file__).parents[1]
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
@@ -33,8 +34,9 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(RLS_POLICY)
 
                 cursor.execute(
-                    f'CREATE ROLE "{role}" LOGIN PASSWORD %s NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS',
-                    (password,),
+                    sql.SQL("CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS").format(
+                        sql.Identifier(role), sql.Literal(password)
+                    )
                 )
                 cursor.execute(f'GRANT USAGE ON SCHEMA public TO "{role}"')
                 cursor.execute(f'GRANT SELECT, INSERT, UPDATE ON public.civic_cases TO "{role}"')
