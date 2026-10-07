@@ -31,7 +31,7 @@ def insert_case(cur, case, created_at, updated_at):
         related_representative_id, subject_claims_json, status, created_at,
         updated_at, version
     ) VALUES (%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,1)""", (
-        case.case_id, case.case_type.value, case.subject, case.narrative,
+        case.case_id, case.case_type.value, case.case_type.value, "",
         case.created_by, encode(case.jurisdiction), case.related_organisation_id,
         case.related_office_id, case.related_official_id,
         case.related_representative_id, encode(case.claims), case.status.value,
@@ -46,7 +46,7 @@ def update_case(cur, case, event, current_version):
         related_official_id=%s, related_representative_id=%s,
         subject_claims_json=%s::jsonb, status=%s, updated_at=%s, version=%s
         WHERE case_id=%s AND version=%s""", (
-        case.case_type.value, case.subject, case.narrative, case.created_by,
+        case.case_type.value, case.case_type.value, "", case.created_by,
         encode(case.jurisdiction), case.related_organisation_id,
         case.related_office_id, case.related_official_id,
         case.related_representative_id, encode(case.claims), case.status.value,
