@@ -72,7 +72,7 @@ def create_surface_case_composition(
     consent_repository: object | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
     provider_composition=None,
-    submission_transport: SubmissionTransport | None = None,
+    submission_transport: SubmissionTransport | None = None,\n    document_review_repository=None,\n    artifact_repository=None,\n    blob_store=None,
 ) -> SurfaceCaseComposition:
     """Compose one provider graph for an access surface.
 
@@ -105,7 +105,7 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
-    review_repository = create_document_review_repository_for_platform(provider_composition=provider_composition)
+    review_repository = document_review_repository or create_document_review_repository_for_platform(provider_composition=provider_composition)
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
