@@ -41,7 +41,11 @@ def test_shared_capability_creates_case_and_initial_event() -> None:
     assert result.case.events[0].event_type is CaseEventType.CREATED
     assert result.case.events[0].actor_id == "citizen:test"
     assert result.case.events[0].source_channel == "telegram"
-    assert repository.get(result.case.case_id) is result.case
+    stored = repository.get(result.case.case_id)
+    assert stored is not result.case
+    assert stored.case_id == result.case.case_id
+    assert stored.subject == CaseType.COMPLAINT.value
+    assert stored.narrative == ""
 
 
 def test_shared_capability_denies_without_capability() -> None:
