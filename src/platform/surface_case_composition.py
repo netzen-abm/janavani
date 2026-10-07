@@ -35,7 +35,6 @@ from src.platform.composition_capabilities import (
 )
 
 
-@dataclass(frozen=True)
 _PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
 
 def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
