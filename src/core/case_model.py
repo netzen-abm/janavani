@@ -51,7 +51,7 @@ class CivicCase(CivicCaseOutcomeMixin):
             raise ValueError(f"Cannot approve {self.status.value} case")
         self._ensure_content()
         if not self.consent_refs:
-            raise PermissionError("Explicit submission consent is required")
+            raise PermissionError("Explicit document-delivery consent is required")
         self.status = CaseStatus.READY
         return self._record(CaseEvent(event_id, self.case_id, CaseEventType.APPROVED, occurred_at, actor_id))
 
