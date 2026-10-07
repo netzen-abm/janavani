@@ -17,6 +17,8 @@ from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.submission import SubmissionTransport
 from src.platform.composition_capabilities import create_civic_action_vertical_slice
+from src.storage.artifact_blob_factory import create_artifact_blob_store
+from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
@@ -110,6 +112,12 @@ def create_surface_case_composition(
     consent_repository = consent_repository or runtime_graph.setdefault(
         "consent", create_consent_repository(provider_composition=provider_composition)
     )
+    artifact_repository = artifact_repository or runtime_graph.setdefault(
+        "document_artifacts", create_document_artifact_repository()
+    )
+    blob_store = blob_store or runtime_graph.setdefault(
+        "artifact_blob", create_artifact_blob_store()
+    )
     identity_link_repository = identity_link_repository or runtime_graph.setdefault(
         "external_identity_links",
         create_identity_link_repository(provider_composition=provider_composition),
@@ -122,7 +130,9 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
-    review_repository = document_review_repository or create_document_review_repository_for_platform(provider_composition=provider_composition)
+    review_repository = document_review_repository or runtime_graph.setdefault(
+        "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
+    )
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
