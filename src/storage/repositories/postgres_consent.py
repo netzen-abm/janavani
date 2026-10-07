@@ -31,11 +31,13 @@ class PostgresConsentRepository:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS civic_case_consents (
                         consent_id TEXT PRIMARY KEY,
+                        case_id TEXT REFERENCES civic_cases(case_id),
                         subject_id TEXT NOT NULL,
                         purpose TEXT NOT NULL,
                         scope JSONB NOT NULL,
                         grant_type TEXT NOT NULL,
                         status TEXT NOT NULL,
+                        granted_by TEXT,
                         created_at TIMESTAMPTZ NOT NULL,
                         expires_at TIMESTAMPTZ,
                         revoked_at TIMESTAMPTZ,
