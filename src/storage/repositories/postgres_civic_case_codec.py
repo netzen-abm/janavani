@@ -18,7 +18,7 @@ def decode(value: Any, default: Any) -> Any:
 
 def case_values(case, *, created_at: str, updated_at: str, version: int):
     return (
-        case.case_id, case.case_type.value, case.subject, case.narrative,
+        case.case_id, case.case_type.value, case.case_type.value, "",
         case.created_by, encode(case.jurisdiction), case.related_organisation_id,
         case.related_office_id, case.related_official_id,
         case.related_representative_id, encode(case.claims), case.status.value,
