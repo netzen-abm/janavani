@@ -93,3 +93,10 @@ Before replacing the legacy generation path:
 7. verify document generation contains no submission or dispatch path;
 8. verify external delivery states are never inferred from generation/download;
 9. retire legacy generators only after evidence and archive.
+
+
+## Hard boundary: generation is the terminal Janavani action
+
+The canonical document capability terminates at **user download**. It does not expose a delivery transport. Complaint, petition, RTI and similar civic documents are generated for citizen review and download; the citizen independently sends the final document through email, post, hand delivery or the relevant government portal.
+
+Do not introduce a submission adapter into this capability. Delivery is intentionally outside Janavani's product boundary.
