@@ -127,6 +127,8 @@ def create_surface_case_composition(
         evidence_repository=evidence_repository,
         document_review_repository=review_repository,
         provider_composition=provider_composition,
+        artifact_repository=artifact_repository,
+        blob_store=blob_store,
     )
 
     return SurfaceCaseComposition(
