@@ -146,12 +146,12 @@ class CivicActionVerticalSlice:
         return self._documents.open_artifact(artifact_id, case_id=case_id, identity=identity)
 
     def prepare_delivery_package(
-        self, case_id: str, *, identity: IdentityContext, document_type: str,
+        self, case_id: str, *, identity: IdentityContext, document_types=("petition",),
         formats=("pdf", "docx"),
     ):
         """Prepare downloadable citizen-owned documents; never transmit them."""
         from src.documents.document_contract import DocumentFormat
         selected = tuple(DocumentFormat(value) for value in formats)
         return self._documents.generate_package(
-            case_id, identity=identity, document_type=document_type, formats=selected
+            case_id, identity=identity, document_types=tuple(document_types), formats=selected
         )
