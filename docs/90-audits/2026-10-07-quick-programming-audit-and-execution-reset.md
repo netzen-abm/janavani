@@ -50,3 +50,19 @@ Split at boundaries of change ownership, trust/security, persistence/provider de
 
 ## Definition of done
 Implementation + tests + failure behavior + security/privacy verification + user workflow + documentation + commit/PR evidence + runtime/deployment evidence.
+
+
+## Execution update
+
+- WebApp API client now exposes canonical begin-submission, queue-submission and acknowledgement operations.
+- WebApp Case workspace now enters the canonical review boundary instead of stopping at Case creation.
+- Telegram conversation dispatch now classifies expected workflow errors and hides internal exception details from users.
+- No new domain/service layer was introduced; changes remain inside existing surface adapter boundaries.
+- Nine-branch invariant remains satisfied after the changes.
+
+## Immediate next implementation gates
+
+1. Complete WebApp review → consent → artifact → submission-preparation UI against canonical endpoints.
+2. Complete Telegram document → review → consent → submission-preparation flow using the existing shared composition.
+3. Add cross-surface continuation tests against a durable provider.
+4. Verify PostgreSQL authorization/RLS and restart/recovery evidence before declaring durable production readiness.
