@@ -56,7 +56,7 @@ async def generate_document_artifact(case_id: str, request: ArtifactRequest, con
 async def prepare_document_package(case_id: str, request: DocumentPackageRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         package = CIVIC_ACTION_VERTICAL_SLICE.prepare_delivery_package(
-            case_id, identity=context, document_type=request.document_type,
+            case_id, identity=context, document_types=request.document_types,
             formats=tuple(format.value for format in request.formats),
         )
     except LookupError as exc:
@@ -65,16 +65,16 @@ async def prepare_document_package(case_id: str, request: DocumentPackageRequest
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {
         "case_id": case_id,
-        "document_type": package.document_type,
+        "document_types": [item.document_type for item in package.items],
         "delivery": "citizen_download_and_self_send",
         "submission": "never_submitted_by_janavani",
         "from_address": "citizen_must_fill_before_sending",
-        "to": {"name": package.draft.to.name, "address": package.draft.to.address, "email": package.draft.to.email},
-        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in package.draft.cc],
+        "to": {"name": package.items[0].draft.to.name, "address": package.items[0].draft.to.address, "email": package.items[0].draft.to.email},
+        "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in package.items[0].draft.cc],
         "artifacts": [
             {"artifact_id": artifact.reference.artifact_id, "format": artifact.format.value,
              "download": f"/civic/cases/{case_id}/document/artifact/{artifact.reference.artifact_id}/download"}
-            for artifact in package.artifacts
+            for item in package.items for artifact in item.artifacts
         ],
     }
 
