@@ -126,7 +126,10 @@ class CivicActionCapability:
         output_dir: str | Path = "/tmp/janavani-artifacts/rendered",
         document_id: str | None = None,
     ) -> DocumentArtifact:
-        """Generate an artifact for review/download; never submit or transmit it."""
+        """Generate an artifact for review/download only.
+
+        This capability intentionally has no submission or delivery transport.
+        """
         result = self.build_document(case_id, identity=identity, document_id=document_id)
         artifact = generate_artifact(
             result.draft,
