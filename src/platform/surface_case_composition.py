@@ -15,7 +15,6 @@ from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
-from src.capabilities.submission import SubmissionTransport
 from src.platform.composition_capabilities import create_civic_action_vertical_slice
 from src.storage.artifact_blob_factory import create_artifact_blob_store
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
@@ -86,7 +85,6 @@ def create_surface_case_composition(
     consent_repository: object | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
     provider_composition=None,
-    submission_transport: SubmissionTransport | None = None,
     document_review_repository=None,
     artifact_repository=None,
     blob_store=None,
@@ -147,7 +145,6 @@ def create_surface_case_composition(
         case_repository=case_repository,
         authority_repository=authority_repository,
         consent_repository=consent_repository,
-        submission_transport=submission_transport or FailClosedSubmissionTransport(),
         evidence_repository=evidence_repository,
         document_review_repository=review_repository,
         provider_composition=provider_composition,
