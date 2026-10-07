@@ -76,3 +76,32 @@ The canonical deployment configuration already keeps Web/API and Telegram as sep
 - Telegram: `python src/bot_telegram.py`
 
 This is the desired independence model: either surface can fail without requiring the other surface to terminate. Shared infrastructure remains below both runtimes.
+
+
+## 2026-10-07 privacy convergence update
+
+### Branch hygiene
+
+- Exactly 9 active branches verified.
+- No branch creation performed.
+- No branch deletion performed because the repository already satisfies the nine-branch invariant.
+- Divergent historical branches remain intentionally preserved as evidence/source material; they are not wholesale merge candidates.
+
+### Hard privacy invariant
+
+Janavani is not a citizen personal-data repository. Personal/sensitive citizen content is device-first and must not be durably stored by Janavani. A conventional Telegram bot necessarily receives Telegram content transiently; this is treated as transport processing, not storage permission.
+
+### Code changes
+
+- Telegram session no longer stores name, address, phone, email or photo fields.
+- Telegram issue content uses a short-lived process-memory boundary rather than durable session state.
+- Telegram Case creation now creates a metadata-only Case shell; raw narrative is not persisted.
+- Case persistence adapters redact citizen subject/narrative content before storage.
+- PostgreSQL transactional Case writers were aligned to the same redaction boundary.
+- In-memory Case persistence follows the same contract.
+- A privacy regression test was added for provider-boundary redaction.
+- A controlled migration was added to scrub existing Case subject/narrative fields after backup/restore review.
+
+### Important remaining privacy gate
+
+Document/evidence artifact payloads and channel identity links still require a dedicated convergence pass. The target architecture is device-local content plus destination-bound transient transfer, with opaque citizen-held capability proofs preferred over durable channel-to-citizen identity graphs.
