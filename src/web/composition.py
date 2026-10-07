@@ -20,7 +20,10 @@ def create_web_civic_action_composition(
     consent_repository=None,
     identity_link_repository=None,
     provider_composition=None,
-    submission_transport: SubmissionTransport | None = None,\n    document_review_repository=None,\n    artifact_repository=None,\n    blob_store=None,
+    submission_transport: SubmissionTransport | None = None,
+    document_review_repository=None,
+    artifact_repository=None,
+    blob_store=None,
 ) -> SurfaceCaseComposition:
     """Build the Web adapter's canonical surface-neutral dependency graph.
 
@@ -35,5 +38,8 @@ def create_web_civic_action_composition(
         consent_repository=consent_repository,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
-        submission_transport=submission_transport,\n        document_review_repository=document_review_repository,\n        artifact_repository=artifact_repository,\n        blob_store=blob_store,
+        submission_transport=submission_transport,
+        document_review_repository=document_review_repository,
+        artifact_repository=artifact_repository,
+        blob_store=blob_store,
     )
