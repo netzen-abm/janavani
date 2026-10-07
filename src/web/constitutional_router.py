@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from src.capabilities.constitutional_objection import ConstitutionalObjectionCapability
@@ -16,6 +16,7 @@ from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.core.legislative_monitor import fetch_active_bill_profile
 from src.documents.document_contract import DocumentFormat
+from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.platform.composition import create_constitutional_objection_capability, create_provider_composition
@@ -68,23 +69,26 @@ async def generate_objection(payload: ObjectionDispatchPayload,
         raise HTTPException(status_code=400, detail="Unsupported file format. Use PDF or DOCX.")
 
     try:
-        artifact = _CAPABILITY.generate_reviewable_artifact(
+        result = _CAPABILITY.build_document(
             payload.case_id,
             identity=context,
             bill_code=payload.bill_code,
             citizen_comments=payload.citizen_comments,
-            document_format=DocumentFormat(selected_format.lower()),
         )
+        rendered = render_artifact_payload(result.draft, DocumentFormat(selected_format.lower()))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    filename = f"objection_{payload.bill_code}.{selected_format.lower()}"
-    media_type = "application/pdf" if selected_format == "PDF" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    stream = _CAPABILITY.open_artifact(artifact)
-    return StreamingResponse(stream, media_type=media_type, headers={
-        "Content-Disposition": f"attachment; filename={filename}",
-        "X-JanaVani-Case-Id": payload.case_id,
-        "X-JanaVani-Artifact-SHA256": artifact.reference.content_sha256,
-    })
+    return Response(
+        content=rendered.content,
+        media_type=rendered.media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="objection_{payload.bill_code}.{selected_format.lower()}"',
+            "X-JanaVani-Case-Id": payload.case_id,
+            "X-JanaVani-Artifact-SHA256": rendered.content_sha256,
+            "Cache-Control": "no-store, private",
+            "X-Janavani-Delivery": "citizen-download-only",
+        },
+    )
