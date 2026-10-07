@@ -18,7 +18,7 @@ from src.storage.repositories.consent import InMemoryConsentRepository
 from src.storage.repositories.document_artifact import InMemoryDocumentArtifactRepository
 from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
-from src.web import civic_case_router
+from src.web import civic_case_router, civic_case_dependencies, civic_case_lifecycle_router, civic_case_document_router
 from src.web.canonical_app import app
 
 
@@ -78,6 +78,14 @@ def web_state(monkeypatch):
     monkeypatch.setattr(civic_case_router, "_COMPOSITION", composition)
     monkeypatch.setattr(civic_case_router, "_CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_router, "_CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_dependencies, "_COMPOSITION", composition)
+    monkeypatch.setattr(civic_case_dependencies, "CAPABILITY", composition.case_capability)
+    monkeypatch.setattr(civic_case_dependencies, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_lifecycle_router, "CAPABILITY", composition.case_capability)
+    monkeypatch.setattr(civic_case_lifecycle_router, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_document_router, "CAPABILITY", composition.case_capability)
+    monkeypatch.setattr(civic_case_document_router, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_document_router, "DOCUMENT_REVIEW", composition.document_review_capability)
     os.environ["JANAVANI_IDENTITY_ASSERTION_SECRET"] = SECRET
     return cases, evidence, consents, reviews, artifacts
 
