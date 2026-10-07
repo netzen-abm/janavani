@@ -1,8 +1,9 @@
 """Document preparation, review, and artifact HTTP routes."""
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from src.capabilities.document_review import DocumentReviewRequest
+from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CIVIC_ACTION, CIVIC_ACTION_VERTICAL_SLICE, DOCUMENT_REVIEW
@@ -36,20 +37,27 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
     return serialize_draft(draft, case_id=draft.case_id, submission="not_submitted")
 
 @router.post("/{case_id}/document/artifact")
-async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
+async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)):
+    """Render the finished document ephemerally for immediate citizen download."""
     try:
-        artifact = CIVIC_ACTION_VERTICAL_SLICE.generate_artifact(
-            request.document_id, identity=context, case_id=case_id, document_format=request.document_format
-        )
+        draft = DOCUMENT_REVIEW.get_owned(request.document_id, identity=context)
+        if draft is None or draft.case_id != case_id:
+            raise LookupError("Document draft not found")
+        payload = render_artifact_payload(draft, request.document_format)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Document draft not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return {
-        "case_id": case_id, "document_id": request.document_id,
-        "artifact_id": artifact.reference.artifact_id,
-        "format": request.document_format.value, "submission": "not_submitted",
-    }
+    return Response(
+        content=payload.content,
+        media_type=payload.media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{payload.filename}"',
+            "X-Artifact-SHA256": payload.content_sha256,
+            "X-Janavani-Delivery": "citizen-download-only",
+            "Cache-Control": "no-store, private",
+        },
+    )
 
 
 @router.post("/{case_id}/document/package")
