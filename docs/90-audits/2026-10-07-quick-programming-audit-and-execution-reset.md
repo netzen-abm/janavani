@@ -122,3 +122,12 @@ The canonical artifact repository/provider abstractions remain because they are 
 
 ### Remaining gap
 This is ephemeral server-side generation, not yet true browser/device-local generation. Achieving true device-local generation requires a client-side PDF/DOCX rendering boundary and is therefore a separate presentation/runtime architecture task. It must not be falsely represented as complete.
+
+
+## Cross-check result — artifact consumers
+
+Every production consumer found for the finished-document path was re-checked before changing it. The primary WebApp artifact endpoint now renders ephemerally; the Telegram generation step now renders ephemerally; the constitutional WebApp endpoint now renders ephemerally; the durable package/download route is retired. The remaining durable `generate_artifact` / repository/blob abstractions are compatibility/provider boundaries and test/legacy paths, not the primary WebApp/Telegram delivery path.
+
+### Branch convergence result
+
+The nine-branch invariant remains satisfied. Two branches are exact ancestors of `main` (zero commits ahead) and therefore contain no unique work to merge. The remaining divergent branches contain distinct architectural commits; they require semantic convergence rather than blind merging. No branch was deleted because the connected GitHub capability set does not expose a safe branch-deletion operation in this execution context. The active branch count is therefore already exactly nine.
