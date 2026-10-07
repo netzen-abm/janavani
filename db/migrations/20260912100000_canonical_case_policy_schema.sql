@@ -23,7 +23,7 @@ create table if not exists public.civic_cases (
     version bigint not null default 1,
     constraint civic_cases_version_positive check (version > 0),
     constraint civic_cases_subject_nonempty check (length(trim(subject)) > 0),
-    constraint civic_cases_narrative_nonempty check (length(trim(narrative)) > 0)
+    constraint civic_cases_narrative_redacted check (narrative = '')
 );
 
 create table if not exists public.civic_case_events (
