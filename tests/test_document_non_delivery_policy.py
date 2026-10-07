@@ -30,3 +30,12 @@ def test_document_contract_has_no_delivery_transport():
     assert "smtp" not in fields
     assert "delivery_url" not in fields
     assert "submission_endpoint" not in fields
+
+
+def test_case_lifecycle_routes_explicitly_disable_submission():
+    from pathlib import Path
+
+    source = Path("src/web/civic_case_lifecycle_router.py").read_text(encoding="utf-8")
+
+    assert "Janavani never submits documents or petitions" in source
+    assert "Janavani never queues or transmits document submissions" in source
