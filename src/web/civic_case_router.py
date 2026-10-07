@@ -5,6 +5,7 @@ from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
+_REPOSITORY = CAPABILITY.repository
 from src.web.composition import create_web_civic_action_composition
 from src.web.civic_case_document_router import router as document_router
 from src.web.civic_case_lifecycle_router import router as lifecycle_router
