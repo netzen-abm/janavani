@@ -108,6 +108,33 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
+    def begin_submission(self, case_id: str) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/submitting",
+            json={"source_channel": "webapp"},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def queue_submission(self, case_id: str) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/queued",
+            json={"source_channel": "webapp"},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def acknowledge_case(self, case_id: str, *, source_ref: str | None = None) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/acknowledge",
+            json={"source_channel": "webapp", "source_ref": source_ref},
+            headers=self._headers(), timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def submit_complaint_draft(self, citizen_input: str) -> dict[str, Any]:
         """Compatibility adapter: create the canonical Case from free-form input."""
         result = self.create_case(subject="Citizen civic issue", narrative=citizen_input)
