@@ -1,12 +1,14 @@
 """Document preparation, review and artifact helpers for the civic-action slice."""
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from src.capabilities.document_review import DocumentReviewRequest
 from src.core.execution import CapabilityExecutionContext
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
+from src.documents.artifact_ref import ArtifactState
 from src.identity.context import IdentityContext
+from src.core.case_types import CaseStatus
 from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 
@@ -59,6 +61,8 @@ class CivicActionDocuments:
         if not selected_types or any(item not in {"petition", "rti"} for item in selected_types):
             raise ValueError("document_types must contain petition, rti, or both")
         case = self._deps.civic_action_capability.build_document(case_id, identity=identity).case
+        if case.status is not CaseStatus.READY:
+            raise ValueError("Final document artifacts require an approved case review")
         items = []
         for document_type in selected_types:
             result = self._deps.civic_action_capability.build_document(case_id, identity=identity)
@@ -86,20 +90,24 @@ class CivicActionDocuments:
                 for fmt in formats
             )
             repository = self._deps.artifact_repository or create_document_artifact_repository()
-            for artifact in artifacts:
+            approved_artifacts = tuple(
+                replace(artifact, reference=replace(artifact.reference, state=ArtifactState.USER_APPROVED))
+                for artifact in artifacts
+            )
+            for artifact in approved_artifacts:
                 repository.save(artifact.reference)
                 self._deps.case_capability.add_document(
                     case_id, artifact.reference.artifact_id,
                     identity=identity, source_channel="shared",
                 )
             items.append(DocumentPackageItem(
-                document_type=document_type, draft=draft, artifacts=artifacts
+                document_type=document_type, draft=draft, artifacts=approved_artifacts
             ))
         return DocumentPackage(case_id=case.case_id, items=tuple(items))
     def open_artifact(self, artifact_id: str, *, case_id: str, identity: IdentityContext):
         repository = self._deps.artifact_repository or create_document_artifact_repository()
         artifact = repository.get(artifact_id)
-        if artifact is None or artifact.case_id != case_id:
+        if artifact is None or artifact.case_id != case_id or artifact.state is not ArtifactState.USER_APPROVED:
             raise LookupError("Document artifact not found")
         case = self._deps.case_capability.get_owned(case_id, identity=identity)
         if case is None or artifact_id not in case.document_refs:
