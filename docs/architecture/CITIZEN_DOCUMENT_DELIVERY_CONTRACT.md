@@ -63,4 +63,4 @@ Janavani may maintain verified authority metadata and show the citizen where the
 
 ## RTI-specific note
 
-The official Central Government RTI Online portal supports online filing for covered Central Government public authorities, while stating that State Government public authorities should not be filed through that portal. Janavani therefore should not hard-code a universal “RTI online submission” path; it should generate the citizen-controlled RTI document and clearly identify the appropriate official route when known. citeturn0search6turn0search10
+The official Central Government RTI Online portal supports online filing for covered Central Government public authorities, while stating that State Government public authorities should not be filed through that portal. Janavani therefore should not hard-code a universal “RTI online submission” path; it should generate the citizen-controlled RTI document and clearly identify the appropriate official route when known.
