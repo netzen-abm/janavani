@@ -66,11 +66,31 @@ class CivicCase:
         self.status = CaseStatus.QUEUED
         return self._record(CaseEvent(event_id, self.case_id, CaseEventType.QUEUED, occurred_at, actor_id, source_channel))
 
-    def submit(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
-        if self.status not in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
-            raise ValueError("Only a submitting or queued case can be submitted")
+    def report_sent_by_citizen(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
+                              source_channel: str | None = None, notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.READY, CaseStatus.FOLLOW_UP}:
+            raise ValueError("A final document must be ready before the citizen can report sending it")
         self.status = CaseStatus.SUBMITTED
-        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTED, occurred_at, actor_id, source_channel))
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SENT_BY_CITIZEN,
+                                      occurred_at, actor_id, source_channel, notes=notes))
+
+    def report_response_received(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
+                                source_channel: str | None = None, source_ref: str | None = None,
+                                notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.SUBMITTED, CaseStatus.FOLLOW_UP, CaseStatus.IN_PROGRESS}:
+            raise ValueError("A sent case is required before reporting a response")
+        self.status = CaseStatus.RESPONDED
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.RESPONSE_RECEIVED,
+                                      occurred_at, actor_id, source_channel, source_ref, notes))
+
+    def report_no_response(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
+                           source_channel: str | None = None, notes: str | None = None) -> CaseEvent:
+        if self.status not in {CaseStatus.SUBMITTED, CaseStatus.ACKNOWLEDGED, CaseStatus.FOLLOW_UP,
+                               CaseStatus.IN_PROGRESS}:
+            raise ValueError("A sent case is required before reporting no response")
+        self.status = CaseStatus.FOLLOW_UP
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.NO_RESPONSE_REPORTED,
+                                      occurred_at, actor_id, source_channel, notes=notes))
 
     def acknowledge(self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
                     source_channel: str | None = None, source_ref: str | None = None,
