@@ -37,8 +37,11 @@ class PurposeBoundPermissionSession:
 
 class PurposeBoundPermissionLifecycle:
     """Enforces application-level activation, completion and release."""
-    def __init__(self) -> None:
+    def __init__(self, *, resource_adapter: SensitiveResourceAdapter | None = None,
+                 data_minimizer: SensitiveDataMinimizer | None = None) -> None:
         self._sessions: dict[str, PurposeBoundPermissionSession] = {}
+        self._resource_adapter = resource_adapter
+        self._data_minimizer = data_minimizer
 
     def present(self, request: PurposeBoundPermissionRequest) -> PurposeBoundPermissionSession:
         if not request.explanation.strip(): raise ValueError("A purpose explanation is required")
@@ -52,10 +55,16 @@ class PurposeBoundPermissionLifecycle:
         return self._transition_owned(session_id, identity, PermissionLifecycleState.GRANTED, PermissionLifecycleState.ACTIVE)
 
     def purpose_complete(self, session_id: str, *, identity: IdentityContext) -> PurposeBoundPermissionSession:
-        return self._transition_owned(session_id, identity, PermissionLifecycleState.ACTIVE, PermissionLifecycleState.PURPOSE_COMPLETE)
+        session = self._transition_owned(session_id, identity, PermissionLifecycleState.ACTIVE, PermissionLifecycleState.PURPOSE_COMPLETE)
+        if self._data_minimizer is not None:
+            self._data_minimizer.minimize(session_id=session.session_id, resource=session.resource, purpose=session.purpose)
+        return session
 
     def release(self, session_id: str, *, identity: IdentityContext) -> PurposeBoundPermissionSession:
-        return self._transition_owned(session_id, identity, PermissionLifecycleState.PURPOSE_COMPLETE, PermissionLifecycleState.RELEASED)
+        session = self._transition_owned(session_id, identity, PermissionLifecycleState.PURPOSE_COMPLETE, PermissionLifecycleState.RELEASED)
+        if self._resource_adapter is not None:
+            self._resource_adapter.release(session_id=session.session_id, resource=session.resource)
+        return session
 
     def deny(self, session_id: str, *, identity: IdentityContext) -> PurposeBoundPermissionSession:
         return self._owned_terminal(session_id, identity, {PermissionLifecycleState.PURPOSE_PRESENTED,PermissionLifecycleState.GRANTED}, PermissionLifecycleState.DENIED)
