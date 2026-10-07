@@ -1,6 +1,7 @@
 """Compatibility entry point for the canonical Janavani Web/API runtime.
 
 The canonical application is assembled by ``src.web.canonical_app``.
+Canonical runtime target: ``src.web.canonical_app:app``.
 This module intentionally contains no independent Web runtime, provider access,
 or cross-surface process management. It remains as a compatibility import for
 older local/deployment references while the repository converges on one Web
