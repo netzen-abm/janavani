@@ -57,7 +57,6 @@ def main():
             case_capability=case_capability,
             civic_action_capability=civic_action_capability,
             consent_capability=composition.consent_capability,
-            provider_composition=composition.provider_composition if hasattr(composition, "provider_composition") else None,
             identity_link_repository=composition.identity_link_repository,
         )
     )
