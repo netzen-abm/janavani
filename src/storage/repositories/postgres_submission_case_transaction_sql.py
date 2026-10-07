@@ -32,7 +32,7 @@ def persist_case(cur, case, expected_version, event):
             related_representative_id, subject_claims_json, status, created_at,
             updated_at, version
         ) VALUES (%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,1)""", (
-            case.case_id, case.case_type.value, case.subject, case.narrative,
+            case.case_id, case.case_type.value, case.case_type.value, "",
             case.created_by, json.dumps(case.jurisdiction, ensure_ascii=False, separators=(",", ":")),
             case.related_organisation_id, case.related_office_id,
             case.related_official_id, case.related_representative_id,
@@ -46,7 +46,7 @@ def persist_case(cur, case, expected_version, event):
         related_office_id=%s, related_official_id=%s, related_representative_id=%s,
         subject_claims_json=%s::jsonb, status=%s, updated_at=%s, version=%s
         WHERE case_id=%s AND version=%s""", (
-        case.case_type.value, case.subject, case.narrative, case.created_by,
+        case.case_type.value, case.case_type.value, "", case.created_by,
         json.dumps(case.jurisdiction, ensure_ascii=False, separators=(",", ":")),
         case.related_organisation_id, case.related_office_id,
         case.related_official_id, case.related_representative_id,
