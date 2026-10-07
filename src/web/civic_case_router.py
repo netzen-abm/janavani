@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
-_REPOSITORY = CAPABILITY.repository
-_EVIDENCE_REPOSITORY = getattr(CAPABILITY, "evidence_repository", None)
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, _COMPOSITION
+_CAPABILITY = CAPABILITY
+_CIVIC_ACTION = CIVIC_ACTION
+_REPOSITORY = _CAPABILITY.repository
+_EVIDENCE_REPOSITORY = getattr(_CAPABILITY, "evidence_repository", None)
 from src.web.composition import create_web_civic_action_composition
 from src.web.civic_case_document_router import router as document_router
 from src.web.civic_case_lifecycle_router import router as lifecycle_router
@@ -19,7 +21,7 @@ router.include_router(lifecycle_router)
 @router.post("")
 async def create_case(request: CaseCreateRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = CAPABILITY.create(
+        result = _CAPABILITY.create(
             CivicCaseCreateRequest(
                 case_type=request.case_type, subject=request.subject, narrative=request.narrative,
                 jurisdiction=request.jurisdiction, related_organisation_id=request.related_organisation_id,
@@ -36,7 +38,7 @@ async def create_case(request: CaseCreateRequest, context: IdentityContext = Dep
 
 @router.get("/{case_id}")
 async def get_case(case_id: str, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
-    case = CAPABILITY.get_owned(case_id, identity=context)
+    case = _CAPABILITY.get_owned(case_id, identity=context)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
     return serialize_case(case)
@@ -44,7 +46,7 @@ async def get_case(case_id: str, context: IdentityContext = Depends(require_auth
 @router.post("/{case_id}/consent")
 async def add_consent(case_id: str, request: ConsentRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = CIVIC_ACTION.add_consent(case_id, request.consent_id, identity=context)
+        result = _CIVIC_ACTION.add_consent(case_id, request.consent_id, identity=context)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
@@ -54,7 +56,7 @@ async def add_consent(case_id: str, request: ConsentRequest, context: IdentityCo
 @router.post("/{case_id}/evidence")
 async def add_evidence(case_id: str, request: EvidenceRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        result = CIVIC_ACTION.attach_evidence(
+        result = _CIVIC_ACTION.attach_evidence(
             case_id, request.evidence_id, identity=context, source_channel=request.source_channel or "webapp"
         )
     except LookupError as exc:
