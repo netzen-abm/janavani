@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.adapters.telegram.identity import identity_for_telegram_user
+from src.platform.surface_case_composition import create_surface_case_composition
 
 
 async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,10 +40,13 @@ Rating
 
     issue = " ".join(context.args[2:])
     try:
+        composition = context.application.bot_data.get("surface_case_composition")
+        if composition is None:
+            composition = create_surface_case_composition()
         feedback_capability = context.application.bot_data.get("accountability_feedback_capability")
-        links = context.application.bot_data.get("identity_link_repository")
-        if feedback_capability is None or links is None:
-            raise RuntimeError("Canonical Telegram feedback/identity dependencies are not composed")
+        links = composition.identity_link_repository
+        if feedback_capability is None:
+            raise RuntimeError("Canonical Telegram feedback dependency is not composed")
         actor_ref = None
         if update.effective_user is not None:
             actor_ref = identity_for_telegram_user(
