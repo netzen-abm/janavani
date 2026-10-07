@@ -20,7 +20,6 @@ from src.identity.context import IdentityContext
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.storage.artifact_blob import ArtifactBlobStore
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.consent import ConsentRepository
@@ -48,7 +47,6 @@ def create_telegram_generation_dependencies(
     consent_capability: ConsentCapability,
     artifact_repository: DocumentArtifactRepository | None = None,
     blob_store: ArtifactBlobStore | None = None,
-    provider_composition: ProviderComposition | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
@@ -57,10 +55,8 @@ def create_telegram_generation_dependencies(
         case_capability=case_capability,
         civic_action_capability=civic_action_capability,
         consent_capability=consent_capability,
-        artifact_repository=artifact_repository or create_document_artifact_repository(
-            provider=(provider_composition.provider_for("document_artifact") if provider_composition else None)
-        ),
-        blob_store=blob_store or _create_blob_store(),
+        artifact_repository=artifact_repository,
+        blob_store=blob_store,
         identity_link_repository=identity_link_repository or _MissingIdentityLinkRepository(),
     )
 
@@ -72,10 +68,6 @@ class _MissingIdentityLinkRepository:
     def save(self, identity) -> None:
         raise PermissionError("Telegram identity linking is required")
 
-
-def _create_blob_store() -> ArtifactBlobStore:
-    from storage.artifact_blob_factory import create_artifact_blob_store
-    return create_artifact_blob_store()
 
 
 def _identity(user_id: int, *, links: ExternalIdentityLinkRepository) -> IdentityContext:
