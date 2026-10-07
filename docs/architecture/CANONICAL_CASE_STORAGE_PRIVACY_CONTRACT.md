@@ -46,3 +46,20 @@ Before durable citizen-data persistence is enabled:
 6. recovery behaviour;
 7. absence of unintended cross-capability replication;
 8. end-to-end evidence for the selected adapter.
+
+
+## Hard ecosystem rule — no Janavani personal-data repository
+
+Janavani must not create or maintain a durable repository of citizen personal or sensitive information. In particular, Janavani persistence must not contain citizen names, addresses, phone numbers, email addresses, government identifiers, identity documents, biometric data, precise personal location history, private communications, evidence originals, or raw citizen narratives.
+
+### Device-first content boundary
+
+- WebApp drafts, raw narratives, evidence originals and generated documents remain on the citizen device where technically possible.
+- A Telegram bot necessarily receives Telegram messages transiently; this is transport processing, not permission to persist the content. Telegram-originated personal/sensitive content must not be copied into durable Janavani storage, logs, analytics, telemetry or reusable profiles.
+- If an operation requires information to leave the device, the transfer must be purpose-bound, minimized, explicitly authorized where required, encrypted in transit and limited to the selected destination/processor.
+- Durable Janavani Case state should contain only opaque identifiers and minimum non-sensitive lifecycle metadata. Raw citizen content belongs outside the durable Case repository.
+- Scraping or enrichment must never be used to silently discover, infer or accumulate personal/sensitive citizen data. External public information may be collected only for the selected capability and must remain distinguishable from citizen-provided information.
+
+### Architectural consequence
+
+The Case aggregate is a civic workflow/control record, not a personal-data vault. Any future capability that requires raw citizen content must define a separate transient/device-local content boundary and must prove that the content is not persisted by Janavani before integration.
