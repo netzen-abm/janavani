@@ -20,7 +20,14 @@ from src.capabilities.safety_privacy import AccessPurpose, SensitiveResource
 from src.identity.context import IdentityContext
 
 class PermissionLifecycleState(str, Enum):
-    NOT_REQUESTED="not_requested"; PURPOSE_PRESENTED="purpose_presented"; GRANTED="granted"; ACTIVE="active"; PURPOSE_COMPLETE="purpose_complete"; RELEASED="released"; DENIED="denied"; UNAVAILABLE="unavailable"
+    NOT_REQUESTED = "not_requested"
+    PURPOSE_PRESENTED = "purpose_presented"
+    GRANTED = "granted"
+    ACTIVE = "active"
+    PURPOSE_COMPLETE = "purpose_complete"
+    RELEASED = "released"
+    DENIED = "denied"
+    UNAVAILABLE = "unavailable"
 
 @dataclass(frozen=True)
 class PurposeBoundPermissionRequest:
