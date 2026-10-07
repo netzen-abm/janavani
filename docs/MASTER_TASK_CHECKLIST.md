@@ -634,3 +634,65 @@ Archive requires:
 > **Nothing is considered finished because it was discussed. Nothing is considered finished because code was written. Design completion is not implementation completion. A Janavani capability is finished only when its implementation, dependencies, failure modes, verification, documentation, security/privacy requirements and evidence are all satisfied.**
 
 **END — MASTER TASK CHECKLIST**
+
+
+# 32. EXECUTION RESET — 2026-10-07
+
+## Branch governance
+
+- [x] Exactly nine active branches verified.
+- [x] `main` remains canonical default branch.
+- [x] No tenth feature branch authorized.
+- [x] Useful branch work must be verified before integration/retirement.
+- [x] Branch deletion is not required now because the repository already satisfies the nine-branch target.
+
+## Programming audit
+
+- [x] Shared capability boundary verified.
+- [x] Shared surface composition verified.
+- [x] Web adapter boundary verified.
+- [x] Telegram adapter/bootstrap boundary verified.
+- [x] Cross-surface Case contract tests identified.
+- [x] Responsibility split rule reaffirmed: split only at real architectural boundaries.
+- [ ] PostgreSQL cross-user authorization/RLS evidence on real PostgreSQL.
+- [ ] Restart/outage/recovery evidence.
+- [ ] Backup/restore evidence.
+- [ ] Canonical Web/API runtime evidence.
+- [ ] Independent Telegram runtime evidence.
+
+## Build priority
+
+### P1 — Shared civic-action vertical slice
+
+- [x] Case capability shared by Web and Telegram composition.
+- [x] Authority capability shared by Web and Telegram composition.
+- [x] Evidence capability shared by Web and Telegram composition.
+- [x] Document review/drafting boundaries exist.
+- [x] Consent capability exists in the shared graph.
+- [ ] Complete runtime-verified issue → Case → authority → evidence → document → review → consent → submission-preparation → tracking flow on Web.
+- [ ] Complete the same flow on Telegram without duplicating business logic.
+- [ ] Cross-surface continuation verified with real persistence and identity policy.
+
+### P2 — Surface parity
+
+- [ ] WebApp and Telegram use the same canonical lifecycle and capability contracts in deployed environments.
+- [ ] Failure of either surface leaves the other operational.
+- [ ] Runtime/provider configuration is independently verifiable per surface.
+
+### P3 — Ecosystem expansion after P1/P2 gates
+
+- [ ] Telegram Mini App.
+- [ ] WhatsApp/Messenger adapters.
+- [ ] Android/iOS surfaces.
+- [ ] DApp/Web3 capabilities where justified.
+- [ ] Expanded AI/Agentic AI capabilities.
+- [ ] Resilient/decentralized transports.
+
+## Architectural split rule
+
+Split code only when the split creates an independent boundary of change ownership, trust/security, persistence/provider dependency, independent reuse, independently testable lifecycle/state, or external transport/provider dependency. Preserve cohesive code when splitting would duplicate orchestration or weaken invariants.
+
+## Audit evidence
+
+- docs/90-audits/2026-10-07-quick-programming-audit-and-execution-reset.md
+
