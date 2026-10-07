@@ -131,3 +131,10 @@ Every production consumer found for the finished-document path was re-checked be
 ### Branch convergence result
 
 The nine-branch invariant remains satisfied. Two branches are exact ancestors of `main` (zero commits ahead) and therefore contain no unique work to merge. The remaining divergent branches contain distinct architectural commits; they require semantic convergence rather than blind merging. No branch was deleted because the connected GitHub capability set does not expose a safe branch-deletion operation in this execution context. The active branch count is therefore already exactly nine.
+
+
+## CI evidence reconciliation — 2026-10-07
+
+The latest workflow evidence exposed through GitHub is from 2026-09-24. Architecture Guard and Architecture Conformance passed. The CI job failed only at Archive Safety Evidence because that historical run detected `scripts/check_code_line_limits.py` as an active reference to `janavani_v2`/`janavani_v3`. The current `scripts/archive_safety_evidence.py` explicitly excludes the evidence scripts themselves from active-reference scanning, so this historical failure is not treated as evidence of a current architecture failure. A fresh workflow run is still required before CI health is declared green for the current `main` commits.
+
+The Docker workflow on the same 2026-09-24 baseline succeeded. No current CI success is claimed for the 2026-10-07 commits because the connected GitHub execution surface does not expose a workflow-dispatch operation and the repository-content mutation path does not itself provide fresh Actions evidence.
