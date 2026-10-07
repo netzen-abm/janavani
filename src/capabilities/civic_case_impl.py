@@ -50,6 +50,37 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
+    def create_shell(self, request: CivicCaseCreateRequest, *, identity: IdentityContext,
+                     source_channel: str | None = None,
+                     execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
+        """Create lifecycle metadata without persisting citizen narrative/content.
+
+        The actual citizen content remains outside durable Janavani storage. This
+        shell is intentionally insufficient for review/submission until the
+        selected surface supplies the content transiently or locally.
+        """
+        self._validate_execution_context(execution_context, identity, action="create")
+        subject = request.subject.strip()
+        if not subject:
+            raise ValueError("A case shell requires a non-sensitive subject/category")
+        decision = authorize(AuthorizationRequest(context=identity, capability=CAPABILITY_ID, action="create"))
+        if decision is not AuthorizationDecision.ALLOW:
+            raise PermissionError("Identity is not authorized to create a civic case")
+        now = datetime.now(timezone.utc).isoformat()
+        case_id = f"case-{uuid4().hex}"
+        case = CivicCase(
+            case_id=case_id,
+            case_type=request.case_type,
+            subject=subject,
+            narrative="",
+            created_by=identity.principal.principal_id,
+            created_at=now,
+            updated_at=now,
+        )
+        case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
+        self._repository.save(case, principal_id=identity.principal.principal_id)
+        return CivicCaseResult(case, decision)
+
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
         case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
         if case is None or case.created_by != identity.principal.principal_id:
