@@ -51,3 +51,13 @@ def test_docx_artifact_is_created(tmp_path: Path):
     assert artifact.format is DocumentFormat.DOCX
     assert Path(artifact.path).is_file()
     assert Path(artifact.path).suffix == ".docx"
+
+
+def test_ephemeral_pdf_payload_does_not_use_blob_store(tmp_path: Path):
+    from src.documents.artifact_service import render_artifact_payload
+
+    payload = render_artifact_payload(make_draft(), DocumentFormat.PDF, temp_root=tmp_path)
+    assert payload.content.startswith(b"%PDF")
+    assert payload.content_sha256
+    assert payload.filename.endswith(".pdf")
+    assert not list(tmp_path.glob("**/*.pdf"))
