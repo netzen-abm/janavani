@@ -36,6 +36,19 @@ from src.platform.composition_capabilities import (
 
 
 @dataclass(frozen=True)
+_PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
+
+def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
+    """Return one repository graph per provider composition identity."""
+    key = id(provider_composition)
+    cached = _PROVIDER_RUNTIME_GRAPHS.get(key)
+    if cached is not None and cached[0] is provider_composition:
+        return cached[1]
+    graph: dict[str, object] = {}
+    _PROVIDER_RUNTIME_GRAPHS[key] = (provider_composition, graph)
+    return graph
+
+
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
 
@@ -85,20 +98,22 @@ def create_surface_case_composition(
     """
     provider_composition = provider_composition or create_provider_composition()
 
-    case_repository = case_repository or create_case_repository(
-        provider_composition=provider_composition
+    runtime_graph = _provider_runtime_graph(provider_composition)
+    case_repository = case_repository or runtime_graph.setdefault(
+        "civic_case", create_case_repository(provider_composition=provider_composition)
     )
-    authority_repository = authority_repository or create_authority_repository(
-        provider_composition=provider_composition
+    authority_repository = authority_repository or runtime_graph.setdefault(
+        "authority", create_authority_repository(provider_composition=provider_composition)
     )
-    evidence_repository = evidence_repository or create_evidence_repository(
-        provider_composition=provider_composition
+    evidence_repository = evidence_repository or runtime_graph.setdefault(
+        "evidence", create_evidence_repository(provider_composition=provider_composition)
     )
-    consent_repository = consent_repository or create_consent_repository(
-        provider_composition=provider_composition
+    consent_repository = consent_repository or runtime_graph.setdefault(
+        "consent", create_consent_repository(provider_composition=provider_composition)
     )
-    identity_link_repository = identity_link_repository or create_identity_link_repository(
-        provider_composition=provider_composition
+    identity_link_repository = identity_link_repository or runtime_graph.setdefault(
+        "external_identity_links",
+        create_identity_link_repository(provider_composition=provider_composition),
     )
 
     case_capability = create_case_capability(case_repository)
