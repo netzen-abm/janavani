@@ -5,6 +5,7 @@ from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.platform.surface_case_composition import create_surface_case_composition
 
 
 def identity(principal_id: str = "citizen:contract-test") -> IdentityContext:
