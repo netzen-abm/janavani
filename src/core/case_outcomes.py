@@ -18,6 +18,25 @@ from src.core.case_types import (
 
 
 class CivicCaseOutcomeMixin:
+    def begin_submission(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
+        if self.status is not CaseStatus.READY:
+            raise ValueError("Only a ready case can begin submission")
+        self.status = CaseStatus.SUBMITTING
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTING, occurred_at, actor_id, source_channel))
+
+    def queue_submission(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
+        if self.status is not CaseStatus.SUBMITTING:
+            raise ValueError("Only a submitting case can be queued")
+        self.status = CaseStatus.QUEUED
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.QUEUED, occurred_at, actor_id, source_channel))
+
+    def submit(self, *, event_id: str, occurred_at: str, actor_id: str | None = None, source_channel: str | None = None) -> CaseEvent:
+        """Compatibility state transition; it never performs external delivery."""
+        if self.status not in {CaseStatus.SUBMITTING, CaseStatus.QUEUED}:
+            raise ValueError("Only a submitting or queued case can be marked submitted")
+        self.status = CaseStatus.SUBMITTED
+        return self._record(CaseEvent(event_id, self.case_id, CaseEventType.SUBMITTED, occurred_at, actor_id, source_channel))
+
     def report_sent_by_citizen(
         self, *, event_id: str, occurred_at: str, actor_id: str | None = None,
         source_channel: str | None = None, notes: str | None = None,
