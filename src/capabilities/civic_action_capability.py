@@ -99,6 +99,12 @@ class CivicActionCapability:
                 email=destination.email,
                 role=destination.role,
             ),
+            sender=DocumentParty(
+                name="[YOUR NAME]",
+                address="[YOUR FULL POSTAL ADDRESS]",
+                email="[YOUR EMAIL ADDRESS]",
+                role="Applicant — fill before sending",
+            ),
             cc=tuple(
                 DocumentParty(
                     name=contact.name,
