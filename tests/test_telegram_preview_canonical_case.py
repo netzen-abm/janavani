@@ -5,6 +5,7 @@ from src.core.civic_case import CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from conversation.session import get_session, set_ephemeral_issue
 
 
 def _identity(user_id: int) -> IdentityContext:
@@ -43,6 +44,9 @@ def test_telegram_preview_data_comes_from_canonical_owned_case():
     capability = CivicCaseCapability(repository)
     identity = _identity(42)
     case = _create_case(capability, identity)
+    session = get_session(42)
+    session["category"] = "Water supply"
+    set_ephemeral_issue(42, "Water supply has stopped.")
 
     owned = capability.get_owned(case.case_id, identity=identity)
     assert owned is not None
