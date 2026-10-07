@@ -63,6 +63,8 @@ class CapabilityDataScope:
 class CapabilityDataScopePolicy:
     capability_id: str
     requirements: tuple[DataRequirement, ...]
+    purpose: str | None = None
+     tuple[DataRequirement, ...]
     consent_required_for: FrozenSet[DataClassification] = frozenset(
         {
             DataClassification.PERSONAL,
