@@ -25,7 +25,11 @@ class InMemoryCivicCaseRepository:
         self._cases = store if store is not None else {}
 
     def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
-        self._cases[case.case_id] = case
+        from copy import deepcopy
+        stored = deepcopy(case)
+        stored.subject = stored.case_type.value
+        stored.narrative = ""
+        self._cases[case.case_id] = stored
 
     def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         return self._cases.get(case_id)
