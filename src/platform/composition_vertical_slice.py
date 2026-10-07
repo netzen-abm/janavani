@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.evidence import EvidenceCapability
@@ -17,17 +15,14 @@ from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
-from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
-from src.storage.repositories.submission import SubmissionRepository
 from src.core.responsibility import ResponsibilityResolver
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
-from src.core.submission import SubmissionRepository
 from src.core.obligation import ObligationResolver
-from .composition_repositories import create_document_review_repository_for_platform, create_submission_repository, create_provider_composition
+from .composition_repositories import create_document_review_repository_for_platform, create_provider_composition
 
 def create_civic_action_vertical_slice(
     *,
@@ -35,7 +30,6 @@ def create_civic_action_vertical_slice(
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
     case_capability: CivicCaseCapability | None = None,
-    submission_repository: SubmissionRepository | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
     artifact_repository=None,
@@ -47,7 +41,6 @@ def create_civic_action_vertical_slice(
     follow_up_capability: FollowUpCapability | None = None,
     escalation_capability: EscalationCapability | None = None,
     provider_composition: ProviderComposition | None = None,
-    submission_case_transaction_repository: SubmissionCaseTransactionRepository | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
         create_case_capability, create_authority_capability,
@@ -71,16 +64,6 @@ def create_civic_action_vertical_slice(
     document_review_capability = DocumentReviewCapability(
         review_repository, case_capability=case_capability
     )
-    submission_repo = submission_repository or create_submission_repository(provider_composition=composition)
-    atomic_submission = submission_case_transaction_repository
-    if atomic_submission is None and composition.provider_for("submission") == "postgres":
-        from src.storage.repositories.postgres_submission_case_transaction import PostgresSubmissionCaseTransactionRepository
-
-        dsn = os.getenv("JANAVANI_POSTGRES_DSN")
-        if not dsn:
-            raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL submission transactions")
-        atomic_submission = PostgresSubmissionCaseTransactionRepository(dsn=dsn)
-
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
 
