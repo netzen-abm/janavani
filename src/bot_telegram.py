@@ -40,6 +40,7 @@ def main():
     evidence_capability = composition.evidence_capability
     authority_capability = composition.authority_capability
     civic_action_capability = composition.civic_action_capability
+    application.bot_data["surface_case_composition"] = composition
     application.bot_data["case_repository"] = case_repository
     application.bot_data["civic_case_capability"] = case_capability
     application.bot_data["civic_action_capability"] = civic_action_capability
