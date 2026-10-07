@@ -1,7 +1,7 @@
 {
   "draft": ["review"],
   "review": ["review", "ready"],
-  "ready": ["ready", "submitting"],
+  "ready": ["ready", "submitting", "submitted"],
   "submitting": ["submitting", "queued", "submitted"],
   "queued": ["queued", "submitted"],
   "submitted": ["acknowledged"],
