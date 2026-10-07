@@ -23,8 +23,9 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     session = get_session(user_id)
-    session["telegram_user_id"] = user_id
-    session["issue"] = user_input
+    # Raw citizen content is retained only in the process-local Telegram workflow
+    # boundary until the selected action completes. It must never be persisted.
+    session["ephemeral_issue"] = user_input
 
     classification = classify_issue(user_input)
     session["category"] = classification["category"]
