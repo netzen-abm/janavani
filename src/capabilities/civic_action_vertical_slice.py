@@ -17,6 +17,7 @@ from src.capabilities.escalation import EscalationCapability, EscalationContext,
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
 from src.capabilities.follow_up import FollowUpCapability, FollowUpContext, FollowUpRecommendation
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
+from src.capabilities.submission import SubmissionCapability
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
 from src.core.delivery_channel import ExternalChannel
 from src.core.obligation import ObligationResolution
@@ -41,6 +42,7 @@ class CivicActionVerticalSliceDependencies:
     document_review_capability: DocumentReviewCapability
     responsibility_capability: ResponsibilityCapability
     obligation_capability: ObligationCapability
+    submission_capability: SubmissionCapability | None = None
     external_channel_capability: ExternalChannelCapability
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
@@ -106,6 +108,14 @@ class CivicActionVerticalSlice:
         """Recommend a user-controlled escalation step from canonical Case state and history."""
         capability = self._deps.escalation_capability or EscalationCapability()
         return capability.recommend(context)
+
+    def submit(self, request, *, channel_id: str, identity: IdentityContext, explicit_user_approval: bool, execution_context=None):
+        if self._deps.submission_capability is None:
+            raise RuntimeError("Submission capability is not configured")
+        return self._deps.submission_capability.submit(
+            request, identity=identity, explicit_user_approval=explicit_user_approval,
+            execution_context=execution_context,
+        )
 
     def attach_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                         source_channel: str | None = None) -> CivicCaseResult:
