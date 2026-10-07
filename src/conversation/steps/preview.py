@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from conversation.session import get_session
+from conversation.session import get_session, get_ephemeral_issue
 from conversation.state import set_state
 from conversation.constants import WAITING_FOR_IDENTITY
 from src.capabilities.civic_case import CivicCaseCapability
@@ -14,10 +14,15 @@ def build_case_preview(*, capability: CivicCaseCapability, case_id: str, user_id
     if case is None:
         raise LookupError("Case not found")
 
+    session = get_session(user_id)
+    issue = get_ephemeral_issue(user_id)
+    category = str(session.get("category") or case.subject or case.case_type.value)
+    if not issue:
+        raise LookupError("Transient issue content has expired; restart the civic issue flow")
     authority = case.related_office_id or "Not selected"
     return (
-        f"Issue:\n{case.narrative}\n\n"
-        f"Category:\n{case.subject}\n\n"
+        f"Issue:\n{issue}\n\n"
+        f"Category:\n{category}\n\n"
         f"Authority reference:\n{authority}"
     )
 
