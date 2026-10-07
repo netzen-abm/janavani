@@ -64,6 +64,9 @@ def post(citizen_input: str):
             P(f"Case ID: {result.get('case_id')}"),
             P(f"Status: {result.get('status')}"),
             P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
+            Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
+                Button("Open Case Workspace", type="submit"),
+            ),
             A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
             cls="card",
         )
@@ -114,3 +117,43 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.webapp.main:app", host="0.0.0.0", port=8080, reload=True)
+
+
+@rt("/cases/{case_id}/prepare")
+def get_case_workspace(case_id: str):
+    """Render the next canonical Case step without owning Case state."""
+    client = JanavaniWebAPIClient()
+    case = client.get_case(case_id)
+    draft = client.prepare_document_draft(case_id)
+    return Titled(
+        f"Janavani Case {case_id}",
+        Container(
+            Div(
+                H2("📁 Case Workspace"),
+                P(f"Case ID: {case.get('case_id')}"),
+                P(f"Status: {case.get('status')}"),
+                H3("Document draft"),
+                P(draft.get("subject", "Draft pending")),
+                P(draft.get("body", "")),
+                Form(action=f"/cases/{case_id}/review", method="post")(
+                    Button("Start Review", type="submit"),
+                ),
+                cls="card",
+            )
+        ),
+    )
+
+@rt("/cases/{case_id}/review")
+def post_case_review(case_id: str):
+    """Advance review through the canonical API."""
+    client = JanavaniWebAPIClient()
+    result = client.start_review(case_id)
+    return Container(
+        Div(
+            H2("Review started"),
+            P(f"Case {case_id}: {result.get('status')}"),
+            P("Review the generated document, then record explicit consent before preparing submission."),
+            A("Return to Case Workspace", href=f"/cases/{case_id}/prepare"),
+            cls="card",
+        )
+    )
