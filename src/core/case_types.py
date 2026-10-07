@@ -8,6 +8,7 @@ class CaseType(str, Enum):
     PETITION = "petition"
     REPRESENTATION = "representation"
     OBJECTION = "objection"
+    NON_CONSENT = "non_consent"
     APPEAL = "appeal"
     CORRUPTION = "corruption"
     MISBEHAVIOUR = "misbehaviour"
