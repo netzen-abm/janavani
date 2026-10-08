@@ -24,7 +24,7 @@ def test_one_external_identity_cannot_be_linked_to_two_principals():
     with pytest.raises(PermissionError):
         service.link_verified(IdentityLinkRequest(
             principal_id="janavani:opaque-2", provider="telegram",
-            subject="telegram-subject-1", authentication_method="none"), verified=True)
+            subject="telegram-subject-1", authentication_method="oidc"), verified=True)
 
 
 def test_postgres_identity_repository_has_provider_neutral_contract():
