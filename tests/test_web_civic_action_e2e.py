@@ -149,7 +149,7 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert reviewed.json()["body"] == "Corrected citizen narrative."
     assert reviews.get(document_id).body == "Corrected citizen narrative."
 
-    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={})
+    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200, started.json()
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=headers, json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
