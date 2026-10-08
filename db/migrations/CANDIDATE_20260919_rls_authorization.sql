@@ -1,5 +1,5 @@
 -- Janavani — candidate PostgreSQL RLS policy set
--- STATUS: CANDIDATE ONLY / NOT ACTIVATED
+-- STATUS: CANDIDATE — HARDENED POLICY / NOT ACTIVATED
 -- This migration MUST NOT be applied until the application establishes a
 -- trusted transaction-local janavani.principal_id for the database session
 -- and the database role is confirmed not to bypass RLS.
@@ -131,6 +131,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_events.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -142,6 +143,7 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_events.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -153,6 +155,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_evidence_refs.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -164,6 +167,7 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_evidence_refs.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -175,6 +179,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_document_refs.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -186,6 +191,7 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_document_refs.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -197,6 +203,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_submissions.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -208,6 +215,7 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_submissions.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
@@ -219,12 +227,14 @@ USING (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_submissions.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 )
 WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.civic_cases c
         WHERE c.case_id = civic_case_submissions.case_id
+          AND c.created_by = janavani_private.current_principal_id()
     )
 );
 
