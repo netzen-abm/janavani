@@ -46,6 +46,9 @@ class CivicCaseContentMixin:
             # Keep durable Case.subject as lifecycle metadata. Citizen-authored subject
             # remains available to document/content consumers without mutating the aggregate
             # identity used by cross-surface contracts.
+            # Rehydrate citizen-authored fields only for the in-memory aggregate used by
+            # lifecycle validation; lifecycle persistence normalizes these fields afterward.
+            case.subject = content.subject
             case.narrative = content.narrative
             case.claims = [dict(claim) for claim in content.claims]
             case.jurisdiction = dict(content.jurisdiction)
