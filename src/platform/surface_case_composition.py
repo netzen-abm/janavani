@@ -127,7 +127,12 @@ def create_surface_case_composition(
 
     # Citizen-authored content is surface-local by design; durable Case state is shared,
     # but sensitive narrative/claims never become shared provider state.
-    case_content_repository = case_content_repository or InMemoryCaseContentRepository()
+    if case_content_repository is None:
+        # Content remains an explicit privacy/persistence boundary. Do not
+        # silently promote citizen-authored narrative into the shared provider
+        # graph until a durable content provider with its own retention/RLS
+        # contract is deliberately selected by the runtime.
+        case_content_repository = InMemoryCaseContentRepository()
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
