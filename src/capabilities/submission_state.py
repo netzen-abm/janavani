@@ -116,6 +116,7 @@ class SubmissionState:
             self.c._cases.transition(
                 request.case_id, action="case:submit", identity=identity,
                 source_channel=request.source_channel,
+                explicit_user_approval=True,
                 execution_context=self.c._child_case_context(
                     context, identity, request.case_id, "case:submit"
                 ),
