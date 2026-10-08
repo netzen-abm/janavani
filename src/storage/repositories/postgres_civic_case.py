@@ -108,7 +108,7 @@ class PostgresCivicCaseRepository:
                     persist_events(cur, case)
                     persist_refs(cur, case)
             case.created_at, case.updated_at, case.version = created_at, timestamp, version
-        except (PostgresCivicCasePersistenceError, PostgresCivicCaseConcurrencyError):
+        except (PostgresCivicCasePersistenceError, PostgresCivicCaseConcurrencyError, PermissionError):
             raise
         except Exception as exc:
             raise PostgresCivicCasePersistenceError(
