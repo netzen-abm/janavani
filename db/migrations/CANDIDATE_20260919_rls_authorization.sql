@@ -1,5 +1,5 @@
 -- Janavani — candidate PostgreSQL RLS policy set
--- STATUS: CANDIDATE — HARDENED POLICY / NOT ACTIVATED
+-- STATUS: CANDIDATE ONLY / NOT ACTIVATED
 -- This migration MUST NOT be applied until the application establishes a
 -- trusted transaction-local janavani.principal_id for the database session
 -- and the database role is confirmed not to bypass RLS.
