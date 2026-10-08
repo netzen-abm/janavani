@@ -36,4 +36,7 @@ def test_repository_contract_accepts_explicit_principal_context():
         created_by="alice",
     )
     repository.save(case, principal_id="alice")
-    assert repository.get(case.case_id, principal_id="alice") is case
+    stored = repository.get(case.case_id, principal_id="alice")
+    assert stored is not case
+    assert stored.subject == CaseType.COMPLAINT.value
+    assert stored.narrative == ""
