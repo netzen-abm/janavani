@@ -68,7 +68,7 @@ class JanavaniLegalAgent:
             "message": "AI drafting is unavailable; continue with deterministic/manual review.",
         }
 
-    def translate_input_if_needed(self, text: str, target_lang: str = "en") -> str:
+    def translate_input_if_needed(self, text: str, target_lang: str = "en", consent_scope: CapabilityDataScope | None = None) -> str:
         """Compatibility wrapper over the shared Translation capability."""
         if not text or not text.strip() or target_lang != "en":
             return text
@@ -82,7 +82,7 @@ class JanavaniLegalAgent:
                     capabilities=frozenset({"civic:translation"}),
                 )
             )
-            return self._translation.translate(text, identity=identity)
+            return self._translation.translate(text, identity=identity, consent_scope=consent_scope)
         except (requests.RequestException, ValueError, TypeError, PermissionError):
             return text
 
