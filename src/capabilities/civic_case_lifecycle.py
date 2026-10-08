@@ -80,6 +80,10 @@ class CivicCaseLifecycleMixin:
         if action == "case:reopen_resolution":
             kwargs["notes"] = notes
         transition_fn(case, **kwargs)
+        # The durable Case aggregate keeps lifecycle metadata canonical; citizen-authored
+        # content remains in the separate CaseContent persistence boundary.
+        case.subject = case.case_type.value
+        case.narrative = ""
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
