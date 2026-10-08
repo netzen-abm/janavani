@@ -114,7 +114,13 @@ def _existing(capability, submission, request, identity):
         return submission
     if submission.state == "unknown":
         raise RuntimeError("Submission already exists for this idempotency key and requires reconciliation")
-    if submission.state not in {"failed", "submitting"}:
+    if submission.state == "submitting":
+        # Reservation is already owned by an in-flight delivery attempt.
+        # Never invoke an external provider twice for the same idempotency key.
+        raise SubmissionCaseConcurrencyError(
+            "Submission is already in progress for this idempotency key"
+        )
+    if submission.state != "failed":
         raise RuntimeError(f"Submission is not retryable: {submission.state}")
     return submission
 
