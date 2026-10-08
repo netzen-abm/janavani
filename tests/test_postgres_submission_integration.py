@@ -71,14 +71,14 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
 
     repository = PostgresSubmissionRepository(dsn=DSN)
     first, replay = repository.create_idempotent(
-        new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-1-{run_id}")
+        new_submission(key=f"pg-submit-key-{run_id}", submission_id="pg-submit-1")
     )
     assert replay is False
     assert first.submission_id == "pg-submit-1"
     assert first.idempotency_key == f"pg-submit-key-{run_id}"
 
     same, replay = repository.create_idempotent(
-        new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-2-{run_id}")
+        new_submission(key=f"pg-submit-key-{run_id}", submission_id="pg-submit-2")
     )
     assert replay is True
     assert same.submission_id == "pg-submit-1"
@@ -86,7 +86,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     with pytest.raises(SubmissionIdempotencyConflictError):
         repository.create_idempotent(
             replace(
-                new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-3-{run_id}"),
+                new_submission(key=f"pg-submit-key-{run_id}", submission_id="pg-submit-3"),
                 destination_ref="different:office",
             )
         )
@@ -148,7 +148,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     )
     assert replay is True
     assert retry.submission_id == "pg-submit-1"
-    assert retry.idempotency_key == "pg-submit-key"
+    assert retry.idempotency_key == f"pg-submit-key-{run_id}"
 
     # The schema contract remains intentionally outside RLS activation.
     with psycopg.connect(DSN) as connection:
