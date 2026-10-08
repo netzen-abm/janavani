@@ -38,8 +38,8 @@ from src.platform.composition_capabilities import (
     create_document_review_repository_for_platform,
 )
 
-
 _PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
+
 
 def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
     """Return one repository graph per provider composition identity."""
@@ -100,7 +100,6 @@ def create_surface_case_composition(
     retained for deterministic tests and deployments with pre-built providers.
     """
     provider_composition = provider_composition or create_provider_composition()
-
     runtime_graph = _provider_runtime_graph(provider_composition)
     case_repository = case_repository or runtime_graph.setdefault(
         "civic_case", create_case_repository(provider_composition=provider_composition)
@@ -128,10 +127,10 @@ def create_surface_case_composition(
     # Citizen-authored content is surface-local by design; durable Case state is shared,
     # but sensitive narrative/claims never become shared provider state.
     if case_content_repository is None:
-        # Content remains an explicit privacy/persistence boundary. Do not
-        # silently promote citizen-authored narrative into the shared provider
-        # graph until a durable content provider with its own retention/RLS
-        # contract is deliberately selected by the runtime.
+        # Content remains an explicit privacy/persistence boundary. Do not silently
+        # promote citizen-authored narrative into the shared provider graph until a
+        # durable content provider with its own retention/RLS contract is deliberately
+        # selected by the runtime.
         case_content_repository = InMemoryCaseContentRepository()
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
@@ -150,9 +149,7 @@ def create_surface_case_composition(
         evidence_repository=evidence_repository,
         case_capability=case_capability,
     )
-
     letter_drafting_capability = create_letter_drafting_capability(civic_action_capability, document_review_capability)
-
     civic_action_vertical_slice = create_civic_action_vertical_slice(
         case_repository=case_repository,
         authority_repository=authority_repository,
@@ -165,7 +162,6 @@ def create_surface_case_composition(
         blob_store=blob_store,
         submission_transport=None,
     )
-
     return SurfaceCaseComposition(
         case_repository=case_repository,
         authority_repository=authority_repository,
