@@ -19,7 +19,6 @@ def test_session_token_resolves_to_authenticated_context():
 def test_wrong_token_fails_closed():
     manager = SessionManager()
     token, record = manager.create_session("user-opaque", authentication_method=AuthenticationMethod.PASSKEY)
-    time.sleep(0.05)
     with pytest.raises(InvalidSession):
         manager.resolve(record.session_id, token + "x")
 
@@ -33,5 +32,6 @@ def test_revoked_session_cannot_be_resolved():
 def test_expired_session_fails_closed():
     manager = SessionManager(ttl=timedelta(milliseconds=20))
     token, record = manager.create_session("user-opaque", authentication_method=AuthenticationMethod.PASSKEY)
+    time.sleep(0.05)
     with pytest.raises(InvalidSession):
         manager.resolve(record.session_id, token)
