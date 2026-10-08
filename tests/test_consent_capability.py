@@ -21,8 +21,13 @@ def _case() -> CivicCase:
 
 
 def test_record_submission_consent_persists_and_advances_owned_case():
-    cases = InMemoryCivicCaseRepository(); cases.save(_case())
-    capability = ConsentCapability(repository=InMemoryConsentRepository(), case_capability=CivicCaseCapability(cases))
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(case_type=CaseType.COMPLAINT, subject="Broken streetlight", narrative="The streetlight has not worked for three nights."),
+        identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"),
+    ).case
+    capability = ConsentCapability(repository=InMemoryConsentRepository(), case_capability=case_capability)
     result = capability.record_submission_consent("JV-001", scope="office:office-1",
         identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"))
     assert result.consent.subject_id == "telegram:12345"
