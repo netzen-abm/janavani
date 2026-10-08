@@ -24,6 +24,7 @@ DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
 def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     psycopg = pytest.importorskip("psycopg")
+    run_id = uuid4().hex[:12]
 
     canonical_sql = CANONICAL_MIGRATION.read_text(encoding="utf-8")
     idempotency_sql = IDEMPOTENCY_MIGRATION.read_text(encoding="utf-8")
@@ -35,7 +36,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
             with connection.cursor() as cursor:
                 cursor.execute(canonical_sql)
                 cursor.execute(idempotency_sql)
-                cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s OR idempotency_key IN (%s, %s)", ("pg-submit-it-case", "pg-submit-key", "pg-race-key"))
+                cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s", ("pg-submit-it-case",))
                 cursor.execute("DELETE FROM civic_cases WHERE case_id = %s", ("pg-submit-it-case",))
                 cursor.execute(
                     """
@@ -70,14 +71,14 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
 
     repository = PostgresSubmissionRepository(dsn=DSN)
     first, replay = repository.create_idempotent(
-        new_submission(key="pg-submit-key", submission_id="pg-submit-1")
+        new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-1-{run_id}")
     )
     assert replay is False
     assert first.submission_id == "pg-submit-1"
-    assert first.idempotency_key == "pg-submit-key"
+    assert first.idempotency_key == f"pg-submit-key-{run_id}"
 
     same, replay = repository.create_idempotent(
-        new_submission(key="pg-submit-key", submission_id="pg-submit-2")
+        new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-2-{run_id}")
     )
     assert replay is True
     assert same.submission_id == "pg-submit-1"
@@ -85,7 +86,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     with pytest.raises(SubmissionIdempotencyConflictError):
         repository.create_idempotent(
             replace(
-                new_submission(key="pg-submit-key", submission_id="pg-submit-3"),
+                new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-3-{run_id}"),
                 destination_ref="different:office",
             )
         )
@@ -97,7 +98,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     def reserve(index: int) -> tuple[SubmissionRecord, bool]:
         provider = PostgresSubmissionRepository(dsn=DSN)
         return provider.create_idempotent(
-            new_submission(key=race_key, submission_id=f"pg-race-{index}")
+            new_submission(key=f"{race_key}-{run_id}", submission_id=f"pg-race-{run_id}-{index}")
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -106,7 +107,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     assert len({record.submission_id for record, _ in results}) == 1
     assert sum(1 for _, was_replay in results if not was_replay) == 1
     race_records = repository.list_for_case("pg-submit-it-case")
-    assert len([record for record in race_records if record.idempotency_key == race_key]) == 1
+    assert len([record for record in race_records if record.idempotency_key == f"{race_key}-{run_id}"]) == 1
 
     # CAS mutation succeeds exactly once and a stale writer is rejected.
     submitting = replace(
@@ -139,11 +140,11 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     assert current.state == "failed"
     assert current.retry_count == 1
     assert current.version == 3
-    assert current.idempotency_key == "pg-submit-key"
+    assert current.idempotency_key == f"pg-submit-key-{run_id}"
 
     # A failed retry reuses the same submission identity and idempotency key.
     retry, replay = repository.create_idempotent(
-        new_submission(key="pg-submit-key", submission_id="pg-submit-retry")
+        new_submission(key=f"pg-submit-key-{run_id}", submission_id=f"pg-submit-retry-{run_id}")
     )
     assert replay is True
     assert retry.submission_id == "pg-submit-1"
