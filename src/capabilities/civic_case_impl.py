@@ -39,7 +39,7 @@ class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
             raise PermissionError("Identity is not authorized to create a civic case")
         now = datetime.now(timezone.utc).isoformat()
         case_id = f"case-{uuid4().hex}"
-        case = CivicCase(case_id=case_id, case_type=request.case_type, subject=subject, narrative=narrative,
+        case = CivicCase(case_id=case_id, case_type=request.case_type, subject=request.case_type.value, narrative=narrative,
                          created_by=identity.principal.principal_id, created_at=now, updated_at=now)
         if request.jurisdiction is not None:
             case.jurisdiction = dict(request.jurisdiction)
@@ -79,7 +79,7 @@ class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
         case = CivicCase(
             case_id=case_id,
             case_type=request.case_type,
-            subject=subject,
+            subject=request.case_type.value,
             narrative="",
             created_by=identity.principal.principal_id,
             created_at=now,
