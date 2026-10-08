@@ -112,7 +112,7 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
     invalid_event = SimpleNamespace(
         event_id="pg-atomic-event-rollback",
         case_id=case_id,
-        event_type=SimpleNamespace(value="rollback.invalid"),
+        event_type=SimpleNamespace(value=None),
         occurred_at="2026-09-14T00:02:00+00:00",
         actor_id="pg-atomic-user",
         source_channel="telegram",
