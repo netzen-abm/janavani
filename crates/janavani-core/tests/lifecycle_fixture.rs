@@ -12,8 +12,11 @@ fn fixture_path() -> PathBuf {
 #[test]
 fn rust_lifecycle_matches_canonical_transition_fixture() {
     let source = fs::read_to_string(fixture_path()).expect("transition fixture must exist");
-    let expected: BTreeMap<String, Vec<String>> =
+    let mut expected: BTreeMap<String, Vec<String>> =
         serde_json::from_str(&source).expect("transition fixture must be valid JSON");
+    for targets in expected.values_mut() {
+        targets.sort();
+    }
 
     let statuses = [
         CaseStatus::Draft,
