@@ -30,7 +30,7 @@ def test_letter_draft_persists_into_canonical_review_boundary() -> None:
         principal=Principal(
             principal_id="letter-principal",
             interface="test",
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review"}),
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:evidence", "document:review"}),
         )
     )
     case = CivicCaseCapability(cases).create(
