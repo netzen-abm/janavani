@@ -9,7 +9,6 @@ from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
-from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
 from src.capabilities.civic_case_contract import CivicCaseCreateRequest, CivicCaseResult
 from src.capabilities.civic_case_lifecycle import CivicCaseLifecycleMixin
 
