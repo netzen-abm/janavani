@@ -156,10 +156,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_case_submissions
-                            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at)
-                            VALUES (%s, %s, 'forged', 'test', 'pending', now(), now())
+                            (submission_id, case_id, destination_ref, channel, state, idempotency_key, created_at, updated_at)
+                            VALUES (%s, %s, 'forged', 'test', 'pending', %s, now(), now())
                             """,
-                            ("forged-" + uuid4().hex, case_id),
+                            ("forged-" + uuid4().hex, case_id, "forged-idempotency-" + uuid4().hex),
                         )
 
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
