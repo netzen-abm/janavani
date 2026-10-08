@@ -44,7 +44,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
                         jurisdiction_json, subject_claims_json, status,
                         created_at, updated_at, version
                     ) VALUES (
-                        %s, 'test', 'Submission integration case', 'Disposable PostgreSQL verification', %s,
+                        %s, 'test', 'test', '', %s,
                         '{}'::jsonb, '[]'::jsonb, 'ready', now(), now(), 1
                     )
                     """,
