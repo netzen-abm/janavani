@@ -19,6 +19,7 @@ from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
 from src.platform.composition_capabilities import create_civic_action_vertical_slice
 from src.storage.artifact_blob_factory import create_artifact_blob_store
+from src.storage.repositories.case_content import InMemoryCaseContentRepository
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.platform.composition import (
     create_authority_repository,
@@ -123,7 +124,8 @@ def create_surface_case_composition(
         create_identity_link_repository(provider_composition=provider_composition),
     )
 
-    case_capability = create_case_capability(case_repository)
+    case_content_repository = runtime_graph.setdefault("case_content", InMemoryCaseContentRepository())
+    case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
     consent_capability = create_consent_capability(
