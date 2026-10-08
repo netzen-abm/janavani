@@ -35,6 +35,18 @@ class InMemoryCivicCaseRepository:
         stored.subject = stored.case_type.value
         stored.narrative = ""
         self._cases[case.case_id] = stored
+        if case.subject.strip() and case.narrative.strip():
+            from src.storage.repositories.case_content import CaseContent
+            self.content_repository.save(
+                case.case_id,
+                CaseContent(
+                    subject=case.subject,
+                    narrative=case.narrative,
+                    claims=tuple(dict(claim) for claim in case.claims),
+                    jurisdiction=dict(case.jurisdiction),
+                ),
+                principal_id=principal_id or case.created_by,
+            )
 
     def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         return self._cases.get(case_id)
