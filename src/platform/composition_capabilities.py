@@ -25,6 +25,7 @@ from src.core.responsibility import ResponsibilityResolver
 from src.core.submission import SubmissionRepository
 from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.case_content import CaseContentRepository
 from src.storage.repositories.consent import ConsentRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
@@ -33,8 +34,8 @@ from src.storage.repositories.submission_case_transaction import SubmissionCaseT
 from .composition_repositories import (create_document_review_repository_for_platform, create_external_channel_repository_for_platform, create_provider_composition, create_submission_repository)
 
 
-def create_case_capability(repository: CivicCaseRepository) -> CivicCaseCapability:
-    return CivicCaseCapability(repository)
+def create_case_capability(repository: CivicCaseRepository, content_repository: CaseContentRepository | None = None) -> CivicCaseCapability:
+    return CivicCaseCapability(repository, content_repository=content_repository)
 
 
 def create_consent_capability(*, consent_repository: ConsentRepository, case_capability: CivicCaseCapability) -> ConsentCapability:
