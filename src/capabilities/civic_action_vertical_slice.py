@@ -112,8 +112,13 @@ class CivicActionVerticalSlice:
     def submit(self, request, *, channel_id: str, identity: IdentityContext, explicit_user_approval: bool, execution_context=None):
         if self._deps.submission_capability is None:
             raise RuntimeError("Submission capability is not configured")
+        from dataclasses import replace
+        if request.external_channel_id is not None and request.external_channel_id != channel_id:
+            raise ValueError("Submission channel does not match the selected verified channel")
+        selected = replace(request, external_channel_id=channel_id)
+        self._deps.external_channel_capability.get_verified(channel_id)
         return self._deps.submission_capability.submit(
-            request, identity=identity, explicit_user_approval=explicit_user_approval,
+            selected, identity=identity, explicit_user_approval=explicit_user_approval,
             execution_context=execution_context,
         )
 
