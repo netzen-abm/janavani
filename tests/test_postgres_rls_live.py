@@ -123,8 +123,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute("SELECT submission_id FROM public.civic_case_submissions WHERE submission_id = %s", (submission_id,))
                 assert cursor.fetchone() is None
 
-                with connection.transaction():
-                    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    with connection.transaction():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_cases
@@ -140,8 +140,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 ) is None
                 assert cursor.rowcount == 0
 
-                with connection.transaction():
-                    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    with connection.transaction():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_case_consents
@@ -151,8 +151,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                             ("forged-" + uuid4().hex, case_id, "principal-a"),
                         )
 
-                with connection.transaction():
-                    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    with connection.transaction():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_case_submissions
