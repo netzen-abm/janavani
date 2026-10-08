@@ -11,6 +11,62 @@
 
 > **Completion rule:** A task is not COMPLETE merely because code or documentation exists. Engineering completion requires implementation, tests, repository verification, security/privacy review where applicable, functional verification, and evidence. Design completion is explicitly labelled DESIGN COMPLETE and must not be confused with implementation completion.
 
+## 0A. EXECUTIVE REBASELINE — 08 OCTOBER 2026
+
+**Decision:** Convergence before expansion. The ecosystem scope remains unchanged; the immediate objective is to make one canonical civic-action system correct, durable, testable and reusable across independent surfaces.
+
+### P0 — Canonical correctness / release blockers
+1. **Case/content → lifecycle → submission cascade** — resolve remaining failures, then rerun the canonical suite.
+2. **Runtime truth** — verify canonical Web/API entry point, Telegram runtime, restart/recovery behavior and deployment startup.
+3. **PostgreSQL/RLS** — prove cross-user isolation, provider contract behavior, migration/rollback, backup/restore and failure recovery.
+4. **Security/privacy** — verify authorization, consent, data minimization, session expiry, logging redaction and device/local-data boundaries.
+
+### P1 — Independent failure isolation
+After P0 is green, isolate and fix only genuinely independent failures:
+- identity/authentication/authorization;
+- PostgreSQL/RLS/provider runtime;
+- AI provider/routing;
+- session expiry/recovery;
+- Rust/Python/domain parity.
+
+These must not be coupled into a new universal orchestration layer.
+
+### P2 — Shared capability convergence
+- Case, Evidence, Authority, Document, Consent, Submission and Tracking remain canonical shared capabilities.
+- Surface adapters consume capabilities; they do not reimplement them.
+- Split code only at boundaries of change, trust, persistence, provider dependency or independent reuse.
+- Keep tightly coupled invariants together.
+
+### P3 — First complete civic-action vertical slice
+**Issue → Case → Authority → Evidence → Document → Review → Consent → Submission → Acknowledgement → Tracking → Follow-up/Outcome.**
+
+The Dynamic Web is the first proving surface, while Telegram remains independently operable. Neither becomes the platform core.
+
+### P4 — Ecosystem expansion
+Only after the canonical slice is green: Mini App, WhatsApp/Messenger, Android/iOS, AI/RAG/Agentic expansion, DApp/Web3, resilience/mesh/satellite and advanced governance capabilities.
+
+### P5 — Repository hygiene
+- Exactly **nine active branches**; the live repository currently satisfies this.
+- No blind merge or deletion of historical work.
+- Preserve useful work, selectively extract unique changes, verify, then retire/archive references.
+- Do not create another architecture generation merely to solve an existing convergence problem.
+
+### Explicit next two steps
+1. **Resolve the remaining Case/content → lifecycle → submission cascade and rerun the canonical suite.**
+2. **Once that cascade is green, isolate the genuinely independent failures—identity, PostgreSQL/RLS, AI provider, session expiry and Rust parity—without introducing architectural coupling.**
+
+### Branch policy
+The nine approved active branches are: main, integration/canonical-platform, feat/canonical-case-kernel, feat/canonical-capability-execution-envelope, feat/canonical-civic-action-vertical-slice, feat/canonical-sos-contract, feat/capability-scoped-consent-agent-enforcement, audit/postgres-provider-production-gates, chore/ecosystem-shared-capability-infrastructure.
+
+### Evidence baseline from live GitHub audit
+- Exactly 9 branches observed.
+- feat/canonical-capability-execution-envelope and chore/ecosystem-shared-capability-infrastructure are 0 commits ahead of main; they do not need merging.
+- integration/canonical-platform contains unique work but is deeply behind main; do not wholesale-merge.
+- Case-kernel, civic-action and SOS branches contain historical/divergent work; selectively extract only missing, still-valid changes.
+- Consent/agent and PostgreSQL-gate branches contain unique work but are based on old generations; re-evaluate against current contracts before integration.
+- PR #203 remains a convergence review vehicle and is not merge-ready merely because it is mergeable.
+
+
 ---
 
 # 0. CHECKLIST GOVERNANCE
@@ -123,7 +179,7 @@ Remaining: capability → repository → tests → deployment → security/priva
 
 # 5. IDENTITY, ACCESS & USER CONTROL
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — FOUNDATION EXISTS; RUNTIME/CHANNEL VERIFICATION OPEN**
 
 - [ ] 5.1 Optional account model.
 - [ ] 5.2 Channel-specific authentication.
@@ -185,7 +241,7 @@ Remaining: capability → repository → tests → deployment → security/priva
 
 # 9. CIVIC DOCUMENT & LETTER ENGINE
 
-**Status: IN PROGRESS — ARCHITECTURE + PARTIAL IMPLEMENTATION**
+**Status: IN PROGRESS — ARCHITECTURE + PARTIAL IMPLEMENTATION; VERTICAL-SLICE VERIFICATION PRIORITY**
 
 - [ ] 9.1 Complaint drafting.
 - [ ] 9.2 Grievance drafting.
@@ -699,4 +755,3 @@ Split code only when the split creates an independent boundary of change ownersh
 ## Audit evidence
 
 - docs/90-audits/2026-10-07-quick-programming-audit-and-execution-reset.md
-
