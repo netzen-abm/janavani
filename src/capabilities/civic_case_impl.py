@@ -110,7 +110,7 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
                    execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         self._validate_execution_context(execution_context, identity, action="save")
         owned = self.get_owned(case.case_id, identity=identity)
-        if owned is None or owned is not case:
+        if owned is None or owned.case_id != case.case_id:
             raise LookupError("Case not found")
         self._repository.save(case, principal_id=identity.principal.principal_id)
         self._content.save(case.case_id, CaseContent(
