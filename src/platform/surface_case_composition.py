@@ -165,7 +165,7 @@ def create_surface_case_composition(
         evidence_capability=evidence_capability,
         consent_capability=consent_capability,
         civic_action_capability=civic_action_capability,
-        civic_action=civic_action_capability,
+        civic_action=civic_action_vertical_slice,
         letter_drafting_capability=letter_drafting_capability,
         identity_link_repository=identity_link_repository,
         provider_composition=provider_composition,
