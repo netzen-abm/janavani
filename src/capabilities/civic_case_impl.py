@@ -11,10 +11,11 @@ from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
 from src.capabilities.civic_case_contract import CivicCaseCreateRequest, CivicCaseResult
 from src.capabilities.civic_case_lifecycle import CivicCaseLifecycleMixin
+from src.capabilities.civic_case_content import CivicCaseContentMixin
 
 CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
 
-class CivicCaseCapability(CivicCaseLifecycleMixin):
+class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
     """Canonical Case command/query boundary shared by every access surface."""
 
     def __init__(self, repository: CivicCaseRepository, content_repository: CaseContentRepository | None = None) -> None:
@@ -87,59 +88,6 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
-
-    def hydrate_transient_content(
-        self,
-        case_id: str,
-        *,
-        identity: IdentityContext,
-        subject: str | None = None,
-        narrative: str | None = None,
-        claims: tuple[dict[str, object], ...] = (),
-        jurisdiction: dict[str, object] | None = None,
-    ) -> None:
-        """Refresh surface-local citizen content without changing durable Case state."""
-        case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
-        if case is None or case.created_by != identity.principal.principal_id:
-            raise LookupError("Case not found")
-        existing = self._content.get(
-            case_id,
-            principal_id=identity.principal.principal_id,
-        )
-        self._content.save(
-            case_id,
-            CaseContent(
-                subject=(subject.strip() if subject is not None else (existing.subject if existing else "")),
-                narrative=(narrative.strip() if narrative is not None else (existing.narrative if existing else "")),
-                claims=tuple(dict(claim) for claim in claims) if claims else (existing.claims if existing else ()),
-                jurisdiction=dict(jurisdiction) if jurisdiction is not None else (existing.jurisdiction if existing else {}),
-            ),
-            principal_id=identity.principal.principal_id,
-        )
-
-    def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
-        case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
-        if case is None or case.created_by != identity.principal.principal_id:
-            return None
-        content = self._content.get(case_id, principal_id=identity.principal.principal_id)
-        if content is not None:
-            # Durable Case.subject is workflow metadata (the canonical case type).
-            # Citizen-authored content is reconstructed only from the separate
-            # content boundary; never overwrite durable metadata with it.
-            case.narrative = content.narrative
-            case.claims = [dict(claim) for claim in content.claims]
-            case.jurisdiction = dict(content.jurisdiction)
-        return case
-
-    def save_owned(self, case: CivicCase, *, identity: IdentityContext,
-                   execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
-        self._validate_execution_context(execution_context, identity, action="save")
-        owned = self.get_owned(case.case_id, identity=identity)
-        if owned is None or owned.case_id != case.case_id:
-            raise LookupError("Case not found")
-        self._repository.save(case, principal_id=identity.principal.principal_id)
-        self._save_content(case, identity=identity)
-        return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
                      source_channel: str | None = None,
