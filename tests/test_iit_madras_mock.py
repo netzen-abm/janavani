@@ -65,7 +65,16 @@ def test_legal_agent_translation_uses_canonical_hf_token(monkeypatch):
             return Response()
 
     session = FakeSession()
-    result = JanavaniLegalAgent(http_session=session).translate_input_if_needed("റോഡ് തകർന്നിരിക്കുന്നു")
+    result = JanavaniLegalAgent(http_session=session).translate_input_if_needed(
+        "റോഡ് തകർന്നിരിക്കുന്നു",
+        consent_scope=CapabilityDataScope(
+            capability_id="civic:translation",
+            purpose="civic_translation",
+            approved_fields=frozenset({"citizen_text"}),
+            provider="huggingface-translation",
+            processing_mode="remote_model",
+        ),
+    )
 
     assert result == "Road is damaged"
     assert session.calls
