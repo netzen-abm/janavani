@@ -86,11 +86,6 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         )
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case, principal_id=identity.principal.principal_id)
-        self._content.save(case.case_id, CaseContent(
-            subject=subject, narrative=narrative,
-            claims=tuple(dict(claim) for claim in case.claims),
-            jurisdiction=dict(case.jurisdiction),
-        ), principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
