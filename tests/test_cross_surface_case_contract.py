@@ -153,11 +153,11 @@ def test_cross_surface_case_evidence_and_consent_converge_on_shared_provider_sta
 
     citizen_a = IdentityContext(principal=Principal(
         principal_id="citizen:vertical-a", identity_mode=IdentityMode.AUTHENTICATED,
-        interface="telegram", capabilities=frozenset({CAPABILITY_ID}),
+        interface="telegram", capabilities=frozenset({CAPABILITY_ID, "case:write", "case:evidence", "case:consent", "case:review"}),
     ))
     citizen_a_web = IdentityContext(principal=Principal(
         principal_id="citizen:vertical-a", identity_mode=IdentityMode.AUTHENTICATED,
-        interface="webapp", capabilities=frozenset({CAPABILITY_ID}),
+        interface="webapp", capabilities=frozenset({CAPABILITY_ID, "case:write", "case:evidence", "case:consent", "case:review"}),
     ))
     citizen_b = IdentityContext(principal=Principal(
         principal_id="citizen:vertical-b", identity_mode=IdentityMode.AUTHENTICATED,
