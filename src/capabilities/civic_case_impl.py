@@ -19,7 +19,7 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
 
     def __init__(self, repository: CivicCaseRepository, content_repository: CaseContentRepository | None = None) -> None:
         self._repository = repository
-        self._content = content_repository or InMemoryCaseContentRepository()
+        self._content = content_repository or getattr(repository, "content_repository", None) or InMemoryCaseContentRepository()
 
     @property
     def repository(self) -> CivicCaseRepository:
