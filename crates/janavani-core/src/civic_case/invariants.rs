@@ -3,31 +3,31 @@ use super::*;
 impl CivicCase {
     pub fn confirmed_delivery(&self) -> bool { confirmed_delivery(self.status) }
 
-    fn ensure_content(&self) -> Result<(), DomainError> {
+    pub(super) fn ensure_content(&self) -> Result<(), DomainError> {
         if self.subject.trim().is_empty() || self.narrative.trim().is_empty() {
             return Err(DomainError::InvalidOperation("A case requires a subject and narrative"));
         }
         Ok(())
     }
 
-    fn ensure_editable(&self) -> Result<(), DomainError> {
+    pub(super) fn ensure_editable(&self) -> Result<(), DomainError> {
         if matches!(self.status, CaseStatus::Submitting | CaseStatus::Queued | CaseStatus::Submitted | CaseStatus::Acknowledged | CaseStatus::InProgress | CaseStatus::Responded | CaseStatus::Resolved | CaseStatus::Escalated | CaseStatus::Closed | CaseStatus::Archived) {
             return Err(DomainError::InvalidOperation("Case is no longer editable"));
         }
         Ok(())
     }
 
-    fn ensure_event_id_available(&self, event_id: &str) -> Result<(), DomainError> {
+    pub(super) fn ensure_event_id_available(&self, event_id: &str) -> Result<(), DomainError> {
         if self.events.iter().any(|event| event.event_id == event_id) { return Err(DomainError::DuplicateEventId); }
         Ok(())
     }
 
-    fn require_status(&self, expected: CaseStatus, message: &'static str) -> Result<(), DomainError> {
+    pub(super) fn require_status(&self, expected: CaseStatus, message: &'static str) -> Result<(), DomainError> {
         if self.status != expected { return Err(DomainError::InvalidOperation(message)); }
         Ok(())
     }
 
-    fn status_event(
+    pub(super) fn status_event(
         &mut self,
         event_id: impl Into<String>,
         occurred_at: impl Into<String>,
@@ -47,7 +47,7 @@ impl CivicCase {
         self.record(event)
     }
 
-    fn record(&mut self, event: CaseEvent) -> Result<CaseEvent, DomainError> {
+    pub(super) fn record(&mut self, event: CaseEvent) -> Result<CaseEvent, DomainError> {
         if event.case_id != self.case_id { return Err(DomainError::EventBelongsToDifferentCase); }
         if self.events.iter().any(|existing| existing.event_id == event.event_id) { return Err(DomainError::DuplicateEventId); }
         self.events.push(event.clone());
