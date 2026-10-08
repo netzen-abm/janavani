@@ -134,18 +134,18 @@ def test_real_postgres_stale_version_is_rejected(repository):
 
 def test_real_postgres_transaction_rolls_back_on_provider_failure(repository):
     case = _case("integration-postgres-rollback-case")
-    from src.storage.repositories import postgres_civic_case_sql
-    original = postgres_civic_case_sql.persist_refs
+    from src.storage.repositories import postgres_civic_case
+    original = postgres_civic_case.persist_refs
 
     def fail_after_case_and_event(cur, candidate):
         original(cur, candidate)
         raise RuntimeError("forced integration rollback")
 
-    postgres_civic_case_sql.persist_refs = fail_after_case_and_event
+    postgres_civic_case.persist_refs = fail_after_case_and_event
     try:
         with pytest.raises(Exception):
             repository.save(case)
     finally:
-        postgres_civic_case_sql.persist_refs = original
+        postgres_civic_case.persist_refs = original
 
     assert repository.get(case.case_id) is None
