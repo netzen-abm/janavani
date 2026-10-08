@@ -56,7 +56,11 @@ class PostgresUnitOfWork(UnitOfWork):
         try:
             if self._transaction is None:
                 return None
-            return self._transaction.__exit__(exc_type, exc_value, traceback)
+            # The shared Unit-of-Work boundary must never suppress provider
+            # exceptions. PostgreSQL decides commit vs rollback; the original
+            # exception must propagate to the caller.
+            self._transaction.__exit__(exc_type, exc_value, traceback)
+            return None
         finally:
             self._transaction = None
             if self.resource is not None:
