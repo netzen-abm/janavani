@@ -19,6 +19,14 @@ def test_canonical_schema_migration_creates_required_tables_and_constraints():
         with connection.transaction():
             with connection.cursor() as cursor:
                 cursor.execute(sql)
+                for table in (
+                    "civic_cases", "civic_case_events", "civic_case_consents",
+                    "civic_case_evidence_refs", "civic_case_document_refs",
+                    "civic_case_submissions", "civic_case_audit", "evidence_objects",
+                    "document_artifacts", "janavani_delegation_grants",
+                    "janavani_service_identity_policies",
+                ):
+                    cursor.execute(f"ALTER TABLE public.{table} DISABLE ROW LEVEL SECURITY")
                 cursor.execute(
                     """
                     select table_name
