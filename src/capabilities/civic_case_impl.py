@@ -8,6 +8,7 @@ from src.core.civic_case import CaseEventType, CaseType, CivicCase
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
 from src.capabilities.civic_case_contract import CivicCaseCreateRequest, CivicCaseResult
 from src.capabilities.civic_case_lifecycle import CivicCaseLifecycleMixin
 
@@ -16,8 +17,9 @@ CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
 class CivicCaseCapability(CivicCaseLifecycleMixin):
     """Canonical Case command/query boundary shared by every access surface."""
 
-    def __init__(self, repository: CivicCaseRepository) -> None:
+    def __init__(self, repository: CivicCaseRepository, content_repository: CaseContentRepository | None = None) -> None:
         self._repository = repository
+        self._content = content_repository or InMemoryCaseContentRepository()
 
     @property
     def repository(self) -> CivicCaseRepository:
@@ -48,6 +50,11 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
             case.claims = [dict(claim) for claim in request.claims]
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case, principal_id=identity.principal.principal_id)
+        self._content.save(case.case_id, CaseContent(
+            subject=subject, narrative=narrative,
+            claims=tuple(dict(claim) for claim in case.claims),
+            jurisdiction=dict(case.jurisdiction),
+        ), principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
     def create_shell(self, request: CivicCaseCreateRequest, *, identity: IdentityContext,
@@ -85,6 +92,12 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
         if case is None or case.created_by != identity.principal.principal_id:
             return None
+        content = self._content.get(case_id, principal_id=identity.principal.principal_id)
+        if content is not None:
+            case.subject = content.subject
+            case.narrative = content.narrative
+            case.claims = [dict(claim) for claim in content.claims]
+            case.jurisdiction = dict(content.jurisdiction)
         return case
 
     def save_owned(self, case: CivicCase, *, identity: IdentityContext,
@@ -94,6 +107,11 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         if owned is None or owned is not case:
             raise LookupError("Case not found")
         self._repository.save(case, principal_id=identity.principal.principal_id)
+        self._content.save(case.case_id, CaseContent(
+            subject=case.subject, narrative=case.narrative,
+            claims=tuple(dict(claim) for claim in case.claims),
+            jurisdiction=dict(case.jurisdiction),
+        ), principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
