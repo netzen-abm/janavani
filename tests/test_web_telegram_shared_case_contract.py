@@ -62,7 +62,7 @@ def test_cross_surface_continuation_is_owner_scoped() -> None:
     assert owned is not None
     assert owned.case_id == case.case_id
     assert owned.subject == CaseType.COMPLAINT.value
-    assert owned.narrative == "Water supply has stopped."
+    assert owned.narrative == "A pothole is blocking traffic."
     assert capability.get_owned(case.case_id, identity=other) is None
     assert capability.create(
         CivicCaseCreateRequest(CaseType.COMPLAINT, "Water leak", "A public pipe is leaking."),
