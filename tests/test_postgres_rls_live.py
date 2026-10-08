@@ -65,6 +65,14 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     """,
                     (evidence_id,),
                 )
+                cursor.execute(
+                    """
+                    INSERT INTO public.document_artifacts
+                    (artifact_id, document_id, case_id, format, storage_ref, state)
+                    VALUES (%s, %s, %s, 'text/plain', 'local:test-document', 'draft')
+                    """,
+                    (artifact_id, document_id, case_id),
+                )
                 cursor.execute(f'SET ROLE "{role}"')
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
@@ -74,14 +82,6 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     VALUES (%s, %s, 'primary', now(), %s)
                     """,
                     (case_id, evidence_id, "principal-a"),
-                )
-                cursor.execute(
-                    """
-                    INSERT INTO public.document_artifacts
-                    (artifact_id, document_id, case_id, format, storage_ref, state)
-                    VALUES (%s, %s, %s, 'text/plain', 'local:test-document', 'draft')
-                    """,
-                    (artifact_id, document_id, case_id),
                 )
                 cursor.execute(
                     """
