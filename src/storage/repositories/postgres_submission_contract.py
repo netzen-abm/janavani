@@ -5,5 +5,5 @@ class PostgresSubmissionPersistenceError(RuntimeError):
 class PostgresSubmissionConcurrencyError(PostgresSubmissionPersistenceError):
     """Raised when optimistic submission concurrency detects a stale version."""
 
-class PostgresSubmissionIdempotencyConflictError(PostgresSubmissionPersistenceError):
+class PostgresSubmissionIdempotencyConflictError(PostgresSubmissionPersistenceError, SubmissionIdempotencyConflictError):
     """Raised when an idempotency key is reused for another operation."""
