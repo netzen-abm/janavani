@@ -122,11 +122,11 @@ def test_authorization_denial_wins_over_consent_and_approval():
     assert gate_consequential_operation(request) is ConsequentialDecision.DENY
 
 
-def test_scoped_execution_must_pass_before_consequential_operation():
+def test_valid_scoped_execution_and_approval_allow_consequential_operation():
     request = _request(approval=True, scoped_execution=_scope())
     assert gate_consequential_operation(
         request, scoped_execution_policy=_policy()
-    ) is ConsequentialDecision.REQUIRE_APPROVAL
+    ) is ConsequentialDecision.ALLOW
 
 
 def test_scoped_execution_field_escape_is_denied():
