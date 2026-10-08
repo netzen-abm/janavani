@@ -27,7 +27,11 @@ def create_provider_composition() -> ProviderComposition:
     return ProviderComposition.from_environment()
 
 def create_case_repository(*, provider_composition: ProviderComposition | None = None) -> CivicCaseRepository:
-    return create_civic_case_repository(composition=provider_composition or create_provider_composition())
+    composition = provider_composition or create_provider_composition()
+    return create_civic_case_repository(
+        composition=composition,
+        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),
+    )
 
 def create_consent_repository(*, provider_composition: ProviderComposition | None = None) -> ConsentRepository:
     composition = provider_composition or create_provider_composition()
