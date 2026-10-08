@@ -1,4 +1,4 @@
-from src.capabilities.civic_case import CivicCaseCapability
+from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.consent import ConsentCapability, PURPOSE_SUBMISSION
 from src.core.civic_case import CaseType, CivicCase
 from src.identity.context import IdentityContext
