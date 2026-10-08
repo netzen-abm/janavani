@@ -41,6 +41,8 @@ def create_civic_action_vertical_slice(
     external_channel_capability: ExternalChannelCapability | None = None,
     follow_up_capability: FollowUpCapability | None = None,
     escalation_capability: EscalationCapability | None = None,
+    submission_capability: SubmissionCapability | None = None,
+    submission_transport=None,
     provider_composition: ProviderComposition | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
