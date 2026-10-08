@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::super::*;
     use serde_json::json;
 
     fn make_case() -> CivicCase {
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn canonical_lifecycle_and_delivery_boundary_remain_intact() {
-        use super::CaseStatus::*;
+        use CaseStatus::*;
         assert!(Draft.can_transition(Review));
         assert!(Acknowledged.can_transition(InProgress));
         assert!(Closed.can_transition(Archived));
