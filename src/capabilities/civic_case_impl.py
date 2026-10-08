@@ -94,7 +94,9 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
             return None
         content = self._content.get(case_id, principal_id=identity.principal.principal_id)
         if content is not None:
-            case.subject = content.subject
+            # Durable Case.subject is workflow metadata (the canonical case type).
+            # Citizen-authored content is reconstructed only from the separate
+            # content boundary; never overwrite durable metadata with it.
             case.narrative = content.narrative
             case.claims = [dict(claim) for claim in content.claims]
             case.jurisdiction = dict(content.jurisdiction)
@@ -107,11 +109,7 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         if owned is None or owned.case_id != case.case_id:
             raise LookupError("Case not found")
         self._repository.save(case, principal_id=identity.principal.principal_id)
-        self._content.save(case.case_id, CaseContent(
-            subject=case.subject, narrative=case.narrative,
-            claims=tuple(dict(claim) for claim in case.claims),
-            jurisdiction=dict(case.jurisdiction),
-        ), principal_id=identity.principal.principal_id)
+        self._save_content(case, identity=identity)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_evidence(self, case_id: str, evidence_id: str, *, identity: IdentityContext,
@@ -124,11 +122,7 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         case.add_evidence(evidence_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
                           actor_id=identity.principal.principal_id, source_channel=source_channel)
         self._repository.save(case, principal_id=identity.principal.principal_id)
-        self._content.save(case.case_id, CaseContent(
-            subject=case.subject, narrative=case.narrative,
-            claims=tuple(dict(claim) for claim in case.claims),
-            jurisdiction=dict(case.jurisdiction),
-        ), principal_id=identity.principal.principal_id)
+        self._save_content(case, identity=identity)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_document(self, case_id: str, document_id: str, *, identity: IdentityContext,
@@ -141,7 +135,24 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         case.add_document(document_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
                           actor_id=identity.principal.principal_id, source_channel=source_channel)
         self._repository.save(case, principal_id=identity.principal.principal_id)
+        self._save_content(case, identity=identity)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
+
+    def _save_content(self, case: CivicCase, *, identity: IdentityContext) -> None:
+        existing = self._content.get(
+            case.case_id,
+            principal_id=identity.principal.principal_id,
+        )
+        self._content.save(
+            case.case_id,
+            CaseContent(
+                subject=existing.subject if existing is not None else case.subject,
+                narrative=case.narrative,
+                claims=tuple(dict(claim) for claim in case.claims),
+                jurisdiction=dict(case.jurisdiction),
+            ),
+            principal_id=identity.principal.principal_id,
+        )
 
     @staticmethod
     def _validate_execution_context(execution_context, identity, *, action, resource_id=None) -> None:
