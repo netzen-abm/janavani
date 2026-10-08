@@ -43,6 +43,7 @@ class CivicCaseLifecycleMixin:
         source_channel: str | None = None,
         source_ref: str | None = None,
         notes: str | None = None,
+        explicit_user_approval: bool = False,
         execution_context: CapabilityExecutionContext | None = None,
     ) -> CivicCaseResult:
         transitions = {
@@ -63,7 +64,10 @@ class CivicCaseLifecycleMixin:
         capability, transition_fn, high_risk = transitions[action]
         self._validate_execution_context(execution_context, identity, action=action, resource_id=case_id)
         case = self._owned(case_id, identity)
-        self._require(identity, capability, action, resource_id=case.case_id, high_risk=high_risk)
+        self._require(
+            identity, capability, action, resource_id=case.case_id,
+            high_risk=high_risk, explicit_user_approval=explicit_user_approval,
+        )
         now = datetime.now(timezone.utc).isoformat()
         kwargs: dict[str, object] = {"event_id": f"event-{uuid4().hex}", "occurred_at": now,
                                      "actor_id": identity.principal.principal_id}
@@ -107,13 +111,16 @@ class CivicCaseLifecycleMixin:
 
     @staticmethod
     def _require(identity: IdentityContext, capability: str, action: str,
-                 resource_id: str | None = None, high_risk: bool = False) -> None:
-        decision = authorize(AuthorizationRequest(context=identity, capability=capability, action=action,
-                                                  resource_id=resource_id, risk_level="high" if high_risk else "normal",
-                                                  requires_approval=high_risk))
+                 resource_id: str | None = None, high_risk: bool = False,
+                 explicit_user_approval: bool = False) -> None:
+        decision = authorize(AuthorizationRequest(
+            context=identity, capability=capability, action=action,
+            resource_id=resource_id, risk_level="high" if high_risk else "normal",
+            requires_approval=high_risk,
+        ))
         if decision is AuthorizationDecision.DENY:
             raise PermissionError("Capability is not authorized")
-        if decision is AuthorizationDecision.REQUIRE_APPROVAL:
+        if decision is AuthorizationDecision.REQUIRE_APPROVAL and not explicit_user_approval:
             raise PermissionError("Explicit approval required")
 
     @staticmethod
