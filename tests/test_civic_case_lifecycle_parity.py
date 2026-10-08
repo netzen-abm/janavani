@@ -13,5 +13,9 @@ def test_python_lifecycle_matches_canonical_transition_fixture():
         status.value: sorted(target.value for target in targets)
         for status, targets in CASE_STATUS_TRANSITIONS.items()
     }
+    expected = {
+        status: sorted(targets)
+        for status, targets in expected.items()
+    }
     assert actual == expected
     assert set(actual) == {status.value for status in CaseStatus}
