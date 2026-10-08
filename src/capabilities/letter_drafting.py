@@ -89,7 +89,7 @@ class LetterDraftingCapability:
             built.draft,
             document_type=request.document_type,
             subject=request.subject.strip(),
-            body=self._compose_body(request),
+            body=compose_letter_body(request),
         )
         persisted = self._document_review.save_draft(document, identity=identity)
         return LetterDraftResult(
@@ -128,4 +128,3 @@ class LetterDraftingCapability:
         if any(token.lower() in content.lower() for token in forbidden_placeholders):
             raise ValueError("Draft contains unresolved placeholder text")
 
-        return compose_letter_body(request)
