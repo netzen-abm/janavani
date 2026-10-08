@@ -44,7 +44,8 @@ def _identity(principal_id: str, interface: str) -> IdentityContext:
 
 
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
-def test_web_and_telegram_share_durable_identity_and_case_state():
+def test_web_and_telegram_share_durable_identity_and_case_state(monkeypatch):
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", DSN)
     _schema()
 
     providers = (
