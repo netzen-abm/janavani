@@ -61,7 +61,7 @@ def test_cross_surface_continuation_is_owner_scoped() -> None:
     owned = capability.get_owned(case.case_id, identity=owner)
     assert owned is not None
     assert owned.case_id == case.case_id
-    assert owned.subject == CaseType.COMPLAINT.value
+    assert owned.subject == "Road damage"
     assert owned.narrative == "A pothole is blocking traffic."
     assert capability.get_owned(case.case_id, identity=other) is None
     assert capability.create(
