@@ -17,50 +17,22 @@ def _python_matrix() -> dict[str, list[str]]:
 
 
 def _rust_matrix() -> dict[str, list[str]]:
-    probe = r'''
-use janavani_core::CaseStatus;
-fn main() {
-    use CaseStatus::*;
-    let statuses = [Draft, Review, Ready, Submitting, Queued, Submitted, Acknowledged,
-        FollowUp, InProgress, Responded, Resolved, Escalated, Closed, Archived];
-    let mut out = String::from("{");
-    for (i, current) in statuses.iter().enumerate() {
-        if i > 0 { out.push(','); }
-        out.push_str(&format!("\"{}\":[", serde_json::to_string(current).unwrap().trim_matches('"')));
-        let mut first = true;
-        for target in statuses.iter() {
-            if current.can_transition(*target) {
-                if !first { out.push(','); }
-                first = false;
-                out.push_str(&serde_json::to_string(target).unwrap());
-            }
-        }
-        out.push(']');
-    }
-    out.push('}');
-    println!("{out}");
-}
-'''
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        (root / "Cargo.toml").write_text(
-            "[package]\nname='lifecycle_probe'\nversion='0.1.0'\nedition='2021'\n\n"
-            "[dependencies]\njanavani-core={path='" + str(RUST_CRATE) + "'}\n"
-            "serde_json='1'\n"
-        )
-        src = root / "src"
-        src.mkdir()
-        (src / "main.rs").write_text(probe)
-        result = subprocess.run(
-            ["cargo", "run", "--quiet", "--manifest-path", str(root / "Cargo.toml")],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        matrix = json.loads(result.stdout)
-        return {status: sorted(targets) for status, targets in matrix.items()}
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--example",
+            "lifecycle_matrix",
+            "--manifest-path",
+            str(RUST_CRATE / "Cargo.toml"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    matrix = json.loads(result.stdout)
+    return {status: sorted(targets) for status, targets in matrix.items()}
 
 
 def test_python_contract_contains_every_case_status():
