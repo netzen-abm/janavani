@@ -88,6 +88,35 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
+    def hydrate_transient_content(
+        self,
+        case_id: str,
+        *,
+        identity: IdentityContext,
+        subject: str | None = None,
+        narrative: str | None = None,
+        claims: tuple[dict[str, object], ...] = (),
+        jurisdiction: dict[str, object] | None = None,
+    ) -> None:
+        """Refresh surface-local citizen content without changing durable Case state."""
+        case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
+        if case is None or case.created_by != identity.principal.principal_id:
+            raise LookupError("Case not found")
+        existing = self._content.get(
+            case_id,
+            principal_id=identity.principal.principal_id,
+        )
+        self._content.save(
+            case_id,
+            CaseContent(
+                subject=(subject.strip() if subject is not None else (existing.subject if existing else "")),
+                narrative=(narrative.strip() if narrative is not None else (existing.narrative if existing else "")),
+                claims=tuple(dict(claim) for claim in claims) if claims else (existing.claims if existing else ()),
+                jurisdiction=dict(jurisdiction) if jurisdiction is not None else (existing.jurisdiction if existing else {}),
+            ),
+            principal_id=identity.principal.principal_id,
+        )
+
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
         case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
         if case is None or case.created_by != identity.principal.principal_id:
