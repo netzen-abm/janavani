@@ -45,6 +45,7 @@ def test_letter_draft_persists_into_canonical_review_boundary() -> None:
     ).case
 
     case_capability = CivicCaseCapability(cases)
+    case_capability.add_evidence(case.case_id, "evidence-1", identity=identity, source_channel="test")
     action = CivicActionCapability(
         case_capability=case_capability,
         case_repository=cases,
