@@ -131,6 +131,7 @@ pub struct CivicCase {
 mod draft;
 mod evidence;
 mod invariants;
+pub use invariants::{confirmed_delivery, validate_event_chain, DomainError};
 mod outcomes;
 mod submission;
 
