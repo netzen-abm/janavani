@@ -95,6 +95,14 @@ jobs:
       - name: Run smoke tests
         run: python -m pytest -q tests/test_smoke.py
 
+      - name: Canonical Web vertical-slice gate
+        env:
+          JANAVANI_IDENTITY_ASSERTION_SECRET: test-identity-secret
+        run: python -m pytest -q tests/test_canonical_app.py tests/test_web_civic_action_e2e.py
+
+      - name: Web/Telegram shared-capability gate
+        run: python -m pytest -q tests/test_web_telegram_shared_case_contract.py
+
       - name: Run canonical test suite
         env:
           REDIS_HOST: localhost
