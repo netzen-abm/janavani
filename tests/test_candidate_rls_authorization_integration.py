@@ -95,8 +95,8 @@ def test_candidate_rls_real_postgres_owner_only_and_isolation():
                                 jurisdiction_json, subject_claims_json, status,
                                 created_at, updated_at, version
                             ) VALUES (
-                                'rls-case', 'complaint', 'RLS test',
-                                'Authorization test', 'alice',
+                                'rls-case', 'complaint', 'complaint',
+                                '', 'alice',
                                 '{}'::jsonb, '[]'::jsonb, 'ready',
                                 now(), now(), 1
                             )
@@ -263,7 +263,7 @@ def test_candidate_rls_principal_context_does_not_leak_between_transactions():
                 "INSERT INTO civic_cases "
                 "(case_id, case_type, subject, narrative, created_by, "
                 "jurisdiction_json, subject_claims_json, status, created_at, updated_at, version) "
-                "VALUES ('rls-context-case', 'complaint', 'context', 'context', 'alice', "
+                "VALUES ('rls-context-case', 'complaint', 'complaint', '', 'alice', "
                 "'{}'::jsonb, '[]'::jsonb, 'ready', now(), now(), 1)"
             )
 
