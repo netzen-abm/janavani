@@ -57,3 +57,10 @@ def test_legacy_app_is_not_imported_by_canonical_assembly() -> None:
     import sys
 
     assert "src.web.app" not in sys.modules
+
+
+def test_constitutional_router_reuses_canonical_case_capability() -> None:
+    from src.platform.runtime import CASE_CAPABILITY
+    from src.web import constitutional_router
+
+    assert constitutional_router._DOCUMENT_REVIEW._case_capability is CASE_CAPABILITY
