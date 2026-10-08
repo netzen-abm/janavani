@@ -1,4 +1,5 @@
 """Contracts and errors for the PostgreSQL submission provider."""
+from src.core.submission import SubmissionIdempotencyConflictError
 class PostgresSubmissionPersistenceError(RuntimeError):
     """Raised when PostgreSQL submission persistence fails."""
 
