@@ -124,7 +124,10 @@ def create_surface_case_composition(
         create_identity_link_repository(provider_composition=provider_composition),
     )
 
-    case_content_repository = runtime_graph.setdefault(\n        "case_content",\n        getattr(case_repository, "content_repository", InMemoryCaseContentRepository()),\n    )
+    case_content_repository = runtime_graph.setdefault(
+        "case_content",
+        getattr(case_repository, "content_repository", InMemoryCaseContentRepository()),
+    )
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
