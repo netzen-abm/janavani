@@ -179,7 +179,7 @@ def test_unavailable_requested_transport_is_unknown() -> None:
 
 def test_consequential_action_requires_canonical_approval() -> None:
     identity_context = identity()
-    with pytest.raises(PermissionError, match="SafetyPrivacyDecision.REVIEW"):
+    with pytest.raises(PermissionError, match="SOS action requires approval"):
         SOSCapability().trigger(
             request(
                 consequential_action=True,
