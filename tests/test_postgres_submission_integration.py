@@ -157,4 +157,4 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
             cursor.execute(
                 "select relrowsecurity from pg_class where oid = 'public.civic_case_submissions'::regclass"
             )
-            assert cursor.fetchone()[0] is False
+            assert cursor.fetchone()[0] is True
