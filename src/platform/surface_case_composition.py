@@ -51,7 +51,6 @@ def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
     _PROVIDER_RUNTIME_GRAPHS[key] = (provider_composition, graph)
     return graph
 
-
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
 
