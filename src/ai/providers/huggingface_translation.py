@@ -32,7 +32,8 @@ class HuggingFaceTranslationProvider:
             json={"inputs": text},
             timeout=self._timeout,
         )
-        response.raise_for_status()
+        if getattr(response, "status_code", 200) >= 400:
+            raise requests.HTTPError(f"Hugging Face translation request failed: {response.status_code}")
         body: Any = response.json()
         translated = None
         if isinstance(body, list) and body and isinstance(body[0], dict):
