@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn canonical_lifecycle_and_delivery_boundary_remain_intact() {
-        use CaseStatus::*;
+        use super::CaseStatus::*;
         assert!(Draft.can_transition(Review));
         assert!(Acknowledged.can_transition(InProgress));
         assert!(Closed.can_transition(Archived));
