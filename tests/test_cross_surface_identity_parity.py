@@ -39,7 +39,7 @@ def test_web_assertion_and_telegram_link_converge_on_same_principal():
     links.save(
         ExternalIdentity(
             provider="telegram",
-            subject="telegram-subject-001",
+            subject="12345",
             principal_id=principal_id,
             authentication_method="explicit_verified_link",
             verified=True,
