@@ -52,7 +52,10 @@ def create_civic_action_vertical_slice(
         create_escalation_capability,
     )
     composition = provider_composition or create_provider_composition()
-    case_capability = case_capability or create_case_capability(\n        case_repository,\n        content_repository=getattr(case_repository, "content_repository", None),\n    )
+    case_capability = case_capability or create_case_capability(
+        case_repository,
+        content_repository=getattr(case_repository, "content_repository", None),
+    )
     authority_capability = create_authority_capability(authority_repository)
     if evidence_repository is None:
         raise ValueError("An evidence repository is required for the canonical civic-action slice")
