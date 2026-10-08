@@ -91,6 +91,7 @@ def create_surface_case_composition(
     document_review_repository=None,
     artifact_repository=None,
     blob_store=None,
+    case_content_repository=None,
 ) -> SurfaceCaseComposition:
     """Compose one provider graph for an access surface.
 
@@ -124,10 +125,9 @@ def create_surface_case_composition(
         create_identity_link_repository(provider_composition=provider_composition),
     )
 
-    case_content_repository = runtime_graph.setdefault(
-        "case_content",
-        getattr(case_repository, "content_repository", InMemoryCaseContentRepository()),
-    )
+    # Citizen-authored content is surface-local by design; durable Case state is shared,
+    # but sensitive narrative/claims never become shared provider state.
+    case_content_repository = case_content_repository or InMemoryCaseContentRepository()
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
