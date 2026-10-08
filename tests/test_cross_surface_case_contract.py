@@ -80,7 +80,7 @@ def test_cross_surface_identity_creates_and_retrieves_same_case_with_ownership_i
             principal_id="citizen:cross-surface-a",
             identity_mode=IdentityMode.AUTHENTICATED,
             interface="webapp",
-            capabilities=frozenset({CAPABILITY_ID}),
+            capabilities=frozenset({CAPABILITY_ID, "case:write", "case:evidence", "case:consent", "case:review"}),
         )
     )
     citizen_b_web = IdentityContext(
