@@ -194,7 +194,7 @@ def test_web_ready_fails_closed_without_submission_consent(web_state):
     assert created.status_code == 200
     case_id = created.json()["case_id"]
 
-    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={})
+    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=headers, json={})
     assert ready.status_code == 409
