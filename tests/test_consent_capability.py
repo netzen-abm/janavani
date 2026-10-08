@@ -28,7 +28,7 @@ def test_record_submission_consent_persists_and_advances_owned_case():
         identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"),
     ).case
     capability = ConsentCapability(repository=InMemoryConsentRepository(), case_capability=case_capability)
-    result = capability.record_submission_consent("JV-001", scope="office:office-1",
+    result = capability.record_submission_consent(case.case_id, scope="office:office-1",
         identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"))
     assert result.consent.subject_id == "telegram:12345"
     assert result.consent.purpose == PURPOSE_SUBMISSION
