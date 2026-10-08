@@ -27,10 +27,11 @@ def _rust_matrix() -> dict[str, list[str]]:
             "--manifest-path",
             str(RUST_CRATE / "Cargo.toml"),
         ],
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
+    assert result.returncode == 0, result.stderr
     matrix = json.loads(result.stdout)
     return {status: sorted(targets) for status, targets in matrix.items()}
 
