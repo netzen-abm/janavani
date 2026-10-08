@@ -99,7 +99,8 @@ class FakeDeliveryTransport:
 
 def _request(case_id: str, *, artifact_id: str | None = None) -> SubmissionRequest:
     return SubmissionRequest(case_id=case_id, document_id="doc-1", destination_ref="authority:email:example",
-                             consent_scope="email:government", source_channel="web", artifact_id=artifact_id,\n                             external_channel_id="channel-verified")
+                             consent_scope="email:government", source_channel="web", artifact_id=artifact_id,
+                             external_channel_id="channel-verified")
 
 
 def _ack_evidence(case_id: str) -> EvidenceObject:
