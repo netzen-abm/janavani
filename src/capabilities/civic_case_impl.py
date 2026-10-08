@@ -9,6 +9,7 @@ from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
+from src.storage.repositories.case_content import CaseContent, CaseContentRepository, InMemoryCaseContentRepository
 from src.capabilities.civic_case_contract import CivicCaseCreateRequest, CivicCaseResult
 from src.capabilities.civic_case_lifecycle import CivicCaseLifecycleMixin
 
@@ -86,6 +87,11 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         )
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case, principal_id=identity.principal.principal_id)
+        self._content.save(case.case_id, CaseContent(
+            subject=subject, narrative=narrative,
+            claims=tuple(dict(claim) for claim in case.claims),
+            jurisdiction=dict(case.jurisdiction),
+        ), principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
 
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
@@ -124,6 +130,11 @@ class CivicCaseCapability(CivicCaseLifecycleMixin):
         case.add_evidence(evidence_id, event_id=f"event-{uuid4().hex}", occurred_at=now,
                           actor_id=identity.principal.principal_id, source_channel=source_channel)
         self._repository.save(case, principal_id=identity.principal.principal_id)
+        self._content.save(case.case_id, CaseContent(
+            subject=case.subject, narrative=case.narrative,
+            claims=tuple(dict(claim) for claim in case.claims),
+            jurisdiction=dict(case.jurisdiction),
+        ), principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
     def add_document(self, case_id: str, document_id: str, *, identity: IdentityContext,
