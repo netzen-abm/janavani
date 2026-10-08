@@ -55,7 +55,6 @@ impl CivicCase {
     }
 }
 
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DomainError {
