@@ -45,8 +45,10 @@ def _prepared() -> tuple[CivicCaseCapability, InMemoryConsentRepository, InMemor
     cases.start_review(case.case_id, identity=identity)
     cases.add_consent(case.case_id, "consent-delivery-outcome", identity=identity)
     cases.approve(case.case_id, identity=identity)
-    case.document_refs.append("doc-delivery-outcome")
-    cases.save_owned(case, identity=identity)
+    current = cases.get_owned(case.case_id, identity=identity)
+    assert current is not None
+    current.document_refs.append("doc-delivery-outcome")
+    cases.save_owned(current, identity=identity)
     return cases, consents, InMemorySubmissionRepository(), identity, case.case_id
 
 
