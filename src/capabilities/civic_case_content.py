@@ -43,9 +43,9 @@ class CivicCaseContentMixin:
             return None
         content = self._content.get(case_id, principal_id=identity.principal.principal_id)
         if content is not None:
-            # Restore citizen-authored fields transiently; the durable repository may
-            # normalize Case.subject to lifecycle metadata (for example case type).
-            case.subject = content.subject
+            # Keep durable Case.subject as lifecycle metadata. Citizen-authored subject
+            # remains available to document/content consumers without mutating the aggregate
+            # identity used by cross-surface contracts.
             case.narrative = content.narrative
             case.claims = [dict(claim) for claim in content.claims]
             case.jurisdiction = dict(content.jurisdiction)
