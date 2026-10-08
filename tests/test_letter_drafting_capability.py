@@ -60,6 +60,7 @@ def test_letter_draft_persists_into_canonical_review_boundary() -> None:
             subject="Notice and demand for resolution",
             issue="I request a documented response.",
             legal_framework=("Article 21", "Precautionary Principle"),
+            jurisdiction="Kochi",
             evidence_refs=("evidence-1",),
             provenance_refs=("source-1",),
             response_period="28 days",
