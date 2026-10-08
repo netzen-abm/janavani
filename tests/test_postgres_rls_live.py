@@ -123,7 +123,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute("SELECT submission_id FROM public.civic_case_submissions WHERE submission_id = %s", (submission_id,))
                 assert cursor.fetchone() is None
 
-                with pytest.raises((psycopg.errors.InsufficientPrivilege, psycopg.errors.CheckViolation, psycopg.errors.RaiseException))
+                with pytest.raises((psycopg.errors.InsufficientPrivilege, psycopg.errors.CheckViolation, psycopg.errors.RaiseException)):
                     with connection.transaction():
                         cursor.execute(
                             """
