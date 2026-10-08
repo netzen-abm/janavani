@@ -39,6 +39,8 @@ class DocumentPackageRequest(BaseModel):
 
 class EventRequest(BaseModel):
     source_channel: str | None = None
+    subject: str | None = None
+    narrative: str | None = None
     source_ref: str | None = None
     notes: str | None = None
 
