@@ -134,10 +134,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                             ("rls-forged-" + uuid4().hex, "principal-a"),
                         )
 
-                assert cursor.execute(
+                cursor.execute(
                     "UPDATE public.civic_cases SET subject = 'B must not mutate A' WHERE case_id = %s",
                     (case_id,),
-                ) is None
+                )
                 assert cursor.rowcount == 0
 
                 with pytest.raises(psycopg.errors.InsufficientPrivilege):
