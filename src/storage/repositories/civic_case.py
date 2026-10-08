@@ -23,6 +23,11 @@ class InMemoryCivicCaseRepository:
 
     def __init__(self, store: dict[str, CivicCase] | None = None) -> None:
         self._cases = store if store is not None else {}
+        # Development/test composition keeps transient citizen content beside,
+        # but not inside, the durable Case map. Production providers inject the
+        # content boundary explicitly.
+        from src.storage.repositories.case_content import InMemoryCaseContentRepository
+        self.content_repository = InMemoryCaseContentRepository()
 
     def save(self, case: CivicCase, *, principal_id: str | None = None) -> None:
         from copy import deepcopy
