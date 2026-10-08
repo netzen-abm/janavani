@@ -50,7 +50,7 @@ def test_telegram_preview_data_comes_from_canonical_owned_case():
 
     owned = capability.get_owned(case.case_id, identity=identity)
     assert owned is not None
-    assert owned.subject == CaseType.COMPLAINT.value
+    assert owned.subject == "Water supply"
     assert owned.narrative == "Water supply has stopped."
     assert owned.related_office_id == "office-1"
 
