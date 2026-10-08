@@ -167,4 +167,23 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 assert cursor.rowcount == 1
 
                 cursor.execute("RESET ROLE")
-                cursor.execute(f'DROP ROLE "{role}"')
+                cursor.execute(
+                    sql.SQL("REVOKE ALL PRIVILEGES ON SCHEMA public FROM {}").format(
+                        sql.Identifier(role)
+                    )
+                )
+                for table in (
+                    "civic_cases",
+                    "civic_case_consents",
+                    "civic_case_submissions",
+                    "civic_case_evidence_refs",
+                    "civic_case_document_refs",
+                    "evidence_objects",
+                    "document_artifacts",
+                ):
+                    cursor.execute(
+                        sql.SQL("REVOKE ALL PRIVILEGES ON public.{} FROM {}").format(
+                            sql.Identifier(table), sql.Identifier(role)
+                        )
+                    )
+                cursor.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
