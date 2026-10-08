@@ -66,9 +66,9 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
     submitting = client.post(f"/civic/cases/{case_id}/submitting", headers=_auth_header(), json={})
-    assert submitting.status_code == 200 and submitting.json()["status"] == "submitting"
+    assert submitting.status_code == 409
     queued = client.post(f"/civic/cases/{case_id}/queued", headers=_auth_header(), json={})
-    assert queued.status_code == 200 and queued.json()["status"] == "queued"
+    assert queued.status_code == 409
     submitted = client.post(f"/civic/cases/{case_id}/submit", headers=_auth_header(), json={})
     assert submitted.status_code == 409
 
@@ -76,7 +76,7 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert fetched.status_code == 200
     body = fetched.json()
     assert body["created_by"] == "principal-1"
-    assert body["status"] == "queued"
+    assert body["status"] == "ready"
     assert body["jurisdiction"]["district"] == "Bengaluru Urban"
     assert body["related_organisation_id"] == "org-1"
     assert body["related_official_id"] == "official-1"
