@@ -35,7 +35,7 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
             with connection.cursor() as cursor:
                 cursor.execute(canonical_sql)
                 cursor.execute(idempotency_sql)
-                cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s", ("pg-submit-it-case",))
+                cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s OR idempotency_key IN (%s, %s)", ("pg-submit-it-case", "pg-submit-key", "pg-race-key"))
                 cursor.execute("DELETE FROM civic_cases WHERE case_id = %s", ("pg-submit-it-case",))
                 cursor.execute(
                     """
