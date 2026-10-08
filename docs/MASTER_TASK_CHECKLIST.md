@@ -755,3 +755,49 @@ Split code only when the split creates an independent boundary of change ownersh
 ## Audit evidence
 
 - docs/90-audits/2026-10-07-quick-programming-audit-and-execution-reset.md
+
+
+# 33. ENGINEERING PROOF CYCLE — 2026-10-08
+
+## Current verified state
+
+- [x] Exactly nine active branches verified on GitHub.
+- [x] No tenth branch created.
+- [x] Current main proof-cycle decision record committed: `docs/90-audits/2026-10-08-engineering-proof-cycle-reset.md`.
+- [x] Current Vercel status for proof-cycle commit `fe64478b5cb327f4140672a10ee313e94bf1bdef` is SUCCESS.
+- [ ] Fresh GitHub Actions evidence for that commit.
+- [ ] Real PostgreSQL production-style recovery evidence.
+- [ ] Backup/restore evidence.
+- [ ] Independent deployed Web/API runtime evidence.
+- [ ] Independent deployed Telegram runtime evidence.
+
+## Branch disposition rule
+
+No branch is deleted merely because it is old or divergent. The repository already satisfies the exact-nine invariant. Divergent branches must be selectively mined for still-valid unique work, verified against current contracts, and only then retired when safe branch-deletion capability and evidence are available.
+
+## Proof-cycle architecture freeze
+
+No new universal orchestration layer or duplicate capability implementation is authorized during this cycle.
+
+Split only when there is an independent boundary of:
+- change ownership;
+- trust/security;
+- persistence;
+- provider dependency;
+- independent reuse;
+- independently testable lifecycle/state;
+- external transport/provider dependency.
+
+Preserve cohesion when splitting would duplicate orchestration, fragment invariants, or create competing sources of truth.
+
+## Evidence gate order
+
+1. Canonical correctness: Web vertical slice, Web/Telegram shared capability contract, Python/Rust parity, transaction/concurrency.
+2. PostgreSQL: cross-user RLS isolation, authorization denial, rollback/atomicity, restart/recovery, backup/restore.
+3. Runtime independence: Web/API and Telegram startup, health, provider configuration and failure isolation.
+4. Security/privacy: authorization, consent, expiry/revocation, content persistence boundary, redaction and non-durable document artifacts.
+
+## Release rule
+
+Green static analysis or CI alone is not production certification. Production readiness requires runtime/deployment evidence for every applicable gate above.
+
