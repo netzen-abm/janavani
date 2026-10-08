@@ -6,7 +6,7 @@ from src.capabilities.document_review import DocumentReviewRequest
 from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CIVIC_ACTION, DOCUMENT_REVIEW
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, DOCUMENT_REVIEW
 from src.web.civic_case_models import ArtifactRequest, DocumentPackageRequest, DocumentReviewRequestModel, serialize_draft
 
 router = APIRouter(tags=["Civic Cases"])
