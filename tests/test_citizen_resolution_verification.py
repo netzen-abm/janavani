@@ -35,7 +35,7 @@ def _resolved_case() -> tuple[CivicCaseCapability, IdentityContext, str]:
     capability.add_consent(case.case_id, "consent-1", identity=identity)
     capability.approve(case.case_id, identity=identity)
     capability.transition(case.case_id, action="case:begin_submission", identity=identity)
-    capability.transition(case.case_id, action="case:submit", identity=identity)
+    capability.transition(case.case_id, action="case:submit", identity=identity, explicit_user_approval=True)
     capability.transition(case.case_id, action="case:acknowledge", identity=identity, source_ref="ack-evidence-1")
     case = capability.get_owned(case.case_id, identity=identity)
     case.respond(event_id="event-response", occurred_at="2026-09-10T09:00:00Z", actor_id="authority:example")
