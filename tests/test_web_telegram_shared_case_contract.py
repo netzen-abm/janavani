@@ -112,3 +112,43 @@ def test_web_and_telegram_expose_the_same_letter_drafting_capability() -> None:
     assert isinstance(web.letter_drafting_capability, LetterDraftingCapability)
     assert isinstance(telegram.letter_drafting_capability, LetterDraftingCapability)
     assert type(web.letter_drafting_capability) is type(telegram.letter_drafting_capability)
+
+
+
+def test_one_surface_repository_failure_does_not_contaminate_another() -> None:
+    import pytest
+    from src.storage.repositories.case_content import InMemoryCaseContentRepository
+
+    class UnavailableCaseRepository:
+        def save(self, case, *, principal_id=None):
+            raise RuntimeError("simulated provider outage")
+
+        def get(self, case_id, *, principal_id=None):
+            raise RuntimeError("simulated provider outage")
+
+    unavailable = create_surface_case_composition(
+        case_repository=UnavailableCaseRepository(),
+        case_content_repository=InMemoryCaseContentRepository(),
+    )
+    healthy_repository = InMemoryCivicCaseRepository()
+    healthy = create_surface_case_composition(
+        case_repository=healthy_repository,
+        case_content_repository=healthy_repository.content_repository,
+    )
+    context = identity()
+
+    with pytest.raises(RuntimeError, match="simulated provider outage"):
+        unavailable.case_capability.create(
+            CivicCaseCreateRequest(CaseType.COMPLAINT, "Unavailable", "Provider failed."),
+            identity=context,
+            source_channel="webapp",
+        )
+
+    created = healthy.case_capability.create(
+        CivicCaseCreateRequest(CaseType.COMPLAINT, "Available", "Independent surface remains usable."),
+        identity=context,
+        source_channel="telegram",
+    )
+    assert created.case.subject == "Available"
+    assert healthy.case_repository is healthy_repository
+    assert unavailable.case_repository is not healthy.case_repository
