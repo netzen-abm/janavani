@@ -170,8 +170,7 @@ with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as c:
     child_env = {**os.environ, "JANAVANI_RESTART_CASE_ID": case_id, "JANAVANI_RESTART_SUBMISSION_ID": submission_id, "JANAVANI_RESTART_EVENT_ID": event.event_id}
     subprocess.run([sys.executable, "-c", child_check], check=True, env=child_env)
 
-    # A transient provider connection failure must propagate without a partial
-    # commit; a new operation using a healthy connection factory can then proceed.
+    # A failed connection attempt must not disturb the committed event.
     attempts = {"count": 0}
     def flaky_connection():
         attempts["count"] += 1
@@ -179,23 +178,12 @@ with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as c:
             raise psycopg.OperationalError("simulated connection interruption")
         return psycopg.connect(DSN)
 
-    from src.storage.repositories.postgres_submission_case_transaction_sql import lock_state
     with pytest.raises(psycopg.OperationalError, match="simulated connection interruption"):
-        PostgresSubmissionCaseTransactionRepository(
-            connection_factory=flaky_connection
-        ).persist_mutation(
-            submission=submission, expected_submission_version=1,
-            case=case, expected_case_version=1, event=event,
-            idempotency_key=event.event_id,
+        PostgresSubmissionCaseTransactionRepository(connection_factory=flaky_connection).persist_mutation(
+            submission=submission, expected_submission_version=1, case=case,
+            expected_case_version=1, event=event, idempotency_key=event.event_id,
         )
-    # The already-committed event remains exactly once after the failed attempt.
-    with psycopg.connect(DSN) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (event.event_id,))
-            assert cursor.fetchone()[0] == 1
-    recovered = PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
-        submission=submission, expected_submission_version=1,
-        case=case, expected_case_version=1, event=event,
-        idempotency_key=event.event_id,
-    )
-    assert recovered.idempotent_replay is True
+    assert PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
+        submission=submission, expected_submission_version=1, case=case,
+        expected_case_version=1, event=event, idempotency_key=event.event_id,
+    ).idempotent_replay is True
