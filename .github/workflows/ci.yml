@@ -138,7 +138,14 @@ jobs:
           createdb janavani_restore_test
           pg_restore --exit-on-error --no-owner --no-privileges --dbname=janavani_restore_test "$backup_file"
 
-          for table in civic_cases civic_case_events civic_case_consents civic_case_evidence_refs civic_case_document_refs civic_case_submissions civic_case_audit evidence_objects document_artifacts janavani_delegation_grants janavani_service_identity_policies; do
+          tables=(
+            civic_cases civic_case_events civic_case_consents
+            civic_case_evidence_refs civic_case_document_refs
+            civic_case_submissions civic_case_audit evidence_objects
+            document_artifacts janavani_delegation_grants
+            janavani_service_identity_policies
+          )
+          for table in "${tables[@]}"; do
             source_count="$(psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --dbname=janavani_test -c "SELECT count(*) FROM public.$table")"
             restored_count="$(psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --dbname=janavani_restore_test -c "SELECT count(*) FROM public.$table")"
             if [ "$source_count" != "$restored_count" ]; then
