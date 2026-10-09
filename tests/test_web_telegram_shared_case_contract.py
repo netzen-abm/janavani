@@ -149,6 +149,7 @@ def test_one_surface_repository_failure_does_not_contaminate_another() -> None:
         identity=context,
         source_channel="telegram",
     )
-    assert created.case.subject == "Available"
+    assert created.authorization is AuthorizationDecision.ALLOW
+    assert healthy.case_repository.get(created.case.case_id) is not None
     assert healthy.case_repository is healthy_repository
     assert unavailable.case_repository is not healthy.case_repository
