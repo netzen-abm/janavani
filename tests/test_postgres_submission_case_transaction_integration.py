@@ -165,7 +165,6 @@ with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as c:
 """
     child_env = {**os.environ, "JANAVANI_RESTART_CASE_ID": case_id, "JANAVANI_RESTART_SUBMISSION_ID": submission_id, "JANAVANI_RESTART_EVENT_ID": event.event_id}
     subprocess.run([sys.executable, "-c", child_check], check=True, env=child_env)
-
     # Connection failure propagates; replay after recovery remains idempotent.
     attempts = {"count": 0}
     def flaky_connection():
