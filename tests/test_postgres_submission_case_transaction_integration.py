@@ -170,20 +170,16 @@ with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as c:
     child_env = {**os.environ, "JANAVANI_RESTART_CASE_ID": case_id, "JANAVANI_RESTART_SUBMISSION_ID": submission_id, "JANAVANI_RESTART_EVENT_ID": event.event_id}
     subprocess.run([sys.executable, "-c", child_check], check=True, env=child_env)
 
-    # A failed connection attempt must not disturb the committed event.
+    # Connection failure propagates; replay after recovery remains idempotent.
     attempts = {"count": 0}
     def flaky_connection():
         attempts["count"] += 1
-        if attempts["count"] == 1:
-            raise psycopg.OperationalError("simulated connection interruption")
+        if attempts["count"] == 1: raise psycopg.OperationalError("simulated connection interruption")
         return psycopg.connect(DSN)
-
     with pytest.raises(psycopg.OperationalError, match="simulated connection interruption"):
         PostgresSubmissionCaseTransactionRepository(connection_factory=flaky_connection).persist_mutation(
             submission=submission, expected_submission_version=1, case=case,
-            expected_case_version=1, event=event, idempotency_key=event.event_id,
-        )
+            expected_case_version=1, event=event, idempotency_key=event.event_id)
     assert PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
         submission=submission, expected_submission_version=1, case=case,
-        expected_case_version=1, event=event, idempotency_key=event.event_id,
-    ).idempotent_replay is True
+        expected_case_version=1, event=event, idempotency_key=event.event_id).idempotent_replay is True
