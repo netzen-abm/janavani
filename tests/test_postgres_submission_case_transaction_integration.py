@@ -21,7 +21,6 @@ CANONICAL_MIGRATION = ROOT / "db" / "migrations" / "20260912100000_canonical_cas
 IDEMPOTENCY_MIGRATION = ROOT / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
-
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
 def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_replay():
     psycopg = pytest.importorskip("psycopg")
