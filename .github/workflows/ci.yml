@@ -22,7 +22,13 @@ jobs:
         run: |
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
-            main|integration/canonical-platform|feat/canonical-case-kernel|feat/canonical-capability-execution-envelope|feat/canonical-civic-action-vertical-slice|feat/canonical-sos-contract|feat/capability-scoped-consent-agent-enforcement|audit/postgres-provider-production-gates|chore/ecosystem-shared-capability-infrastructure)
+            main|integration/canonical-platform|feat/canonical-case-kernel|feat/canonical-capability-execution-envelope) 
+              echo "Allowed branch role: $branch"
+              ;;
+            feat/canonical-civic-action-vertical-slice|feat/canonical-sos-contract|feat/capability-scoped-consent-agent-enforcement)
+              echo "Allowed branch role: $branch"
+              ;;
+            audit/postgres-provider-production-gates|chore/ecosystem-shared-capability-infrastructure)
               echo "Allowed branch role: $branch"
               ;;
             *)
