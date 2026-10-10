@@ -21,6 +21,8 @@ from src.storage.repositories.obligation import AuthorityBackedObligationResolve
 from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.identity.linking import ExternalIdentityLinkRepository, InMemoryExternalIdentityLinkRepository, PostgresExternalIdentityLinkRepository
+from src.identity.pairing import InMemoryPairingRepository
+from src.storage.repositories.postgres_identity_pairing import PostgresPairingRepository
 from src.storage.repositories.submission_provider import create_submission_repository as create_submission_repository_for_provider
 
 def create_provider_composition() -> ProviderComposition:
@@ -98,3 +100,23 @@ def create_responsibility_resolver(authority_repository: AuthorityRepository):
 
 def create_obligation_resolver(authority_repository: AuthorityRepository, records: dict[str, list[dict[str, object]]] | None = None):
     return AuthorityBackedObligationResolver(records or {})
+
+def create_identity_pairing_repository(
+    *, provider_composition: ProviderComposition | None = None,
+    identity_link_repository: ExternalIdentityLinkRepository | None = None,
+):
+    """Choose pairing persistence consistently with external identity persistence."""
+    composition = provider_composition or create_provider_composition()
+    if composition.provider_for("external_identity_links") == "postgres":
+        runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+        identity_dsn = os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
+        if runtime_mode == "production" and not identity_dsn:
+            raise ValueError("JANAVANI_IDENTITY_LINKS_DSN is required for production pairing")
+        dsn = identity_dsn or os.getenv("JANAVANI_POSTGRES_DSN")
+        if not dsn:
+            raise ValueError("Identity PostgreSQL DSN is required for pairing")
+        return PostgresPairingRepository(dsn=dsn)
+    links = identity_link_repository or create_identity_link_repository(
+        provider_composition=composition
+    )
+    return InMemoryPairingRepository(identity_link_repository=links)
