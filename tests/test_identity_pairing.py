@@ -86,16 +86,12 @@ def test_pairing_persists_only_a_digest_and_never_exposes_code_in_repository_sta
 
 def test_identity_resolver_accepts_only_the_confirmed_link():
     links = InMemoryExternalIdentityLinkRepository()
-    _, service = setup_pairing()
+    repository = InMemoryPairingRepository(identity_link_repository=links)
+    service = IdentityPairingService(repository)
     challenge = service.issue(principal_id="citizen:one", now=NOW)
     service.claim_telegram(challenge.code, telegram_subject="tg:123", now=NOW)
-    identity = service.confirm_from_web(challenge.pairing_id, principal_id="citizen:one",
-                                        explicit_confirmation=True, now=NOW)
-    IdentityLinkingService(links).link_verified(
-        IdentityLinkRequest(
-            principal_id=identity.principal_id, provider=identity.provider, subject=identity.subject,
-            authentication_method=identity.authentication_method,
-        ),
-        verified=identity.verified,
+    service.confirm_from_web(
+        challenge.pairing_id, principal_id="citizen:one",
+        explicit_confirmation=True, now=NOW,
     )
     assert IdentityLinkResolver(links).resolve("telegram", "tg:123").principal_id == "citizen:one"
