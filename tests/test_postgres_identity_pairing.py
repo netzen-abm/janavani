@@ -51,6 +51,11 @@ def _repositories(dsn):
     # separate processes sharing only PostgreSQL.
     return IdentityPairingService(PostgresPairingRepository(dsn=dsn))
 
+def _connect(dsn):
+    import psycopg
+
+    return psycopg.connect(dsn)
+
 
 def _cleanup(dsn, pairing_ids, subjects):
     import psycopg
@@ -84,7 +89,7 @@ def test_postgres_pairing_is_visible_across_independent_service_instances(pairin
         # A new repository instance must resolve the persisted verified link.
         from src.identity.linking import PostgresExternalIdentityLinkRepository
 
-        links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(dsn))
+        links = PostgresExternalIdentityLinkRepository(lambda: _connect(dsn))
         assert IdentityLinkResolver(links).resolve("telegram", identity.subject).principal_id == claim.principal_id
         with pytest.raises(LookupError):
             resolved.claim_telegram(challenge.code, telegram_subject=f"replay:{secrets.token_hex(8)}")
