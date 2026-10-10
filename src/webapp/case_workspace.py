@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi.responses import Response
-from fasthtml.common import A, Button, Container, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
 from starlette.requests import Request
 
 from src.webapp.services.api_client import client_for_request
@@ -18,7 +18,7 @@ def register_case_workspace_routes(rt) -> None:
         draft = client.prepare_document_draft(case_id)
         return Titled(
             f"Janavani Case {case_id}",
-            Container(
+            Div(
                 H2("Janavani Citizen Case Workspace"),
                 P(f"Case ID: {case['case_id']}"),
                 P(f"Lifecycle status: {case['status']}"),
