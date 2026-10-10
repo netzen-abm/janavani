@@ -143,6 +143,4 @@ def test_telegram_application_composition_registers_handlers_without_polling(mon
     ]
     assert len(registered) >= 6
     assert application.running is False
-    import asyncio
-    asyncio.run(application.shutdown())
 
