@@ -24,7 +24,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     links = context.bot_data.get("identity_link_repository")
     try:
         identity_for_telegram_user(user_id, links=links)
-    except PermissionError:
+    except (PermissionError, LookupError):
         await update.message.reply_text(
             "For your privacy, a Telegram account must be explicitly linked to a "
             "verified Janavani identity before a protected Case can be created. "
