@@ -25,6 +25,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
     artifact_id = "rls-artifact-" + uuid4().hex
     consent_id = "rls-consent-" + uuid4().hex
     submission_id = "rls-submission-" + uuid4().hex
+    identity_subject = "identity-rls-" + uuid4().hex
 
     with psycopg.connect(DSN) as connection:
         with connection.transaction():
@@ -62,7 +63,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(
                     "INSERT INTO public.external_identity_links "
                     "(provider, subject, principal_id, authentication_method, verified) "
-                    "VALUES ('telegram', 'identity-rls-subject', 'principal-a', 'test', true)"
+                    "VALUES ('telegram', %s, 'principal-a', 'test', true)",
+                    (identity_subject,),
                 )
                 cursor.execute(
                     """
@@ -92,7 +94,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
                     "SELECT principal_id FROM public.external_identity_links "
-                    "WHERE provider = 'telegram' AND subject = 'identity-rls-subject'"
+                    "WHERE provider = 'telegram' AND subject = %s",
+                    (identity_subject,),
                 )
                 assert cursor.fetchone() is None
                 with pytest.raises(psycopg.errors.InsufficientPrivilege):
