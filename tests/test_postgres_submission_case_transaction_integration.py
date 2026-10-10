@@ -182,14 +182,14 @@ with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as connection:
 """
     child_env = {**os.environ, "JANAVANI_RESTART_CASE_ID": case_id, "JANAVANI_RESTART_SUBMISSION_ID": submission_id, "JANAVANI_RESTART_EVENT_ID": event.event_id}
     subprocess.run([sys.executable, "-c", child_check], check=True, env=child_env)
-    # Connection failure propagates; replay after recovery remains idempotent.
-    attempts = {"count": 0}
-    def flaky_connection():
-        attempts["count"] += 1
-        if attempts["count"] == 1: raise psycopg.OperationalError("simulated connection interruption")
-        return psycopg.connect(DSN)
-    with pytest.raises(psycopg.OperationalError, match="simulated connection interruption"):
-        PostgresSubmissionCaseTransactionRepository(connection_factory=flaky_connection).persist_mutation(
+    # Terminate a real PostgreSQL backend; failed work must not break replay.
+    def terminated_connection():
+        connection = psycopg.connect(DSN)
+        with psycopg.connect(DSN) as killer:
+            killer.execute("SELECT pg_terminate_backend(%s)", (connection.info.backend_pid,))
+        return connection
+    with pytest.raises(psycopg.OperationalError):
+        PostgresSubmissionCaseTransactionRepository(connection_factory=terminated_connection).persist_mutation(
             submission=submission, expected_submission_version=1, case=case,
             expected_case_version=1, event=event, idempotency_key=event.event_id)
     assert PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
