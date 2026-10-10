@@ -3,6 +3,7 @@ from fasthtml.common import (
     I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li, A,
     fast_app,
 )
+from starlette.requests import Request
 from src.webapp.services.api_client import client_for_request
 
 # Initialize the stateless web interface client
@@ -48,10 +49,20 @@ def get():
     )
 
 @rt("/submit-issue")
-def post(citizen_input: str, request):
+def post(citizen_input: str, request: Request):
     """Sends user text to the backend microservice and displays the structured draft fields."""
-    client = client_for_request(request)
-    result = client.submit_complaint_draft(citizen_input)
+    try:
+        client = client_for_request(request)
+        result = client.submit_complaint_draft(citizen_input)
+    except (RuntimeError, ValueError):
+        return Container(
+            Div(
+                H3("Sign-in required"),
+                P("Authenticate through the Janavani identity gateway before creating a case."),
+                A("Return to dashboard", href="/"),
+                cls="card",
+            )
+        )
     
     if "error" in result:
         return Container(
