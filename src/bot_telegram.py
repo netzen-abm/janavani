@@ -8,6 +8,7 @@ from telegram.ext import (
 
 from core.config import Config
 from commands.check import check
+from commands.cancel import cancel
 from commands.pair import pair
 from commands.start import start
 from commands.search import search
@@ -70,6 +71,8 @@ def build_application(*, token: str | None = None) -> Application:
 
     application.add_handler(CallbackQueryHandler(handle_format))
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", start))
+    application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
