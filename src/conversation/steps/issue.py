@@ -11,7 +11,7 @@ from src.adapters.telegram.identity import identity_for_telegram_user
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Capture the issue and create the canonical Case through shared infrastructure."""
+    """Capture issue transiently; create its Case after authority selection."""
     user = update.effective_user
     if user is None or update.message is None:
         return
@@ -42,21 +42,11 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
-    repository = context.bot_data["case_repository"]
-    case = create_case_from_telegram(
-        repository,
-        identity=identity,
-        subject=session["category"],
-        narrative=user_input,
-        case_capability=context.bot_data["civic_case_capability"],
-    )
-    session["case_id"] = case.case_id
-
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
-        f"🏛 Department: {session['department']}\n"
-        f"🆔 Case: {case.case_id}\n\n"
-        "Your issue is now a Janavani case. You can continue to evidence, document, review and consent steps."
+        f"🏛 Department: {session['department']}\n\n"
+        "Next, choose the document type, district, and a verified authority. "
+        "Janavani will create the Case after the destination is selected."
     )
 
     set_state(user_id, WAITING_FOR_DOCUMENT)
