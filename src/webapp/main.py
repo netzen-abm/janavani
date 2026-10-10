@@ -1,6 +1,6 @@
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, Link, P, Span, Style, Textarea, Titled, Ul, Li,
+    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
     fast_app,
 )
 from starlette.requests import Request
@@ -9,7 +9,6 @@ from src.webapp.services.api_client import client_for_request
 # Initialize the stateless web interface client
 app, rt = fast_app(
     hdrs=(
-        Link(rel="stylesheet", href="https://jsdelivr.net"),
         Style("""
             body { padding: 2rem 0; background-color: #f8f9fa; }
             .container { max-width: 900px; }
