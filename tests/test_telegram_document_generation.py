@@ -123,3 +123,26 @@ def test_telegram_runtime_and_generation_state_import_cleanly():
 
     assert callable(telegram_runtime.main)
     assert get_handler(WAITING_FOR_GENERATE) is generate.handle_generate
+
+def test_telegram_application_composition_registers_handlers_without_polling(monkeypatch):
+    import src.bot_telegram as runtime
+
+    monkeypatch.setattr(runtime.Config, "TELEGRAM_BOT_TOKEN", "test-token")
+    application = runtime.build_application()
+    assert application.bot_data["surface_case_composition"] is not None
+    assert application.bot_data["civic_case_capability"] is application.bot_data[
+        "surface_case_composition"
+    ].case_capability
+    assert application.bot_data["telegram_generation_dependencies"].identity_link_repository is (
+        application.bot_data["identity_link_repository"]
+    )
+    registered = [
+        handler
+        for handlers in application.handlers.values()
+        for handler in handlers
+    ]
+    assert len(registered) >= 6
+    assert application.running is False
+    import asyncio
+    asyncio.run(application.shutdown())
+
