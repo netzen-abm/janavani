@@ -98,8 +98,9 @@ class _PendingPairing:
 class InMemoryPairingRepository:
     """Deterministic adapter for unit tests and local development only."""
 
-    def __init__(self) -> None:
+    def __init__(self, identity_link_repository=None) -> None:
         self._items: dict[str, _PendingPairing] = {}
+        self._identity_link_repository = identity_link_repository
 
     def issue(self, pairing_id: str, token_digest: str, principal_id: str, expires_at: datetime) -> None:
         self._items[pairing_id] = _PendingPairing(pairing_id, token_digest, principal_id, expires_at)
@@ -122,10 +123,13 @@ class InMemoryPairingRepository:
         ):
             return None
         item.confirmed_at = now
-        return ExternalIdentity(
+        identity = ExternalIdentity(
             provider=item.provider, subject=item.subject, principal_id=item.principal_id,
             authentication_method="web_telegram_pairing", verified=True,
         )
+        if self._identity_link_repository is not None:
+            self._identity_link_repository.save(identity)
+        return identity
 
 
 
