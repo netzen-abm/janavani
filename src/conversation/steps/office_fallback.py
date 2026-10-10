@@ -9,7 +9,8 @@ from conversation.constants import (
     WAITING_FOR_PREVIEW
 )
 
-from conversation.steps.preview import handle_preview  # 🔥 IMPORTANT
+from conversation.steps.preview import handle_preview
+from src.commands.shared_case_capability import create_case_for_telegram_session
 
 
 async def handle_office_fallback(
@@ -46,6 +47,15 @@ async def handle_office_fallback(
             "name": "Not Specified",
             "city": session.get("district", "Unknown")
         }
+        try:
+            create_case_for_telegram_session(
+                user_id=user_id, context=context, session=session
+            )
+        except (LookupError, ValueError, PermissionError):
+            await update.message.reply_text(
+                "The Case could not be created safely. Please restart after identity linking."
+            )
+            return
 
         await update.message.reply_text(
             "✅ Continuing without specific office."
