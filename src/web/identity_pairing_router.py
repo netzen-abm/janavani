@@ -17,11 +17,15 @@ from src.platform.composition import (
 
 router = APIRouter(prefix="/civic/identity-pairings", tags=["Identity Pairing"])
 _providers = create_provider_composition()
-_identity_links = create_identity_link_repository(provider_composition=_providers)
-_pairing_repository = create_identity_pairing_repository(
-    provider_composition=_providers, identity_link_repository=_identity_links
-)
-_pairing_service = IdentityPairingService(_pairing_repository)
+_pairing_service = None
+# In-memory repositories are process-local and cannot link independently deployed
+# Web and Telegram surfaces. Cross-surface pairing requires shared PostgreSQL.
+if _providers.provider_for("external_identity_links") == "postgres":
+    _identity_links = create_identity_link_repository(provider_composition=_providers)
+    _pairing_repository = create_identity_pairing_repository(
+        provider_composition=_providers, identity_link_repository=_identity_links
+    )
+    _pairing_service = IdentityPairingService(_pairing_repository)
 
 
 class ConfirmPairingRequest(BaseModel):
@@ -34,6 +38,8 @@ async def issue_pairing(
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, str]:
     """Issue a short-lived code; the caller must be authenticated."""
+    if _pairing_service is None:
+        raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     challenge = _pairing_service.issue(principal_id=context.principal.principal_id)
@@ -52,6 +58,8 @@ async def confirm_pairing(
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, object]:
     """Confirm only for the same authenticated principal that issued the code."""
+    if _pairing_service is None:
+        raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     try:
         identity = _pairing_service.confirm_from_web(
             pairing_id,
