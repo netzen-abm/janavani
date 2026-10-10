@@ -31,7 +31,7 @@ def create_canonical_app() -> FastAPI:
     app.include_router(civic_case_router)
     app.include_router(identity_pairing_router)
 
-    static_dir = Path(__file__).resolve().parent / "static"
+    static_dir = Path(__file__).absolute().parent / "static"
 
     @app.get("/app", include_in_schema=False)
     async def citizen_workspace() -> FileResponse:
