@@ -52,7 +52,7 @@ def register_case_workspace_routes(rt) -> None:
         result = client.start_review(case_id, subject=subject, narrative=body)
         return Titled(
             "Draft review saved",
-            Container(
+            Div(
                 H2("Draft saved for review"),
                 P(f"Case {case_id}: {result.get('status', 'review')}"),
                 P("Before marking this case ready, confirm that you intend to download the document and submit it yourself. Janavani will not transmit it."),
@@ -72,7 +72,7 @@ def register_case_workspace_routes(rt) -> None:
         if explicit_confirmation != "yes":
             return Titled(
                 "Consent required",
-                Container(
+                Div(
                     H2("No consent recorded"),
                     P("Tick the explicit confirmation box to record consent."),
                     A("Return to document review", href=f"/cases/{case_id}/prepare"),
@@ -82,7 +82,7 @@ def register_case_workspace_routes(rt) -> None:
         result = client.record_explicit_consent(case_id)
         return Titled(
             "Consent recorded",
-            Container(
+            Div(
                 H2("Explicit consent recorded"),
                 P(f"Case {case_id}: {result.get('status', 'ready')}"),
                 P("No document has been transmitted. You remain responsible for reviewing and sending it."),
@@ -126,7 +126,7 @@ def register_case_workspace_routes(rt) -> None:
         )
         return Titled(
             "Case ready",
-            Container(
+            Div(
                 H2("Case lifecycle updated"),
                 P(f"Case {case_id}: {result.get('status', 'ready')}"),
                 P("Download the document and send it yourself. Janavani does not transmit submissions."),
