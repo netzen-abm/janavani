@@ -19,6 +19,7 @@ def test_canonical_platform_endpoints() -> None:
         "service": "janavani-platform-api",
         "version": "canonical-m3",
         "status": "available",
+        "citizen_workspace": "/app",
         "health": "/liveness",
         "version_endpoint": "/version",
         "openapi": "/openapi.json",
