@@ -37,7 +37,7 @@ You can either use commands
 
 /complaint
 /check <Case ID> — check a Case you own
-/pair <code> — link Telegram from the authenticated WebApp
+/pair <code> — start a pairing attempt; not linked until confirmed
 
 Web citizen workspace: open /app on the Janavani web service.
 Drafts created there stay in your browser until you download or print them.
