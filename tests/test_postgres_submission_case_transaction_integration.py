@@ -159,9 +159,26 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
             assert cursor.fetchone()[0] == 2
 
     # A separate interpreter verifies committed state across a process boundary.
-    child_check = """import os, psycopg
-with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as c:
- with c.cursor() as q: q.execute("SELECT status, version FROM civic_cases WHERE case_id=%s",(os.environ["JANAVANI_RESTART_CASE_ID"],)); assert q.fetchone()==("submitted",2); q.execute("SELECT state, version FROM civic_case_submissions WHERE submission_id=%s",(os.environ["JANAVANI_RESTART_SUBMISSION_ID"],)); assert q.fetchone()==("submitted",2); q.execute("SELECT count(*) FROM civic_case_events WHERE event_id=%s",(os.environ["JANAVANI_RESTART_EVENT_ID"],)); assert q.fetchone()[0]==1
+    child_check = """import os
+import psycopg
+
+with psycopg.connect(os.environ["JANAVANI_POSTGRES_TEST_DSN"]) as connection:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT status, version FROM civic_cases WHERE case_id = %s",
+            (os.environ["JANAVANI_RESTART_CASE_ID"],),
+        )
+        assert cursor.fetchone() == ("submitted", 2)
+        cursor.execute(
+            "SELECT state, version FROM civic_case_submissions WHERE submission_id = %s",
+            (os.environ["JANAVANI_RESTART_SUBMISSION_ID"],),
+        )
+        assert cursor.fetchone() == ("submitted", 2)
+        cursor.execute(
+            "SELECT count(*) FROM civic_case_events WHERE event_id = %s",
+            (os.environ["JANAVANI_RESTART_EVENT_ID"],),
+        )
+        assert cursor.fetchone()[0] == 1
 """
     child_env = {**os.environ, "JANAVANI_RESTART_CASE_ID": case_id, "JANAVANI_RESTART_SUBMISSION_ID": submission_id, "JANAVANI_RESTART_EVENT_ID": event.event_id}
     subprocess.run([sys.executable, "-c", child_check], check=True, env=child_env)
