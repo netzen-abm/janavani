@@ -27,6 +27,10 @@ You can either use commands
 
 /start
 
+/help
+
+/cancel — clear the current workflow and transient in-memory state
+
 /search
 
 /rate
