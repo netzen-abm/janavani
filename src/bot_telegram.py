@@ -20,43 +20,37 @@ from conversation.steps.generate import create_telegram_generation_dependencies
 from src.platform.surface_case_composition import create_surface_case_composition
 
 
-def main():
-    if not Config.TELEGRAM_BOT_TOKEN:
-        raise Exception("TELEGRAM_BOT_TOKEN is not configured.")
+def build_application(*, token: str | None = None) -> Application:
+    """Compose a testable Telegram runtime without starting network polling."""
+    bot_token = token or Config.TELEGRAM_BOT_TOKEN
+    if not bot_token:
+        raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
 
-    print("=" * 60)
-    print("🇮🇳 JANAVANI TELEGRAM BOT")
-    print("=" * 60)
-    print("Starting Bot...")
-    print("=" * 60)
-
-    application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+    application = Application.builder().token(bot_token).build()
 
     # Compose the shared ecosystem graph once at the bot application boundary.
     composition = create_surface_case_composition()
     case_repository = composition.case_repository
     case_capability = composition.case_capability
-    consent_repository = composition.consent_repository
-    evidence_capability = composition.evidence_capability
-    authority_capability = composition.authority_capability
-    civic_action_capability = composition.civic_action_capability
     application.bot_data["surface_case_composition"] = composition
     application.bot_data["case_repository"] = case_repository
     application.bot_data["civic_case_capability"] = case_capability
-    application.bot_data["civic_action_capability"] = civic_action_capability
-    application.bot_data["consent_repository"] = consent_repository
-    application.bot_data["evidence_capability"] = evidence_capability
-    application.bot_data["authority_capability"] = authority_capability
+    application.bot_data["civic_action_capability"] = composition.civic_action_capability
+    application.bot_data["consent_repository"] = composition.consent_repository
+    application.bot_data["evidence_capability"] = composition.evidence_capability
+    application.bot_data["authority_capability"] = composition.authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
     application.bot_data["accountability_feedback_capability"] = AccountabilityFeedbackCapability(
-        create_accountability_feedback_repository(provider_composition=composition.provider_composition)
+        create_accountability_feedback_repository(
+            provider_composition=composition.provider_composition
+        )
     )
     application.bot_data["civic_action_vertical_slice"] = composition.civic_action_vertical_slice
     application.bot_data["telegram_generation_dependencies"] = (
         create_telegram_generation_dependencies(
             case_repository=case_repository,
             case_capability=case_capability,
-            civic_action_capability=civic_action_capability,
+            civic_action_capability=composition.civic_action_capability,
             consent_capability=composition.consent_capability,
             identity_link_repository=composition.identity_link_repository,
         )
@@ -69,9 +63,21 @@ def main():
     application.add_handler(CommandHandler("complaint", complaint))
     application.add_handler(CommandHandler("check", check))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route))
+    return application
 
-    print("✅ Bot Started Successfully")
+
+def main() -> None:
+    """Run the Telegram polling process after composition succeeds."""
+    if not Config.TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
+
     print("=" * 60)
+    print("🇮🇳 JANAVANI TELEGRAM BOT")
+    print("=" * 60)
+    print("Starting Bot...")
+
+    application = build_application(token=Config.TELEGRAM_BOT_TOKEN)
+    print("✅ Bot application composed; starting polling.")
     application.run_polling(drop_pending_updates=True)
 
 
