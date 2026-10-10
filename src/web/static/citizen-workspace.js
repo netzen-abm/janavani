@@ -29,8 +29,15 @@
     const contact = clean(data.contact);
     const isRti = data.kind === "rti";
     const opening = isRti
-      ? "Please treat this as a request for information under the Right to Information Act, 2005, subject to verification of the appropriate public authority, applicable procedure, fee and any lawful exemptions."
-      : "I respectfully submit the following issue for your consideration and request appropriate action within the authority's jurisdiction.";
+      ? [
+          "Please treat this as a request for information under the Right to Information Act, 2005,",
+          "subject to verification of the appropriate public authority, applicable procedure, fee",
+          "and any lawful exemptions."
+        ].join(" ")
+      : [
+          "I respectfully submit the following issue for your consideration and request",
+          "appropriate action within the authority's jurisdiction."
+        ].join(" ");
     return [
       title, "", date, "", "To,", recipient, "[Office address, if known]", "",
       "Subject: " + clean(data.subject), "", "Respected Sir / Madam,", "",
