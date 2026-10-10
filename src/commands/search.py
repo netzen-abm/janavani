@@ -3,12 +3,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.capabilities.authority import AuthorityCapability, AuthorityLookupRequest
-from src.platform.composition import create_authority_capability, create_authority_repository
-
-
-authority_capability: AuthorityCapability = create_authority_capability(
-    create_authority_repository()
-)
 
 
 def _render(results) -> str:
@@ -30,10 +24,18 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     department = context.args[0]
     city = " ".join(context.args[1:])
     try:
+        authority_capability: AuthorityCapability | None = (
+            context.application.bot_data.get("authority_capability")
+        )
+        if authority_capability is None:
+            raise RuntimeError("Canonical authority capability was not composed")
         results = authority_capability.search(
             AuthorityLookupRequest(authority_type=department, city=city)
         )
     except ValueError as exc:
         await update.message.reply_text(str(exc))
+        return
+    except RuntimeError:
+        await update.message.reply_text("Authority search is temporarily unavailable.")
         return
     await update.message.reply_text(_render(results))
