@@ -86,7 +86,7 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `REDIS_HOST` / `REDIS_PORT` | If Redis capability is enabled | If needed | If needed | If needed | Fixture | Runtime infrastructure |
 | `JANAVANI_ARTIFACT_BLOB_ROOT` | Development/local only | Development/local only | No | No | Fixture | Local storage |
 | `JANAVANI_POSTGRES_TEST_DSN` | No | No | No | No | Integration tests | Test-only secret |
-| `JANAVANI_IDENTITY_LINKS_DSN` | If PostgreSQL identity mappings are enabled | No | No | No | Test-only fixture | Dedicated least-privilege identity DB role; required in production |
+| `JANAVANI_IDENTITY_LINKS_DSN` | Yes in production | Yes in production when Telegram identity links are resolved | No | No | Test-only fixture | Dedicated `janavani_identity_service` role; required in production |
 
 The matrix describes intended ownership. A service should not receive a variable merely because another service uses it.
 
