@@ -59,7 +59,7 @@ Example:
 Janavani will guide you step by step.
 
 Privacy reminder: send sensitive details or documents only when necessary.
-A Telegram pairing code must be sent in a private chat and confirmed in the WebApp.
+A pairing code is not a completed link. Confirm only in an authenticated account-linking screen that reports success; this screen is not yet part of every deployment.
 A command being accepted does not mean a complaint was submitted to an authority.
 """
 
