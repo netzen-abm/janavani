@@ -85,6 +85,14 @@ class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
             created_at=now,
             updated_at=now,
         )
+        if request.jurisdiction is not None:
+            case.jurisdiction = dict(request.jurisdiction)
+        case.related_organisation_id = request.related_organisation_id
+        case.related_office_id = request.related_office_id
+        case.related_official_id = request.related_official_id
+        case.related_representative_id = request.related_representative_id
+        if request.claims is not None:
+            case.claims = [dict(claim) for claim in request.claims]
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, decision)
