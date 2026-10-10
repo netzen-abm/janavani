@@ -104,10 +104,14 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.content
 
-    def mark_ready(self, case_id: str) -> dict[str, Any]:
+    def mark_ready(
+        self, case_id: str, *, subject: str | None = None, narrative: str | None = None
+    ) -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases/{case_id}/ready",
-            json={}, headers=self._headers(), timeout=20.0,
+            json={"subject": subject, "narrative": narrative},
+            headers=self._headers(),
+            timeout=20.0,
         )
         response.raise_for_status()
         return response.json()
@@ -129,7 +133,11 @@ class JanavaniWebAPIClient:
 
     def submit_complaint_draft(self, citizen_input: str) -> dict[str, Any]:
         """Deprecated compatibility adapter; submission is never performed by Janavani."""
-        result = self.create_case(subject="Citizen civic issue", narrative=citizen_input)
+        narrative = citizen_input.strip()
+        if not narrative:
+            raise ValueError("Describe the civic issue before creating a Case")
+        subject = " ".join(narrative.splitlines()[0].split())[:120] or "Citizen civic issue"
+        result = self.create_case(subject=subject, narrative=narrative)
         return {"case_id": result["case_id"], "status": result["status"], "delivery": "citizen_download_and_self_send"}
 
     def download_constitutional_objection(
