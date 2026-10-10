@@ -24,9 +24,13 @@ def _bootstrap(connection) -> None:
     idempotency = (
         ROOT / "db/migrations/20260913100000_submission_idempotency_key.sql"
     ).read_text(encoding="utf-8")
+    identity = (
+        ROOT / "db/migrations/20260920100000_external_identity_links.sql"
+    ).read_text(encoding="utf-8")
     with connection.cursor() as cur:
         cur.execute(canonical)
         cur.execute(idempotency)
+        cur.execute(identity)
 
 
 def _set_principal(connection, principal: str) -> None:
