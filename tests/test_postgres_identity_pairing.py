@@ -120,6 +120,8 @@ def test_postgres_pairing_claim_has_exactly_one_winner_under_concurrency(pairing
 
 
 def test_postgres_pairing_refuses_identity_reassignment(pairing_db):
+    import psycopg
+
     dsn = pairing_db
     first, second = _repositories(dsn), _repositories(dsn)
     subject = f"conflict:{secrets.token_hex(12)}"
