@@ -6,7 +6,6 @@ from conversation.state import set_state
 from conversation.constants import WAITING_FOR_DOCUMENT
 
 from src.capabilities.issue_classification import classify_issue
-from src.commands.shared_case_capability import create_case_from_telegram
 from src.adapters.telegram.identity import identity_for_telegram_user
 
 
@@ -24,7 +23,7 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     links = context.bot_data.get("identity_link_repository")
     try:
-        identity = identity_for_telegram_user(user_id, links=links)
+        identity_for_telegram_user(user_id, links=links)
     except PermissionError:
         await update.message.reply_text(
             "For your privacy, a Telegram account must be explicitly linked to a "
