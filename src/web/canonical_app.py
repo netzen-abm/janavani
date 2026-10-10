@@ -41,7 +41,11 @@ def create_canonical_app() -> FastAPI:
             media_type="text/html",
             headers={
                 "Cache-Control": "no-store",
-                "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+                "Content-Security-Policy": (
+                    "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; "
+                    "connect-src 'none'; img-src 'self' data:; base-uri 'none'; "
+                    "form-action 'none'; frame-ancestors 'none'"
+                ),
                 "X-Content-Type-Options": "nosniff",
                 "Referrer-Policy": "no-referrer",
                 "X-Frame-Options": "DENY",
