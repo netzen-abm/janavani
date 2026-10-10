@@ -1,6 +1,6 @@
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li,
+    I, Input, Label, Link, P, Span, Style, Textarea, Titled, Ul, Li,
     fast_app,
 )
 from starlette.requests import Request
@@ -96,8 +96,8 @@ def get_bill_review(bill_code: str):
                 H4("Add Your Personal Observations or Local Context (Optional):"),
                 Textarea(name="comments", placeholder="Enter your comments here to append them to the formal petition...", rows=3),
                 H4("Select Your Official Action Channel:"),
-                Label(Radio(name="format_choice", value="PDF", checked=True), " Download Print-Ready PDF for Official Physical Mail"),
-                Label(Radio(name="format_choice", value="DOCX"), " Download Editable Word Document (.docx) for Local Adjustments"),
+                Label(Input(type="radio", name="format_choice", value="PDF", checked=True), " Download Print-Ready PDF for Official Physical Mail"),
+                Label(Input(type="radio", name="format_choice", value="DOCX"), " Download Editable Word Document (.docx) for Local Adjustments"),
                 Br(),
                 Button("Generate Official Objection Paperwork", type="submit")
             ),
