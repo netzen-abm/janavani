@@ -19,6 +19,11 @@ class CaseCreateRequest(BaseModel):
 class ConsentRequest(BaseModel):
     consent_id: str = Field(min_length=1)
 
+
+class ExplicitConsentRequest(BaseModel):
+    scope: str = Field(default="citizen_download_and_self_send", min_length=1, max_length=120)
+    explicit_confirmation: bool = False
+
 class EvidenceRequest(BaseModel):
     evidence_id: str = Field(min_length=1)
     source_channel: str | None = None
