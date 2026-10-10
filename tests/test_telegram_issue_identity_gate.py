@@ -11,11 +11,14 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
     clear_session(user_id)
     replies = []
 
+    async def reply_text(text):
+        replies.append(text)
+
     update = SimpleNamespace(
         effective_user=SimpleNamespace(id=user_id),
         message=SimpleNamespace(
             text="Sensitive issue details that must not be retained",
-            reply_text=lambda text: replies.append(text),
+            reply_text=reply_text,
         ),
     )
     context = SimpleNamespace(
