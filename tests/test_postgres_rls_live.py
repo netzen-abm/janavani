@@ -38,17 +38,32 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                         sql.Identifier(role), sql.Literal(password)
                     )
                 )
+                cursor.execute(
+                    "CREATE ROLE janavani_identity_service NOLOGIN "
+                    "NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS"
+                )
                 cursor.execute(f'GRANT USAGE ON SCHEMA public TO "{role}"')
                 cursor.execute(f'GRANT SELECT, INSERT, UPDATE ON public.civic_cases TO "{role}"')
                 cursor.execute(f'GRANT SELECT, INSERT, UPDATE ON public.civic_case_consents TO "{role}"')
                 cursor.execute(f'GRANT SELECT, INSERT, UPDATE ON public.civic_case_submissions TO "{role}"')
                 cursor.execute(f'GRANT SELECT, INSERT ON public.civic_case_evidence_refs, public.civic_case_document_refs TO "{role}"')
                 cursor.execute(f'GRANT SELECT ON public.evidence_objects, public.document_artifacts TO "{role}"')
+                # Ordinary application roles can reach the table but cannot
+                # enumerate identity mappings. The dedicated trusted role is
+                # the only role authorized by the identity RLS policy.
+                cursor.execute(f'GRANT SELECT, INSERT, UPDATE ON public.external_identity_links TO "{role}"')
+                cursor.execute("GRANT USAGE ON SCHEMA public TO janavani_identity_service")
+                cursor.execute("GRANT SELECT, INSERT, UPDATE ON public.external_identity_links TO janavani_identity_service")
 
                 # Seed backend-owned case/evidence/document metadata before
                 # switching to the restricted application role. Ordinary clients
                 # cannot register evidence/document metadata directly under the
                 # candidate policy.
+                cursor.execute(
+                    "INSERT INTO public.external_identity_links "
+                    "(provider, subject, principal_id, authentication_method, verified) "
+                    "VALUES ('telegram', 'identity-rls-subject', 'principal-a', 'test', true)"
+                )
                 cursor.execute(
                     """
                     INSERT INTO public.civic_cases
@@ -74,6 +89,27 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     (artifact_id, document_id, case_id),
                 )
                 cursor.execute(f'SET ROLE "{role}"')
+                cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
+                cursor.execute(
+                    "SELECT principal_id FROM public.external_identity_links "
+                    "WHERE provider = 'telegram' AND subject = 'identity-rls-subject'"
+                )
+                assert cursor.fetchone() is None
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    with connection.transaction():
+                        cursor.execute(
+                            "INSERT INTO public.external_identity_links "
+                            "(provider, subject, principal_id, authentication_method, verified) "
+                            "VALUES ('forged', 'subject', 'principal-a', 'test', true)"
+                        )
+                cursor.execute("SET ROLE janavani_identity_service")
+                cursor.execute(
+                    "SELECT principal_id FROM public.external_identity_links "
+                    "WHERE provider = 'telegram' AND subject = 'identity-rls-subject'"
+                )
+                assert cursor.fetchone()[0] == "principal-a"
+                cursor.execute("RESET ROLE")
+                cursor.execute("SET ROLE " + role)
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
                 cursor.execute(
                     """
@@ -186,4 +222,6 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                             sql.Identifier(table), sql.Identifier(role)
                         )
                     )
+                cursor.execute("DROP OWNED BY janavani_identity_service")
+                cursor.execute("DROP ROLE janavani_identity_service")
                 cursor.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
