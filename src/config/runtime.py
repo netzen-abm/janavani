@@ -46,6 +46,10 @@ def validate_runtime_configuration(
         raise RuntimeConfigurationError(
             "Production PostgreSQL providers require JANAVANI_POSTGRES_DSN"
         )
+    if not values.get("JANAVANI_IDENTITY_LINKS_DSN"):
+        raise RuntimeConfigurationError(
+            "Production identity mapping requires dedicated JANAVANI_IDENTITY_LINKS_DSN"
+        )
     if not values.get("JANAVANI_ARTIFACT_S3_BUCKET"):
         raise RuntimeConfigurationError(
             "Production artifact storage requires JANAVANI_ARTIFACT_S3_BUCKET"
