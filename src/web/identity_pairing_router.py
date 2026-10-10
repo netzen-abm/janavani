@@ -5,6 +5,7 @@ from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
@@ -42,7 +43,9 @@ async def issue_pairing(
         raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
-    challenge = _pairing_service.issue(principal_id=context.principal.principal_id)
+    challenge = await run_in_threadpool(
+        _pairing_service.issue, principal_id=context.principal.principal_id
+    )
     return {
         "pairing_id": challenge.pairing_id,
         "code": challenge.code,
@@ -61,7 +64,8 @@ async def confirm_pairing(
     if _pairing_service is None:
         raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     try:
-        identity = _pairing_service.confirm_from_web(
+        identity = await run_in_threadpool(
+            _pairing_service.confirm_from_web,
             pairing_id,
             principal_id=context.principal.principal_id,
             explicit_confirmation=request.explicit_confirmation,
