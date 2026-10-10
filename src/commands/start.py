@@ -31,6 +31,8 @@ You can either use commands
 
 /cancel — clear the current workflow and transient in-memory state
 
+/privacy — explain data handling and privacy limits
+
 /search
 
 /rate
