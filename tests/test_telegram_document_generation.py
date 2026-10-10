@@ -113,3 +113,13 @@ def test_generate_handler_sends_document_then_clears_transient_content(monkeypat
     assert get_state(user_id) == COMPLETED
     assert get_session(user_id).get("_ephemeral_issue") is None
     clear_session(user_id)
+
+
+
+def test_telegram_runtime_and_generation_state_import_cleanly():
+    from conversation.constants import WAITING_FOR_GENERATE
+    from conversation.state_registry import get_handler
+    import src.bot_telegram as telegram_runtime
+
+    assert callable(telegram_runtime.main)
+    assert get_handler(WAITING_FOR_GENERATE) is generate.handle_generate
