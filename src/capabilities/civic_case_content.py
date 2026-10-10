@@ -37,6 +37,19 @@ class CivicCaseContentMixin:
             principal_id=identity.principal.principal_id,
         )
 
+    def clear_transient_content(
+        self, case_id: str, *, identity: IdentityContext
+    ) -> None:
+        """Delete non-durable citizen content after its authorized workflow completes."""
+        case = self._repository.get(
+            case_id, principal_id=identity.principal.principal_id
+        )
+        if case is None or case.created_by != identity.principal.principal_id:
+            raise LookupError("Case not found")
+        self._content.delete(
+            case_id, principal_id=identity.principal.principal_id
+        )
+
     def get_owned(self, case_id: str, *, identity: IdentityContext) -> CivicCase | None:
         case = self._repository.get(case_id, principal_id=identity.principal.principal_id)
         if case is None or case.created_by != identity.principal.principal_id:
