@@ -55,9 +55,19 @@ def create_identity_link_repository(*, provider_composition: ProviderComposition
     """Select the shared identity-link provider at the composition boundary."""
     composition = provider_composition or create_provider_composition()
     if composition.provider_for("external_identity_links") == "postgres":
-        dsn = os.getenv("JANAVANI_POSTGRES_DSN")
+        runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+        identity_dsn = os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
+        if runtime_mode == "production" and not identity_dsn:
+            raise ValueError(
+                "JANAVANI_IDENTITY_LINKS_DSN is required in production; "
+                "identity mappings must use a dedicated least-privilege database role"
+            )
+        dsn = identity_dsn or os.getenv("JANAVANI_POSTGRES_DSN")
         if not dsn:
-            raise ValueError("JANAVANI_POSTGRES_DSN is required for PostgreSQL identity persistence")
+            raise ValueError(
+                "JANAVANI_IDENTITY_LINKS_DSN or JANAVANI_POSTGRES_DSN is required "
+                "for PostgreSQL identity persistence"
+            )
 
         def connect():
             try:
