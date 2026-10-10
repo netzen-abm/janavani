@@ -17,7 +17,8 @@ class JanavaniWebAPIClient:
 
     def __init__(self, *, base_url: str | None = None, identity_assertion: str | None = None) -> None:
         self.base_url = (base_url or os.getenv("JANAVANI_WEB_API_URL", "http://127.0.0.1:8000")).rstrip("/")
-        self.identity_assertion = identity_assertion or os.getenv("JANAVANI_WEB_IDENTITY_ASSERTION")
+        # Never fall back to a process-wide assertion: it would collapse every web citizen into one principal.
+        self.identity_assertion = identity_assertion
 
     def _headers(self) -> dict[str, str]:
         if not self.identity_assertion:
@@ -135,3 +136,15 @@ class JanavaniWebAPIClient:
         """Legacy UI hook retained without reviving the retired dispatch path."""
         del bill_code, comments, format_choice
         return None
+
+
+
+def client_for_request(request: object) -> JanavaniWebAPIClient:
+    """Build a citizen-scoped API client from a trusted gateway assertion cookie.
+
+    The API independently verifies the signature, issuer, audience and expiry.
+    This adapter never treats a cookie value as identity without that verification.
+    """
+    cookies = getattr(request, "cookies", {})
+    assertion = cookies.get("janavani_identity_assertion") if cookies else None
+    return JanavaniWebAPIClient(identity_assertion=assertion)
