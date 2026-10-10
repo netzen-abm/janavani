@@ -96,7 +96,7 @@ Tests use non-secret fixture values. Test credentials must never be copied from 
 
 `JANAVANI_POSTGRES_TEST_DSN` is reserved for external PostgreSQL integration tests.
 
-`JANAVANI_IDENTITY_LINKS_DSN` is a dedicated credential for the external identity mapping repository. In production, identity mapping persistence fails closed without it; do not reuse the general application DSN unless the database role is explicitly constrained to the identity repository's least-privilege access model.
+`JANAVANI_IDENTITY_LINKS_DSN` is a dedicated credential for the external identity mapping repository. In production, identity mapping persistence fails closed without it. The DSN must authenticate as the dedicated `janavani_identity_service` PostgreSQL role, provisioned with `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, and only the required `SELECT`, `INSERT`, and `UPDATE` privileges on `public.external_identity_links`. Do not grant this role to general application roles, and do not reuse the general application DSN.
 
 Local development may use the local artifact provider and local Redis defaults where supported.
 
