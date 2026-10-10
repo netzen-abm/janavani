@@ -82,11 +82,9 @@ def test_postgres_pairing_is_visible_across_independent_service_instances(pairin
         resolved = _repositories(dsn)
         from src.identity.linking import IdentityLinkResolver
         # A new repository instance must resolve the persisted verified link.
-        from src.platform.composition_repositories import create_identity_link_repository
-        from src.storage.provider_composition import ProviderComposition
+        from src.identity.linking import PostgresExternalIdentityLinkRepository
 
-        composition = ProviderComposition.memory_first().with_provider("external_identity_links", "postgres")
-        links = create_identity_link_repository(provider_composition=composition)
+        links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(dsn))
         assert IdentityLinkResolver(links).resolve("telegram", identity.subject).principal_id == claim.principal_id
         with pytest.raises(LookupError):
             resolved.claim_telegram(challenge.code, telegram_subject=f"replay:{secrets.token_hex(8)}")
@@ -135,11 +133,10 @@ def test_postgres_pairing_refuses_identity_reassignment(pairing_db):
                 challenge_two.pairing_id, principal_id=principal_two, explicit_confirmation=True,
             )
         from src.identity.linking import IdentityLinkResolver
-        from src.platform.composition_repositories import create_identity_link_repository
-        from src.storage.provider_composition import ProviderComposition
+        from src.identity.linking import PostgresExternalIdentityLinkRepository
 
-        composition = ProviderComposition.memory_first().with_provider("external_identity_links", "postgres")
-        resolved = IdentityLinkResolver(create_identity_link_repository(provider_composition=composition))
+        links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(dsn))
+        resolved = IdentityLinkResolver(links)
         assert resolved.resolve("telegram", subject).principal_id == principal_one
     finally:
         _cleanup(dsn, [challenge_one.pairing_id, challenge_two.pairing_id], [subject])
