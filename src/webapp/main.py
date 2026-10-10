@@ -55,7 +55,7 @@ def post(citizen_input: str, request: Request):
         client = client_for_request(request)
         result = client.submit_complaint_draft(citizen_input)
     except (RuntimeError, ValueError):
-        return Container(
+        return Div(
             Div(
                 H3("Sign-in required"),
                 P("Authenticate through the Janavani identity gateway before creating a case."),
@@ -65,11 +65,11 @@ def post(citizen_input: str, request: Request):
         )
     
     if "error" in result:
-        return Container(
+        return Div(
             Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
         )
         
-    return Container(
+    return Div(
         Div(
             H2("📁 Civic Case Created"),
             P(f"Case ID: {result.get('case_id')}"),
@@ -86,7 +86,7 @@ def post(citizen_input: str, request: Request):
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
     """Displays targeted bill details alongside dynamic print and email action controls."""
-    return Container(
+    return Div(
         Div(
             H2(f"Constitutional Audit Report: {bill_code}"),
             P("This evaluation screens statutory structures against Article 14 (Equality), Article 19 (Freedom), and Article 21 (Liberty)."),
