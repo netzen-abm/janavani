@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from src.identity.linking import IdentityLinkResolver, InMemoryExternalIdentityLinkRepository, IdentityLinkingService
+from src.identity.linking import IdentityLinkRequest, IdentityLinkResolver, InMemoryExternalIdentityLinkRepository, IdentityLinkingService
 from src.identity.pairing import IdentityPairingService, InMemoryPairingRepository
 
 
@@ -92,7 +92,7 @@ def test_identity_resolver_accepts_only_the_confirmed_link():
     identity = service.confirm_from_web(challenge.pairing_id, principal_id="citizen:one",
                                         explicit_confirmation=True, now=NOW)
     IdentityLinkingService(links).link_verified(
-        __import__("src.identity.linking", fromlist=["IdentityLinkRequest"]).IdentityLinkRequest(
+        IdentityLinkRequest(
             principal_id=identity.principal_id, provider=identity.provider, subject=identity.subject,
             authentication_method=identity.authentication_method,
         ),
