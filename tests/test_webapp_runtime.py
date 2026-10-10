@@ -30,6 +30,8 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     from src.webapp.main import app
 
     class Client:
+        identity_assertion = "test-signed-assertion"
+
         def get_case(self, case_id):
             return {"case_id": case_id, "status": "draft"}
 
@@ -86,4 +88,12 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     assert artifact.status_code == 200
     assert artifact.content == b"%PDF-test-payload"
     assert artifact.headers["cache-control"] == "no-store, private"
+
+def test_case_workspace_requires_request_identity_before_protected_calls():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/cases/case-private/prepare")
+    assert response.status_code == 200
+    assert "Sign-in required" in response.text
+    assert "secure Janavani session" in response.text
 
