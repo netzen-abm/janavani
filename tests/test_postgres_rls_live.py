@@ -216,6 +216,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                     "civic_case_document_refs",
                     "evidence_objects",
                     "document_artifacts",
+                    "external_identity_links",
                 ):
                     cursor.execute(
                         sql.SQL("REVOKE ALL PRIVILEGES ON public.{} FROM {}").format(
