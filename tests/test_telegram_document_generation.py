@@ -143,4 +143,7 @@ def test_telegram_application_composition_registers_handlers_without_polling(mon
     ]
     assert len(registered) >= 6
     assert application.running is False
+    assert application.bot_data["identity_link_repository"] is (
+        application.bot_data["surface_case_composition"].identity_link_repository
+    )
 
