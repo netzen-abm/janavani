@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, _COMPOSITION
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, CONSENT, _COMPOSITION
 _CAPABILITY = CAPABILITY
 _CIVIC_ACTION = CIVIC_ACTION
 _REPOSITORY = _CAPABILITY.repository
@@ -12,7 +12,7 @@ _EVIDENCE_REPOSITORY = getattr(_CAPABILITY, "evidence_repository", None)
 from src.web.composition import create_web_civic_action_composition
 from src.web.civic_case_document_router import router as document_router
 from src.web.civic_case_lifecycle_router import router as lifecycle_router
-from src.web.civic_case_models import CaseCreateRequest, ConsentRequest, EvidenceRequest, event_result, serialize_case
+from src.web.civic_case_models import CaseCreateRequest, ConsentRequest, ExplicitConsentRequest, EvidenceRequest, event_result, serialize_case
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 router.include_router(document_router)
@@ -52,6 +52,35 @@ async def add_consent(case_id: str, request: ConsentRequest, context: IdentityCo
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return {"case_id": result.case.case_id, "consent_refs": list(result.case.consent_refs)}
+
+@router.post("/{case_id}/explicit-consent")
+async def record_explicit_consent(
+    case_id: str,
+    request: ExplicitConsentRequest,
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, object]:
+    """Record a citizen's explicit consent through the canonical consent capability."""
+    if not request.explicit_confirmation:
+        raise HTTPException(status_code=400, detail="Explicit citizen confirmation is required")
+    try:
+        result = CONSENT.record_submission_consent(
+            case_id, scope=request.scope, identity=context
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Case not found") from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "case_id": result.case.case.case_id,
+        "status": result.case.case.status.value,
+        "consent_id": result.consent.consent_id,
+        "scope": request.scope,
+        "consent_recorded": True,
+        "delivery": "citizen_download_and_self_send",
+    }
+
 
 @router.post("/{case_id}/evidence")
 async def add_evidence(case_id: str, request: EvidenceRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
