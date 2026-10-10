@@ -32,6 +32,11 @@ You can either use commands
 /rate
 
 /complaint
+/check <Case ID> — check a Case you own
+/pair <code> — link Telegram from the authenticated WebApp
+
+Web citizen workspace: open /app on the Janavani web service.
+Drafts created there stay in your browser until you download or print them.
 
 ------------------------------------
 
@@ -52,6 +57,10 @@ Example:
 ------------------------------------
 
 Janavani will guide you step by step.
+
+Privacy reminder: send sensitive details or documents only when necessary.
+A Telegram pairing code must be sent in a private chat and confirmed in the WebApp.
+A command being accepted does not mean a complaint was submitted to an authority.
 """
 
     await update.message.reply_text(message)
