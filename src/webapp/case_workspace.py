@@ -27,9 +27,9 @@ def register_case_workspace_routes(rt) -> None:
                 P(draft.get("body", "")),
                 Form(action=f"/cases/{case_id}/review", method="post")(
                     Label("Document subject"),
-                    Textarea(name="subject", required=True, rows=2, value=draft.get("subject", "")),
+                    Textarea(draft.get("subject", ""), name="subject", required=True, rows=2),
                     Label("Document body"),
-                    Textarea(name="body", required=True, rows=10, value=draft.get("body", "")),
+                    Textarea(draft.get("body", ""), name="body", required=True, rows=10),
                     Label("Reason for changes (optional)"),
                     Textarea(name="reason", rows=2),
                     Button("Save reviewed draft", type="submit"),
@@ -93,9 +93,9 @@ def register_case_workspace_routes(rt) -> None:
     @rt("/cases/{case_id}/ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
-        case = client.get_case(case_id)
+        draft = client.prepare_document_draft(case_id)
         result = client.mark_ready(
-            case_id, subject=case.get("subject"), narrative=case.get("narrative")
+            case_id, subject=draft.get("subject"), narrative=draft.get("body")
         )
         return Titled(
             "Case ready",
