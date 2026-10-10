@@ -19,7 +19,7 @@ def test_citizen_workspace_is_served_without_third_party_dependencies(monkeypatc
     assert page.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=()"
     assert page.headers["x-frame-options"] == "DENY"
     assert "Janavani Citizen Workspace" in page.text
-    assert "does not send your details" in page.text
+    assert "does not send your details" in " ".join(page.text.split())
     assert 'src="/app.js"' in page.text
 
     assert script.status_code == 200
