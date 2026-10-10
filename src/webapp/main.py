@@ -1,5 +1,5 @@
 from fasthtml.common import (
-    A, Br, Button, Container, Div, Form, H1, H2, H3, H4, Hidden, Hr,
+    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
     I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li,
     fast_app,
 )
@@ -25,7 +25,7 @@ def get():
     """Render the first-class Janavani WebApp civic Case workspace."""
     return Titled(
         "🇮🇳 Janavani — Citizen Action Hub",
-        Container(
+        Div(
             Div(
                 H1("JANAVANI"),
                 P("Create and review a civic Case through the shared Janavani platform."),
