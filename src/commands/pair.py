@@ -20,8 +20,14 @@ async def pair(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if service is None:
         await message.reply_text("Identity pairing is not configured. Please use the WebApp without linking Telegram.")
         return
+    code = context.args[0]
+    # Pairing codes are short-lived credentials; remove the submitted message when possible.
     try:
-        claim = service.claim_telegram(context.args[0], telegram_subject=str(user.id))
+        await message.delete()
+    except Exception:
+        pass
+    try:
+        claim = service.claim_telegram(code, telegram_subject=str(user.id))
     except (LookupError, ValueError):
         await message.reply_text("That pairing code is invalid, expired, or already used. Generate a new code in the WebApp.")
         return
