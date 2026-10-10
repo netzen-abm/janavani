@@ -15,6 +15,8 @@ def create_case_from_telegram(
     subject: str,
     narrative: str,
     case_capability: CivicCaseCapability | None = None,
+    case_type: CaseType = CaseType.COMPLAINT,
+    related_office_id: str | None = None,
 ) -> CivicCase:
     """Create a Telegram-originated case through shared infrastructure."""
     # The Telegram application passes the canonical composed capability. The
@@ -25,9 +27,10 @@ def create_case_from_telegram(
     # shell in Janavani persistence; never persist the raw narrative.
     return capability.create_shell(
         CivicCaseCreateRequest(
-            case_type=CaseType.COMPLAINT,
+            case_type=case_type,
             subject=subject,
             narrative="",
+            related_office_id=related_office_id,
         ),
         identity=identity,
         source_channel="telegram",
