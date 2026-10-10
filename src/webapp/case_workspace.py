@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi.responses import Response
-from fasthtml.common import A, Button, Container, Form, H2, H3, Label, P, Select, Option, Textarea, Titled
+from fasthtml.common import A, Button, Container, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
 from starlette.requests import Request
 
 from src.webapp.services.api_client import client_for_request
@@ -34,9 +34,6 @@ def register_case_workspace_routes(rt) -> None:
                     Textarea(name="reason", rows=2),
                     Button("Save reviewed draft", type="submit"),
                 ),
-                Form(action=f"/cases/{case_id}/ready", method="post")(
-                    Button("Mark ready after review and consent", type="submit"),
-                ),
                 A("Return to dashboard", href="/"),
             ),
         )
@@ -58,15 +55,45 @@ def register_case_workspace_routes(rt) -> None:
             Container(
                 H2("Draft saved for review"),
                 P(f"Case {case_id}: {result.get('status', 'review')}"),
-                P("Janavani has not sent anything to a government office."),
+                P("Before marking this case ready, confirm that you intend to download the document and submit it yourself. Janavani will not transmit it."),
+                Form(action=f"/cases/{case_id}/consent", method="post")(
+                    Label(
+                        Input(type="checkbox", name="explicit_confirmation", value="yes", required=True),
+                        " I have reviewed this document and consent to prepare it for my own download and submission.",
+                    ),
+                    Button("Confirm consent and mark case ready"),
+                ),
+                A("Continue case review", href=f"/cases/{case_id}/prepare"),
+            ),
+        )
+
+    @rt("/cases/{case_id}/consent")
+    def post_case_consent(case_id: str, request: Request, explicit_confirmation: str = ""):
+        if explicit_confirmation != "yes":
+            return Titled(
+                "Consent required",
+                Container(
+                    H2("No consent recorded"),
+                    P("Tick the explicit confirmation box to record consent."),
+                    A("Return to document review", href=f"/cases/{case_id}/prepare"),
+                ),
+            )
+        client = client_for_request(request)
+        result = client.record_explicit_consent(case_id)
+        return Titled(
+            "Consent recorded",
+            Container(
+                H2("Explicit consent recorded"),
+                P(f"Case {case_id}: {result.get('status', 'ready')}"),
+                P("No document has been transmitted. You remain responsible for reviewing and sending it."),
                 Form(action=f"/cases/{case_id}/artifact", method="post")(
                     Select(name="document_format")(
                         Option("PDF", value="pdf", selected=True),
                         Option("Word document", value="docx"),
                     ),
-                    Button("Download document"),
+                    Button("Download reviewed document"),
                 ),
-                A("Continue case review", href=f"/cases/{case_id}/prepare"),
+                A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
             ),
         )
 
