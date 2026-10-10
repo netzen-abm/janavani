@@ -304,6 +304,23 @@ ALTER TABLE public.janavani_service_identity_policies FORCE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.janavani_service_identity_policies FROM anon, authenticated;
 
+-- External identity mappings are a trusted authentication boundary, not
+-- citizen-readable profile data. Only the dedicated identity DB role may
+-- read or mutate provider-subject -> canonical-principal mappings. The role
+-- must be provisioned separately with NO SUPERUSER, NO BYPASSRLS and table
+-- privileges; the identity DSN must connect as this exact role. If the role
+-- or grants are absent, access fails closed.
+ALTER TABLE public.external_identity_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.external_identity_links FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS external_identity_links_service_only
+    ON public.external_identity_links;
+CREATE POLICY external_identity_links_service_only
+ON public.external_identity_links
+FOR ALL
+USING (current_user = 'janavani_identity_service')
+WITH CHECK (current_user = 'janavani_identity_service');
+
 -- No DELETE policies are intentional: lifecycle/history removal must remain
 -- behind dedicated capability/service boundaries.
 -- FORCE ROW LEVEL SECURITY is required so table ownership cannot silently bypass
