@@ -107,9 +107,9 @@ def get_bill_review(bill_code: str):
     )
 
 @rt("/dispatch-objection")
-def post_dispatch_objection(bill_code: str, comments: str, format_choice: str):
+def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, request: Request):
     """Triggers document streaming back to the browser based on format preferences."""
-    client = JanavaniWebAPIClient()
+    client = client_for_request(request)
     file_bytes = client.download_constitutional_objection(bill_code, comments, format_choice)
     
     if not file_bytes:
