@@ -1,6 +1,6 @@
 from fasthtml.common import (
     A, Br, Button, Container, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li, A,
+    I, Label, Link, P, Radio, Span, Style, Textarea, Titled, Ul, Li,
     fast_app,
 )
 from starlette.requests import Request
