@@ -22,17 +22,26 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please describe the civic issue you want to report.")
         return
 
+    links = context.bot_data.get("identity_link_repository")
+    try:
+        identity = identity_for_telegram_user(user_id, links=links)
+    except PermissionError:
+        await update.message.reply_text(
+            "For your privacy, a Telegram account must be explicitly linked to a "
+            "verified Janavani identity before a protected Case can be created. "
+            "Account linking is not enabled in this runtime, so no Case was created. "
+            "Please do not resend sensitive details until linking is available."
+        )
+        return
+
     session = get_session(user_id)
-    # Raw citizen content is retained only in the process-local Telegram workflow
-    # boundary until the selected action completes. It must never be persisted.
+    # Citizen text is held transiently only after identity prerequisites pass.
     set_ephemeral_issue(user_id, user_input)
 
     classification = classify_issue(user_input)
     session["category"] = classification["category"]
     session["department"] = classification["department"]
 
-    links = context.bot_data["identity_link_repository"]
-    identity = identity_for_telegram_user(user_id, links=links)
     repository = context.bot_data["case_repository"]
     case = create_case_from_telegram(
         repository,
