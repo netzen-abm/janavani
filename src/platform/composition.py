@@ -2,7 +2,7 @@
 from .composition_repositories import (
     create_accountability_feedback_repository, create_authority_repository, create_case_repository,
     create_consent_repository, create_development_authority_repository, create_development_evidence_repository,
-    create_document_review_repository_for_platform, create_evidence_repository, create_external_channel_repository_for_platform, create_identity_link_repository,
+    create_document_review_repository_for_platform, create_evidence_repository, create_external_channel_repository_for_platform, create_identity_link_repository, create_identity_pairing_repository,
     create_obligation_resolver, create_provider_composition, create_responsibility_resolver, create_submission_repository,
 )
 from .composition_capabilities import (
