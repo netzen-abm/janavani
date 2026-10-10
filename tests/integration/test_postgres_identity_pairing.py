@@ -38,13 +38,25 @@ def postgres_pairing():
     subject_prefix = f"test:telegram:{suffix}:"
     repository = PostgresPairingRepository(dsn=dsn)
 
-    # Fail early if migrations have not been applied to this dedicated database.
-    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
-        cur.execute("SELECT to_regclass('public.external_identity_pairings'), to_regclass('public.external_identity_links')")
+    # Apply migrations only to the explicitly configured dedicated test database.
+    # The fixture above refuses production mode and runtime DSNs.
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    migrations = (
+        repo_root / "db/migrations/20260920100000_external_identity_links.sql",
+        repo_root / "db/migrations/20261010120000_external_identity_pairings.sql",
+    )
+    with psycopg.connect(dsn) as conn, conn.transaction(), conn.cursor() as cur:
+        for migration in migrations:
+            cur.execute(migration.read_text(encoding="utf-8"))
+        cur.execute(
+            "SELECT to_regclass('public.external_identity_pairings'), "
+            "to_regclass('public.external_identity_links')"
+        )
         tables = cur.fetchone()
         assert tables == ("external_identity_pairings", "external_identity_links"), (
-            "Apply the external identity links and external identity pairings migrations "
-            "to the dedicated integration-test database before running these tests"
+            "Identity pairing migrations did not create the required test tables"
         )
 
     yield {
