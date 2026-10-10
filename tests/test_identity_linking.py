@@ -40,3 +40,37 @@ def test_identity_link_schema_exists():
     text = migration.read_text(encoding="utf-8")
     assert "external_identity_links" in text
     assert "PRIMARY KEY (provider, subject)" in text
+
+
+def test_production_postgres_identity_provider_requires_dedicated_dsn(monkeypatch):
+    from src.platform.composition_repositories import create_identity_link_repository
+    from src.storage.provider_composition import ProviderComposition
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.setenv("JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER", "postgres")
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://shared-role.invalid/db")
+    monkeypatch.delenv("JANAVANI_IDENTITY_LINKS_DSN", raising=False)
+
+    with pytest.raises(ValueError, match="JANAVANI_IDENTITY_LINKS_DSN is required in production"):
+        create_identity_link_repository(
+            provider_composition=ProviderComposition.memory_first().with_provider(
+                "external_identity_links", "postgres"
+            )
+        )
+
+
+def test_production_postgres_identity_provider_accepts_dedicated_dsn(monkeypatch):
+    from src.platform.composition_repositories import create_identity_link_repository
+    from src.identity.linking import PostgresExternalIdentityLinkRepository
+    from src.storage.provider_composition import ProviderComposition
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.setenv("JANAVANI_IDENTITY_LINKS_DSN", "postgresql://identity-role.invalid/db")
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://shared-role.invalid/db")
+
+    repository = create_identity_link_repository(
+        provider_composition=ProviderComposition.memory_first().with_provider(
+            "external_identity_links", "postgres"
+        )
+    )
+    assert isinstance(repository, PostgresExternalIdentityLinkRepository)
