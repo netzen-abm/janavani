@@ -8,12 +8,26 @@ from starlette.requests import Request
 from src.webapp.services.api_client import client_for_request
 
 
+def _sign_in_required():
+    """Render a safe, user-facing response when no request identity is present."""
+    return Titled(
+        "Sign-in required",
+        Div(
+            H2("Sign-in required"),
+            P("Your secure Janavani session is missing or expired. Sign in again before opening a case."),
+            A("Return to dashboard", href="/"),
+        ),
+    )
+
+
 def register_case_workspace_routes(rt) -> None:
     """Register UI routes that forward each request's verified identity assertion."""
 
     @rt("/cases/{case_id}/prepare")
     def get_case_workspace(case_id: str, request: Request):
         client = client_for_request(request)
+        if not client.identity_assertion:
+            return _sign_in_required()
         case = client.get_case(case_id)
         draft = client.prepare_document_draft(case_id)
         return Titled(
@@ -41,6 +55,8 @@ def register_case_workspace_routes(rt) -> None:
     @rt("/cases/{case_id}/review")
     def post_case_review(case_id: str, request: Request, subject: str, body: str, reason: str = ""):
         client = client_for_request(request)
+        if not client.identity_assertion:
+            return _sign_in_required()
         draft = client.prepare_document_draft(case_id)
         reviewed = client.review_document(
             case_id,
@@ -79,6 +95,8 @@ def register_case_workspace_routes(rt) -> None:
                 ),
             )
         client = client_for_request(request)
+        if not client.identity_assertion:
+            return _sign_in_required()
         result = client.record_explicit_consent(case_id)
         return Titled(
             "Consent recorded",
@@ -100,6 +118,8 @@ def register_case_workspace_routes(rt) -> None:
     @rt("/cases/{case_id}/artifact")
     def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf"):
         client = client_for_request(request)
+        if not client.identity_assertion:
+            return _sign_in_required()
         draft = client.prepare_document_draft(case_id)
         payload = client.generate_artifact(
             case_id, document_id=draft["document_id"], document_format=document_format
@@ -120,6 +140,8 @@ def register_case_workspace_routes(rt) -> None:
     @rt("/cases/{case_id}/ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
+        if not client.identity_assertion:
+            return _sign_in_required()
         draft = client.prepare_document_draft(case_id)
         result = client.mark_ready(
             case_id, subject=draft.get("subject"), narrative=draft.get("body")
