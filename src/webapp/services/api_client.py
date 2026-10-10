@@ -53,10 +53,12 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
-    def start_review(self, case_id: str) -> dict[str, Any]:
+    def start_review(
+        self, case_id: str, *, subject: str | None = None, narrative: str | None = None
+    ) -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases/{case_id}/review",
-            json={},
+            json={"subject": subject, "narrative": narrative},
             headers=self._headers(),
             timeout=20.0,
         )
