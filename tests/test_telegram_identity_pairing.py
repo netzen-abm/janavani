@@ -38,5 +38,6 @@ def test_pair_command_deletes_code_message_and_claims_only_in_private_chat():
     asyncio.run(pair(update, context))
     message.delete.assert_awaited_once()
     response = message.reply_text.await_args.args[0]
-    assert "not linked yet" in response
+    assert "NOT linked" in response
+    assert "Do not assume the accounts are connected" in response
     assert challenge.code not in response
