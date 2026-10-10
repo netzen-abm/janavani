@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123b35">
+<title>Janavani Citizen Workspace</title>
+<style>
+:root{color-scheme:light;--ink:#18332e;--muted:#536a64;--paper:#f5f7f3;--line:#d5e0da;--accent:#176b55;--focus:#d58b25}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:#123b35;color:#fff;padding:1.4rem max(1rem,calc((100vw - 1050px)/2))}header p{margin:.25rem 0;color:#d8e8e2}
+main{max-width:1050px;margin:1.5rem auto;padding:0 1rem 3rem;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem}
+section{background:#fff;border:1px solid var(--line);border-radius:14px;padding:1.2rem;min-width:0}
+h1{font-size:1.5rem;margin:0}h2{font-size:1.15rem;margin:.1rem 0 1rem}
+label{display:block;font-weight:650;margin:.8rem 0 .25rem}input,select,textarea{width:100%;border:1px solid #9aafa7;border-radius:8px;padding:.7rem;font:inherit;color:inherit;background:#fff}
+textarea{min-height:150px;resize:vertical}input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+button{border:0;border-radius:8px;padding:.72rem 1rem;font:inherit;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;margin:.6rem .35rem .1rem 0}
+button.secondary{background:#e6eee9;color:var(--ink);border:1px solid var(--line)}
+.note{padding:.8rem;background:#edf4ef;border-left:4px solid var(--accent);border-radius:4px;color:#284840;font-size:.93rem}
+#draft{white-space:pre-wrap;overflow-wrap:anywhere;min-height:260px;font:15px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#fbfcfa;border:1px solid var(--line);border-radius:8px;padding:1rem}
+footer{max-width:1050px;margin:auto;padding:0 1rem 2rem;color:var(--muted);font-size:.9rem}
+@media(max-width:760px){main{grid-template-columns:1fr;margin-top:1rem}header{padding:1.2rem 1rem}}
+@media print{header,form,.actions,footer,.note{display:none!important}body{background:#fff}main{display:block;margin:0;max-width:none;padding:0}section{border:0;padding:0}#draft{border:0;min-height:0}}
+</style>
+</head>
+<body>
+<header>
+<h1>🇮🇳 Janavani Citizen Workspace</h1>
+<p>The Infrastructure of Citizen Voice</p>
+</header>
+<main>
+<section>
+<h2>Prepare a civic document</h2>
+<p class="note">Privacy by default: this workspace drafts in your browser. It does not send your details to Janavani, an AI provider, or a government office. Review the draft before downloading or printing.</p>
+<form id="draft-form">
+<label for="kind">Document type</label>
+<select id="kind" name="kind"><option value="complaint">Public-service complaint</option><option value="grievance">Grievance representation</option><option value="rti">RTI application</option><option value="petition">Petition / collective request</option><option value="representation">Representation to an authority</option></select>
+<label for="office">Authority / office (if known)</label>
+<input id="office" name="office" maxlength="180" autocomplete="organization" placeholder="e.g. Secretary, Municipal Office">
+<label for="subject">Subject</label>
+<input id="subject" name="subject" maxlength="220" required placeholder="Summarise the issue in one sentence">
+<label for="facts">Facts and timeline</label>
+<textarea id="facts" name="facts" maxlength="12000" required placeholder="What happened, where, when, and what have you already tried? Avoid adding information you do not want included in the document."></textarea>
+<label for="request">Action requested</label>
+<textarea id="request" name="request" maxlength="4000" required placeholder="What specific action, information, correction, or response are you requesting?"></textarea>
+<label for="name">Your name (optional)</label>
+<input id="name" name="name" maxlength="160" autocomplete="name">
+<label for="contact">Contact details (optional)</label>
+<input id="contact" name="contact" maxlength="240" autocomplete="email" placeholder="Add only what is necessary for this request">
+<label for="evidence">Evidence / reference list (optional)</label>
+<textarea id="evidence" name="evidence" maxlength="4000" placeholder="List document names, dates, or reference numbers. Do not upload confidential evidence here."></textarea>
+<div class="actions"><button type="submit">Generate draft</button><button class="secondary" type="reset">Clear form</button></div>
+</form>
+</section>
+<section>
+<h2>Review before you use it</h2>
+<p id="status" role="status" aria-live="polite">Your draft will appear here. Nothing is submitted automatically.</p>
+<pre id="draft">JANAVANI — CITIZEN DRAFT
+
+Complete the form and choose “Generate draft”.
+Review every fact, date, legal reference and recipient before use.</pre>
+<div class="actions"><button id="download" type="button" disabled>Download .txt</button><button id="print" class="secondary" type="button" disabled>Print / save PDF</button></div>
+<p class="note">This is a drafting aid, not legal advice, an official form, or proof of submission. RTI requirements, fees, jurisdiction and exemptions vary. Verify the applicable rules and correct public authority before sending.</p>
+</section>
+</main>
+<footer>Janavani does not claim that a document has been submitted or delivered. This first workspace keeps drafts local; authenticated case saving, tracking and cross-surface sync require separately configured identity and persistence services.</footer>
+<script src="/app.js" defer></script>
+</body>
+</html>
