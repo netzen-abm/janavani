@@ -34,7 +34,13 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
     office_id = office.get("office_id") or office.get("id")
     if not case_id or not office_id:
         await update.message.reply_text(
-            "❌ A canonical case and office destination are required before consent can be recorded."
+            "❌ A canonical Case and verified authority are required before consent can be recorded."
+        )
+        return
+    if str(office_id) == "manual":
+        await update.message.reply_text(
+            "Your Case is saved for tracking, but the manually entered office is not verified. "
+            "Use /complaint again and choose a verified authority to generate a document."
         )
         return
 
