@@ -65,6 +65,18 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
+    def record_explicit_consent(
+        self, case_id: str, *, scope: str = "citizen_download_and_self_send"
+    ) -> dict[str, Any]:
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/{case_id}/explicit-consent",
+            json={"scope": scope, "explicit_confirmation": True},
+            headers=self._headers(),
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def add_consent(self, case_id: str, consent_id: str) -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases/{case_id}/consent",
