@@ -9,7 +9,7 @@ from conversation.constants import (
     WAITING_FOR_OFFICE_SELECTION,
 )
 
-from src.services.authority_service import find_authorities
+from src.capabilities.authority import AuthorityCapability, AuthorityLookupRequest
 
 
 async def handle_select_office(
@@ -22,7 +22,15 @@ async def handle_select_office(
     session = get_session(user_id)
     department = session.get("department", "")
 
-    authorities = find_authorities(department, location)
+    capability: AuthorityCapability | None = (
+        context.application.bot_data.get("authority_capability")
+    )
+    if capability is None:
+        await update.message.reply_text("Authority lookup is temporarily unavailable.")
+        return
+    authorities = capability.search(
+        AuthorityLookupRequest(authority_type=department, city=location, limit=5)
+    )
 
     if not authorities:
         await update.message.reply_text(
