@@ -108,7 +108,8 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute("SET ROLE janavani_identity_service")
                 cursor.execute(
                     "SELECT principal_id FROM public.external_identity_links "
-                    "WHERE provider = 'telegram' AND subject = 'identity-rls-subject'"
+                    "WHERE provider = 'telegram' AND subject = %s",
+                    (identity_subject,),
                 )
                 assert cursor.fetchone()[0] == "principal-a"
                 cursor.execute("RESET ROLE")
