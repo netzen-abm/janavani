@@ -43,11 +43,15 @@ def build_application(*, token: str | None = None) -> Application:
     application.bot_data["evidence_capability"] = composition.evidence_capability
     application.bot_data["authority_capability"] = composition.authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
-    pairing_repository = create_identity_pairing_repository(
-        provider_composition=composition.provider_composition,
-        identity_link_repository=composition.identity_link_repository,
-    )
-    application.bot_data["identity_pairing_service"] = IdentityPairingService(pairing_repository)
+    # Pairing across independently deployed processes requires shared PostgreSQL.
+    pairing_service = None
+    if composition.provider_composition.provider_for("external_identity_links") == "postgres":
+        pairing_repository = create_identity_pairing_repository(
+            provider_composition=composition.provider_composition,
+            identity_link_repository=composition.identity_link_repository,
+        )
+        pairing_service = IdentityPairingService(pairing_repository)
+    application.bot_data["identity_pairing_service"] = pairing_service
     application.bot_data["accountability_feedback_capability"] = AccountabilityFeedbackCapability(
         create_accountability_feedback_repository(
             provider_composition=composition.provider_composition
