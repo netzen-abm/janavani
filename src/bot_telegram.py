@@ -10,6 +10,7 @@ from core.config import Config
 from commands.check import check
 from commands.cancel import cancel
 from commands.pair import pair
+from commands.privacy import privacy
 from commands.start import start
 from commands.search import search
 from commands.rate import rate
@@ -73,6 +74,7 @@ def build_application(*, token: str | None = None) -> Application:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(CommandHandler("privacy", privacy))
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
