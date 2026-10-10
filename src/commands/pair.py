@@ -32,7 +32,9 @@ async def pair(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await message.reply_text("That pairing code is invalid, expired, or already used. Generate a new code in the WebApp.")
         return
     await message.reply_text(
-        "Pairing code accepted. Your Telegram account is not linked yet. "
-        "Return to the authenticated Janavani WebApp and explicitly confirm the pairing "
-        f"before it expires. Challenge: {claim.pairing_id}"
+        "Pairing code accepted, but your Telegram account is NOT linked. "
+        "Do not assume the accounts are connected. Finish only through an authenticated "
+        "Janavani account-linking screen that explicitly reports success; if that screen "
+        "is not available in your deployment, request support and generate a new code "
+        "when the feature is enabled. Challenge reference: " + claim.pairing_id
     )
