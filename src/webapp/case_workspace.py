@@ -93,7 +93,10 @@ def register_case_workspace_routes(rt) -> None:
     @rt("/cases/{case_id}/ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
-        result = client.mark_ready(case_id)
+        case = client.get_case(case_id)
+        result = client.mark_ready(
+            case_id, subject=case.get("subject"), narrative=case.get("narrative")
+        )
         return Titled(
             "Case ready",
             Container(
