@@ -210,3 +210,36 @@ jobs:
           END
           $$;
           SQL
+      - name: Prove PostgreSQL service restart durability
+        env:
+          PGHOST: localhost
+          PGUSER: janavani
+          PGPASSWORD: janavani-test
+          PGDATABASE: janavani_test
+        run: |
+          set -euo pipefail
+          container_id="$(docker ps --filter 'ancestor=postgres:16' --format '{{.ID}}' | head -n 1)"
+          test -n "$container_id"
+          before="$(psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.civic_case_events WHERE event_id = 'pg-atomic-event-1'")"
+          test "$before" = "1"
+          docker restart "$container_id"
+          for attempt in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U "$PGUSER" -d "$PGDATABASE"; then break; fi
+            sleep 2
+          done
+          pg_isready -h localhost -p 5432 -U "$PGUSER" -d "$PGDATABASE"
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM public.civic_cases WHERE case_id = 'pg-atomic-case' AND status = 'submitted' AND version = 2) THEN
+              RAISE EXCEPTION 'Case state did not survive PostgreSQL service restart';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM public.civic_case_submissions WHERE submission_id = 'pg-atomic-submission' AND state = 'submitted' AND version = 2) THEN
+              RAISE EXCEPTION 'Submission state did not survive PostgreSQL service restart';
+            END IF;
+            IF (SELECT count(*) FROM public.civic_case_events WHERE event_id = 'pg-atomic-event-1') <> 1 THEN
+              RAISE EXCEPTION 'Lifecycle event count changed after PostgreSQL service restart';
+            END IF;
+          END
+          $$;
+          SQL
