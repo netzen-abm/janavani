@@ -7,6 +7,7 @@ surface-specific behavior and does not make one surface depend on another.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 
 from src.capabilities.authority import AuthorityCapability
 from src.identity.linking import ExternalIdentityLinkRepository
@@ -97,14 +98,23 @@ def create_surface_case_composition(
     artifact_repository = repositories.artifact_repository
     blob_store = repositories.blob_store
 
-    # Citizen-authored content is surface-local by design; durable Case state is shared,
-    # but sensitive narrative/claims never become shared provider state.
+    # Citizen-authored content has its own privacy and persistence contract.
+    # Never let a production process silently accept process-local-only content.
+    runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
     if case_content_repository is None:
-        # Content remains an explicit privacy/persistence boundary. Do not silently
-        # promote citizen-authored narrative into the shared provider graph until a
-        # durable content provider with its own retention/RLS contract is deliberately
-        # selected by the runtime.
+        if runtime_mode == "production":
+            raise ValueError(
+                "Production requires an explicitly configured CaseContentRepository; "
+                "in-memory citizen content is not durable across processes or restarts"
+            )
         case_content_repository = InMemoryCaseContentRepository()
+    elif runtime_mode == "production" and isinstance(
+        case_content_repository, InMemoryCaseContentRepository
+    ):
+        raise ValueError(
+            "InMemoryCaseContentRepository is not permitted in production; "
+            "configure a durable adapter with explicit ownership, retention and authorization"
+        )
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
