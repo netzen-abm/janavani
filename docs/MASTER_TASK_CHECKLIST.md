@@ -1,8 +1,8 @@
 # 🇮🇳 JANAVANI — MASTER TASK CHECKLIST
 
 **Status:** LIVE MASTER CONTROL DOCUMENT  
-**Version:** 1.2  
-**Date:** 05 October 2026  
+**Version:** 1.3  
+**Date:** 11 October 2026  
 **Scope:** COMPLETE JANAVANI ECOSYSTEM — NOT AN MVP
 
 **Purpose:** Single authoritative checklist for tracking the complete Janavani ecosystem. It records master workstreams, subtasks, dependencies, verification status, and completion evidence.
@@ -66,6 +66,65 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 - Consent/agent and PostgreSQL-gate branches contain unique work but are based on old generations; re-evaluate against current contracts before integration.
 - PR #203 remains a convergence review vehicle and is not merge-ready merely because it is mergeable.
 
+
+## 0B. LIVE REBASELINE — 11 OCTOBER 2026
+
+**Status:** ACTIVE REBASELINE — supersedes older checklist statements about the current physical branch count and current PR security workflow; dated material remains as historical evidence.
+
+**Audit record:** [2026-10-11 live rebaseline and code audit](90-audits/2026-10-11-live-rebaseline-and-code-audit.md)
+
+### Live baseline
+
+- [x] Canonical `main` SHA recorded: `0fb4c50d188811bed700555e1ed82735adef790e`.
+- [x] Main-tree source inventory: 1,048 tree entries; 292 active `.py/.rs` files under `src/`, `api/`, and `crates/` after archive/historical exclusions.
+- [x] CI has an active-source line guard at 180 lines.
+- [x] Latest observed PR #204 head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed the canonical CI test job, including the line guard, smoke, Web vertical-slice, Web/Telegram shared capability, full canonical suite, live PostgreSQL RLS, identity-pairing, backup/restore and restart-durability gates.
+- [x] Docker, Architecture Guard, Security CI and Dependency Review were green for that observed PR head.
+- [x] CodeQL workflow regression was identified; its job has been restored on `chore/ecosystem-shared-capability-infrastructure` in commit `a790ddc294ed40e9113df0fe1e2ff7a5a9fd8789`.
+- [ ] Re-run and inspect fresh checks after the CodeQL restoration; prior green checks predate the restoration.
+- [ ] The live repository currently has **10 physical branches**, not nine, because an extra `audit/2026-10-11-live-rebaseline` branch was accidentally created during the audit. The exact-nine invariant is therefore BLOCKED until that extra ref is archived/deleted and GitHub verifies nine refs.
+- [ ] Deployed Web/API and independent Telegram runtime evidence is not yet verified by this audit.
+
+### Pull-request disposition
+
+- **PR #203:** open/unmerged; convergence review vehicle, not a wholesale merge candidate. Compare selectively against current main.
+- **PR #204:** keep draft until fresh CI includes CodeQL and the trusted identity gateway, dedicated least-privilege shared database role, independent protected-data authorization and deployment/runtime gates are reviewed.
+- The `/app` workspace is a local draft / preview / download / print surface; it is not yet a complete persisted Case, submission and tracking experience. Do not call it a full production WebApp.
+
+### Exact branch-recovery action
+
+Use the existing [Branch Retirement workflow](https://github.com/netzen-abm/janavani/actions/workflows/branch-retirement.yml) on `main`, with `execute=true` and confirmation exactly `RETIRE-LEGACY-BRANCHES`. The workflow is designed to archive each non-approved head as a tag before deleting its physical branch ref, then assert that nine refs remain. Review its logs and re-query branches afterwards. The connected GitHub action surface does not offer workflow dispatch or branch-ref deletion, so this session could not execute that operation. Do not claim the nine-branch rule is satisfied until the physical count is verified.
+
+### Current priority order
+
+**P0 — repository and runtime truth**
+1. Retire only the accidental extra audit branch through the guarded workflow; re-verify exactly nine branches.
+2. Verify fresh CodeQL/security/CI outcomes on the updated PR head.
+3. Verify canonical Web/API and Telegram startup, health, provider configuration and mutual failure independence in the actual deployment.
+4. Re-check PostgreSQL RLS/cross-user denials, least-privilege roles, atomicity/rollback, migration behavior, restart/outage recovery and backup/restore against deployment-equivalent configuration.
+
+**P1 — the first complete citizen workflow**
+5. Complete and verify `issue → Case → authority → evidence reference → document → review/correction → explicit consent → submission preparation → acknowledgement/tracking → follow-up/outcome` on Web.
+6. Provide the corresponding Telegram workflow through the same shared capability graph. Telegram remains independently deployed and must not own a duplicate civic domain.
+7. Verify cross-surface Case continuation only once shared identity, authorization and durable persistence are proven together. Keep personal/sensitive content and evidence device-first by default; document generation is not submission, and delivery attempts are not acknowledgements.
+
+**P2 — defect-driven convergence**
+8. Fix the smallest reproducible boundary-local defect. Do not add a generic orchestrator or split cohesive code for line-count cosmetics.
+9. Re-run focused tests, canonical suite and security/runtime gates after each meaningful change; record SHA and direct evidence.
+
+**P3 — expansion**
+10. Expand Mini App, WhatsApp/Messenger, Android/iOS, AI/RAG/Agentic AI, DApp/Web3 and resilient transports only after the proving gates pass. The ecosystem scope remains complete; this is sequencing, not scope reduction.
+
+### Code-responsibility rule reaffirmed
+
+Split only at independent boundaries of change ownership, trust/security, persistence, provider dependency, reuse, lifecycle/state testing, or external transport. Preserve cohesive invariants. The 180-line CI rule is a guard, not permission to fragment responsibilities arbitrarily.
+
+### Next 2 steps
+
+1. **Restore exact-nine branch hygiene and verify the fresh CI/CodeQL results** on the current PR head.
+2. **Verify deployed Web/API + Telegram independently, then finish the same end-to-end civic-action journey across both surfaces** using the existing shared capabilities and explicit consent/persistence controls.
+
+---
 
 ---
 
