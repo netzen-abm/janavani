@@ -110,7 +110,7 @@ def create_surface_case_composition(
             case_content_repository = TransientCaseContentRepository()
         elif runtime_mode == "production":
             raise ValueError(
-                "Production requires an explicit CaseContentRepository or "
+                "Production requires an explicitly configured CaseContentRepository or "
                 "JANAVANI_CASE_CONTENT_POLICY=transient; citizen content is not "
                 "durable Case metadata and must not be persisted by default"
             )
@@ -120,8 +120,8 @@ def create_surface_case_composition(
         case_content_repository, InMemoryCaseContentRepository
     ):
         raise ValueError(
-            "InMemoryCaseContentRepository is for development/tests; use an explicitly "
-            "configured durable adapter or JANAVANI_CASE_CONTENT_POLICY=transient"
+            "InMemoryCaseContentRepository is not permitted in production; use an explicitly "
+            "configured transient policy or a separately approved durable adapter"
         )
     elif isinstance(case_content_repository, TransientCaseContentRepository) and (
         runtime_mode == "production" and content_policy != "transient"
