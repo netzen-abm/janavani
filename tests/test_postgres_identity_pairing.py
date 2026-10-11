@@ -20,6 +20,17 @@ def _dsn() -> str:
     value = os.getenv("JANAVANI_POSTGRES_TEST_DSN", "").strip()
     if not value:
         pytest.skip("JANAVANI_POSTGRES_TEST_DSN is not configured")
+
+    # Never allow the integration gate to migrate or clean up a database that
+    # is also configured as a runtime persistence target.
+    runtime_dsns = {
+        os.getenv("JANAVANI_POSTGRES_DSN", "").strip(),
+        os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip(),
+        os.getenv("JANAVANI_CASE_DATABASE_URL", "").strip(),
+    } - {""}
+    if value in runtime_dsns:
+        pytest.fail("JANAVANI_POSTGRES_TEST_DSN must be separate from every runtime database DSN")
+
     lowered = value.lower()
     if "test" not in lowered and "localhost" not in lowered and "127.0.0.1" not in lowered:
         pytest.fail("Refusing live pairing integration tests: DSN must clearly identify a test/local database")
