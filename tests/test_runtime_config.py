@@ -50,6 +50,9 @@ def test_production_rejects_shared_dsn_for_identity_mapping():
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_POSTGRES_DSN": "postgresql://shared-role.example",
         "JANAVANI_ARTIFACT_S3_BUCKET": "janavani-artifacts",
+        "JANAVANI_IDENTITY_ASSERTION_SECRET": "test-secret",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER": "janavani-identity",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE": "janavani-api",
     }
     with pytest.raises(RuntimeConfigurationError, match="JANAVANI_IDENTITY_LINKS_DSN"):
         validate_runtime_configuration(environment="production", environ=environ)
