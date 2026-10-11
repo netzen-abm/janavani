@@ -83,12 +83,12 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 - [x] Advanced CodeQL job was tested and failed because GitHub default CodeQL setup is enabled (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`, run `38123086974`). The duplicate advanced job was removed again in `b04a2c538f0936d26b6f7ba3d70742a1d41a53f0`.
 - [ ] Re-run and inspect fresh custom security/CI checks after de-duplicating CodeQL; separately verify that default CodeQL analysis is actively completing and current.
 - [ ] The live repository currently has **10 physical branches**, not nine, because an extra `audit/2026-10-11-live-rebaseline` branch was accidentally created during the audit. The exact-nine invariant is therefore BLOCKED until that extra ref is archived/deleted and GitHub verifies nine refs.
-- [ ] Deployed Web/API and independent Telegram runtime evidence is not yet verified by this audit.
+- [ ] Deployed Web/API liveness and independent Telegram runtime evidence remain unverified. Live Render inventory showed only the Web/API service; no Telegram Worker was configured in the connected workspace.
 
 ### Pull-request disposition
 
 - **PR #203:** open/unmerged; convergence review vehicle, not a wholesale merge candidate. Compare selectively against current main.
-- **PR #204:** keep draft until fresh CI includes CodeQL and the trusted identity gateway, dedicated least-privilege shared database role, independent protected-data authorization and deployment/runtime gates are reviewed.
+- **PR #204:** keep draft until fresh CI passes, default CodeQL is verified as actively analyzing (do not combine with the conflicting advanced job), and the trusted identity gateway, dedicated least-privilege shared database role, independent protected-data authorization and deployment/runtime gates are reviewed.
 - The `/app` workspace is a local draft / preview / download / print surface; it is not yet a complete persisted Case, submission and tracking experience. Do not call it a full production WebApp.
 
 ### Exact branch-recovery action
@@ -121,8 +121,8 @@ Split only at independent boundaries of change ownership, trust/security, persis
 
 ### Next 2 steps
 
-1. **Restore exact-nine branch hygiene and verify the fresh CI/CodeQL results** on the current PR head.
-2. **Verify deployed Web/API + Telegram independently, then finish the same end-to-end civic-action journey across both surfaces** using the existing shared capabilities and explicit consent/persistence controls.
+1. **Remove the accidental extra branch through the archive-first Branch Retirement workflow, then verify nine refs and fresh CI/default-CodeQL evidence.**
+2. **Apply and verify `/liveness` on the Render Web/API service; configure the Telegram bot as an independent Worker; then finish the same end-to-end civic-action journey across both surfaces** using shared capabilities and explicit consent/persistence controls.
 
 ---
 
