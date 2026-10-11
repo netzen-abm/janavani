@@ -37,16 +37,17 @@ jobs:
               ;;
           esac
 
-      - name: Enforce physical branch budget on canonical line
-        if: github.ref_name == 'main' && github.event_name == 'push'
+      - name: Enforce physical branch budget on canonical repository
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
-          mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | sed '/^$/d; /^HEAD$/d' | sort)
+          mapfile -t branches < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' | sort)
           count="${#branches[@]}"
-          echo "Observed remote branch refs: $count"
+          echo "Observed physical branch refs in ${GITHUB_REPOSITORY}: $count"
           printf '%s\\n' "${branches[@]}"
           if [ "$count" -ne 9 ]; then
             echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
+            echo "::error::Archive and retire only non-sanctioned branches, then re-run this gate."
             exit 1
           fi
 
