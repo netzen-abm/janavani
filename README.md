@@ -4,7 +4,10 @@
 **Version:** 2.1  
 **Date:** 24 August 2026  
 **Repository:** `netzen-abm/janavani`
-**Public brochure website:** https://netzen-abm.github.io/janavani-website/ (canonical static-site URL; the API and citizen application run separately).
+**Primary public site (current):** https://netzen-abm.github.io/janavani/
+**Brochure / showcase site:** https://netzen-abm.github.io/janavani-website/
+
+The primary site is the current product-facing entry point. The separate brochure/showcase site presents Janavani's mission, vision and public information. The citizen drafting preview currently runs at https://janavani-bot.onrender.com/app; it is a preview, not the complete production WebApp.
 
 ## What is Janavani?
 
