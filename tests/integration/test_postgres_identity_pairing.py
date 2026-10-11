@@ -28,6 +28,7 @@ def postgres_pairing():
     runtime_dsns = {
         os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip(),
         os.getenv("JANAVANI_POSTGRES_DSN", "").strip(),
+        os.getenv("JANAVANI_CASE_DATABASE_URL", "").strip(),
     } - {""}
     if dsn in runtime_dsns:
         pytest.fail("JANAVANI_POSTGRES_TEST_DSN must be a dedicated database, not a runtime DSN")
