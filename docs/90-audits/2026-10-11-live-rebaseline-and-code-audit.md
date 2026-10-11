@@ -94,7 +94,7 @@ Other required gates before merge/release:
 - prove pairing replay/concurrency/link reassignment behavior against PostgreSQL;
 - verify the intended API runtime and independent Telegram worker in the actual deployment environment.
 
-The `/app` addition is deliberately a local drafting workspace: draft, preview, download and print. It does not yet represent a complete Case-persistence, submission and tracking journey. Do not describe it as the full production WebApp.
+PR #204 adds `/app` as a local drafting workspace for draft, preview, download and print. The current deployed `main` revision does not yet contain that route; do not link to or advertise it until the PR is merged, Render has deployed the new revision, and a live route check succeeds. Even then, it is not the complete Case-persistence, submission and tracking journey.
 
 ### PR #203 — canonical platform convergence
 
