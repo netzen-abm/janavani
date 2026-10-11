@@ -1,3 +1,4 @@
+from telegram import BotCommand
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -25,13 +26,33 @@ from src.identity.pairing import IdentityPairingService
 from src.platform.composition import create_identity_pairing_repository
 
 
+async def _set_bot_commands(application: Application) -> None:
+    """Publish the supported command menu so citizens can discover safe controls."""
+    await application.bot.set_my_commands([
+        BotCommand("start", "Start Janavani"),
+        BotCommand("help", "View help and available commands"),
+        BotCommand("complaint", "Start a complaint or grievance workflow"),
+        BotCommand("search", "Find public-service information"),
+        BotCommand("check", "Check a case you own"),
+        BotCommand("pair", "Start account pairing; confirmation is required"),
+        BotCommand("privacy", "Understand data handling and privacy limits"),
+        BotCommand("cancel", "Clear the current in-memory workflow"),
+        BotCommand("rate", "Share feedback about the service"),
+    ])
+
+
 def build_application(*, token: str | None = None) -> Application:
     """Compose a testable Telegram runtime without starting network polling."""
     bot_token = token or Config.TELEGRAM_BOT_TOKEN
     if not bot_token:
         raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
 
-    application = Application.builder().token(bot_token).build()
+    application = (
+        Application.builder()
+        .token(bot_token)
+        .post_init(_set_bot_commands)
+        .build()
+    )
 
     # Compose the shared ecosystem graph once at the bot application boundary.
     composition = create_surface_case_composition()
