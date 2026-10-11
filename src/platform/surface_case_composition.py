@@ -17,45 +17,16 @@ from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
-from src.platform.composition_capabilities import create_civic_action_vertical_slice
-from src.storage.artifact_blob_factory import create_artifact_blob_store
-from src.storage.repositories.case_content import InMemoryCaseContentRepository
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_repository,
-    create_consent_repository,
-    create_evidence_repository,
-    create_identity_link_repository,
-    create_provider_composition,
-)
 from src.platform.composition_capabilities import (
+    create_civic_action_vertical_slice,
     create_authority_capability,
     create_case_capability,
     create_civic_action_capability,
     create_letter_drafting_capability,
     create_consent_capability,
-    create_document_review_repository_for_platform,
 )
+from src.storage.repositories.case_content import InMemoryCaseContentRepository
 
-_PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
-
-
-def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
-    """Return one repository graph per provider composition identity."""
-    key = id(provider_composition)
-    cached = _PROVIDER_RUNTIME_GRAPHS.get(key)
-    if cached is not None and cached[0] is provider_composition:
-        return cached[1]
-    graph: dict[str, object] = {}
-    _PROVIDER_RUNTIME_GRAPHS[key] = (provider_composition, graph)
-    return graph
-
-def _runtime_dependency(graph: dict[str, object], key: str, factory):
-    """Create each shared dependency once without eagerly invoking unused factories."""
-    if key not in graph:
-        graph[key] = factory()
-    return graph[key]
 
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
@@ -104,34 +75,27 @@ def create_surface_case_composition(
     are derived from that same provider graph. Explicit repository injection is
     retained for deterministic tests and deployments with pre-built providers.
     """
-    provider_composition = provider_composition or create_provider_composition()
-    runtime_graph = _provider_runtime_graph(provider_composition)
-    case_repository = case_repository or _runtime_dependency(
-        runtime_graph, "civic_case",
-        lambda: create_case_repository(provider_composition=provider_composition),
+    from src.platform.surface_repository_graph import create_surface_repository_graph
+
+    repositories = create_surface_repository_graph(
+        provider_composition=provider_composition,
+        case_repository=case_repository,
+        authority_repository=authority_repository,
+        evidence_repository=evidence_repository,
+        consent_repository=consent_repository,
+        identity_link_repository=identity_link_repository,
+        artifact_repository=artifact_repository,
+        blob_store=blob_store,
+        document_review_repository=document_review_repository,
     )
-    authority_repository = authority_repository or _runtime_dependency(
-        runtime_graph, "authority",
-        lambda: create_authority_repository(provider_composition=provider_composition),
-    )
-    evidence_repository = evidence_repository or _runtime_dependency(
-        runtime_graph, "evidence",
-        lambda: create_evidence_repository(provider_composition=provider_composition),
-    )
-    consent_repository = consent_repository or _runtime_dependency(
-        runtime_graph, "consent",
-        lambda: create_consent_repository(provider_composition=provider_composition),
-    )
-    artifact_repository = artifact_repository or _runtime_dependency(
-        runtime_graph, "document_artifacts", create_document_artifact_repository,
-    )
-    blob_store = blob_store or _runtime_dependency(
-        runtime_graph, "artifact_blob", create_artifact_blob_store,
-    )
-    identity_link_repository = identity_link_repository or _runtime_dependency(
-        runtime_graph, "external_identity_links",
-        lambda: create_identity_link_repository(provider_composition=provider_composition),
-    )
+    provider_composition = repositories.provider_composition
+    case_repository = repositories.case_repository
+    authority_repository = repositories.authority_repository
+    evidence_repository = repositories.evidence_repository
+    consent_repository = repositories.consent_repository
+    identity_link_repository = repositories.identity_link_repository
+    artifact_repository = repositories.artifact_repository
+    blob_store = repositories.blob_store
 
     # Citizen-authored content is surface-local by design; durable Case state is shared,
     # but sensitive narrative/claims never become shared provider state.
@@ -148,10 +112,7 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
-    review_repository = document_review_repository or _runtime_dependency(
-        runtime_graph, "document_review",
-        lambda: create_document_review_repository_for_platform(provider_composition=provider_composition),
-    )
+    review_repository = repositories.document_review_repository
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,
