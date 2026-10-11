@@ -80,8 +80,8 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 - [x] CI has an active-source line guard at 180 lines.
 - [x] Latest observed PR #204 head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed the canonical CI test job, including the line guard, smoke, Web vertical-slice, Web/Telegram shared capability, full canonical suite, live PostgreSQL RLS, identity-pairing, backup/restore and restart-durability gates.
 - [x] Docker, Architecture Guard, Security CI and Dependency Review were green for that observed PR head.
-- [x] CodeQL workflow regression was identified; its job has been restored on `chore/ecosystem-shared-capability-infrastructure` in commit `a790ddc294ed40e9113df0fe1e2ff7a5a9fd8789`.
-- [ ] Re-run and inspect fresh checks after the CodeQL restoration; prior green checks predate the restoration.
+- [x] Advanced CodeQL job was tested and failed because GitHub default CodeQL setup is enabled (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`, run `38123086974`). The duplicate advanced job was removed again in `b04a2c538f0936d26b6f7ba3d70742a1d41a53f0`.
+- [ ] Re-run and inspect fresh custom security/CI checks after de-duplicating CodeQL; separately verify that default CodeQL analysis is actively completing and current.
 - [ ] The live repository currently has **10 physical branches**, not nine, because an extra `audit/2026-10-11-live-rebaseline` branch was accidentally created during the audit. The exact-nine invariant is therefore BLOCKED until that extra ref is archived/deleted and GitHub verifies nine refs.
 - [ ] Deployed Web/API and independent Telegram runtime evidence is not yet verified by this audit.
 
@@ -99,7 +99,7 @@ Use the existing [Branch Retirement workflow](https://github.com/netzen-abm/jana
 
 **P0 — repository and runtime truth**
 1. Retire only the accidental extra audit branch through the guarded workflow; re-verify exactly nine branches.
-2. Verify fresh CodeQL/security/CI outcomes on the updated PR head.
+2. Verify fresh Security CI/CI outcomes and confirm GitHub's default CodeQL setup is producing current analyses; do not re-enable the conflicting advanced job.
 3. Verify canonical Web/API and Telegram startup, health, provider configuration and mutual failure independence in the actual deployment.
 4. Re-check PostgreSQL RLS/cross-user denials, least-privilege roles, atomicity/rollback, migration behavior, restart/outage recovery and backup/restore against deployment-equivalent configuration.
 
