@@ -11,6 +11,86 @@
 
 > **Completion rule:** A task is not COMPLETE merely because code or documentation exists. Engineering completion requires implementation, tests, repository verification, security/privacy review where applicable, functional verification, and evidence. Design completion is explicitly labelled DESIGN COMPLETE and must not be confused with implementation completion.
 
+
+## 0B. LIVE REBASELINE — 11 OCTOBER 2026
+
+**Audit source:** live GitHub branch inventory, current `main`, current open PRs, current workflow run evidence, and the existing proof-cycle decision record. This section supersedes stale execution assumptions in older checklist sections; historical evidence is retained.
+
+### Current repository baseline
+
+- [x] Default branch is `main` at `0fb4c50d188811bed700555e1ed82735adef790e`.
+- [x] Exactly nine physical branches verified on GitHub.
+- [x] Approved set matches the nine branch names listed in §0A.
+- [x] No new branch was created for this reset.
+- [x] Active-source Python/Rust line-ceiling guard is enforced at 180 lines in CI.
+- [x] Latest observed full CI test job on PR #204 head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed on 11 October 2026, including syntax, line ceiling, static analysis, smoke tests, Web vertical-slice tests, Web/Telegram shared-capability tests, canonical suite, live PostgreSQL RLS isolation, identity pairing, backup/restore integrity, and restart durability.
+- [x] Latest observed Docker, Architecture Guard, Security CI and Dependency Review runs for the same PR head passed.
+- [ ] The above CI evidence is PR-head evidence, not proof that the exact same work has been merged into `main`.
+- [ ] Current deployed Web/API and independent Telegram runtime evidence is still required.
+- [ ] Confirm actual production deployment config, runtime health, provider DSNs/least-privilege roles, and real deployment restart/outage/recovery.
+- [ ] Reconcile current live gate evidence against the older 8 October checklist entry and mark its now-satisfied items only with linked dated evidence.
+
+### Current open pull requests
+
+- **PR #203 — Converge canonical platform infrastructure:** open and unmerged; retain as a convergence/evidence vehicle. Do not merge wholesale: the source branch is divergent from current `main`; extract only code proven absent and still contract-compatible.
+- **PR #204 — Secure identity pairing and citizen workspace:** open and draft. Latest observed CI/security/Docker/architecture/dependency checks are green on the current head, but its explicit remaining merge gates still require review: trusted identity assertions (browser-controlled principal IDs must never be trusted), shared Web/Telegram identity database and least-privilege role, independent authorization audit, cross-user protected-data authorization, replay/concurrency/link reassignment, and confirmation that its workspace is intentionally a local-drafting surface rather than a complete persisted Case workspace.
+- [ ] Do not merge a draft merely because CI is green. Recheck head SHA and every required check immediately before any merge decision.
+
+### Corrected engineering execution order
+
+**P0 — Proof and deployment truth**
+1. Capture and link the full CI run/commit evidence to a dated audit record.
+2. Verify the canonical Web/API deployment and Telegram process independently in their actual target environments. Prove each starts, health-checks, and remains operational if the other is stopped.
+3. Verify runtime environment configuration, shared capability composition, identity database ownership, non-privileged PostgreSQL roles, authorization/RLS denial paths, and truthful failure states.
+4. Repeat PostgreSQL migration/rollback, cross-user isolation, transaction atomicity, restart durability, outage/recovery, and backup/restore gates on the deployment-equivalent configuration—not just CI's ephemeral service.
+
+**P1 — Finish the first usable citizen workflow**
+5. Complete and verify the actual Web citizen workflow: issue → Case → authority → evidence reference → document → review/correction → explicit consent → submission preparation → acknowledgement/tracking → follow-up/outcome. Do not report prepared documents as submitted.
+6. Complete the corresponding Telegram flow through the same shared capability graph. Telegram is independent as a runtime but must not fork business rules.
+7. Verify cross-surface Case continuation only after identity, authorization, and durable storage are proven together. Keep sensitive narratives/evidence out of central persistence by default; the Telegram transport's transient receipt of user messages does not constitute storage permission.
+
+**P2 — Narrow defect remediation**
+8. Investigate failures with reproduction evidence. Fix the smallest boundary-local defect; avoid a generic facade/orchestration layer or new runtime generation.
+9. Re-run relevant focused tests first, then the canonical suite and security/runtime gates. Update this checklist and dated evidence only after observing results.
+
+**P3 — Ecosystem expansion**
+10. After P0/P1 pass: expand Mini App, WhatsApp/Messenger, Android/iOS, AI/RAG/Agentic AI, DApp/Web3 and resilient transports. Preserve complete ecosystem scope; the phased order is not a scope reduction.
+
+### Branch disposition — live state
+
+The live repository currently has exactly these nine branches:
+1. `main`
+2. `integration/canonical-platform`
+3. `audit/postgres-provider-production-gates`
+4. `chore/ecosystem-shared-capability-infrastructure`
+5. `feat/canonical-capability-execution-envelope`
+6. `feat/canonical-case-kernel`
+7. `feat/canonical-civic-action-vertical-slice`
+8. `feat/canonical-sos-contract`
+9. `feat/capability-scoped-consent-agent-enforcement`
+
+No branch should be merged or deleted merely to make the count look tidy. Because the exact-nine invariant is already met, branch deletion is not an immediate task. Preserve divergent refs; compare and selectively extract unique current work only when a specific production blocker requires it. Never force-move a branch as a substitute for safe retirement.
+
+### Code-line and cohesion rule — reaffirmed
+
+The CI guard enforces a maximum of 180 lines for active Python/Rust files under `src/`, `api/`, and `crates/` (archives and historical trees are excluded). This is a review guard, not an instruction to split cohesive domain code arbitrarily. Refactor only when a real boundary of change ownership, trust/security, persistence, provider dependency, independently reusable behavior, independently testable lifecycle/state, or external transport exists. Keep invariants and orchestration together when a split would duplicate decisions or weaken correctness.
+
+### Required status vocabulary
+
+- **Implemented:** source exists.
+- **Tested:** named automated tests passed on an identified commit.
+- **Runtime-verified:** behavior observed in the target runtime.
+- **Production-verified:** runtime, security/privacy, persistence/recovery and deployment gates passed with linked evidence.
+
+Do not conflate these states. Green CI is strong evidence, but is not deployment certification.
+
+### Next 2 steps
+
+1. **Verify live deployment truth** for the canonical Web/API and independent Telegram runtime using the latest code; attach health/startup/provider evidence and prove each surface survives the other's failure.
+2. **Complete the Web + Telegram civic-action vertical slice and cross-surface continuation** using the same shared capabilities, after identity, authorization, PostgreSQL/RLS, artifact non-durability and consent gates are proven together.
+
+---
+
 ## 0A. EXECUTIVE REBASELINE — 08 OCTOBER 2026
 
 **Decision:** Convergence before expansion. The ecosystem scope remains unchanged; the immediate objective is to make one canonical civic-action system correct, durable, testable and reusable across independent surfaces.
