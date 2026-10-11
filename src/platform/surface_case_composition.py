@@ -51,6 +51,12 @@ def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
     _PROVIDER_RUNTIME_GRAPHS[key] = (provider_composition, graph)
     return graph
 
+def _runtime_dependency(graph: dict[str, object], key: str, factory):
+    """Create each shared dependency once without eagerly invoking unused factories."""
+    if key not in graph:
+        graph[key] = factory()
+    return graph[key]
+
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
 
@@ -100,27 +106,31 @@ def create_surface_case_composition(
     """
     provider_composition = provider_composition or create_provider_composition()
     runtime_graph = _provider_runtime_graph(provider_composition)
-    case_repository = case_repository or runtime_graph.setdefault(
-        "civic_case", create_case_repository(provider_composition=provider_composition)
+    case_repository = case_repository or _runtime_dependency(
+        runtime_graph, "civic_case",
+        lambda: create_case_repository(provider_composition=provider_composition),
     )
-    authority_repository = authority_repository or runtime_graph.setdefault(
-        "authority", create_authority_repository(provider_composition=provider_composition)
+    authority_repository = authority_repository or _runtime_dependency(
+        runtime_graph, "authority",
+        lambda: create_authority_repository(provider_composition=provider_composition),
     )
-    evidence_repository = evidence_repository or runtime_graph.setdefault(
-        "evidence", create_evidence_repository(provider_composition=provider_composition)
+    evidence_repository = evidence_repository or _runtime_dependency(
+        runtime_graph, "evidence",
+        lambda: create_evidence_repository(provider_composition=provider_composition),
     )
-    consent_repository = consent_repository or runtime_graph.setdefault(
-        "consent", create_consent_repository(provider_composition=provider_composition)
+    consent_repository = consent_repository or _runtime_dependency(
+        runtime_graph, "consent",
+        lambda: create_consent_repository(provider_composition=provider_composition),
     )
-    artifact_repository = artifact_repository or runtime_graph.setdefault(
-        "document_artifacts", create_document_artifact_repository()
+    artifact_repository = artifact_repository or _runtime_dependency(
+        runtime_graph, "document_artifacts", create_document_artifact_repository,
     )
-    blob_store = blob_store or runtime_graph.setdefault(
-        "artifact_blob", create_artifact_blob_store()
+    blob_store = blob_store or _runtime_dependency(
+        runtime_graph, "artifact_blob", create_artifact_blob_store,
     )
-    identity_link_repository = identity_link_repository or runtime_graph.setdefault(
-        "external_identity_links",
-        create_identity_link_repository(provider_composition=provider_composition),
+    identity_link_repository = identity_link_repository or _runtime_dependency(
+        runtime_graph, "external_identity_links",
+        lambda: create_identity_link_repository(provider_composition=provider_composition),
     )
 
     # Citizen-authored content is surface-local by design; durable Case state is shared,
@@ -138,8 +148,9 @@ def create_surface_case_composition(
         consent_repository=consent_repository,
         case_capability=case_capability,
     )
-    review_repository = document_review_repository or runtime_graph.setdefault(
-        "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
+    review_repository = document_review_repository or _runtime_dependency(
+        runtime_graph, "document_review",
+        lambda: create_document_review_repository_for_platform(provider_composition=provider_composition),
     )
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
