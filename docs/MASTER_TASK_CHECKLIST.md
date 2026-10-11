@@ -869,3 +869,41 @@ Preserve cohesion when splitting would duplicate orchestration, fragment invaria
 
 Green static analysis or CI alone is not production certification. Production readiness requires runtime/deployment evidence for every applicable gate above.
 
+
+
+---
+
+# 34. CURRENT EXECUTION REBASELINE — 11 OCTOBER 2026
+
+**This section supersedes older status statements where they conflict with current live evidence.** Older checklist sections remain as historical records; their branch-count claims must not be read as the current state.
+
+## Site roles — owner-confirmed
+
+- [x] Primary public site for current use: https://netzen-abm.github.io/janavani/
+- [x] Separate brochure/showcase site: https://netzen-abm.github.io/janavani-website/
+- [x] Public repository README on the review branch now distinguishes these roles.
+- [x] A static, responsive primary-site landing page has been added as root `index.html` on the existing review branch. It links to the current citizen drafting preview and labels it as a preview; it does not claim a full production WebApp.
+- [ ] After merge, confirm the GitHub Pages publishing source for `netzen-abm/janavani` is configured to publish the branch/root containing `index.html`; verify deployed metadata, links, mobile layout, keyboard access and reduced-motion behavior.
+- [ ] Keep the brochure repository's page canonicals and sitemap pointing to its own `/janavani-website/` URLs. Do not conflate its SEO identity with the primary site's URL.
+- [ ] Confirm the primary landing page and platform README consistently label the current /app workspace as a drafting preview until persistence/submission/tracking are verified.
+
+## Branch hygiene — current live state
+
+- [ ] **BLOCKED: exact-nine invariant.** The current GitHub branch query returned 10 physical branches, including `audit/2026-10-11-live-rebaseline`.
+- [ ] Run `.github/workflows/branch-retirement.yml` from `main` with `execute=true` and confirmation `RETIRE-LEGACY-BRANCHES`. The workflow must archive the extra branch head before deleting its ref; do not delete one of the nine approved branch roles to satisfy the count.
+- [ ] Re-query GitHub branches after workflow completion and require exactly nine physical refs before marking the invariant complete.
+- [ ] Do not create an additional branch. Continue work on `chore/ecosystem-shared-capability-infrastructure` until the current reviewed changes are either merged or explicitly retired.
+
+## Proof-and-product gates
+
+- [ ] Finish fresh CI after the landing page and checklist/readme updates.
+- [ ] Verify current default CodeQL analysis on the review head; custom Security CI is not a substitute for CodeQL coverage.
+- [ ] Verify the live primary Pages URL renders the new landing page after deployment.
+- [ ] Configure and verify the independent Telegram Worker in Render; a `render.yaml` worker definition is not deployment evidence.
+- [ ] Complete the shared civic-action workflow across Web and Telegram with real identity, authorization, persistence and explicit consent.
+- [ ] Keep PostgreSQL RLS, least-privilege database role, migration/rollback, transaction atomicity, restart/recovery and backup/restore as release gates.
+
+## Responsibility rule
+
+No extra abstractions or arbitrary file-size refactors during the proof cycle. Keep domain invariants and cohesive orchestration together. Separate code only where the separation creates a real boundary of change ownership, trust/security, persistence, provider dependency, independent reuse, lifecycle/state testing or external transport.
+
