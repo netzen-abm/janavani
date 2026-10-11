@@ -42,6 +42,21 @@ def validate_runtime_configuration(
             "Production requires durable persistence providers: " + detail
         )
 
+    identity_assertion_settings = (
+        "JANAVANI_IDENTITY_ASSERTION_SECRET",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE",
+    )
+    missing_identity_settings = [
+        name for name in identity_assertion_settings
+        if not values.get(name, "").strip()
+    ]
+    if missing_identity_settings:
+        raise RuntimeConfigurationError(
+            "Production authenticated identity requires explicit assertion configuration: "
+            + ", ".join(missing_identity_settings)
+        )
+
     if not values.get("JANAVANI_POSTGRES_DSN"):
         raise RuntimeConfigurationError(
             "Production PostgreSQL providers require JANAVANI_POSTGRES_DSN"
