@@ -51,11 +51,20 @@
     header { background: var(--green-dark); color: #fff; border-bottom: 1px solid rgba(255,255,255,.15); }
     .nav { min-height: 78px; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
     .brand { display: inline-flex; align-items: center; gap: .7rem; text-decoration: none; color: white; font-weight: 800; letter-spacing: .04em; }
-    .brand-mark { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold); font-family: Georgia, serif; font-weight: 600; }
+    .brand-mark {
+      display: grid; place-items: center; width: 2.3rem; height: 2.3rem;
+      border: 1px solid var(--gold); border-radius: 50%; color: var(--gold);
+      font-family: Georgia, serif; font-weight: 600;
+    }
     nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1.1rem; }
     nav a { color: #f4f5f0; font-size: .92rem; text-decoration: none; }
     nav a:hover { text-decoration: underline; }
-    .hero { position: relative; overflow: hidden; color: white; background: radial-gradient(ellipse at 82% 18%, rgba(215,173,96,.18), transparent 27%), linear-gradient(125deg, #102e36 0%, #15463f 58%, #1d5b4d 100%); }
+    .hero {
+      position: relative; overflow: hidden; color: white;
+      background:
+        radial-gradient(ellipse at 82% 18%, rgba(215,173,96,.18), transparent 27%),
+        linear-gradient(125deg, #102e36 0%, #15463f 58%, #1d5b4d 100%);
+    }
     .hero-inner { padding-block: clamp(4.4rem, 9vw, 8rem); display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(230px, .55fr); gap: clamp(2rem, 6vw, 5.5rem); align-items: center; }
     .eyebrow { color: var(--gold); text-transform: uppercase; letter-spacing: .18em; font-size: .76rem; font-weight: 800; margin: 0 0 1.2rem; }
     h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 500; line-height: 1.12; }
@@ -67,7 +76,12 @@
     .hero-aside strong { display: block; color: #f1dfbb; font-size: .78rem; text-transform: uppercase; letter-spacing: .13em; margin-bottom: .65rem; }
     .hero-aside p { margin: 0; font-size: .95rem; color: #eef1ea; }
     .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
-    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 999px; padding: .8rem 1.2rem; font-weight: 750; text-decoration: none; transition: transform .15s ease, background .15s ease; }
+    .button {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 48px; border-radius: 999px; padding: .8rem 1.2rem;
+      font-weight: 750; text-decoration: none;
+      transition: transform .15s ease, background .15s ease;
+    }
     .button:hover { transform: translateY(-1px); }
     .button-primary { background: #f0d9a7; color: #17343a; }
     .button-secondary { border: 1px solid rgba(255,255,255,.55); color: white; }
@@ -79,7 +93,11 @@
     .section-head p { margin: 0; color: var(--muted); font-size: 1.06rem; }
     .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
     .card { min-width: 0; padding: 1.4rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; }
-    .number { display: inline-grid; place-items: center; width: 2.3rem; height: 2.3rem; margin-bottom: 1rem; border: 1px solid #9fbaaa; border-radius: 50%; color: var(--green); font-family: Georgia, serif; }
+    .number {
+      display: inline-grid; place-items: center; width: 2.3rem; height: 2.3rem;
+      margin-bottom: 1rem; border: 1px solid #9fbaaa; border-radius: 50%;
+      color: var(--green); font-family: Georgia, serif;
+    }
     .card h3 { margin: 0 0 .65rem; font-size: 1.45rem; }
     .card p { color: var(--muted); margin: 0; }
     .status-band { background: #e9efe9; border-block: 1px solid var(--line); }
@@ -156,7 +174,9 @@
         <div class="section-head">
           <p class="eyebrow">A clearer path from issue to action</p>
           <h2>Turn a concern into a considered next step.</h2>
-          <p>Public problems can be difficult to navigate. Janavani’s intended civic-action pathway makes the steps visible, without confusing a draft, a submission attempt and an official acknowledgement.</p>
+          <p>Public problems can be difficult to navigate. Janavani’s intended civic-action
+          pathway makes the steps visible, without confusing a draft, a submission attempt
+          and an official acknowledgement.</p>
         </div>
         <div class="grid">
           <article class="card">
@@ -183,12 +203,18 @@
         <div>
           <p class="eyebrow">Current availability</p>
           <h2>A useful starting point, with clear limits.</h2>
-          <p>The current online workspace supports local document drafting, preview, download and printing. It is an early product surface, not yet the complete persisted citizen case-management experience.</p>
-          <p>Authenticated case saving, evidence lifecycle, cross-surface continuity, formal submission, acknowledgements and outcome tracking remain subject to implementation and verification.</p>
+          <p>The current online workspace supports local document drafting, preview, download
+          and printing. It is an early product surface, not yet the complete persisted citizen
+          case-management experience.</p>
+          <p>Authenticated case saving, evidence lifecycle, cross-surface continuity, formal
+          submission, acknowledgements and outcome tracking remain subject to implementation
+          and verification.</p>
         </div>
         <aside class="notice">
           <strong>Before you continue</strong>
-          <p>Review all generated text for accuracy. Do not include unnecessary sensitive personal information. The workspace does not submit documents on your behalf; follow the relevant authority’s official process.</p>
+          <p>Review all generated text for accuracy. Do not include unnecessary sensitive
+          personal information. The workspace does not submit documents on your behalf;
+          follow the relevant authority’s official process.</p>
         </aside>
       </div>
     </section>
