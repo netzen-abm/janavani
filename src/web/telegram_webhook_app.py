@@ -1,4 +1,4 @@
-""""Dedicated Telegram webhook runtime for the free-tier Render web service.
+"""Dedicated Telegram webhook runtime for the free-tier Render web service.
 
 Telegram updates are authenticated with Telegram's webhook secret header and
 queued into the existing python-telegram-bot application. Business logic remains
