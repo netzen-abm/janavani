@@ -65,7 +65,7 @@ Do not merge or delete any of the nine sanctioned branches merely to achieve a c
 
 ### PR #204 — secure identity pairing and citizen workspace
 
-PR #204 is open and **draft**. The observed head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed CI, Docker, Architecture Guard, Security CI, and Dependency Review on 11 October 2026. Its test job reported success for:
+PR #204 is open and **draft**. Its head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed the observed CI, Docker, Architecture Guard, Security CI, and Dependency Review runs on 11 October before later audit commits. Its test job reported success for:
 - Python syntax and active-source line limit;
 - smoke tests;
 - canonical Web vertical-slice tests;
@@ -76,9 +76,13 @@ PR #204 is open and **draft**. The observed head `6ff2f2788ead52ee08943b97887f83
 - backup/restore integrity;
 - PostgreSQL restart durability.
 
-These are valuable **PR-head CI test results**, not proof that the same code is merged or deployed in production.
+These are **PR-head CI results**, not proof that the same code is merged or deployed. Fresh checks are required after the audit/configuration commits.
 
-**Merge blocker found:** the PR removes the CodeQL job from `.github/workflows/security-ci.yml`. The remaining Gitleaks, Dependency Review, and OpenSSF Scorecard checks are not a like-for-like replacement for CodeQL source analysis. A comment requesting that CodeQL be restored (or replaced by an explicitly reviewed equivalent) was posted on [PR #204](https://github.com/netzen-abm/janavani/pull/204#issuecomment-6106876537). Keep the PR draft until resolved.
+#### CodeQL configuration finding — corrected
+
+The initial review flagged removal of the advanced CodeQL job as a possible security regression. I then re-added that job briefly and inspected its failure logs. The exact failure was: **`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`** (run [38123086974](https://github.com/netzen-abm/janavani/actions/runs/38123086974), failed CodeQL Analyze job).
+
+Therefore, the correct solution is **one CodeQL configuration mode, not running advanced setup alongside GitHub's enabled default setup**. The conflicting advanced CodeQL job has been removed again in commit `b04a2c538f0936d26b6f7ba3d70742a1d41a53f0`. A correction was posted on [PR #204](https://github.com/netzen-abm/janavani/pull/204#issuecomment-6106911394); it supersedes my earlier premature request to restore the advanced job. Remaining gate: verify that the default CodeQL setup is actively completing current analyses and that fresh Security CI passes. A green custom Security CI run alone is not proof of default CodeQL coverage.
 
 Other required gates before merge/release:
 - verify the trusted identity gateway that issues signed, short-lived assertions; never trust browser-supplied principal IDs;
@@ -97,7 +101,7 @@ PR #203 remains open/unmerged and should not be merged wholesale. It calls for P
 
 ### P0 — runtime truth and security/persistence proof
 1. Clean the extra branch and re-verify nine physical refs.
-2. Restore CodeQL (or an approved equivalent) to the PR security workflow; re-run checks on the latest head.
+2. Verify that GitHub's enabled default CodeQL setup is actively completing analyses. Do not run the conflicting advanced CodeQL job at the same time; re-run custom Security CI after configuration de-duplication.
 3. Verify Web/API and Telegram startup, health, provider configuration and failure independence in deployed environments.
 4. Run deployment-equivalent PostgreSQL cross-user/RLS denial, least-privilege role, migration/rollback, transaction atomicity, restart/outage/recovery and backup/restore checks.
 5. Verify identity/consent expiry and revocation, data redaction, sensitive-content persistence boundary, ephemeral document/artifact handling and honest delivery states.
