@@ -98,7 +98,7 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 
 - **PR #203:** open/unmerged; convergence review vehicle, not a wholesale merge candidate. Compare selectively against current main.
 - **PR #204:** keep draft until fresh CI passes, default CodeQL is verified as actively analyzing (do not combine with the conflicting advanced job), and the trusted identity gateway, dedicated least-privilege shared database role, independent protected-data authorization and deployment/runtime gates are reviewed.
-- The `/app` workspace is a local draft / preview / download / print surface; it is not yet a complete persisted Case, submission and tracking experience. Do not call it a full production WebApp.
+- PR #204 adds a local draft / preview / download / print workspace at `/app`. That route is not present in the currently deployed `main` revision; merge/deploy and runtime verification are required before advertising it. Even after deployment, it is not the complete persisted Case, submission and tracking experience.
 
 ### Exact branch-recovery action
 
@@ -882,10 +882,10 @@ Green static analysis or CI alone is not production certification. Production re
 - [x] Primary public site for current use: https://netzen-abm.github.io/janavani/
 - [x] Separate brochure/showcase site: https://netzen-abm.github.io/janavani-website/
 - [x] Public repository README on the review branch now distinguishes these roles.
-- [x] A static, responsive primary-site landing page has been added as root `index.html` on the existing review branch. It links to the current citizen drafting preview and labels it as a preview; it does not claim a full production WebApp.
+- [x] A static, responsive primary-site landing page has been added as root `index.html` on the existing review branch. Until `/app` is deployed and verified, the page links to the civic-action explainer and showcase rather than to an unavailable workspace route.
 - [ ] After merge, confirm the GitHub Pages publishing source for `netzen-abm/janavani` is configured to publish the branch/root containing `index.html`; verify deployed metadata, links, mobile layout, keyboard access and reduced-motion behavior.
 - [ ] Keep the brochure repository's page canonicals and sitemap pointing to its own `/janavani-website/` URLs. Do not conflate its SEO identity with the primary site's URL.
-- [ ] Confirm the primary landing page and platform README consistently label the current /app workspace as a drafting preview until persistence/submission/tracking are verified.
+- [ ] Keep the `/app` route out of public CTAs until a merged main deployment returns a successful runtime check; afterward label it as an early local-drafting preview, not a complete WebApp.
 
 ## Branch hygiene — current live state
 
