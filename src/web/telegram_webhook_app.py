@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hmac
 import os
+import re
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import BotCommand, Update
@@ -55,8 +57,24 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         token = _required_setting("TELEGRAM_BOT_TOKEN")
         webhook_url = _required_setting("TELEGRAM_WEBHOOK_URL")
         secret = _required_setting("TELEGRAM_WEBHOOK_SECRET")
-        if len(secret) < 32:
-            raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must contain at least 32 characters")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", secret):
+            raise RuntimeError(
+                "TELEGRAM_WEBHOOK_SECRET must be 32-256 characters using only "
+                "letters, digits, underscores or hyphens"
+            )
+        parsed_webhook_url = urlsplit(webhook_url)
+        if (
+            parsed_webhook_url.scheme != "https"
+            or not parsed_webhook_url.netloc
+            or parsed_webhook_url.path != "/telegram/webhook"
+            or parsed_webhook_url.query
+            or parsed_webhook_url.fragment
+            or parsed_webhook_url.username
+            or parsed_webhook_url.password
+        ):
+            raise RuntimeError(
+                "TELEGRAM_WEBHOOK_URL must be an HTTPS URL ending exactly in /telegram/webhook"
+            )
 
         telegram_application = build_application(token=token)
         await telegram_application.initialize()
