@@ -7,7 +7,7 @@
 **Primary public site (current):** https://netzen-abm.github.io/janavani/
 **Brochure / showcase site:** https://netzen-abm.github.io/janavani-website/
 
-The primary site is the current product-facing entry point. The separate brochure/showcase site presents Janavani's mission, vision and public information. The citizen drafting preview currently runs at https://janavani-bot.onrender.com/app; it is a preview, not the complete production WebApp.
+The primary site is the current product-facing entry point. The separate brochure/showcase site presents Janavani's mission, vision and public information. The citizen drafting workspace is under review; the current deployed `main` runtime does not yet expose `/app`. Link to that route only after the change is merged, deployed and runtime-verified.
 
 ## What is Janavani?
 
