@@ -26,7 +26,10 @@ from src.platform.composition_capabilities import (
     create_letter_drafting_capability,
     create_consent_capability,
 )
-from src.storage.repositories.case_content import InMemoryCaseContentRepository
+from src.storage.repositories.case_content import (
+    InMemoryCaseContentRepository,
+    TransientCaseContentRepository,
+)
 
 
 class FailClosedSubmissionTransport(SubmissionTransport):
@@ -101,19 +104,30 @@ def create_surface_case_composition(
     # Citizen-authored content has its own privacy and persistence contract.
     # Never let a production process silently accept process-local-only content.
     runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+    content_policy = os.getenv("JANAVANI_CASE_CONTENT_POLICY", "").strip().lower()
     if case_content_repository is None:
         if runtime_mode == "production":
-            raise ValueError(
-                "Production requires an explicitly configured CaseContentRepository; "
-                "in-memory citizen content is not durable across processes or restarts"
-            )
-        case_content_repository = InMemoryCaseContentRepository()
+            if content_policy != "transient":
+                raise ValueError(
+                    "Production requires an explicit CaseContentRepository or "
+                    "JANAVANI_CASE_CONTENT_POLICY=transient; citizen content is not "
+                    "durable Case metadata and must not be persisted by default"
+                )
+            case_content_repository = TransientCaseContentRepository()
+        else:
+            case_content_repository = InMemoryCaseContentRepository()
     elif runtime_mode == "production" and isinstance(
         case_content_repository, InMemoryCaseContentRepository
     ):
         raise ValueError(
-            "InMemoryCaseContentRepository is not permitted in production; "
-            "configure a durable adapter with explicit ownership, retention and authorization"
+            "InMemoryCaseContentRepository is for development/tests; use an explicitly "
+            "configured durable adapter or JANAVANI_CASE_CONTENT_POLICY=transient"
+        )
+    elif runtime_mode == "production" and isinstance(
+        case_content_repository, TransientCaseContentRepository
+    ) and content_policy != "transient":
+        raise ValueError(
+            "TransientCaseContentRepository requires JANAVANI_CASE_CONTENT_POLICY=transient"
         )
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
