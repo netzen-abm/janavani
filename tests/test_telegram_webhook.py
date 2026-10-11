@@ -29,6 +29,13 @@ def _payload():
     }
 
 
+def _post(client, *, content=None, json=None, secret="test-secret"):
+    headers = {"X-Telegram-Bot-Api-Secret-Token": secret}
+    if json is not None:
+        return client.post("/telegram/webhook", json=json, headers=headers)
+    return client.post("/telegram/webhook", content=content, headers=headers)
+
+
 def test_webhook_rejects_missing_or_wrong_secret():
     client = TestClient(create_webhook_app(application=_application()))
     response = client.post("/telegram/webhook", json={"update_id": 1})
@@ -45,11 +52,8 @@ def test_webhook_rejects_missing_or_wrong_secret():
 def test_webhook_accepts_valid_secret_and_queues_update():
     application = _application()
     client = TestClient(create_webhook_app(application=application))
-    response = client.post(
-        "/telegram/webhook",
-        json=_payload(),
-        headers={"X-Telegram-Bot-Api-Secret-Token": "test-secret"},
-    )
+    response = _post(client, json=_payload())
+
     assert response.status_code == 202
     assert response.json() == {"status": "accepted"}
     application.update_queue.put.assert_awaited_once()
@@ -60,16 +64,34 @@ def test_webhook_returns_retryable_status_if_queue_rejects_update():
     application.update_queue.put.side_effect = RuntimeError("queue unavailable")
     client = TestClient(create_webhook_app(application=application))
 
-    response = client.post(
-        "/telegram/webhook",
-        json=_payload(),
-        headers={"X-Telegram-Bot-Api-Secret-Token": "test-secret"},
-    )
+    response = _post(client, json=_payload())
 
     assert response.status_code == 503
     assert response.json()["detail"] == (
         "Telegram update could not be queued; retry delivery"
     )
+
+
+def test_webhook_rejects_malformed_json_without_queueing():
+    application = _application()
+    client = TestClient(create_webhook_app(application=application))
+
+    response = _post(client, content=b'{"update_id":')
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid JSON update"
+    application.update_queue.put.assert_not_awaited()
+
+
+def test_webhook_rejects_non_object_json_without_queueing():
+    application = _application()
+    client = TestClient(create_webhook_app(application=application))
+
+    response = _post(client, json=["not", "an", "update"])
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Update must be a JSON object"
+    application.update_queue.put.assert_not_awaited()
 
 
 def test_webhook_liveness_is_available():
