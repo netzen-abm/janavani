@@ -6,6 +6,8 @@
 **Canonical main SHA observed:** `0fb4c50d188811bed700555e1ed82735adef790e`  
 **Scope:** live branches, canonical source responsibilities, active-source line policy, CI/PR evidence, Web/Telegram status, GitHub Pages, GitHub automation.
 
+**Website role clarification (owner-confirmed, 11 October 2026):** `https://netzen-abm.github.io/janavani/` is the primary site for current use. The separately maintained `netzen-abm/janavani-website` repository and `https://netzen-abm.github.io/janavani-website/` are the brochure/showcase layer, not the primary product site. All future public navigation and repository descriptions must preserve this distinction.
+
 ## 1. Executive decision
 
 The project is ready for a **proof-and-product cycle**, not another architecture-generation cycle. The current architecture already has a canonical FastAPI assembly, independent Telegram runtime, provider/capability composition, Case/lifecycle and submission boundaries, and PostgreSQL integration gates. The highest-value work is proving those pieces in deployment and finishing the first usable Web + Telegram civic-action journey.
@@ -118,7 +120,7 @@ Only after P0/P1 gates: Mini App, WhatsApp/Messenger, Android/iOS, broader AI/RA
 
 ## 7. GitHub Pages recommendation — live site-source audit
 
-**Important correction:** the link `https://netzen-abm.github.io/janavani/` is not the canonical public brochure-site URL reported by the website repository's current successful Pages deployment. The dedicated `netzen-abm/janavani-website` repository explicitly identifies `https://netzen-abm.github.io/janavani-website/` as its canonical public URL. The platform repository `netzen-abm/janavani` has its repository homepage metadata set to the old `/janavani/` URL; that setting is stale relative to the current brochure deployment.
+**Owner-confirmed correction (11 October 2026):** `https://netzen-abm.github.io/janavani/` is the primary site for current use. The dedicated `netzen-abm/janavani-website` repository and `https://netzen-abm.github.io/janavani-website/` are the brochure/showcase site. Keep the roles distinct: primary site for current product-facing access; brochure site for public introduction, vision, resources and project showcase. Do not redirect the primary site to the brochure site.
 
 Live website-repository checks:
 - Main SHA: `4d2ca7c45ba80bb786a9ec46cf7f1876dba0e0df`.
@@ -129,7 +131,7 @@ Live website-repository checks:
 - The website repository's own progress record estimates the validated deployment artifact at about 1.03 MB, substantially narrower than the prior broad asset-copy approach.
 - A reliable rendered/browser inspection was not available in this session (the web viewer could not fetch the URLs), so responsive visual QA, keyboard/navigation QA and actual device testing remain open despite the successful build/deploy validation.
 
-**Recommendation / corrective action:** make `https://netzen-abm.github.io/janavani-website/` the canonical public website URL everywhere. Update the **platform repository's Settings → General → Website** field from the stale `/janavani/` URL to the canonical `/janavani-website/` URL, and update any public README links when the main branch can be safely changed. If backward compatibility for `/janavani/` is required, make it a deliberate minimal redirect/landing page after confirming that repository's Settings → Pages publishing source; do not create a second copy of the brochure website.
+**Recommendation / corrective action:** preserve `https://netzen-abm.github.io/janavani/` as the primary site for now. Use `https://netzen-abm.github.io/janavani-website/` for the brochure/showcase role. Update the public platform README and primary-site navigation/links to label the showcase site clearly. Do not change the primary Pages URL or repurpose its publishing source just to converge the two site identities.
 
 Keep the two responsibilities separate:
 1. **`janavani-website` + GitHub Pages:** public information, SEO/AEO, civic explainers, resources, FAQs and other safe static content.
