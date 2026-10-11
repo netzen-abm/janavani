@@ -111,18 +111,27 @@ The WebApp and Telegram must share domain/capability logic while keeping indepen
 ### P2 — expansion
 Only after P0/P1 gates: Mini App, WhatsApp/Messenger, Android/iOS, broader AI/RAG/Agentic AI, DApp/Web3, and resilient/mesh/satellite transports. The staged sequence does not reduce the full ecosystem scope.
 
-## 7. GitHub Pages recommendation
+## 7. GitHub Pages recommendation — live site-source audit
 
-The repository has Pages enabled in repository metadata, but this session could not retrieve the actual Pages publishing settings, and a reliable rendering/functional inspection of `https://netzen-abm.github.io/janavani/` was not available. The main branch tree inspected here contains **no root `index.html` and no dedicated Pages deployment workflow**. Therefore I cannot honestly claim what page source/settings currently produce the public URL.
+**Important correction:** the link `https://netzen-abm.github.io/janavani/` is not the canonical public brochure-site URL reported by the website repository's current successful Pages deployment. The dedicated `netzen-abm/janavani-website` repository explicitly identifies `https://netzen-abm.github.io/janavani-website/` as its canonical public URL. The platform repository `netzen-abm/janavani` has its repository homepage metadata set to the old `/janavani/` URL; that setting is stale relative to the current brochure deployment.
 
-Recommended decision:
-1. Treat GitHub Pages as **static hosting only**—for a public, fast, accessible information site, documentation hub, civic explainers, FAQ/schema content, developer docs, policy/architecture maps, and static interactive tools.
-2. Decide one canonical owner for the public citizen-facing website. If `janavani-website` is still the dedicated site repository, keep its six-page static website there; use this repository's Pages URL only for the docs/developer hub or redirect to the dedicated site after confirming its route and deployment settings.
-3. If this repository is to own the Pages site, add/maintain a deliberate static publishing tree with a real entry `index.html`, relative asset paths compatible with the repository subpath, metadata/canonicals, accessibility, and a Pages build/deploy workflow. Verify the configured source in **Settings → Pages** before changing files or publishing.
-4. Never put secrets or backend credentials in Pages assets. Pages cannot host the Janavani API, PostgreSQL, or Telegram polling worker; keep those on independent service runtimes. A static page that calls an API still requires carefully configured CORS, authentication/trust boundaries, no secret keys in JavaScript, and a defined failure/degraded path.
-5. Verify the published artifact and all routes/assets after each deployment; don't infer live behavior from source tree presence.
+Live website-repository checks:
+- Main SHA: `4d2ca7c45ba80bb786a9ec46cf7f1876dba0e0df`.
+- GitHub Pages workflow run [38120947149](https://github.com/netzen-abm/janavani-website/actions/runs/38120947149) completed successfully on 11 October 2026.
+- The workflow stages an explicit allowlist of public HTML, CSS, JavaScript, icons and referenced images, then validates metadata, local references, encoding, sitemap, manifest and artifact scope before deploying.
+- Six production HTML pages were inspected: each has one H1, a title, description, canonical URL, Open Graph/Twitter metadata and one JSON-LD block; no missing `alt` attributes were detected in the quick markup scan.
+- The homepage H1 visibly encodes **“WE, THE PEOPLE OF INDIA”** across three spans. Pages share the lightweight SVG favicon, Apple touch icon, manifest and sitemap/robots support.
+- The website repository's own progress record estimates the validated deployment artifact at about 1.03 MB, substantially narrower than the prior broad asset-copy approach.
+- A reliable rendered/browser inspection was not available in this session (the web viewer could not fetch the URLs), so responsive visual QA, keyboard/navigation QA and actual device testing remain open despite the successful build/deploy validation.
+
+**Recommendation / corrective action:** make `https://netzen-abm.github.io/janavani-website/` the canonical public website URL everywhere. Update the **platform repository's Settings → General → Website** field from the stale `/janavani/` URL to the canonical `/janavani-website/` URL, and update any public README links when the main branch can be safely changed. If backward compatibility for `/janavani/` is required, make it a deliberate minimal redirect/landing page after confirming that repository's Settings → Pages publishing source; do not create a second copy of the brochure website.
+
+Keep the two responsibilities separate:
+1. **`janavani-website` + GitHub Pages:** public information, SEO/AEO, civic explainers, resources, FAQs and other safe static content.
+2. **`janavani` platform:** authenticated/dynamic WebApp, canonical API, PostgreSQL and independent Telegram runtime. GitHub Pages cannot replace the API, database or Telegram worker, and static JavaScript must contain no secrets.
 
 Official guidance: [GitHub Pages quickstart](https://docs.github.com/en/pages/quickstart), [publishing-source configuration](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site), and [custom Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
 
 ## 8. GitHub App / GitHub Actions recommendation
 
