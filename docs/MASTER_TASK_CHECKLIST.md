@@ -67,6 +67,15 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 - PR #203 remains a convergence review vehicle and is not merge-ready merely because it is mergeable.
 
 
+
+### Verified follow-up on the rebaseline commit — 11 October 2026
+
+- [x] Latest observed review-head checks for `f29feb8076b8043269a71cc47fa06afecc98252c`: CI, Docker, Architecture Guard, Security CI and Dependency Review all completed successfully.
+- [x] Telegram pairing command is registered by `src/bot_telegram.py`; its service is only composed when the `external_identity_links` provider is PostgreSQL. This verifies source wiring, not that a live Telegram Worker exists.
+- [ ] Fresh default CodeQL analysis must be confirmed on the current review head; custom Security CI success is not sufficient.
+- [ ] Current live Render service inventory still contains only the Web/API service. The `render.yaml` worker definition is not proof that the Telegram Worker has been created.
+- [ ] Do not promote the browser `/app` local-draft workspace as the full WebApp. Case persistence, evidence lifecycle, authenticated cross-surface continuation, submission, acknowledgement and tracking are not yet jointly verified in the deployed system.
+
 ## 0B. LIVE REBASELINE — 11 OCTOBER 2026
 
 **Status:** ACTIVE REBASELINE — supersedes older checklist statements about the current physical branch count and current PR security workflow; dated material remains as historical evidence.
