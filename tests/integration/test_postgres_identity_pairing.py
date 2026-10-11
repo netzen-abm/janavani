@@ -33,6 +33,15 @@ def postgres_pairing():
     if dsn in runtime_dsns:
         pytest.fail("JANAVANI_POSTGRES_TEST_DSN must be a dedicated database, not a runtime DSN")
 
+    # This fixture applies SQL migrations and deletes its test rows. Require an
+    # unmistakable test/local target even when runtime DSNs are not configured,
+    # so a missing runtime variable cannot silently weaken the safety gate.
+    lowered_dsn = dsn.lower()
+    if "test" not in lowered_dsn and "localhost" not in lowered_dsn and "127.0.0.1" not in lowered_dsn:
+        pytest.fail(
+            "Refusing PostgreSQL pairing integration tests: DSN must clearly identify a test/local database"
+        )
+
     psycopg = pytest.importorskip("psycopg")
     suffix = uuid.uuid4().hex
     principal_id = f"test:pairing:{suffix}"
