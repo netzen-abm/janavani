@@ -2,12 +2,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
+from telegram.ext import Defaults
+
 from src.web.telegram_webhook_app import create_webhook_app
 
 
 def _application():
     application = MagicMock()
     application.bot = MagicMock()
+    application.bot.defaults = Defaults()
     application.update_queue = MagicMock()
     application.update_queue.put = AsyncMock()
     return application
