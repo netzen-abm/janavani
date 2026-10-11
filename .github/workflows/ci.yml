@@ -44,7 +44,7 @@ jobs:
           mapfile -t branches < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' | sort)
           count="${#branches[@]}"
           echo "Observed physical branch refs in ${GITHUB_REPOSITORY}: $count"
-          printf '%s\\n' "${branches[@]}"
+          printf '%s\n' "${branches[@]}"
           if [ "$count" -ne 9 ]; then
             echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
             echo "::error::Archive and retire only non-sanctioned branches, then re-run this gate."
