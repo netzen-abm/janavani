@@ -106,14 +106,14 @@ def create_surface_case_composition(
     runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
     content_policy = os.getenv("JANAVANI_CASE_CONTENT_POLICY", "").strip().lower()
     if case_content_repository is None:
-        if runtime_mode == "production":
-            if content_policy != "transient":
-                raise ValueError(
-                    "Production requires an explicit CaseContentRepository or "
-                    "JANAVANI_CASE_CONTENT_POLICY=transient; citizen content is not "
-                    "durable Case metadata and must not be persisted by default"
-                )
+        if content_policy == "transient":
             case_content_repository = TransientCaseContentRepository()
+        elif runtime_mode == "production":
+            raise ValueError(
+                "Production requires an explicit CaseContentRepository or "
+                "JANAVANI_CASE_CONTENT_POLICY=transient; citizen content is not "
+                "durable Case metadata and must not be persisted by default"
+            )
         else:
             case_content_repository = InMemoryCaseContentRepository()
     elif runtime_mode == "production" and isinstance(
@@ -123,9 +123,9 @@ def create_surface_case_composition(
             "InMemoryCaseContentRepository is for development/tests; use an explicitly "
             "configured durable adapter or JANAVANI_CASE_CONTENT_POLICY=transient"
         )
-    elif runtime_mode == "production" and isinstance(
-        case_content_repository, TransientCaseContentRepository
-    ) and content_policy != "transient":
+    elif isinstance(case_content_repository, TransientCaseContentRepository) and (
+        runtime_mode == "production" and content_policy != "transient"
+    ):
         raise ValueError(
             "TransientCaseContentRepository requires JANAVANI_CASE_CONTENT_POLICY=transient"
         )
