@@ -102,6 +102,12 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    if injected_application:
+        # Test clients may not enter lifespan unless used as a context manager.
+        # Populate injected transport dependencies at construction for deterministic tests.
+        app.state.telegram_application = application
+        app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+
     @app.get("/liveness")
     async def liveness() -> dict[str, str]:
         return {"status": "alive", "surface": "telegram-webhook"}
