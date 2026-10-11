@@ -4,7 +4,7 @@ Janavani uses a dedicated FastAPI webhook service for Telegram updates. The Web/
 
 ## Configure the Render free web service
 
-1. Deploy the `janavani-telegram-webhook` service from `render.yaml`.
+0. If an older `janavani-telegram` polling worker exists, stop it before enabling the webhook. Never run polling and webhook delivery concurrently for the same bot token.\n1. Deploy the `janavani-telegram-webhook` service from `render.yaml`.
 2. In the service dashboard, set `TELEGRAM_BOT_TOKEN` to the bot token from BotFather.
 3. Set `TELEGRAM_WEBHOOK_SECRET` to a random 32+ character string containing only letters, digits, underscores or hyphens. Do not commit it.
 4. Copy the actual public HTTPS service URL from Render and set `TELEGRAM_WEBHOOK_URL` to `https://<actual-service-host>/telegram/webhook`.
