@@ -1,4 +1,4 @@
-"""Dedicated Telegram webhook runtime for the free-tier Render web service.
+""""Dedicated Telegram webhook runtime for the free-tier Render web service.
 
 Telegram updates are authenticated with Telegram's webhook secret header and
 queued into the existing python-telegram-bot application. Business logic remains
@@ -137,7 +137,15 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         update = Update.de_json(payload, telegram_application.bot)
         if update is None:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
-        await telegram_application.update_queue.put(update)
+        try:
+            await telegram_application.update_queue.put(update)
+        except Exception as exc:
+            # Non-2xx tells Telegram the update was not accepted so it can retry.
+            # This does not make the in-memory queue durable across process crashes.
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram update could not be queued; retry delivery",
+            ) from exc
         return {"status": "accepted"}
 
     return app
