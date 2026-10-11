@@ -4,6 +4,7 @@
 **Version:** 2.1  
 **Date:** 24 August 2026  
 **Repository:** `netzen-abm/janavani`
+**Public brochure website:** https://netzen-abm.github.io/janavani-website/ (canonical static-site URL; the API and citizen application run separately).
 
 ## What is Janavani?
 
