@@ -66,3 +66,43 @@ def test_production_rejects_in_memory_case_content_repository(monkeypatch):
         create_surface_case_composition(
             case_content_repository=InMemoryCaseContentRepository()
         )
+
+
+def test_production_allows_explicit_transient_content_policy(monkeypatch):
+    from src.storage.repositories.case_content import TransientCaseContentRepository
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.setenv("JANAVANI_CASE_CONTENT_POLICY", "transient")
+
+    composition = create_surface_case_composition(
+        case_content_repository=TransientCaseContentRepository(ttl_seconds=60, max_entries=5)
+    )
+    assert composition.case_capability is not None
+
+
+def test_transient_case_content_expires_and_is_principal_scoped(monkeypatch):
+    import src.storage.repositories.case_content as content_module
+    from src.storage.repositories.case_content import CaseContent, TransientCaseContentRepository
+
+    now = [100.0]
+    monkeypatch.setattr(content_module, "monotonic", lambda: now[0])
+    repository = TransientCaseContentRepository(ttl_seconds=10, max_entries=2)
+    value = CaseContent(subject="Test", narrative="synthetic only")
+
+    repository.save("case-1", value, principal_id="principal-a")
+    assert repository.get("case-1", principal_id="principal-a") == value
+    assert repository.get("case-1", principal_id="principal-b") is None
+
+    now[0] = 111.0
+    assert repository.get("case-1", principal_id="principal-a") is None
+
+
+def test_transient_case_content_enforces_capacity():
+    from src.storage.repositories.case_content import CaseContent, TransientCaseContentRepository
+
+    repository = TransientCaseContentRepository(ttl_seconds=60, max_entries=1)
+    repository.save("case-1", CaseContent(subject="one", narrative=""), principal_id="p")
+    repository.save("case-2", CaseContent(subject="two", narrative=""), principal_id="p")
+
+    assert repository.get("case-1", principal_id="p") is None
+    assert repository.get("case-2", principal_id="p") is not None
