@@ -65,3 +65,32 @@ def test_pairing_confirmation_cannot_be_replayed(monkeypatch):
         service.confirm_from_web(
             challenge.pairing_id, principal_id="citizen:test", explicit_confirmation=True,
         )
+
+
+def test_pairing_issue_rejects_request_without_trusted_identity(monkeypatch):
+    monkeypatch.setattr(
+        pairing_router,
+        "_pairing_service",
+        IdentityPairingService(InMemoryPairingRepository()),
+    )
+    app = FastAPI()
+    app.include_router(pairing_router.router)
+    response = TestClient(app).post("/civic/identity-pairings")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Authenticated identity gateway is not configured"
+
+
+def test_pairing_issue_rejects_missing_bearer_assertion_when_gateway_configured(monkeypatch):
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", "test-only-secret")
+    monkeypatch.delenv("JANAVANI_IDENTITY_ASSERTION_ISSUER", raising=False)
+    monkeypatch.delenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE", raising=False)
+    monkeypatch.setattr(
+        pairing_router,
+        "_pairing_service",
+        IdentityPairingService(InMemoryPairingRepository()),
+    )
+    app = FastAPI()
+    app.include_router(pairing_router.router)
+    response = TestClient(app).post("/civic/identity-pairings")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authenticated identity required"
