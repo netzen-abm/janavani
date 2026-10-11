@@ -43,3 +43,26 @@ def test_runtime_dependency_creates_missing_dependency_once():
     assert _runtime_dependency(graph, "repository", factory) is created
     assert _runtime_dependency(graph, "repository", factory) is created
     assert calls == [True]
+
+
+
+def test_production_requires_explicit_case_content_repository(monkeypatch):
+    import pytest
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+
+    with pytest.raises(ValueError, match="explicitly configured CaseContentRepository"):
+        create_surface_case_composition()
+
+
+def test_production_rejects_in_memory_case_content_repository(monkeypatch):
+    import pytest
+
+    from src.storage.repositories.case_content import InMemoryCaseContentRepository
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+
+    with pytest.raises(ValueError, match="not permitted in production"):
+        create_surface_case_composition(
+            case_content_repository=InMemoryCaseContentRepository()
+        )
