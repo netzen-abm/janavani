@@ -3,7 +3,6 @@ from telegram.ext import ContextTypes
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     message = """
 🇮🇳 Welcome to Janavani
 
@@ -41,8 +40,8 @@ You can either use commands
 /check <Case ID> — check a Case you own
 /pair <code> — start a pairing attempt; not linked until confirmed
 
-Web citizen workspace: open /app on the Janavani web service.
-Drafts created there stay in your browser until you download or print them.
+Web citizen workspace: /app is available only on deployments where the workspace is enabled.
+When available, drafts stay in your browser until you download or print them.
 
 ------------------------------------
 
@@ -68,5 +67,5 @@ Privacy reminder: send sensitive details or documents only when necessary.
 A pairing code is not a completed link. Confirm only in an authenticated account-linking screen that reports success; this screen is not yet part of every deployment.
 A command being accepted does not mean a complaint was submitted to an authority.
 """
-
-    await update.message.reply_text(message)
+    if update.message:
+        await update.message.reply_text(message)
