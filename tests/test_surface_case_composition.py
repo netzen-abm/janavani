@@ -17,7 +17,7 @@ def test_surface_case_composition_uses_shared_capability_graph():
 
 
 def test_runtime_dependency_does_not_evaluate_cached_factory():
-    from src.platform.surface_case_composition import _runtime_dependency
+    from src.platform.surface_repository_graph import _runtime_dependency
 
     existing = object()
     graph = {"repository": existing}
@@ -30,7 +30,7 @@ def test_runtime_dependency_does_not_evaluate_cached_factory():
 
 
 def test_runtime_dependency_creates_missing_dependency_once():
-    from src.platform.surface_case_composition import _runtime_dependency
+    from src.platform.surface_repository_graph import _runtime_dependency
 
     graph = {}
     created = object()
