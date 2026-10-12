@@ -1,12 +1,13 @@
 """Telegram webhook runtime; domain behavior stays in existing handlers/capabilities."""
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import os
 import re
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -14,7 +15,8 @@ from telegram import BotCommand, Update
 from telegram.ext import Application
 
 from src.bot_telegram import build_application
-
+from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
+from src.web.telegram_inbox_worker import run_inbox_worker
 
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
 
@@ -27,92 +29,93 @@ def _required_setting(name: str) -> str:
 
 
 def _webhook_commands() -> list[BotCommand]:
-    return [
-        BotCommand("start", "Start Janavani"),
-        BotCommand("help", "View help and available commands"),
-        BotCommand("complaint", "Start a test complaint workflow"),
-        BotCommand("search", "Find public-service information"),
-        BotCommand("check", "Check a case you own"),
-        BotCommand("pair", "Start account pairing"),
-        BotCommand("privacy", "Understand data handling"),
-        BotCommand("cancel", "Clear the current in-memory workflow"),
-        BotCommand("rate", "Share feedback"),
-    ]
+    return [BotCommand("start", "Start Janavani"), BotCommand("help", "View help and available commands"),
+            BotCommand("complaint", "Start a test complaint workflow"),
+            BotCommand("search", "Find public-service information"), BotCommand("check", "Check a case you own"),
+            BotCommand("pair", "Start account pairing"), BotCommand("privacy", "Understand data handling"),
+            BotCommand("cancel", "Clear the current in-memory workflow"), BotCommand("rate", "Share feedback")]
 
 
-def create_webhook_app(*, application: Application | None = None) -> FastAPI:
-    """Build a webhook app; injected applications allow transport tests."""
-    injected_application = application is not None
+def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
+    """Build the webhook; production accepts updates only after durable inbox commit."""
+    injected_application, injected_inbox = application is not None, inbox is not None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if injected_application:
             app.state.telegram_application = application
             app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+            if injected_inbox:
+                app.state.telegram_inbox = inbox
+                app.state.inbox_worker = asyncio.create_task(run_inbox_worker(application, inbox))
             yield
+            worker = getattr(app.state, "inbox_worker", None)
+            if worker:
+                worker.cancel()
+                try:
+                    await worker
+                except asyncio.CancelledError:
+                    pass
             return
 
-        token = _required_setting("TELEGRAM_BOT_TOKEN")
-        webhook_url = _required_setting("TELEGRAM_WEBHOOK_URL")
-        secret = _required_setting("TELEGRAM_WEBHOOK_SECRET")
+        token, webhook_url = _required_setting("TELEGRAM_BOT_TOKEN"), _required_setting("TELEGRAM_WEBHOOK_URL")
+        secret, dsn = _required_setting("TELEGRAM_WEBHOOK_SECRET"), _required_setting("JANAVANI_TELEGRAM_INBOX_DSN")
         if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", secret):
             raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must be 32-256 URL-safe characters")
         parsed = urlsplit(webhook_url)
-        if (
-            parsed.scheme != "https" or not parsed.netloc
-            or parsed.path != "/telegram/webhook" or parsed.query or parsed.fragment
-            or parsed.username or parsed.password
-        ):
+        if (parsed.scheme != "https" or not parsed.netloc or parsed.path != "/telegram/webhook"
+                or parsed.query or parsed.fragment or parsed.username or parsed.password):
             raise RuntimeError("TELEGRAM_WEBHOOK_URL must be HTTPS and end in /telegram/webhook")
 
-        telegram_application = build_application(token=token)
-        await telegram_application.initialize()
-        await telegram_application.start()
-        await telegram_application.bot.set_my_commands(_webhook_commands())
-        await telegram_application.bot.set_webhook(
-            url=webhook_url, secret_token=secret,
-            allowed_updates=Update.ALL_TYPES, drop_pending_updates=False,
-        )
-        app.state.telegram_application = telegram_application
+        bot_app, durable_inbox = build_application(token=token), PostgresTelegramInbox(dsn=dsn)
+        await bot_app.initialize()
+        await bot_app.start()
+        await bot_app.bot.set_my_commands(_webhook_commands())
+        await bot_app.bot.set_webhook(url=webhook_url, secret_token=secret,
+                                      allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
+        app.state.telegram_application, app.state.telegram_inbox = bot_app, durable_inbox
         app.state.webhook_secret = secret
+        worker = asyncio.create_task(run_inbox_worker(bot_app, durable_inbox))
+        app.state.inbox_worker = worker
         try:
             yield
         finally:
-            await telegram_application.stop()
-            await telegram_application.shutdown()
+            worker.cancel()
+            try:
+                await worker
+            except asyncio.CancelledError:
+                pass
+            await bot_app.stop()
+            await bot_app.shutdown()
 
-    app = FastAPI(title="Janavani Telegram Webhook", version="1.0.0",
-                  docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="Janavani Telegram Webhook", version="1.1.0", docs_url=None, redoc_url=None, lifespan=lifespan)
     if injected_application:
         app.state.telegram_application = application
         app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+        if injected_inbox:
+            app.state.telegram_inbox = inbox
 
     @app.get("/liveness")
     async def liveness() -> dict[str, str]:
         return {"status": "alive", "surface": "telegram-webhook"}
 
     @app.post("/telegram/webhook", status_code=202)
-    async def telegram_webhook(
-        request: Request,
-        telegram_secret: str | None = Header(
-            default=None, alias="X-Telegram-Bot-Api-Secret-Token"
-        ),
-    ) -> dict[str, str]:
+    async def telegram_webhook(request: Request, telegram_secret: str | None = Header(
+        default=None, alias="X-Telegram-Bot-Api-Secret-Token"
+    )) -> dict[str, str]:
         expected = getattr(request.app.state, "webhook_secret", None)
         if not expected or not telegram_secret or not hmac.compare_digest(expected, telegram_secret):
             raise HTTPException(status_code=403, detail="Invalid webhook secret")
-
-        declared_length = request.headers.get("content-length")
-        if declared_length is not None:
+        declared = request.headers.get("content-length")
+        if declared is not None:
             try:
-                parsed_length = int(declared_length)
+                length = int(declared)
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail="Invalid Content-Length") from exc
-            if parsed_length < 0:
+            if length < 0:
                 raise HTTPException(status_code=400, detail="Invalid Content-Length")
-            if parsed_length > MAX_WEBHOOK_BODY_BYTES:
+            if length > MAX_WEBHOOK_BODY_BYTES:
                 raise HTTPException(status_code=413, detail="Telegram update exceeds size limit")
-
         body = bytearray()
         async for chunk in request.stream():
             body.extend(chunk)
@@ -124,20 +127,25 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Invalid JSON update") from exc
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Update must be a JSON object")
-
-        telegram_application: Application = request.app.state.telegram_application
+        update_id = payload.get("update_id")
+        if isinstance(update_id, bool) or not isinstance(update_id, int) or update_id < 0:
+            raise HTTPException(status_code=400, detail="Update must include a valid update_id")
+        bot_app: Application = request.app.state.telegram_application
         try:
-            update = Update.de_json(payload, telegram_application.bot)
+            update = Update.de_json(payload, bot_app.bot)
         except Exception as exc:
             raise HTTPException(status_code=400, detail="Invalid Telegram update") from exc
-        if update is None:
+        if update is None or update.update_id != update_id:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
+        durable_inbox = getattr(request.app.state, "telegram_inbox", None)
         try:
-            await telegram_application.update_queue.put(update)
+            if durable_inbox is not None:
+                await asyncio.to_thread(durable_inbox.accept, update_id, payload)
+            else:
+                # Test-only compatibility: production startup always requires a DSN.
+                await bot_app.update_queue.put(update)
         except Exception as exc:
-            raise HTTPException(
-                status_code=503, detail="Telegram update could not be queued; retry delivery"
-            ) from exc
+            raise HTTPException(status_code=503, detail="Telegram update could not be durably accepted; retry delivery") from exc
         return {"status": "accepted"}
 
     return app
