@@ -77,10 +77,7 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
         async def process_update(self, update):
             await asyncio.Event().wait()
 
-    async def immediate_sleep(_seconds):
-        await asyncio.sleep(0)
-
-    # Replace only the worker module's sleep; yield to let dispatch and lease tasks run.
+    # Force lease loss deterministically while the handler is still awaiting work.
     monkeypatch.setattr(telegram_inbox_worker, "_renew_lease", lease_fails_immediately)
 
     async def lease_fails_immediately(inbox, update_id, attempts):
