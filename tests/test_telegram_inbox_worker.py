@@ -69,10 +69,6 @@ def test_worker_retries_when_telegram_handler_reports_error(monkeypatch):
 
 
 def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
-    class LostLeaseInbox(_Inbox):
-        def heartbeat(self, update_id, *, attempts):
-            raise RuntimeError("lease lost")
-
     class BlockingApplication(_Application):
         async def process_update(self, update):
             await asyncio.Event().wait()
