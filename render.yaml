@@ -23,6 +23,8 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_URL
         sync: false
+      - key: JANAVANI_TELEGRAM_INBOX_DSN
+        sync: false
       - key: JANAVANI_RUNTIME_MODE
         value: test
       - key: JANAVANI_CASE_CONTENT_POLICY
