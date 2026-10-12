@@ -44,6 +44,8 @@ def test_webhook_persists_update_before_acknowledging(monkeypatch):
     )
     assert response.status_code == 202
     assert inbox.accepted[0][0] == 9001
+    client = _client(monkeypatch, inbox)
+    client.app.state.telegram_application.update_queue.put.assert_not_called()
     # Durable inbox owns acceptance; the process-local PTB queue is not used.
 
 
