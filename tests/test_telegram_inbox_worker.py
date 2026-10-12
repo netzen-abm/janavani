@@ -67,7 +67,6 @@ def test_worker_retries_when_telegram_handler_reports_error(monkeypatch):
     assert not hasattr(application, "error_handler")
 
 
-
 def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
     class BlockingApplication(_Application):
         async def process_update(self, update):
@@ -90,7 +89,9 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
             telegram_inbox_worker.run_inbox_worker(application, inbox, poll_seconds=0.01)
         )
         try:
-            assert await asyncio.to_thread(inbox.retried.wait, 2), "worker did not retry after lease loss"
+            assert await asyncio.to_thread(inbox.retried.wait, 2), (
+                "worker did not retry after lease loss"
+            )
         finally:
             worker.cancel()
             with pytest.raises(asyncio.CancelledError):
