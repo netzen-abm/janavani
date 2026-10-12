@@ -68,7 +68,7 @@ def test_webhook_returns_retryable_status_if_queue_rejects_update():
 
     assert response.status_code == 503
     assert response.json()["detail"] == (
-        "Telegram update could not be queued; retry delivery"
+        "Telegram update could not be durably accepted; retry delivery"
     )
 
 
