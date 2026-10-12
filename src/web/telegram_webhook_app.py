@@ -134,7 +134,12 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Update must be a JSON object")
 
         telegram_application: Application = request.app.state.telegram_application
-        update = Update.de_json(payload, telegram_application.bot)
+        try:
+            update = Update.de_json(payload, telegram_application.bot)
+        except Exception as exc:
+            # Treat parser failures as invalid client input, not an unhandled 500.
+            # Do not include the untrusted payload in the response or logs.
+            raise HTTPException(status_code=400, detail="Invalid Telegram update") from exc
         if update is None:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
         try:
