@@ -1,4 +1,4 @@
-"""Dedicated Telegram webhook runtime for the free-tier Render web service.
+""""Dedicated Telegram webhook runtime for the free-tier Render web service.
 
 Telegram updates are authenticated with Telegram's webhook secret header and
 queued into the existing python-telegram-bot application. Business logic remains
@@ -7,6 +7,7 @@ in the existing handlers and shared capabilities.
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import re
 from contextlib import asynccontextmanager
@@ -18,6 +19,11 @@ from telegram import BotCommand, Update
 from telegram.ext import Application
 
 from src.bot_telegram import build_application
+
+
+# Telegram updates should be small JSON envelopes. Bound ingress memory use even
+# when a caller omits or lies about Content-Length.
+MAX_WEBHOOK_BODY_BYTES = 1_048_576
 
 
 def _required_setting(name: str) -> str:
@@ -126,8 +132,25 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         ):
             raise HTTPException(status_code=403, detail="Invalid webhook secret")
 
+        declared_length = request.headers.get("content-length")
+        if declared_length is not None:
+            try:
+                parsed_length = int(declared_length)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Invalid Content-Length") from exc
+            if parsed_length < 0:
+                raise HTTPException(status_code=400, detail="Invalid Content-Length")
+            if parsed_length > MAX_WEBHOOK_BODY_BYTES:
+                raise HTTPException(status_code=413, detail="Telegram update exceeds size limit")
+
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > MAX_WEBHOOK_BODY_BYTES:
+                raise HTTPException(status_code=413, detail="Telegram update exceeds size limit")
+
         try:
-            payload = await request.json()
+            payload = json.loads(body)
         except (ValueError, UnicodeDecodeError) as exc:
             raise HTTPException(status_code=400, detail="Invalid JSON update") from exc
         if not isinstance(payload, dict):
