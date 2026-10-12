@@ -85,7 +85,8 @@ async def run_inbox_worker(
                 for task in (lease, dispatch):
                     try:
                         await task
-                    except asyncio.CancelledError:
+                    except (asyncio.CancelledError, Exception):
+                        # The task's failure is handled above; cleanup must not mask it.
                         pass
     finally:
         application.remove_error_handler(record_handler_error)
