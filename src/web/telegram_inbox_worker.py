@@ -13,11 +13,11 @@ from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInb
 logger = logging.getLogger(__name__)
 
 
-async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int) -> None:
+async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: int) -> None:
     while True:
         await asyncio.sleep(30)
         try:
-            await asyncio.to_thread(inbox.heartbeat, update_id)
+            await asyncio.to_thread(inbox.heartbeat, update_id, attempts=attempts)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -45,7 +45,8 @@ async def run_inbox_worker(
                 await asyncio.sleep(poll_seconds)
                 continue
             update_id = int(item["update_id"])
-            lease = asyncio.create_task(_renew_lease(inbox, update_id))
+            attempts = int(item["attempts"])
+            lease = asyncio.create_task(_renew_lease(inbox, update_id, attempts))
             try:
                 update = Update.de_json(item["payload"], application.bot)
                 if update is None:
@@ -63,14 +64,14 @@ async def run_inbox_worker(
                 try:
                     await asyncio.to_thread(
                         inbox.retry_or_dead_letter, update_id,
-                        attempts=int(item["attempts"]), error_code=type(exc).__name__,
+                        attempts=attempts, error_code=type(exc).__name__,
                     )
                 except Exception:
                     logger.exception("Telegram inbox retry state update failed for update_id=%s", update_id)
                 continue
             else:
                 try:
-                    await asyncio.to_thread(inbox.mark_processed, update_id)
+                    await asyncio.to_thread(inbox.mark_processed, update_id, attempts=attempts)
                 except Exception:
                     # Leave the row processing; lease expiry makes it recoverable.
                     logger.exception("Telegram inbox completion mark failed for update_id=%s", update_id)
