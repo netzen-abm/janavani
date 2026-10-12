@@ -1,4 +1,4 @@
-def test_polling_restart_does_not_drop_pending_updates(monkeypatch, capsys):
+def test_polling_restart_does_not_drop_pending_updates(monkeypatch):
     import src.bot_telegram as runtime
 
     class FakeApplication:
