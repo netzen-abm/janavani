@@ -907,3 +907,20 @@ Green static analysis or CI alone is not production certification. Production re
 
 No extra abstractions or arbitrary file-size refactors during the proof cycle. Keep domain invariants and cohesive orchestration together. Separate code only where the separation creates a real boundary of change ownership, trust/security, persistence, provider dependency, independent reuse, lifecycle/state testing or external transport.
 
+## EXECUTION LOG — 12 OCTOBER 2026
+
+### Telegram reliability proof cycle
+- [x] Confirm exactly nine approved active branches.
+- [x] Bound Telegram webhook request bodies to 1 MiB and validate declared plus streamed size.
+- [x] Preserve pending updates in the polling startup path with `drop_pending_updates=False`.
+- [x] Add a PostgreSQL durable inbox migration keyed by Telegram `update_id`, with bounded retry/dead-letter state and terminal payload clearing.
+- [x] Add a PostgreSQL inbox adapter using `FOR UPDATE SKIP LOCKED`, plus processing-lease renewal and worker dispatch.
+- [x] Wire production webhook startup to require `JANAVANI_TELEGRAM_INBOX_DSN`; acknowledge only after the durable insert/duplicate check returns.
+- [x] Add route tests for durable acceptance and retryable failure; document the delivery contract and deployment prerequisites.
+- [ ] Apply the new inbox migration to a disposable PostgreSQL database and run end-to-end worker/restart tests.
+- [ ] Verify latest CI for the new inbox commits and resolve all failures.
+- [ ] Add explicit least-privilege database grants for the deployment role and verify them against the live service configuration.
+- [ ] Prove business-operation idempotency where a handler effect can occur before inbox completion is recorded.
+- [ ] Verify deployed Telegram and Web/API runtimes independently; do not infer production readiness from CI alone.
+
+**Delivery semantics:** Durable at-least-once delivery to handler dispatch is the target. Exactly-once business effects are not claimed. The WebApp remains browser-local drafting until authenticated, persistent Case operations are demonstrated.
