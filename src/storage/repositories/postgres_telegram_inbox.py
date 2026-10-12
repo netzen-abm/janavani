@@ -60,6 +60,17 @@ class PostgresTelegramInbox:
                 return None
             return {"update_id": row[0], "payload": row[1], "attempts": row[2]}
 
+    def heartbeat(self, update_id: int) -> None:
+        """Extend a live processing lease so long handlers are not reclaimed."""
+        with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
+            cur.execute(
+                """UPDATE public.telegram_update_inbox SET locked_at = now()
+                   WHERE update_id = %s AND status = 'processing'""",
+                (update_id,),
+            )
+            if cur.rowcount != 1:
+                raise RuntimeError("Telegram inbox processing lease was lost")
+
     def mark_processed(self, update_id: int) -> None:
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
