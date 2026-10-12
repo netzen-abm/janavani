@@ -14,20 +14,24 @@ logger = logging.getLogger(__name__)
 
 
 async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: int) -> None:
+    """Keep the claim alive; returning means ownership was lost or cannot be proven."""
     while True:
         await asyncio.sleep(30)
         try:
-            await asyncio.to_thread(inbox.heartbeat, update_id, attempts=attempts)
+            owned = await asyncio.to_thread(inbox.heartbeat, update_id, attempts=attempts)
+            if owned is False:
+                raise RuntimeError("Telegram inbox processing lease was lost")
         except asyncio.CancelledError:
             raise
         except Exception:
             logger.exception("Telegram inbox lease renewal failed for update_id=%s", update_id)
+            return
 
 
 async def run_inbox_worker(
     application: Application, inbox: PostgresTelegramInbox, *, poll_seconds: float = 0.5
 ) -> None:
-    """Dispatch accepted updates; observe PTB handler errors for bounded retry."""
+    """Dispatch accepted updates; stop dispatch when lease ownership is lost."""
     failed_updates: set[int] = set()
 
     async def record_handler_error(update: object, context: Any) -> None:
@@ -47,17 +51,22 @@ async def run_inbox_worker(
             update_id = int(item["update_id"])
             attempts = int(item["attempts"])
             lease = asyncio.create_task(_renew_lease(inbox, update_id, attempts))
+            dispatch = asyncio.create_task(_dispatch(application, item, failed_updates))
             try:
-                update = Update.de_json(item["payload"], application.bot)
-                if update is None:
-                    raise ValueError("invalid_update")
-                failed_updates.discard(update_id)
-                await application.process_update(update)
-                # python-telegram-bot reports handler exceptions through its error
-                # handlers instead of propagating them from process_update().
-                if update_id in failed_updates:
-                    raise RuntimeError("telegram_handler_failed")
+                done, _ = await asyncio.wait(
+                    {dispatch, lease}, return_when=asyncio.FIRST_COMPLETED
+                )
+                if lease in done:
+                    dispatch.cancel()
+                    try:
+                        await dispatch
+                    except asyncio.CancelledError:
+                        pass
+                    raise RuntimeError("telegram_inbox_lease_lost")
+                await dispatch
+                await asyncio.to_thread(inbox.mark_processed, update_id, attempts=attempts)
             except asyncio.CancelledError:
+                dispatch.cancel()
                 raise
             except Exception as exc:
                 logger.exception("Telegram inbox processing failed for update_id=%s", update_id)
@@ -67,19 +76,28 @@ async def run_inbox_worker(
                         attempts=attempts, error_code=type(exc).__name__,
                     )
                 except Exception:
+                    # A reclaimed claim must not mutate the newer worker's state.
                     logger.exception("Telegram inbox retry state update failed for update_id=%s", update_id)
-                continue
-            else:
-                try:
-                    await asyncio.to_thread(inbox.mark_processed, update_id, attempts=attempts)
-                except Exception:
-                    # Leave the row processing; lease expiry makes it recoverable.
-                    logger.exception("Telegram inbox completion mark failed for update_id=%s", update_id)
             finally:
                 lease.cancel()
-                try:
-                    await lease
-                except asyncio.CancelledError:
-                    pass
+                if not dispatch.done():
+                    dispatch.cancel()
+                for task in (lease, dispatch):
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
     finally:
         application.remove_error_handler(record_handler_error)
+
+
+async def _dispatch(application: Application, item: dict[str, Any], failed_updates: set[int]) -> None:
+    update_id = int(item["update_id"])
+    update = Update.de_json(item["payload"], application.bot)
+    if update is None:
+        raise ValueError("invalid_update")
+    failed_updates.discard(update_id)
+    await application.process_update(update)
+    # python-telegram-bot routes handler errors through registered error handlers.
+    if update_id in failed_updates:
+        raise RuntimeError("telegram_handler_failed")
