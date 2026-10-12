@@ -8,13 +8,17 @@ from src.web import telegram_webhook_app
 class FakeInbox:
     def __init__(self, *, fail=False):
         self.accepted = []
+        self.ids = set()
         self.fail = fail
 
     def accept(self, update_id, payload):
         if self.fail:
             raise OSError("database unavailable")
+        if update_id in self.ids:
+            return False
+        self.ids.add(update_id)
         self.accepted.append((update_id, payload))
-        return len(self.accepted) == 1
+        return True
 
 
 def _payload():
