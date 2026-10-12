@@ -41,7 +41,6 @@ def test_webhook_persists_update_before_acknowledging(monkeypatch):
     assert response.status_code == 202
     assert inbox.accepted[0][0] == 9001
     # Durable inbox owns acceptance; the process-local PTB queue is not used.
-    telegram_webhook_app.Update.de_json  # keep patch scoped to this test
 
 
 def test_webhook_returns_retryable_failure_if_durable_acceptance_fails(monkeypatch):
