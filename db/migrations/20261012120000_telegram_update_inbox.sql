@@ -26,5 +26,7 @@ CREATE INDEX IF NOT EXISTS telegram_update_inbox_stale_idx
     ON public.telegram_update_inbox (locked_at)
     WHERE status = 'processing';
 
+REVOKE ALL ON TABLE public.telegram_update_inbox FROM PUBLIC;
+
 COMMENT ON TABLE public.telegram_update_inbox IS
     'Durable, idempotent Telegram update acceptance; terminal rows retain update IDs but not message payloads.';
