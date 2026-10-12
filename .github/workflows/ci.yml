@@ -129,6 +129,11 @@ jobs:
           JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
         run: python -m pytest -q tests/test_postgres_identity_pairing.py
 
+      - name: Run live PostgreSQL Telegram inbox gate
+        env:
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+        run: python -m pytest -q tests/test_postgres_telegram_inbox.py
+
       - name: Prove PostgreSQL backup and restore integrity
         env:
           PGHOST: localhost
