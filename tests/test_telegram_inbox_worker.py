@@ -78,10 +78,10 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
             await asyncio.Event().wait()
 
     # Force lease loss deterministically while the handler is still awaiting work.
-    monkeypatch.setattr(telegram_inbox_worker, "_renew_lease", lease_fails_immediately)
-
     async def lease_fails_immediately(inbox, update_id, attempts):
         raise RuntimeError("lease lost")
+
+    monkeypatch.setattr(telegram_inbox_worker, "_renew_lease", lease_fails_immediately)
 
     monkeypatch.setattr(
         telegram_inbox_worker.Update, "de_json",
