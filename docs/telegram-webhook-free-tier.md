@@ -1,28 +1,31 @@
-# Telegram webhook deployment (free-tier smoke test)
+# Telegram webhook deployment and reliability contract
 
-Janavani uses a dedicated FastAPI webhook service for Telegram updates. The Web/API service remains independent. Do not run the polling worker and webhook for the same bot token simultaneously: Telegram supports one configured webhook, and polling conflicts with webhook delivery.
+Janavani's Telegram webhook is an independent access-surface runtime. It must use shared capability implementations and must not become a second Case/business-logic implementation.
 
-## Configure the Render free web service
+## Before deployment
 
-0. If an older `janavani-telegram` polling worker exists, stop it before enabling the webhook. Never run polling and webhook delivery concurrently for the same bot token.\n1. Deploy the `janavani-telegram-webhook` service from `render.yaml`.
-2. In the service dashboard, set `TELEGRAM_BOT_TOKEN` to the bot token from BotFather.
-3. Set `TELEGRAM_WEBHOOK_SECRET` to a random 32+ character string containing only letters, digits, underscores or hyphens. Do not commit it.
-4. Copy the actual public HTTPS service URL from Render and set `TELEGRAM_WEBHOOK_URL` to `https://<actual-service-host>/telegram/webhook`.
-5. Redeploy/restart the service after setting secrets. Check `/liveness` returns HTTP 200 and inspect logs for startup/configuration errors.
-6. Open https://t.me/JanaVaniBot and send `/start`, then `/help` and `/privacy`.
+1. Apply `db/migrations/20261012120000_telegram_update_inbox.sql` to the bot's PostgreSQL database.
+2. Configure `TELEGRAM_BOT_TOKEN` from BotFather.
+3. Configure `TELEGRAM_WEBHOOK_SECRET` with a random 32–256 character URL-safe value. Never commit it.
+4. Configure `TELEGRAM_WEBHOOK_URL` to the public HTTPS endpoint ending in `/telegram/webhook`.
+5. Configure `JANAVANI_TELEGRAM_INBOX_DSN` with a PostgreSQL DSN held in the deployment secret manager and scoped to the inbox operations.
+6. Ensure no polling process uses the same bot token. Webhook and polling must not run concurrently for one bot.
+7. Deploy/restart and verify health, webhook registration, inbox insertion, processing, retry, and restart recovery.
 
-The service is deliberately configured with `JANAVANI_RUNTIME_MODE=test` and transient content for smoke testing. Do not submit real citizen data. Test mode is not production persistence: in-memory Case metadata and transient content can be lost on restart or free-tier sleep. The current bot command workflows may create local test state, but this is not a verified durable citizen service.
+Production startup fails closed if the inbox DSN is missing. Do not use production citizen data until inbox and Case/evidence/document persistence are independently verified.
 
-## Webhook behavior and security
+## Acceptance and processing
 
-- Telegram sends HTTPS POST requests to `/telegram/webhook`.
-- The endpoint checks `X-Telegram-Bot-Api-Secret-Token` using constant-time comparison.
-- Valid updates are queued to the existing python-telegram-bot application; existing command handlers remain the business adapter.
-- The application calls `setWebhook` at startup and does not use long polling.
-- `drop_pending_updates=false` preserves queued updates through service restarts where Telegram retains them.
-- A free Render web service may spin down. Telegram may retry a webhook request after timeout/error; monitor webhook delivery and duplicate-update handling. Do not assume every update is processed exactly once.
-- Do not expose the bot token or webhook secret in logs, URLs, client-side code or screenshots.
+- The endpoint validates Telegram's secret header in constant time and limits request bodies to 1 MiB.
+- Each update is stored in `public.telegram_update_inbox` using Telegram's `update_id` as an idempotency key.
+- HTTP 202 is returned only after the database insert/duplicate check completes. Duplicate update IDs do not create duplicate inbox rows. Database errors return HTTP 503 for retry.
+- A worker claims rows using `FOR UPDATE SKIP LOCKED`, renews processing leases, retries failures with bounded backoff, and dead-letters after the configured attempt limit.
+- Terminal rows retain the update ID and status but clear the payload to reduce message-content retention.
+- The guarantee is **at-least-once delivery to handler dispatch**, not exactly-once business execution. A crash after a handler performs an effect but before the inbox row is marked processed can cause a retry. Consequential capabilities need their own idempotency and transaction guarantees.
+- Polling now uses `drop_pending_updates=False`, avoiding intentional deletion of Telegram pending updates. This is not a replacement for the durable webhook inbox.
 
-## Production gate
+## Privacy and release gates
 
-Do not change `JANAVANI_RUNTIME_MODE` to production until the PostgreSQL, identity assertion, artifact repository and object-storage settings required by `src/config/runtime.py` are configured and verified. The Case-content privacy policy must remain explicit; this webhook configuration does not authorize durable storage of citizen narratives.
+The inbox stores update payloads while work is pending or processing. Apply least-privilege database permissions, a retention policy, encrypted transport/storage, backups and monitoring appropriate to message sensitivity. Do not grant broad database ownership just for convenience.
+
+The inbox alone does not make Case, evidence or document state durable. Production mode must also satisfy the provider requirements in `src/config/runtime.py`, trusted identity assertion validation, cross-user authorization, object-storage policy, and backup/restore verification. Test Web/API and Telegram independently. Do not describe a smoke-test deployment as a complete production civic service until these gates pass.
