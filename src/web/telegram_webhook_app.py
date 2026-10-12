@@ -1,9 +1,4 @@
-""""Dedicated Telegram webhook runtime for the free-tier Render web service.
-
-Telegram updates are authenticated with Telegram's webhook secret header and
-queued into the existing python-telegram-bot application. Business logic remains
-in the existing handlers and shared capabilities.
-"""
+"""Telegram webhook runtime; domain behavior stays in existing handlers/capabilities."""
 from __future__ import annotations
 
 import hmac
@@ -21,8 +16,6 @@ from telegram.ext import Application
 from src.bot_telegram import build_application
 
 
-# Telegram updates should be small JSON envelopes. Bound ingress memory use even
-# when a caller omits or lies about Content-Length.
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
 
 
@@ -49,7 +42,6 @@ def _webhook_commands() -> list[BotCommand]:
 
 def create_webhook_app(*, application: Application | None = None) -> FastAPI:
     """Build a webhook app; injected applications allow transport tests."""
-
     injected_application = application is not None
 
     @asynccontextmanager
@@ -64,33 +56,22 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         webhook_url = _required_setting("TELEGRAM_WEBHOOK_URL")
         secret = _required_setting("TELEGRAM_WEBHOOK_SECRET")
         if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", secret):
-            raise RuntimeError(
-                "TELEGRAM_WEBHOOK_SECRET must be 32-256 characters using only "
-                "letters, digits, underscores or hyphens"
-            )
-        parsed_webhook_url = urlsplit(webhook_url)
+            raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must be 32-256 URL-safe characters")
+        parsed = urlsplit(webhook_url)
         if (
-            parsed_webhook_url.scheme != "https"
-            or not parsed_webhook_url.netloc
-            or parsed_webhook_url.path != "/telegram/webhook"
-            or parsed_webhook_url.query
-            or parsed_webhook_url.fragment
-            or parsed_webhook_url.username
-            or parsed_webhook_url.password
+            parsed.scheme != "https" or not parsed.netloc
+            or parsed.path != "/telegram/webhook" or parsed.query or parsed.fragment
+            or parsed.username or parsed.password
         ):
-            raise RuntimeError(
-                "TELEGRAM_WEBHOOK_URL must be an HTTPS URL ending exactly in /telegram/webhook"
-            )
+            raise RuntimeError("TELEGRAM_WEBHOOK_URL must be HTTPS and end in /telegram/webhook")
 
         telegram_application = build_application(token=token)
         await telegram_application.initialize()
         await telegram_application.start()
         await telegram_application.bot.set_my_commands(_webhook_commands())
         await telegram_application.bot.set_webhook(
-            url=webhook_url,
-            secret_token=secret,
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=False,
+            url=webhook_url, secret_token=secret,
+            allowed_updates=Update.ALL_TYPES, drop_pending_updates=False,
         )
         app.state.telegram_application = telegram_application
         app.state.webhook_secret = secret
@@ -100,17 +81,9 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
             await telegram_application.stop()
             await telegram_application.shutdown()
 
-    app = FastAPI(
-        title="Janavani Telegram Webhook",
-        version="1.0.0",
-        docs_url=None,
-        redoc_url=None,
-        lifespan=lifespan,
-    )
-
+    app = FastAPI(title="Janavani Telegram Webhook", version="1.0.0",
+                  docs_url=None, redoc_url=None, lifespan=lifespan)
     if injected_application:
-        # Test clients may not enter lifespan unless used as a context manager.
-        # Populate injected transport dependencies at construction for deterministic tests.
         app.state.telegram_application = application
         app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
 
@@ -122,14 +95,11 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
     async def telegram_webhook(
         request: Request,
         telegram_secret: str | None = Header(
-            default=None,
-            alias="X-Telegram-Bot-Api-Secret-Token",
+            default=None, alias="X-Telegram-Bot-Api-Secret-Token"
         ),
     ) -> dict[str, str]:
         expected = getattr(request.app.state, "webhook_secret", None)
-        if not expected or not telegram_secret or not hmac.compare_digest(
-            expected, telegram_secret
-        ):
+        if not expected or not telegram_secret or not hmac.compare_digest(expected, telegram_secret):
             raise HTTPException(status_code=403, detail="Invalid webhook secret")
 
         declared_length = request.headers.get("content-length")
@@ -148,7 +118,6 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
             body.extend(chunk)
             if len(body) > MAX_WEBHOOK_BODY_BYTES:
                 raise HTTPException(status_code=413, detail="Telegram update exceeds size limit")
-
         try:
             payload = json.loads(body)
         except (ValueError, UnicodeDecodeError) as exc:
@@ -160,19 +129,14 @@ def create_webhook_app(*, application: Application | None = None) -> FastAPI:
         try:
             update = Update.de_json(payload, telegram_application.bot)
         except Exception as exc:
-            # Treat parser failures as invalid client input, not an unhandled 500.
-            # Do not include the untrusted payload in the response or logs.
             raise HTTPException(status_code=400, detail="Invalid Telegram update") from exc
         if update is None:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
         try:
             await telegram_application.update_queue.put(update)
         except Exception as exc:
-            # Non-2xx tells Telegram the update was not accepted so it can retry.
-            # This does not make the in-memory queue durable across process crashes.
             raise HTTPException(
-                status_code=503,
-                detail="Telegram update could not be queued; retry delivery",
+                status_code=503, detail="Telegram update could not be queued; retry delivery"
             ) from exc
         return {"status": "accepted"}
 
