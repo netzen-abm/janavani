@@ -8,7 +8,7 @@ Janavani's Telegram webhook is an independent access-surface runtime. It must us
 2. Configure `TELEGRAM_BOT_TOKEN` from BotFather.
 3. Configure `TELEGRAM_WEBHOOK_SECRET` with a random 32–256 character URL-safe value. Never commit it.
 4. Configure `TELEGRAM_WEBHOOK_URL` to the public HTTPS endpoint ending in `/telegram/webhook`.
-5. Configure `JANAVANI_TELEGRAM_INBOX_DSN` with a PostgreSQL DSN held in the deployment secret manager and scoped to the inbox operations.
+5. Configure `JANAVANI_TELEGRAM_INBOX_DSN` with a PostgreSQL DSN held in the deployment secret manager. Grant the runtime role `USAGE` on schema `public` and `SELECT, INSERT, UPDATE` on `public.telegram_update_inbox`; do not grant table ownership or `DELETE` unless a separately reviewed operation requires it.
 6. Ensure no polling process uses the same bot token. Webhook and polling must not run concurrently for one bot.
 7. Deploy/restart and verify health, webhook registration, inbox insertion, processing, retry, and restart recovery.
 
