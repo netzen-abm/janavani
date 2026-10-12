@@ -47,7 +47,7 @@ class PostgresTelegramInbox:
                           OR (status = 'processing'
                               AND locked_at < now() - (%s * interval '1 second'))
                        ORDER BY received_at
-                       FOR UPDATE SKIP LOCKED LIMIT 1
+                       LIMIT 1 FOR UPDATE SKIP LOCKED
                    )
                    UPDATE public.telegram_update_inbox AS inbox
                    SET status = 'processing', attempts = attempts + 1, locked_at = now()
