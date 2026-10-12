@@ -65,3 +65,5 @@ def test_duplicate_webhook_update_is_acknowledged_without_duplicate_acceptance(m
     assert client.post("/telegram/webhook", json=_payload(), headers=headers).status_code == 202
     assert client.post("/telegram/webhook", json=_payload(), headers=headers).status_code == 202
     assert len(inbox.accepted) == 1
+
+
