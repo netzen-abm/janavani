@@ -52,7 +52,11 @@ async def run_inbox_worker(
                 logger.exception("Telegram inbox retry state update failed for update_id=%s", update_id)
             continue
         else:
-            await asyncio.to_thread(inbox.mark_processed, update_id)
+            try:
+                await asyncio.to_thread(inbox.mark_processed, update_id)
+            except Exception:
+                # Leave the row processing; lease expiry makes it recoverable.
+                logger.exception("Telegram inbox completion mark failed for update_id=%s", update_id)
         finally:
             lease.cancel()
             try:
