@@ -65,3 +65,45 @@ def test_worker_retries_when_telegram_handler_reports_error(monkeypatch):
     assert inbox.retried.is_set()
     assert not inbox.processed
     assert not hasattr(application, "error_handler")
+
+
+
+def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
+    class LostLeaseInbox(_Inbox):
+        def heartbeat(self, update_id, *, attempts):
+            raise RuntimeError("lease lost")
+
+    class BlockingApplication(_Application):
+        async def process_update(self, update):
+            await asyncio.Event().wait()
+
+    async def immediate_sleep(_seconds):
+        await asyncio.sleep(0)
+
+    # Replace only the worker module's sleep; yield to let dispatch and lease tasks run.
+    monkeypatch.setattr(telegram_inbox_worker, "_renew_lease", lease_fails_immediately)
+
+    async def lease_fails_immediately(inbox, update_id, attempts):
+        raise RuntimeError("lease lost")
+
+    monkeypatch.setattr(
+        telegram_inbox_worker.Update, "de_json",
+        lambda payload, bot: SimpleNamespace(update_id=payload["update_id"]),
+    )
+    inbox, application = LostLeaseInbox(), BlockingApplication()
+
+    async def run_until_retry():
+        worker = asyncio.create_task(
+            telegram_inbox_worker.run_inbox_worker(application, inbox, poll_seconds=0.01)
+        )
+        try:
+            assert await asyncio.to_thread(inbox.retried.wait, 2), "worker did not retry after lease loss"
+        finally:
+            worker.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await worker
+
+    asyncio.run(run_until_retry())
+    assert inbox.retried.is_set()
+    assert not inbox.processed
+    assert not hasattr(application, "error_handler")
