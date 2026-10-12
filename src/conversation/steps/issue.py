@@ -49,8 +49,8 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     set_ephemeral_issue(user_id, user_input)
 
     classification = classify_issue(user_input)
-    session["category"] = classification["category"]
-    session["department"] = classification["department"]
+    session["category"] = classification.category
+    session["department"] = classification.department
 
     await update.message.reply_text(
         f"📌 Category: {session['category']}\n"
