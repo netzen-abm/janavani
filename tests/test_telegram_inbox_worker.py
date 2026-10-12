@@ -19,13 +19,13 @@ class _Inbox:
             return {"update_id": 44, "payload": {"update_id": 44}, "attempts": 1}
         return None
 
-    def heartbeat(self, update_id):
+    def heartbeat(self, update_id, *, attempts):
         return None
 
     def retry_or_dead_letter(self, update_id, *, attempts, error_code):
         self.retried.set()
 
-    def mark_processed(self, update_id):
+    def mark_processed(self, update_id, *, attempts):
         self.processed = True
 
 
