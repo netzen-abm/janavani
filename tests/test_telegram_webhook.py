@@ -94,6 +94,21 @@ def test_webhook_rejects_non_object_json_without_queueing():
     application.update_queue.put.assert_not_awaited()
 
 
+def test_webhook_rejects_update_parser_exception_without_queueing(monkeypatch):
+    application = _application()
+    client = TestClient(create_webhook_app(application=application))
+
+    def raise_parser_error(payload, bot):
+        raise TypeError("unexpected update field")
+
+    monkeypatch.setattr("src.web.telegram_webhook_app.Update.de_json", raise_parser_error)
+    response = _post(client, json=_payload())
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid Telegram update"
+    application.update_queue.put.assert_not_awaited()
+
+
 def test_webhook_liveness_is_available():
     client = TestClient(create_webhook_app(application=_application()))
     response = client.get("/liveness")
