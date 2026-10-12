@@ -117,7 +117,7 @@ def main() -> None:
 
     application = build_application(token=Config.TELEGRAM_BOT_TOKEN)
     print("✅ Bot application composed; starting polling.")
-    application.run_polling(drop_pending_updates=True)
+    application.run_polling(drop_pending_updates=False)
 
 
 if __name__ == "__main__":
