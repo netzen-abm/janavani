@@ -16,9 +16,20 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = user.id
-    user_input = update.message.text.strip()
-    if not user_input:
-        await update.message.reply_text("Please describe the civic issue you want to report.")
+    user_input = (update.message.text or "").strip()
+    words = user_input.split()
+    # A minimal quality gate catches empty/single-token noise, not factual truth.
+    # Keep this before identity lookup and transient storage so rejected text is not retained.
+    if len(user_input) > 5000:
+        await update.message.reply_text(
+            "Your description is too long. Please keep it under 5,000 characters."
+        )
+        return
+    if len(words) < 2 or not any(any(ch.isalpha() for ch in word) for word in words):
+        await update.message.reply_text(
+            "Please describe the issue in a short sentence, for example: "
+            "'My road has been damaged for three months.'"
+        )
         return
 
     links = context.bot_data.get("identity_link_repository")
