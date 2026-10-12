@@ -83,7 +83,7 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
         telegram_inbox_worker.Update, "de_json",
         lambda payload, bot: SimpleNamespace(update_id=payload["update_id"]),
     )
-    inbox, application = LostLeaseInbox(), BlockingApplication()
+    inbox, application = _Inbox(), BlockingApplication()
 
     async def run_until_retry():
         worker = asyncio.create_task(
