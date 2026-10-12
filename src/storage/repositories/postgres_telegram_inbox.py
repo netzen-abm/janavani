@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 
 class PostgresTelegramInbox:
-    """Persist accepted updates and recover stale claims after worker restart."""
+    """Persist accepted updates and fence stale workers after a lease is reclaimed."""
 
     def __init__(
         self, connection_factory: Callable[[], Any] | None = None, *, dsn: str | None = None
@@ -38,7 +38,7 @@ class PostgresTelegramInbox:
             return cur.fetchone() is not None
 
     def claim_next(self, *, stale_after_seconds: int = 120) -> dict[str, Any] | None:
-        """Claim one available update; reclaim work abandoned by a crashed worker."""
+        """Claim one available update; attempts acts as a fencing generation."""
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """WITH candidate AS (
@@ -60,25 +60,25 @@ class PostgresTelegramInbox:
                 return None
             return {"update_id": row[0], "payload": row[1], "attempts": row[2]}
 
-    def heartbeat(self, update_id: int) -> None:
-        """Extend a live processing lease so long handlers are not reclaimed."""
+    def heartbeat(self, update_id: int, *, attempts: int) -> None:
+        """Renew only the current claim; a reclaimed claim fences the old worker."""
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """UPDATE public.telegram_update_inbox SET locked_at = now()
-                   WHERE update_id = %s AND status = 'processing'""",
-                (update_id,),
+                   WHERE update_id = %s AND status = 'processing' AND attempts = %s""",
+                (update_id, attempts),
             )
             if cur.rowcount != 1:
                 raise RuntimeError("Telegram inbox processing lease was lost")
 
-    def mark_processed(self, update_id: int) -> None:
+    def mark_processed(self, update_id: int, *, attempts: int) -> None:
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """UPDATE public.telegram_update_inbox
                    SET status = 'processed', payload = NULL, locked_at = NULL,
                        processed_at = now(), last_error_code = NULL
-                   WHERE update_id = %s AND status = 'processing'""",
-                (update_id,),
+                   WHERE update_id = %s AND status = 'processing' AND attempts = %s""",
+                (update_id, attempts),
             )
             if cur.rowcount != 1:
                 raise RuntimeError("Telegram inbox update was not owned by this worker")
@@ -96,9 +96,9 @@ class PostgresTelegramInbox:
                        available_at = now() + (%s * interval '1 second'),
                        locked_at = NULL, processed_at = CASE WHEN %s THEN now() ELSE NULL END,
                        last_error_code = %s
-                   WHERE update_id = %s AND status = 'processing'""",
+                   WHERE update_id = %s AND status = 'processing' AND attempts = %s""",
                 ("dead_letter" if terminal else "pending", terminal, delay, terminal,
-                 error_code[:80], update_id),
+                 error_code[:80], update_id, attempts),
             )
             if cur.rowcount != 1:
                 raise RuntimeError("Telegram inbox update was not owned by this worker")
