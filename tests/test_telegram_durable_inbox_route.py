@@ -54,3 +54,12 @@ def test_webhook_returns_retryable_failure_if_durable_acceptance_fails(monkeypat
         headers={"X-Telegram-Bot-Api-Secret-Token": "test-secret"},
     )
     assert response.status_code == 503
+
+
+def test_duplicate_webhook_update_is_acknowledged_without_duplicate_acceptance(monkeypatch):
+    inbox = FakeInbox()
+    client = _client(monkeypatch, inbox)
+    headers = {"X-Telegram-Bot-Api-Secret-Token": "test-secret"}
+    assert client.post("/telegram/webhook", json=_payload(), headers=headers).status_code == 202
+    assert client.post("/telegram/webhook", json=_payload(), headers=headers).status_code == 202
+    assert len(inbox.accepted) == 1
