@@ -32,6 +32,24 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
             with connection.cursor() as cursor:
                 cursor.execute(BASE_SCHEMA)
                 cursor.execute(IDENTITY_SCHEMA)
+                # The candidate Supabase-compatible policy migration references
+                # platform roles that a vanilla PostgreSQL CI service does not
+                # create automatically. Provision the minimal test roles before
+                # applying that policy; never use elevated application roles.
+                cursor.execute(
+                    """
+                    DO $
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                            CREATE ROLE anon NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                            CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                        END IF;
+                    END
+                    $;
+                    """
+                )
                 cursor.execute(RLS_POLICY)
 
                 cursor.execute(
