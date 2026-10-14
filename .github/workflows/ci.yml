@@ -289,6 +289,29 @@ jobs:
           set -euo pipefail
           container_id="$(docker ps --filter 'ancestor=postgres:16' --format '{{.ID}}' | head -n 1)"
           test -n "$container_id"
+          # This gate runs in its own job/database, so seed its own durable
+          # fixture instead of depending on rows created by canonical-suite.
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO public.civic_cases
+            (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at, version)
+          VALUES
+            ('pg-atomic-case', 'complaint', 'restart durability fixture', '', 'janavani:ci-test', 'submitted', now(), now(), 2)
+          ON CONFLICT (case_id) DO UPDATE SET
+            status = EXCLUDED.status, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at;
+
+          INSERT INTO public.civic_case_submissions
+            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, version)
+          VALUES
+            ('pg-atomic-submission', 'pg-atomic-case', 'destination:ci-test', 'test', 'submitted', now(), now(), 2)
+          ON CONFLICT (submission_id) DO UPDATE SET
+            state = EXCLUDED.state, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at;
+
+          INSERT INTO public.civic_case_events
+            (event_id, case_id, event_type, occurred_at, actor_id, source_channel, notes, event_version, created_at)
+          VALUES
+            ('pg-atomic-event-1', 'pg-atomic-case', 'submission_recorded', now(), 'janavani:ci-test', 'ci', 'restart durability fixture', 2, now())
+          ON CONFLICT (event_id) DO NOTHING;
+          SQL
           before="$(psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.civic_case_events WHERE event_id = 'pg-atomic-event-1'")"
           test "$before" = "1"
           docker restart "$container_id"
