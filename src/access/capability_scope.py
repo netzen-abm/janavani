@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import FrozenSet
 
 
 class DataClassification(str, Enum):
@@ -37,7 +36,7 @@ class DataRequirement:
 class CapabilityDataScope:
     capability_id: str
     purpose: str
-    approved_fields: FrozenSet[str]
+    approved_fields: frozenset[str]
     provider: str | None = None
     processing_mode: str | None = None
 
@@ -46,7 +45,7 @@ class CapabilityDataScope:
         *,
         capability_id: str,
         purpose: str,
-        requested_fields: FrozenSet[str],
+        requested_fields: frozenset[str],
         provider: str | None,
         processing_mode: str | None,
     ) -> bool:
@@ -64,7 +63,7 @@ class CapabilityDataScopePolicy:
     capability_id: str
     requirements: tuple[DataRequirement, ...]
     purpose: str | None = None
-    consent_required_for: FrozenSet[DataClassification] = frozenset(
+    consent_required_for: frozenset[DataClassification] = frozenset(
         {
             DataClassification.PERSONAL,
             DataClassification.SENSITIVE,
@@ -79,7 +78,7 @@ class CapabilityDataScopePolicy:
         self,
         *,
         purpose: str,
-        requested_fields: FrozenSet[str],
+        requested_fields: frozenset[str],
         provider: str | None,
         processing_mode: str | None,
         consent_scope: CapabilityDataScope | None = None,
