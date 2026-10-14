@@ -38,7 +38,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 # applying that policy; never use elevated application roles.
                 cursor.execute(
                     """
-                    DO $
+                    DO $janavani_roles$
                     BEGIN
                         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
                             CREATE ROLE anon NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
@@ -47,7 +47,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                             CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
                         END IF;
                     END
-                    $;
+                    $janavani_roles$;
                     """
                 )
                 cursor.execute(RLS_POLICY)
