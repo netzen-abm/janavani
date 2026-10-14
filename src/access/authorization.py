@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
 from src.identity.context import IdentityContext
@@ -23,8 +22,8 @@ class AuthorizationRequest:
     context: IdentityContext
     capability: str
     action: str
-    resource_id: Optional[str] = None
-    resource_owner_id: Optional[str] = None
+    resource_id: str | None = None
+    resource_owner_id: str | None = None
     risk_level: str = "normal"
     requires_approval: bool = False
     execution_context: CapabilityExecutionContext | None = None
