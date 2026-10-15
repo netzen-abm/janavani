@@ -300,11 +300,12 @@ jobs:
             status = EXCLUDED.status, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at;
 
           INSERT INTO public.civic_case_submissions
-            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, version)
+            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, version, idempotency_key)
           VALUES
-            ('pg-atomic-submission', 'pg-atomic-case', 'destination:ci-test', 'test', 'submitted', now(), now(), 2)
+            ('pg-atomic-submission', 'pg-atomic-case', 'destination:ci-test', 'test', 'submitted', now(), now(), 2, 'pg-atomic-submission-key')
           ON CONFLICT (submission_id) DO UPDATE SET
-            state = EXCLUDED.state, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at;
+            state = EXCLUDED.state, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at,
+            idempotency_key = EXCLUDED.idempotency_key;
 
           INSERT INTO public.civic_case_events
             (event_id, case_id, event_type, occurred_at, actor_id, source_channel, notes, event_version, created_at)
