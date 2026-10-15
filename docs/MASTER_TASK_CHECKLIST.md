@@ -1,8 +1,8 @@
 # 🇮🇳 JANAVANI — MASTER TASK CHECKLIST
 
 **Status:** LIVE MASTER CONTROL DOCUMENT  
-**Version:** 1.2  
-**Date:** 05 October 2026  
+**Version:** 1.3  
+**Date:** 11 October 2026  
 **Scope:** COMPLETE JANAVANI ECOSYSTEM — NOT AN MVP
 
 **Purpose:** Single authoritative checklist for tracking the complete Janavani ecosystem. It records master workstreams, subtasks, dependencies, verification status, and completion evidence.
@@ -66,6 +66,74 @@ The nine approved active branches are: main, integration/canonical-platform, fea
 - Consent/agent and PostgreSQL-gate branches contain unique work but are based on old generations; re-evaluate against current contracts before integration.
 - PR #203 remains a convergence review vehicle and is not merge-ready merely because it is mergeable.
 
+
+
+### Verified follow-up on the rebaseline commit — 11 October 2026
+
+- [x] Latest observed review-head checks for `f29feb8076b8043269a71cc47fa06afecc98252c`: CI, Docker, Architecture Guard, Security CI and Dependency Review all completed successfully.
+- [x] Telegram pairing command is registered by `src/bot_telegram.py`; its service is only composed when the `external_identity_links` provider is PostgreSQL. This verifies source wiring, not that a live Telegram Worker exists.
+- [ ] Fresh default CodeQL analysis must be confirmed on the current review head; custom Security CI success is not sufficient.
+- [ ] Current live Render service inventory still contains only the Web/API service. The `render.yaml` worker definition is not proof that the Telegram Worker has been created.
+- [ ] Do not promote the browser `/app` local-draft workspace as the full WebApp. Case persistence, evidence lifecycle, authenticated cross-surface continuation, submission, acknowledgement and tracking are not yet jointly verified in the deployed system.
+
+## 0B. LIVE REBASELINE — 11 OCTOBER 2026
+
+**Status:** ACTIVE REBASELINE — supersedes older checklist statements about the current physical branch count and current PR security workflow; dated material remains as historical evidence.
+
+**Audit record:** [2026-10-11 live rebaseline and code audit](90-audits/2026-10-11-live-rebaseline-and-code-audit.md)
+
+### Live baseline
+
+- [x] Canonical `main` SHA recorded: `0fb4c50d188811bed700555e1ed82735adef790e`.
+- [x] Main-tree source inventory: 1,048 tree entries; 292 active `.py/.rs` files under `src/`, `api/`, and `crates/` after archive/historical exclusions.
+- [x] CI has an active-source line guard at 180 lines.
+- [x] Latest observed PR #204 head `6ff2f2788ead52ee08943b97887f83f2d913a796` passed the canonical CI test job, including the line guard, smoke, Web vertical-slice, Web/Telegram shared capability, full canonical suite, live PostgreSQL RLS, identity-pairing, backup/restore and restart-durability gates.
+- [x] Docker, Architecture Guard, Security CI and Dependency Review were green for that observed PR head.
+- [x] Advanced CodeQL job was tested and failed because GitHub default CodeQL setup is enabled (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`, run `38123086974`). The duplicate advanced job was removed again in `b04a2c538f0936d26b6f7ba3d70742a1d41a53f0`.
+- [ ] Re-run and inspect fresh custom security/CI checks after de-duplicating CodeQL; separately verify that default CodeQL analysis is actively completing and current.
+- [ ] The live repository currently has **10 physical branches**, not nine, because an extra `audit/2026-10-11-live-rebaseline` branch was accidentally created during the audit. The exact-nine invariant is therefore BLOCKED until that extra ref is archived/deleted and GitHub verifies nine refs.
+- [ ] Deployed Web/API liveness and independent Telegram runtime evidence remain unverified. Live Render inventory showed only the Web/API service; no Telegram Worker was configured in the connected workspace.
+
+### Pull-request disposition
+
+- **PR #203:** open/unmerged; convergence review vehicle, not a wholesale merge candidate. Compare selectively against current main.
+- **PR #204:** keep draft until fresh CI passes, default CodeQL is verified as actively analyzing (do not combine with the conflicting advanced job), and the trusted identity gateway, dedicated least-privilege shared database role, independent protected-data authorization and deployment/runtime gates are reviewed.
+- PR #204 adds a local draft / preview / download / print workspace at `/app`. That route is not present in the currently deployed `main` revision; merge/deploy and runtime verification are required before advertising it. Even after deployment, it is not the complete persisted Case, submission and tracking experience.
+
+### Exact branch-recovery action
+
+Use the existing [Branch Retirement workflow](https://github.com/netzen-abm/janavani/actions/workflows/branch-retirement.yml) on `main`, with `execute=true` and confirmation exactly `RETIRE-LEGACY-BRANCHES`. The workflow is designed to archive each non-approved head as a tag before deleting its physical branch ref, then assert that nine refs remain. Review its logs and re-query branches afterwards. The connected GitHub action surface does not offer workflow dispatch or branch-ref deletion, so this session could not execute that operation. Do not claim the nine-branch rule is satisfied until the physical count is verified.
+
+### Current priority order
+
+**P0 — repository and runtime truth**
+1. Retire only the accidental extra audit branch through the guarded workflow; re-verify exactly nine branches.
+2. Verify fresh Security CI/CI outcomes and confirm GitHub's default CodeQL setup is producing current analyses; do not re-enable the conflicting advanced job.
+3. Verify canonical Web/API and Telegram startup, health, provider configuration and mutual failure independence in the actual deployment.
+4. Re-check PostgreSQL RLS/cross-user denials, least-privilege roles, atomicity/rollback, migration behavior, restart/outage recovery and backup/restore against deployment-equivalent configuration.
+
+**P1 — the first complete citizen workflow**
+5. Complete and verify `issue → Case → authority → evidence reference → document → review/correction → explicit consent → submission preparation → acknowledgement/tracking → follow-up/outcome` on Web.
+6. Provide the corresponding Telegram workflow through the same shared capability graph. Telegram remains independently deployed and must not own a duplicate civic domain.
+7. Verify cross-surface Case continuation only once shared identity, authorization and durable persistence are proven together. Keep personal/sensitive content and evidence device-first by default; document generation is not submission, and delivery attempts are not acknowledgements.
+
+**P2 — defect-driven convergence**
+8. Fix the smallest reproducible boundary-local defect. Do not add a generic orchestrator or split cohesive code for line-count cosmetics.
+9. Re-run focused tests, canonical suite and security/runtime gates after each meaningful change; record SHA and direct evidence.
+
+**P3 — expansion**
+10. Expand Mini App, WhatsApp/Messenger, Android/iOS, AI/RAG/Agentic AI, DApp/Web3 and resilient transports only after the proving gates pass. The ecosystem scope remains complete; this is sequencing, not scope reduction.
+
+### Code-responsibility rule reaffirmed
+
+Split only at independent boundaries of change ownership, trust/security, persistence, provider dependency, reuse, lifecycle/state testing, or external transport. Preserve cohesive invariants. The 180-line CI rule is a guard, not permission to fragment responsibilities arbitrarily.
+
+### Next 2 steps
+
+1. **Remove the accidental extra branch through the archive-first Branch Retirement workflow, then verify nine refs and fresh CI/default-CodeQL evidence.**
+2. **Apply and verify `/liveness` on the Render Web/API service; configure the Telegram bot as an independent Worker; then finish the same end-to-end civic-action journey across both surfaces** using shared capabilities and explicit consent/persistence controls.
+
+---
 
 ---
 
@@ -801,3 +869,109 @@ Preserve cohesion when splitting would duplicate orchestration, fragment invaria
 
 Green static analysis or CI alone is not production certification. Production readiness requires runtime/deployment evidence for every applicable gate above.
 
+
+
+---
+
+# 34. CURRENT EXECUTION REBASELINE — 11 OCTOBER 2026
+
+**This section supersedes older status statements where they conflict with current live evidence.** Older checklist sections remain as historical records; their branch-count claims must not be read as the current state.
+
+## Site roles — owner-confirmed
+
+- [x] Primary public site for current use: https://netzen-abm.github.io/janavani/
+- [x] Separate brochure/showcase site: https://netzen-abm.github.io/janavani-website/
+- [x] Public repository README on the review branch now distinguishes these roles.
+- [x] A static, responsive primary-site landing page has been added as root `index.html` on the existing review branch. Until `/app` is deployed and verified, the page links to the civic-action explainer and showcase rather than to an unavailable workspace route.
+- [ ] After merge, confirm the GitHub Pages publishing source for `netzen-abm/janavani` is configured to publish the branch/root containing `index.html`; verify deployed metadata, links, mobile layout, keyboard access and reduced-motion behavior.
+- [ ] Keep the brochure repository's page canonicals and sitemap pointing to its own `/janavani-website/` URLs. Do not conflate its SEO identity with the primary site's URL.
+- [ ] Keep the `/app` route out of public CTAs until a merged main deployment returns a successful runtime check; afterward label it as an early local-drafting preview, not a complete WebApp.
+
+## Branch hygiene — current live state
+
+- [ ] **BLOCKED: exact-nine invariant.** The current GitHub branch query returned 10 physical branches, including `audit/2026-10-11-live-rebaseline`.
+- [ ] Run `.github/workflows/branch-retirement.yml` from `main` with `execute=true` and confirmation `RETIRE-LEGACY-BRANCHES`. The workflow must archive the extra branch head before deleting its ref; do not delete one of the nine approved branch roles to satisfy the count.
+- [ ] Re-query GitHub branches after workflow completion and require exactly nine physical refs before marking the invariant complete.
+- [ ] Do not create an additional branch. Continue work on `chore/ecosystem-shared-capability-infrastructure` until the current reviewed changes are either merged or explicitly retired.
+
+## Proof-and-product gates
+
+- [ ] Finish fresh CI after the landing page and checklist/readme updates.
+- [ ] Verify current default CodeQL analysis on the review head; custom Security CI is not a substitute for CodeQL coverage.
+- [ ] Verify the live primary Pages URL renders the new landing page after deployment.
+- [ ] Configure and verify the independent Telegram Worker in Render; a `render.yaml` worker definition is not deployment evidence.
+- [ ] Complete the shared civic-action workflow across Web and Telegram with real identity, authorization, persistence and explicit consent.
+- [ ] Keep PostgreSQL RLS, least-privilege database role, migration/rollback, transaction atomicity, restart/recovery and backup/restore as release gates.
+
+## Responsibility rule
+
+No extra abstractions or arbitrary file-size refactors during the proof cycle. Keep domain invariants and cohesive orchestration together. Separate code only where the separation creates a real boundary of change ownership, trust/security, persistence, provider dependency, independent reuse, lifecycle/state testing or external transport.
+
+## EXECUTION LOG — 12 OCTOBER 2026
+
+### Telegram reliability proof cycle
+- [x] Confirm exactly nine approved active branches.
+- [x] Bound Telegram webhook request bodies to 1 MiB and validate declared plus streamed size.
+- [x] Preserve pending updates in the polling startup path with `drop_pending_updates=False`.
+- [x] Add a PostgreSQL durable inbox migration keyed by Telegram `update_id`, with bounded retry/dead-letter state and terminal payload clearing.
+- [x] Add a PostgreSQL inbox adapter using `FOR UPDATE SKIP LOCKED`, plus processing-lease renewal and worker dispatch.
+- [x] Wire production webhook startup to require `JANAVANI_TELEGRAM_INBOX_DSN`; acknowledge only after the durable insert/duplicate check returns.
+- [x] Add route tests for durable acceptance and retryable failure; document the delivery contract and deployment prerequisites.
+- [ ] Apply the new inbox migration to a disposable PostgreSQL database and run end-to-end worker/restart tests.
+- [ ] Verify latest CI for the new inbox commits and resolve all failures.
+- [ ] Add explicit least-privilege database grants for the deployment role and verify them against the live service configuration.
+- [ ] Prove business-operation idempotency where a handler effect can occur before inbox completion is recorded.
+- [ ] Verify deployed Telegram and Web/API runtimes independently; do not infer production readiness from CI alone.
+
+**Delivery semantics:** Durable at-least-once delivery to handler dispatch is the target. Exactly-once business effects are not claimed. The WebApp remains browser-local drafting until authenticated, persistent Case operations are demonstrated.
+
+
+---
+
+# 35. ENGINEERING PROOF CYCLE — 15 OCTOBER 2026
+
+**Current review branch:** `chore/ecosystem-shared-capability-infrastructure`  
+**Current known head at prior evidence capture:** `3d38c2fadce3691eeb9b370d86c839f607234432`  
+**PR:** [#204](https://github.com/netzen-abm/janavani/pull/204) — keep draft and unmerged until acceptance gates pass.
+
+## Live repository and CI recheck
+
+- [x] GitHub branch inventory returns exactly nine physical branches: `main`, `integration/canonical-platform`, `feat/canonical-case-kernel`, `feat/canonical-capability-execution-envelope`, `feat/canonical-civic-action-vertical-slice`, `feat/canonical-sos-contract`, `feat/capability-scoped-consent-agent-enforcement`, `audit/postgres-provider-production-gates`, and `chore/ecosystem-shared-capability-infrastructure`.
+- [x] Branch-budget job passed in workflow run `38616728218`.
+- [x] Focused test job passed in run `38616728218`, including syntax, active-source line guard, smoke tests, Web vertical slice, Web/Telegram shared-capability gate, live PostgreSQL RLS isolation, identity pairing, Telegram inbox, backup/restore, and PostgreSQL restart durability.
+- [x] Docker build run `38616728412` passed.
+- [x] Dependency Review run `38616728976` passed.
+- [ ] **Full canonical suite is NOT green:** canonical-suite job `116033592567` in run `38616728218` ended `cancelled`. Cancellation is neither pass nor a diagnosed test failure. Obtain a fresh, completed run and investigate the reason for cancellation before release decisions.
+
+## P0 — prove Telegram business-effect replay safety
+
+- [x] Acceptance contract exists: `docs/architecture/TELEGRAM_POST_COMMIT_REPLAY_ACCEPTANCE_CONTRACT.md`.
+- [x] Existing PostgreSQL inbox tests cover durable acceptance, duplicate Telegram update ID, claim completion, and stale-worker fencing.
+- [x] Existing PostgreSQL submission/Case transaction test covers atomic projection/event mutation and repository-level idempotent replay.
+- [ ] Add a PostgreSQL-backed failure-injection test through the actual Telegram handler/capability and durable transaction path: commit business mutation, inject failure before inbox completion, reclaim/redeliver, then assert one durable Case/Submission mutation, one lifecycle event, safe/deduplicated consequential effects, and eventual inbox completion.
+- [ ] Re-run with fresh worker/repository instances and reject conflicting reuse of the business idempotency key.
+- [ ] Record CI evidence proving this test actually executed against PostgreSQL and was not skipped.
+
+**Do not treat the acceptance document or separate inbox/repository tests as proof of the combined crash window.** Inbox delivery remains at-least-once; the target is effectively-once business effects through the existing durable idempotency boundary, not exactly-once delivery.
+
+## P1 — Web ↔ Telegram end-to-end continuity
+
+- [ ] Verify Web creates a durable Case through authenticated API operations.
+- [ ] Verify a paired Telegram identity can retrieve and continue that same Case after process restart.
+- [ ] Verify a different identity is denied access.
+- [ ] Verify consent, evidence/document references, submission preparation and lifecycle history remain consistent across both surfaces.
+- [ ] Verify Web/API and Telegram worker can fail/restart independently without losing accepted updates or committed Case state.
+
+## Architecture and operations constraints
+
+- Exactly nine physical branches; do not create a tenth branch for this cycle.
+- Archive before retiring any branch; no branch retirement is currently required by the verified inventory.
+- Preserve existing domain/capability orchestration. Do not introduce another generic idempotency layer.
+- Separate only at transport/trust, persistence/provider, independent runtime, or independently reusable/testable lifecycle boundaries.
+- Keep `/app` described as local drafting until authenticated durable Case operations and cross-surface continuity are demonstrated.
+- Keep PR #204 draft/unmerged and do not promote production based on focused gates alone.
+
+## Next two engineering actions
+
+1. Investigate why the canonical suite was cancelled and obtain a completed result.
+2. Implement and execute the PostgreSQL-backed Telegram post-commit crash/redelivery test through the real handler and canonical capability path.

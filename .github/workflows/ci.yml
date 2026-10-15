@@ -37,18 +37,73 @@ jobs:
               ;;
           esac
 
-      - name: Enforce physical branch budget on canonical line
-        if: github.ref_name == 'main' && github.event_name == 'push'
+      - name: Enforce physical branch budget on canonical repository
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
-          mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | sed '/^$/d; /^HEAD$/d' | sort)
+          mapfile -t branches < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' | sort)
           count="${#branches[@]}"
-          echo "Observed remote branch refs: $count"
-          printf '%s\\n' "${branches[@]}"
+          echo "Observed physical branch refs in ${GITHUB_REPOSITORY}: $count"
+          printf '%s\n' "${branches[@]}"
           if [ "$count" -ne 9 ]; then
             echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
+            echo "::error::Archive and retire only non-sanctioned branches, then re-run this gate."
             exit 1
           fi
+
+  canonical-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: janavani
+          POSTGRES_PASSWORD: janavani-test
+          POSTGRES_DB: janavani_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U janavani -d janavani_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=12
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e '.[postgres]'
+          python -m pip install pytest fakeredis ruff
+
+      - name: Run canonical test suite
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          OPENROUTER_API_KEY: mock-verification-token
+          HF_TOKEN: mock-verification-token
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+        run: bash ./run_all_tests.sh
 
   test:
     runs-on: ubuntu-latest
@@ -109,19 +164,20 @@ jobs:
       - name: Web/Telegram shared-capability gate
         run: python -m pytest -q tests/test_web_telegram_shared_case_contract.py
 
-      - name: Run canonical test suite
-        env:
-          REDIS_HOST: localhost
-          REDIS_PORT: "6379"
-          OPENROUTER_API_KEY: mock-verification-token
-          HF_TOKEN: mock-verification-token
-          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
-        run: bash ./run_all_tests.sh
-
       - name: Run live PostgreSQL RLS isolation gate
         env:
           JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
         run: python -m pytest -q tests/test_postgres_rls_live.py
+
+      - name: Run live PostgreSQL identity-pairing gate
+        env:
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+        run: python -m pytest -q tests/test_postgres_identity_pairing.py
+
+      - name: Run live PostgreSQL Telegram inbox gate
+        env:
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+        run: python -m pytest -q tests/test_postgres_telegram_inbox.py
 
       - name: Prove PostgreSQL backup and restore integrity
         env:
@@ -233,6 +289,30 @@ jobs:
           set -euo pipefail
           container_id="$(docker ps --filter 'ancestor=postgres:16' --format '{{.ID}}' | head -n 1)"
           test -n "$container_id"
+          # This gate runs in its own job/database, so seed its own durable
+          # fixture instead of depending on rows created by canonical-suite.
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO public.civic_cases
+            (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at, version)
+          VALUES
+            ('pg-atomic-case', 'complaint', 'restart durability fixture', '', 'janavani:ci-test', 'submitted', now(), now(), 2)
+          ON CONFLICT (case_id) DO UPDATE SET
+            status = EXCLUDED.status, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at;
+
+          INSERT INTO public.civic_case_submissions
+            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, version, idempotency_key)
+          VALUES
+            ('pg-atomic-submission', 'pg-atomic-case', 'destination:ci-test', 'test', 'submitted', now(), now(), 2, 'pg-atomic-submission-key')
+          ON CONFLICT (submission_id) DO UPDATE SET
+            state = EXCLUDED.state, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at,
+            idempotency_key = EXCLUDED.idempotency_key;
+
+          INSERT INTO public.civic_case_events
+            (event_id, case_id, event_type, occurred_at, actor_id, source_channel, notes, event_version, created_at)
+          VALUES
+            ('pg-atomic-event-1', 'pg-atomic-case', 'submission_recorded', now(), 'janavani:ci-test', 'ci', 'restart durability fixture', 2, now())
+          ON CONFLICT (event_id) DO NOTHING;
+          SQL
           before="$(psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.civic_case_events WHERE event_id = 'pg-atomic-event-1'")"
           test "$before" = "1"
           docker restart "$container_id"

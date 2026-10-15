@@ -35,11 +35,19 @@ class AuthorityCapability:
     def search(self, request: AuthorityLookupRequest) -> list[AuthorityRecord]:
         if request.limit < 1:
             return []
-        return self._repository.search(
+        candidates = self._repository.search(
             authority_type=request.authority_type,
             city=request.city,
             limit=request.limit,
         )
+        # Search results feed user-facing destination selection. Keep the
+        # candidate list consistent with require_verified_destination: an
+        # authority must be verified and have a usable primary destination.
+        return [
+            authority
+            for authority in candidates
+            if authority.verified and authority.primary_contact is not None
+        ]
 
     def require_verified_destination(self, authority_id: str):
         """Resolve an authority and fail closed unless its destination is verified."""

@@ -11,6 +11,7 @@ ROOT = Path(__file__).parents[1]
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 BASE_SCHEMA = (ROOT / "db/migrations/20260912100000_canonical_case_policy_schema.sql").read_text(encoding="utf-8")
 IDENTITY_SCHEMA = (ROOT / "db/migrations/20260920100000_external_identity_links.sql").read_text(encoding="utf-8")
+SUBMISSION_IDEMPOTENCY_SCHEMA = (ROOT / "db/migrations/20260913100000_submission_idempotency_key.sql").read_text(encoding="utf-8")
 RLS_POLICY = (ROOT / "db/migrations/CANDIDATE_20260919_rls_authorization.sql").read_text(encoding="utf-8")
 
 
@@ -31,7 +32,26 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
         with connection.transaction():
             with connection.cursor() as cursor:
                 cursor.execute(BASE_SCHEMA)
+                cursor.execute(SUBMISSION_IDEMPOTENCY_SCHEMA)
                 cursor.execute(IDENTITY_SCHEMA)
+                # The candidate Supabase-compatible policy migration references
+                # platform roles that a vanilla PostgreSQL CI service does not
+                # create automatically. Provision the minimal test roles before
+                # applying that policy; never use elevated application roles.
+                cursor.execute(
+                    """
+                    DO $janavani_roles$
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                            CREATE ROLE anon NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                            CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                        END IF;
+                    END
+                    $janavani_roles$;
+                    """
+                )
                 cursor.execute(RLS_POLICY)
 
                 cursor.execute(
@@ -134,10 +154,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(
                     """
                     INSERT INTO public.civic_case_submissions
-                    (submission_id, case_id, destination_ref, channel, state, idempotency_key, created_at, updated_at)
-                    VALUES (%s, %s, 'destination:test', 'test', 'pending', %s, now(), now())
+                    (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, idempotency_key)
+                    VALUES (%s, %s, 'destination:test', 'test', 'pending', now(), now(), %s)
                     """,
-                    (submission_id, case_id, "rls-idempotency-" + submission_id),
+                    (submission_id, case_id, submission_id),
                 )
 
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-b",))
@@ -196,10 +216,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_case_submissions
-                            (submission_id, case_id, destination_ref, channel, state, idempotency_key, created_at, updated_at)
-                            VALUES (%s, %s, 'forged', 'test', 'pending', %s, now(), now())
+                            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, idempotency_key)
+                            VALUES (%s, %s, 'forged', 'test', 'pending', now(), now(), %s)
                             """,
-                            ("forged-" + uuid4().hex, case_id, "forged-idempotency-" + uuid4().hex),
+                            ("forged-" + uuid4().hex, case_id, "forged-key-" + uuid4().hex),
                         )
 
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
