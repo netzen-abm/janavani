@@ -11,6 +11,7 @@ ROOT = Path(__file__).parents[1]
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 BASE_SCHEMA = (ROOT / "db/migrations/20260912100000_canonical_case_policy_schema.sql").read_text(encoding="utf-8")
 IDENTITY_SCHEMA = (ROOT / "db/migrations/20260920100000_external_identity_links.sql").read_text(encoding="utf-8")
+SUBMISSION_IDEMPOTENCY_SCHEMA = (ROOT / "db/migrations/20260913100000_submission_idempotency_key.sql").read_text(encoding="utf-8")
 RLS_POLICY = (ROOT / "db/migrations/CANDIDATE_20260919_rls_authorization.sql").read_text(encoding="utf-8")
 
 
@@ -31,6 +32,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
         with connection.transaction():
             with connection.cursor() as cursor:
                 cursor.execute(BASE_SCHEMA)
+                cursor.execute(SUBMISSION_IDEMPOTENCY_SCHEMA)
                 cursor.execute(IDENTITY_SCHEMA)
                 # The candidate Supabase-compatible policy migration references
                 # platform roles that a vanilla PostgreSQL CI service does not
