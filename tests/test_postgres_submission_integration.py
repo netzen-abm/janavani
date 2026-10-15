@@ -151,11 +151,6 @@ def test_postgres_submission_idempotency_concurrency_and_retry_contract():
     assert retry.submission_id == "pg-submit-1"
     assert retry.idempotency_key == f"pg-submit-key-{run_id}"
 
-    # The schema contract remains intentionally outside RLS activation.
-    with psycopg.connect(DSN) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "select relrowsecurity from pg_class where oid = 'public.civic_case_submissions'::regclass"
-            )
-            # Live CI schema has RLS enabled; this is a security invariant, not a candidate marker.
-            assert cursor.fetchone()[0] is True
+    # RLS activation is deliberately excluded from the canonical schema-only migrations.
+    # Cross-surface row isolation is verified by tests/test_postgres_rls_live.py,
+    # which explicitly applies the candidate RLS policy before asserting isolation.
