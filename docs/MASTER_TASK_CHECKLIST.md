@@ -924,3 +924,54 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 - [ ] Verify deployed Telegram and Web/API runtimes independently; do not infer production readiness from CI alone.
 
 **Delivery semantics:** Durable at-least-once delivery to handler dispatch is the target. Exactly-once business effects are not claimed. The WebApp remains browser-local drafting until authenticated, persistent Case operations are demonstrated.
+
+
+---
+
+# 35. ENGINEERING PROOF CYCLE — 15 OCTOBER 2026
+
+**Current review branch:** `chore/ecosystem-shared-capability-infrastructure`  
+**Current known head at prior evidence capture:** `3d38c2fadce3691eeb9b370d86c839f607234432`  
+**PR:** [#204](https://github.com/netzen-abm/janavani/pull/204) — keep draft and unmerged until acceptance gates pass.
+
+## Live repository and CI recheck
+
+- [x] GitHub branch inventory returns exactly nine physical branches: `main`, `integration/canonical-platform`, `feat/canonical-case-kernel`, `feat/canonical-capability-execution-envelope`, `feat/canonical-civic-action-vertical-slice`, `feat/canonical-sos-contract`, `feat/capability-scoped-consent-agent-enforcement`, `audit/postgres-provider-production-gates`, and `chore/ecosystem-shared-capability-infrastructure`.
+- [x] Branch-budget job passed in workflow run `38616728218`.
+- [x] Focused test job passed in run `38616728218`, including syntax, active-source line guard, smoke tests, Web vertical slice, Web/Telegram shared-capability gate, live PostgreSQL RLS isolation, identity pairing, Telegram inbox, backup/restore, and PostgreSQL restart durability.
+- [x] Docker build run `38616728412` passed.
+- [x] Dependency Review run `38616728976` passed.
+- [ ] **Full canonical suite is NOT green:** canonical-suite job `116033592567` in run `38616728218` ended `cancelled`. Cancellation is neither pass nor a diagnosed test failure. Obtain a fresh, completed run and investigate the reason for cancellation before release decisions.
+
+## P0 — prove Telegram business-effect replay safety
+
+- [x] Acceptance contract exists: `docs/architecture/TELEGRAM_POST_COMMIT_REPLAY_ACCEPTANCE_CONTRACT.md`.
+- [x] Existing PostgreSQL inbox tests cover durable acceptance, duplicate Telegram update ID, claim completion, and stale-worker fencing.
+- [x] Existing PostgreSQL submission/Case transaction test covers atomic projection/event mutation and repository-level idempotent replay.
+- [ ] Add a PostgreSQL-backed failure-injection test through the actual Telegram handler/capability and durable transaction path: commit business mutation, inject failure before inbox completion, reclaim/redeliver, then assert one durable Case/Submission mutation, one lifecycle event, safe/deduplicated consequential effects, and eventual inbox completion.
+- [ ] Re-run with fresh worker/repository instances and reject conflicting reuse of the business idempotency key.
+- [ ] Record CI evidence proving this test actually executed against PostgreSQL and was not skipped.
+
+**Do not treat the acceptance document or separate inbox/repository tests as proof of the combined crash window.** Inbox delivery remains at-least-once; the target is effectively-once business effects through the existing durable idempotency boundary, not exactly-once delivery.
+
+## P1 — Web ↔ Telegram end-to-end continuity
+
+- [ ] Verify Web creates a durable Case through authenticated API operations.
+- [ ] Verify a paired Telegram identity can retrieve and continue that same Case after process restart.
+- [ ] Verify a different identity is denied access.
+- [ ] Verify consent, evidence/document references, submission preparation and lifecycle history remain consistent across both surfaces.
+- [ ] Verify Web/API and Telegram worker can fail/restart independently without losing accepted updates or committed Case state.
+
+## Architecture and operations constraints
+
+- Exactly nine physical branches; do not create a tenth branch for this cycle.
+- Archive before retiring any branch; no branch retirement is currently required by the verified inventory.
+- Preserve existing domain/capability orchestration. Do not introduce another generic idempotency layer.
+- Separate only at transport/trust, persistence/provider, independent runtime, or independently reusable/testable lifecycle boundaries.
+- Keep `/app` described as local drafting until authenticated durable Case operations and cross-surface continuity are demonstrated.
+- Keep PR #204 draft/unmerged and do not promote production based on focused gates alone.
+
+## Next two engineering actions
+
+1. Investigate why the canonical suite was cancelled and obtain a completed result.
+2. Implement and execute the PostgreSQL-backed Telegram post-commit crash/redelivery test through the real handler and canonical capability path.
