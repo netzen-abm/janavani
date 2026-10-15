@@ -152,10 +152,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                 cursor.execute(
                     """
                     INSERT INTO public.civic_case_submissions
-                    (submission_id, case_id, destination_ref, channel, state, created_at, updated_at)
-                    VALUES (%s, %s, 'destination:test', 'test', 'pending', now(), now())
+                    (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, idempotency_key)
+                    VALUES (%s, %s, 'destination:test', 'test', 'pending', now(), now(), %s)
                     """,
-                    (submission_id, case_id),
+                    (submission_id, case_id, submission_id),
                 )
 
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-b",))
@@ -214,10 +214,10 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
                         cursor.execute(
                             """
                             INSERT INTO public.civic_case_submissions
-                            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at)
-                            VALUES (%s, %s, 'forged', 'test', 'pending', now(), now())
+                            (submission_id, case_id, destination_ref, channel, state, created_at, updated_at, idempotency_key)
+                            VALUES (%s, %s, 'forged', 'test', 'pending', now(), now(), %s)
                             """,
-                            ("forged-" + uuid4().hex, case_id),
+                            ("forged-" + uuid4().hex, case_id, "forged-key-" + uuid4().hex),
                         )
 
                 cursor.execute("SELECT set_config('janavani.principal_id', %s, true)", ("principal-a",))
