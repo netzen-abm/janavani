@@ -71,3 +71,11 @@ def test_canonical_provider_name_takes_precedence_over_legacy_alias() -> None:
     })
 
     assert composition.provider_for("civic_case") == "memory"
+
+
+
+def test_document_review_can_be_explicitly_transient_for_privacy():
+    composition = ProviderComposition.from_environment({
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient"
+    })
+    assert composition.provider_for("document_review") == "transient"

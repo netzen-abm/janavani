@@ -28,6 +28,8 @@ def validate_runtime_configuration(
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
     }
@@ -40,6 +42,13 @@ def validate_runtime_configuration(
         detail = "; ".join(mismatches)
         raise RuntimeConfigurationError(
             "Production requires durable persistence providers: " + detail
+        )
+
+    if values.get("JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER", "").strip().lower() != "transient":
+        raise RuntimeConfigurationError(
+            "Production document review requires "
+            "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient "
+            "until a durable citizen-content adapter is explicitly approved"
         )
 
     identity_assertion_settings = (

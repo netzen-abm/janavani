@@ -25,6 +25,9 @@ def test_production_accepts_durable_configuration():
     environ = {
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
@@ -45,6 +48,9 @@ def test_production_rejects_shared_dsn_for_identity_mapping():
     environ = {
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
@@ -70,6 +76,9 @@ def test_production_requires_explicit_identity_assertion_trust_settings(missing_
     environ = {
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
@@ -93,6 +102,9 @@ def test_production_runtime_contract_selects_the_validated_case_provider() -> No
         "JANAVANI_RUNTIME_MODE": "production",
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
@@ -108,3 +120,30 @@ def test_production_runtime_contract_selects_the_validated_case_provider() -> No
 
     assert composition.provider_for("civic_case") == "postgres"
     assert composition.provider_for("document_artifact") == "postgres"
+    assert composition.provider_for("consent") == "postgres"
+    assert composition.provider_for("submission") == "postgres"
+    assert composition.provider_for("document_review") == "transient"
+
+
+
+def test_production_requires_explicit_transient_document_review_policy() -> None:
+    environ = {
+        "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_POSTGRES_DSN": "postgresql://example",
+        "JANAVANI_IDENTITY_LINKS_DSN": "postgresql://identity-role.example",
+        "JANAVANI_ARTIFACT_S3_BUCKET": "janavani-artifacts",
+        "JANAVANI_IDENTITY_ASSERTION_SECRET": "test-secret",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER": "janavani-identity",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE": "janavani-api",
+    }
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient",
+    ):
+        validate_runtime_configuration(environment="production", environ=environ)
