@@ -4,6 +4,7 @@ from fasthtml.common import (
     fast_app,
 )
 from starlette.requests import Request
+from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
 
 # Initialize the stateless web interface client
@@ -18,6 +19,8 @@ app, rt = fast_app(
         """)
     )
 )
+app.add_middleware(SameOriginCookieMutationMiddleware)
+
 
 @rt("/")
 def get():
