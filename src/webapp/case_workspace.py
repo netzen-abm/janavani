@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi.responses import Response
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Li, P, Select, Option, Textarea, Titled, Ul
 from starlette.requests import Request
 
 from src.webapp.services.api_client import client_for_request
@@ -30,12 +30,20 @@ def register_case_workspace_routes(rt) -> None:
             return _sign_in_required()
         case = client.get_case(case_id)
         draft = client.prepare_document_draft(case_id)
+        events = case.get("events", [])
+        event_items = [
+            Li(f"{event.get('occurred_at', 'Time unavailable')} — {event.get('event_type', 'Case update')}")
+            for event in events
+        ]
         return Titled(
             f"Janavani Case {case_id}",
             Div(
                 H2("Janavani Citizen Case Workspace"),
                 P(f"Case ID: {case['case_id']}"),
                 P(f"Lifecycle status: {case['status']}"),
+                H3("Case activity"),
+                Ul(*event_items) if event_items else P("No lifecycle events recorded yet."),
+                P(f"Evidence references: {len(case.get('evidence_refs', []))}; document references: {len(case.get('document_refs', []))}."),
                 H3("Review your document"),
                 P(draft.get("subject", "Document draft")),
                 P(draft.get("body", "")),
