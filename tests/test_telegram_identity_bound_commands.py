@@ -71,9 +71,10 @@ def test_telegram_cases_command_lists_only_owned_metadata(monkeypatch):
 
     class Case:
         case_id = "case-owned-1"
-        status = SimpleNamespace(value="review")
-        evidence_refs = ["evidence-1"]
-        document_refs = ["document-1"]
+        case_type = "complaint"
+        status = "review"
+        evidence_count = 1
+        document_count = 1
         narrative = "private citizen narrative"
 
     messages = []
