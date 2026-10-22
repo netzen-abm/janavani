@@ -206,6 +206,7 @@ def test_atomic_consent_case_rejects_case_owned_by_other_principal():
 )
 def test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response():
     import psycopg
+    from psycopg import sql
 
     dsn = os.getenv("JANAVANI_POSTGRES_TEST_DSN", "").strip()
     runtime_dsns = {
@@ -224,6 +225,11 @@ def test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response()
     token = uuid4().hex
     principal = f"consent-replay-{token}"
     case_id, consent_id = f"case-{token}", f"consent-{token}"
+    rollback_token = uuid4().hex
+    rollback_principal = f"consent-rollback-{rollback_token}"
+    rollback_case_id = f"case-{rollback_token}"
+    rollback_consent_id = f"consent-{rollback_token}"
+    rollback_constraint = f"ck_consent_rollback_{rollback_token}"
     timestamp = "2026-10-22T00:00:00+00:00"
     with psycopg.connect(dsn) as connection:
         connection.execute(schema)
@@ -232,6 +238,24 @@ def test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response()
                (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at, version)
                VALUES (%s, 'complaint', 'complaint', '', %s, 'draft', %s, %s, 1)""",
             (case_id, principal, timestamp, timestamp),
+        )
+        connection.execute(
+            """INSERT INTO public.civic_cases
+               (case_id, case_type, subject, narrative, created_by, status, created_at, updated_at, version)
+               VALUES (%s, 'complaint', 'complaint', '', %s, 'draft', %s, %s, 1)""",
+            (rollback_case_id, rollback_principal, timestamp, timestamp),
+        )
+        # A NOT VALID constraint is enforced on changed rows but does not scan
+        # unrelated pre-existing data. It forces the Case UPDATE to fail after
+        # the atomic repository has attempted the consent INSERT.
+        connection.execute(
+            sql.SQL(
+                "ALTER TABLE public.civic_cases ADD CONSTRAINT {} "
+                "CHECK (case_id <> {} OR status <> 'ready') NOT VALID"
+            ).format(
+                sql.Identifier(rollback_constraint),
+                sql.Literal(rollback_case_id),
+            )
         )
 
     case = CivicCase(
@@ -267,9 +291,68 @@ def test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response()
         assert persisted == ("ready", 2)
         assert consent_count == 1
         assert [event[0] for event in events] == ["approved", "consent_recorded", "review_started"]
+
+        rollback_case = CivicCase(
+            case_id=rollback_case_id,
+            case_type=CaseType.COMPLAINT,
+            subject="Rollback transaction",
+            narrative="Private content remains outside durable Case metadata",
+            created_by=rollback_principal,
+            status=CaseStatus.READY,
+            version=1,
+            created_at=timestamp,
+            updated_at=timestamp,
+            consent_refs=[rollback_consent_id],
+        )
+        rollback_repository = PostgresConsentCaseAtomicRepository(
+            dsn=dsn,
+            principal_id=rollback_principal,
+        )
+        with pytest.raises(psycopg.errors.CheckViolation):
+            rollback_repository.save_consent_and_case(
+                consent(rollback_consent_id, rollback_principal),
+                rollback_case,
+                principal_id=rollback_principal,
+            )
+
+        # The real PostgreSQL constraint fails after the consent INSERT was
+        # attempted. The transaction must roll back consent, Case status/version,
+        # and lifecycle events together.
+        with psycopg.connect(dsn) as connection:
+            persisted_case = connection.execute(
+                "SELECT status, version FROM public.civic_cases WHERE case_id=%s",
+                (rollback_case_id,),
+            ).fetchone()
+            persisted_consent_count = connection.execute(
+                "SELECT count(*) FROM public.civic_case_consents WHERE consent_id=%s",
+                (rollback_consent_id,),
+            ).fetchone()[0]
+            rollback_events = connection.execute(
+                "SELECT count(*) FROM public.civic_case_events WHERE case_id=%s",
+                (rollback_case_id,),
+            ).fetchone()[0]
+        assert persisted_case == ("draft", 1)
+        assert persisted_consent_count == 0
+        assert rollback_events == 0
     finally:
         with psycopg.connect(dsn) as connection:
             with connection.transaction():
-                connection.execute("DELETE FROM public.civic_case_events WHERE case_id=%s", (case_id,))
-                connection.execute("DELETE FROM public.civic_case_consents WHERE consent_id=%s", (consent_id,))
-                connection.execute("DELETE FROM public.civic_cases WHERE case_id=%s", (case_id,))
+                connection.execute(
+                    sql.SQL("ALTER TABLE public.civic_cases DROP CONSTRAINT IF EXISTS {}")
+                    .format(sql.Identifier(rollback_constraint))
+                )
+                for candidate_case_id in (case_id, rollback_case_id):
+                    connection.execute(
+                        "DELETE FROM public.civic_case_events WHERE case_id=%s",
+                        (candidate_case_id,),
+                    )
+                for candidate_consent_id in (consent_id, rollback_consent_id):
+                    connection.execute(
+                        "DELETE FROM public.civic_case_consents WHERE consent_id=%s",
+                        (candidate_consent_id,),
+                    )
+                for candidate_case_id in (case_id, rollback_case_id):
+                    connection.execute(
+                        "DELETE FROM public.civic_cases WHERE case_id=%s",
+                        (candidate_case_id,),
+                    )
