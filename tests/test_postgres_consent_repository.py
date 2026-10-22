@@ -15,6 +15,8 @@ class FakeCursor:
 
     def execute(self, sql, params=()):
         upper = sql.upper()
+        if "CREATE TABLE" in upper or "CREATE INDEX" in upper:
+            self.db.ddl_statements.append(sql)
         if "WHERE SUBJECT_ID" in upper:
             self.rows = [item for item in self.db.items.values() if item[1] == params[0]]
         elif "SELECT CONSENT_ID" in upper:
@@ -58,6 +60,7 @@ class FakeConnection:
 class FakeDb:
     def __init__(self):
         self.items = {}
+        self.ddl_statements = []
 
 
 def make_consent():
@@ -80,6 +83,7 @@ def test_postgres_consent_round_trip_and_subject_listing():
     )
     consent = make_consent()
 
+    assert db.ddl_statements == []
     repository.save(consent)
     assert repository.get("consent-1") == consent
     assert repository.list_for_subject("citizen-1") == [consent]
