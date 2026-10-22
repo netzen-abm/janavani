@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.identity.pairing import IdentityPairingService
+from src.capabilities.civic_case_contract import CAPABILITY_ID
 from src.platform.composition import (
     create_identity_link_repository,
     create_identity_pairing_repository,
@@ -17,6 +18,15 @@ from src.platform.composition import (
 )
 
 router = APIRouter(prefix="/civic/identity-pairings", tags=["Identity Pairing"])
+
+def _require_civic_case_access(context: IdentityContext) -> None:
+    """Identity linking must not grant Case capability a principal does not have."""
+    if not context.principal.has_capability(CAPABILITY_ID):
+        raise HTTPException(
+            status_code=403,
+            detail="Civic Case capability is required to link a Telegram identity",
+        )
+
 _providers = create_provider_composition()
 _pairing_service = None
 # In-memory repositories are process-local and cannot link independently deployed
@@ -38,7 +48,8 @@ async def issue_pairing(
     response: Response,
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, str]:
-    """Issue a short-lived code; the caller must be authenticated."""
+    """Issue a short-lived code; the caller must be authenticated and Case-authorized."""
+    _require_civic_case_access(context)
     if _pairing_service is None:
         raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     response.headers["Cache-Control"] = "no-store"
@@ -60,7 +71,8 @@ async def confirm_pairing(
     request: ConfirmPairingRequest,
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, object]:
-    """Confirm only for the same authenticated principal that issued the code."""
+    """Confirm only for the same authenticated, Case-authorized principal."""
+    _require_civic_case_access(context)
     if _pairing_service is None:
         raise HTTPException(status_code=503, detail="Cross-surface pairing requires shared PostgreSQL identity persistence")
     try:
