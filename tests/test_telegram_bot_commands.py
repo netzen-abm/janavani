@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from src.bot_telegram import _set_bot_commands
+from src.commands.catalogue import telegram_bot_commands
 
 
 def test_startup_publishes_unique_discoverable_bot_commands():
@@ -15,6 +16,7 @@ def test_startup_publishes_unique_discoverable_bot_commands():
 
     set_my_commands.assert_awaited_once()
     commands = set_my_commands.await_args.args[0]
+    assert commands == telegram_bot_commands()
     names = [command.command for command in commands]
     assert len(names) == len(set(names))
     assert {
