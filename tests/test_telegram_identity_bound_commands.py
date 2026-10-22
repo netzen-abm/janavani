@@ -1,7 +1,6 @@
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
-import asyncio
-
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +25,7 @@ def test_telegram_check_command_uses_canonical_identity_link_repository():
 
     assert "links = context.application.bot_data.get(\"identity_link_repository\")" in source
     assert "identity_for_telegram_user(user_id, links=links)" in source
+
 
 def test_telegram_check_renders_recent_activity_without_private_notes(monkeypatch):
     import src.commands.check as check_module
