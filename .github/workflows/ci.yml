@@ -188,9 +188,31 @@ jobs:
           JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
         run: |
           set -euo pipefail
-          python -m pytest -vv -rs \
+          report="$RUNNER_TEMP/postgres-continuity-junit.xml"
+          python -m pytest -vv -rs --junitxml="$report" \
             tests/test_postgres_web_telegram_case_continuity.py \
             tests/test_postgres_consent_case_atomic.py
+          python - "$report" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(sys.argv[1]).getroot()
+          cases = {case.attrib.get("name"): case for case in root.iter("testcase")}
+          required = {
+              "test_web_and_telegram_share_postgres_case_and_verified_principal",
+              "test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response",
+          }
+          missing = required - cases.keys()
+          if missing:
+              raise SystemExit(f"Required integration tests not collected: {sorted(missing)}")
+          for name in sorted(required):
+              case = cases[name]
+              if case.find("skipped") is not None:
+                  raise SystemExit(f"Required integration test was skipped: {name}")
+              if case.find("failure") is not None or case.find("error") is not None:
+                  raise SystemExit(f"Required integration test failed: {name}")
+              print(f"Required integration test passed: {name}")
+          PY
 
       - name: Prove PostgreSQL backup and restore integrity
         env:
