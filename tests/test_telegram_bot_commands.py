@@ -23,6 +23,7 @@ def test_startup_publishes_unique_discoverable_bot_commands():
         "complaint",
         "search",
         "check",
+        "cases",
         "pair",
         "privacy",
         "cancel",

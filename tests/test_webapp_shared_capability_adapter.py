@@ -87,3 +87,33 @@ def test_lifecycle_requests_forward_transient_citizen_content(monkeypatch):
         call["headers"] == {"Authorization": "Bearer signed-user-assertion"}
         for call in calls
     )
+
+
+
+def test_web_client_lists_owned_case_metadata_with_request_scoped_identity(monkeypatch):
+    import src.webapp.services.api_client as api_module
+
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"items": [{"case_id": "case-owned-1", "status": "review"}], "count": 1}
+
+    def fake_get(url, *, params, headers, timeout):
+        captured.update(url=url, params=params, headers=headers, timeout=timeout)
+        return Response()
+
+    monkeypatch.setattr(api_module.httpx, "get", fake_get)
+    client = JanavaniWebAPIClient(
+        base_url="https://api.example.test",
+        identity_assertion="signed-citizen-assertion",
+    )
+    items = client.list_cases(limit=100)
+
+    assert items == [{"case_id": "case-owned-1", "status": "review"}]
+    assert captured["url"] == "https://api.example.test/civic/cases"
+    assert captured["params"] == {"limit": 50}
+    assert captured["headers"] == {"Authorization": "Bearer signed-citizen-assertion"}
