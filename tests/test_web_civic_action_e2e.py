@@ -176,7 +176,12 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert document_id in body["document_refs"]
     listed = client.get("/civic/cases", headers=headers)
     assert listed.status_code == 200
-    assert any(item["case_id"] == case_id for item in listed.json()["items"])
+    listed_item = next(
+        item for item in listed.json()["items"] if item["case_id"] == case_id
+    )
+    assert listed_item["evidence_count"] == 1
+    assert listed_item["document_count"] == 1
+    assert listed_item["last_activity_at"]
     assert all("narrative" not in item and "subject" not in item for item in listed.json()["items"])
     stranger_list = client.get("/civic/cases", headers=_auth_header("principal-stranger"))
     assert stranger_list.status_code == 200
