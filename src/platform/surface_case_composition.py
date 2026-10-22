@@ -26,10 +26,8 @@ from src.platform.composition_capabilities import (
     create_letter_drafting_capability,
     create_consent_capability,
 )
-from src.storage.repositories.case_content import (
-    InMemoryCaseContentRepository,
-    TransientCaseContentRepository,
-)
+from src.storage.repositories.case_content import InMemoryCaseContentRepository, TransientCaseContentRepository
+from src.storage.repositories.document_review_provider import require_transient_document_review
 
 
 class FailClosedSubmissionTransport(SubmissionTransport):
@@ -138,6 +136,9 @@ def create_surface_case_composition(
         provider_composition=provider_composition,
     )
     review_repository = repositories.document_review_repository
+    require_transient_document_review(
+        provider_composition.provider_for("document_review"), review_repository, runtime_mode
+    )
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(
         case_repository=case_repository,

@@ -73,6 +73,7 @@ def test_production_allows_explicit_transient_content_policy(monkeypatch):
 
     monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
     monkeypatch.setenv("JANAVANI_CASE_CONTENT_POLICY", "transient")
+    monkeypatch.setenv("JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER", "transient")
 
     composition = create_surface_case_composition(
         case_content_repository=TransientCaseContentRepository(ttl_seconds=60, max_entries=5)
@@ -140,3 +141,18 @@ def test_non_postgres_consent_does_not_create_atomic_postgres_writer():
         provider_composition=ProviderComposition.memory_first()
     )
     assert composition.consent_capability._atomic_repository is None
+
+
+
+def test_production_rejects_memory_document_review_repository(monkeypatch):
+    import pytest
+    from src.storage.repositories.case_content import TransientCaseContentRepository
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.setenv("JANAVANI_CASE_CONTENT_POLICY", "transient")
+    monkeypatch.delenv("JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER", raising=False)
+
+    with pytest.raises(ValueError, match="JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient"):
+        create_surface_case_composition(
+            case_content_repository=TransientCaseContentRepository(ttl_seconds=60, max_entries=5)
+        )

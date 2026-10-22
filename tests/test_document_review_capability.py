@@ -65,3 +65,53 @@ def test_document_review_requires_capability():
 
     with pytest.raises(PermissionError):
         capability.edit(DocumentReviewRequest("doc-1", body="No permission"), identity=identity(review=False))
+
+
+
+def test_transient_document_review_expires_drafts_and_revisions(monkeypatch):
+    import src.storage.repositories.document_review as review_module
+    from src.core.document_review import DocumentRevision
+    from src.storage.repositories.document_review import TransientDocumentReviewRepository
+
+    _, _, case, draft = setup()
+    now = [100.0]
+    monkeypatch.setattr(review_module, "monotonic", lambda: now[0])
+    repository = TransientDocumentReviewRepository(ttl_seconds=10, max_entries=2)
+    repository.save(draft)
+    repository.save_revision(DocumentRevision(
+        revision_id="rev-1", document_id=draft.document_id, case_id=case.case_id,
+        occurred_at="2026-10-22T00:00:00Z", actor_id="owner",
+        subject=draft.subject, body=draft.body,
+    ))
+    assert repository.get(draft.document_id) == draft
+    assert len(repository.revisions(draft.document_id)) == 1
+
+    now[0] = 111.0
+    assert repository.get(draft.document_id) is None
+    assert repository.revisions(draft.document_id) == []
+
+
+def test_transient_document_review_is_capacity_bounded():
+    from dataclasses import replace
+    from src.storage.repositories.document_review import TransientDocumentReviewRepository
+
+    _, _, _, first = setup()
+    second = replace(first, document_id="doc-2")
+    repository = TransientDocumentReviewRepository(ttl_seconds=60, max_entries=1)
+    repository.save(first)
+    repository.save(second)
+    assert repository.get(first.document_id) is None
+    assert repository.get(second.document_id) == second
+
+
+def test_transient_document_review_rejects_orphan_revision():
+    from src.core.document_review import DocumentRevision
+    from src.storage.repositories.document_review import TransientDocumentReviewRepository
+
+    repository = TransientDocumentReviewRepository()
+    with pytest.raises(LookupError, match="expired or does not exist"):
+        repository.save_revision(DocumentRevision(
+            revision_id="rev-orphan", document_id="missing", case_id="case-1",
+            occurred_at="2026-10-22T00:00:00Z", actor_id="owner",
+            subject="Subject", body="Body",
+        ))
