@@ -62,12 +62,19 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    recent_events = list(case.events)[-3:]
+    timeline = "\n".join(
+        f"• {event.event_type.value} — {event.occurred_at}"
+        for event in recent_events
+    ) or "• No lifecycle events recorded"
     await update.message.reply_text(
         (
             "📄 Janavani Case\n\n"
             f"🆔 ID: {case.case_id}\n"
             f"📌 Status: {case.status.value}\n"
             f"📎 Evidence references: {len(case.evidence_refs)}\n"
-            f"📄 Document references: {len(case.document_refs)}"
+            f"📄 Document references: {len(case.document_refs)}\n\n"
+            "🕒 Recent activity\n"
+            f"{timeline}"
         )
     )
