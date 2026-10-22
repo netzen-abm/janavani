@@ -12,6 +12,13 @@ from typing import Any
 import httpx
 
 
+def authorization_headers(identity_assertion: str | None) -> dict[str, str]:
+    """Format a request-scoped verified assertion; never use process-wide identity."""
+    if not identity_assertion:
+        raise RuntimeError("Authenticated Web identity is not configured")
+    return {"Authorization": f"Bearer {identity_assertion}"}
+
+
 class JanavaniWebAPIClient:
     """Call canonical civic-case endpoints without duplicating domain logic."""
 
@@ -21,9 +28,7 @@ class JanavaniWebAPIClient:
         self.identity_assertion = identity_assertion
 
     def _headers(self) -> dict[str, str]:
-        if not self.identity_assertion:
-            raise RuntimeError("Authenticated Web identity is not configured")
-        return {"Authorization": f"Bearer {self.identity_assertion}"}
+        return authorization_headers(self.identity_assertion)
 
     def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
         response = httpx.post(
