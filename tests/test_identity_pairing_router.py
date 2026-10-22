@@ -1,12 +1,11 @@
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
-from src.identity.context import IdentityContext
 from src.capabilities.civic_case_contract import CAPABILITY_ID
-from src.identity.principal import Principal
+from src.identity.context import IdentityContext
 from src.identity.pairing import IdentityPairingService, InMemoryPairingRepository
+from src.identity.principal import Principal
 import src.web.identity_pairing_router as pairing_router
 
 
