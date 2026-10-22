@@ -36,11 +36,26 @@ Deliver a secure, reliable citizen-participation platform in which the WebApp an
 - Every material claim is backed by CI, runtime, or reproducible integration evidence.
 - PR stays draft until the required gates are evidenced.
 
+## Delivery issue map
+- Master project tracker: [Issue #207](https://github.com/netzen-abm/janavani/issues/207)
+- W1 reliability and PostgreSQL replay: [Issue #208](https://github.com/netzen-abm/janavani/issues/208)
+- W4 authenticated WebApp Case lifecycle: [Issue #209](https://github.com/netzen-abm/janavani/issues/209)
+- W5 Telegram citizen journey: [Issue #210](https://github.com/netzen-abm/janavani/issues/210)
+- W6 shared infrastructure production readiness: [Issue #211](https://github.com/netzen-abm/janavani/issues/211)
+
+## Proposed delivery phases
+These are planned acceptance phases, not a claim that GitHub milestones have been created:
+1. **Reliability baseline:** worker cancellation, isolated regression tests, PostgreSQL crash/replay.
+2. **Citizen vertical slice:** shared identity and Case continuity; evidence/document, review, submission state and acknowledgement.
+3. **Operational readiness:** independent deployments, least-privilege database roles, RLS/ownership, backups and recovery.
+4. **Measured optimization:** use baseline latency, query counts, queue lag, retries and resource measurements to choose targeted optimizations.
+
 ## Current checkpoint — 2026-10-22
 - Live branch inventory: nine sanctioned branches.
-- Docker build and Architecture Guard: passed on the latest inspected run.
-- Secret/privacy scan and dependency review: passed on the latest inspected run.
-- Isolated Telegram worker regression gate: timed out after 30 seconds; root-cause diagnosis is the immediate blocker.
-- Canonical suite: still in progress at last inspection.
-- PostgreSQL crash-after-commit/replay test: added to the existing integration test file; execution result not yet verified.
-- PR #204 remains draft. Do not merge until the failed worker gate and remaining release gates are resolved.
+- Latest inspected previous run: Docker build, Architecture Guard, secret/privacy scan, dependency review and branch-budget gate passed; the isolated worker test timed out.
+- Diagnostic trace located the hang during the worker regression test and showed the test was not completing after cancellation. The worker cleanup previously awaited child tasks while catching `CancelledError` broadly. Cleanup now uses `asyncio.gather(..., return_exceptions=True)` to preserve cancellation of the worker itself; this is a root-cause fix candidate pending CI confirmation.
+- Regression tests no longer block an executor thread waiting on a `threading.Event`; they poll asynchronously with a bounded deadline.
+- Isolated test CI has verbose output and a faulthandler timeout enabled.
+- PostgreSQL crash-after-commit/replay test now terminates a child process after the transaction returns and before the inbox is marked processed; execution is still unverified.
+- Current CI runs for the latest checkpoint were queued at last inspection. Do not treat them as passing.
+- PR #204 remains draft. Do not merge until worker regression, canonical suite, live PostgreSQL and remaining release gates are evidenced.
