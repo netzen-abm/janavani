@@ -11,10 +11,11 @@ from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Request
-from telegram import BotCommand, Update
+from telegram import Update
 from telegram.ext import Application
 
 from src.bot_telegram import build_application
+from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
 
@@ -26,14 +27,6 @@ def _required_setting(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} must be configured for Telegram webhook mode")
     return value
-
-
-def _webhook_commands() -> list[BotCommand]:
-    return [BotCommand("start", "Start Janavani"), BotCommand("help", "View help and available commands"),
-            BotCommand("complaint", "Start a test complaint workflow"),
-            BotCommand("search", "Find public-service information"), BotCommand("check", "Check a case you own"),
-            BotCommand("pair", "Start account pairing"), BotCommand("privacy", "Understand data handling"),
-            BotCommand("cancel", "Clear the current in-memory workflow"), BotCommand("rate", "Share feedback")]
 
 
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
@@ -70,7 +63,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         bot_app, durable_inbox = build_application(token=token), PostgresTelegramInbox(dsn=dsn)
         await bot_app.initialize()
         await bot_app.start()
-        await bot_app.bot.set_my_commands(_webhook_commands())
+        await bot_app.bot.set_my_commands(telegram_bot_commands())
         await bot_app.bot.set_webhook(url=webhook_url, secret_token=secret,
                                       allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
         app.state.telegram_application, app.state.telegram_inbox = bot_app, durable_inbox
