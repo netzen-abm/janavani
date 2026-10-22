@@ -40,12 +40,21 @@ def create_consent_repository(*, provider_composition: ProviderComposition | Non
     return create_consent_repository_for_provider(provider=composition.provider_for("consent"))
 
 
-def create_consent_case_atomic_repository(*, provider_composition: ProviderComposition | None = None):
-    """Select atomic consent/Case persistence only when both domains are PostgreSQL-backed."""
+def create_consent_case_atomic_repository(
+    *, provider_composition: ProviderComposition | None = None,
+    case_repository=None, consent_repository=None,
+):
+    """Select atomic writes only for a coherent PostgreSQL repository pair."""
     composition = provider_composition or create_provider_composition()
     if (composition.provider_for("civic_case") != "postgres"
             or composition.provider_for("consent") != "postgres"):
         return None
+    from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+    from src.storage.repositories.postgres_consent import PostgresConsentRepository
+    if not isinstance(case_repository, PostgresCivicCaseRepository):
+        raise ValueError("Atomic consent requires a PostgreSQL Case repository")
+    if not isinstance(consent_repository, PostgresConsentRepository):
+        raise ValueError("Atomic consent requires a PostgreSQL consent repository")
     dsn = os.getenv("JANAVANI_POSTGRES_DSN", "").strip()
     if not dsn:
         raise ValueError("JANAVANI_POSTGRES_DSN is required for atomic PostgreSQL consent")

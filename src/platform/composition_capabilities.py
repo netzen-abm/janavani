@@ -45,7 +45,9 @@ def create_consent_capability(
     atomic_repository=None,
 ) -> ConsentCapability:
     atomic = atomic_repository or create_consent_case_atomic_repository(
-        provider_composition=provider_composition
+        provider_composition=provider_composition,
+        case_repository=case_repository,
+        consent_repository=consent_repository,
     )
     return ConsentCapability(
         repository=consent_repository, case_capability=case_capability,

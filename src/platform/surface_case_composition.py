@@ -133,6 +133,7 @@ def create_surface_case_composition(
     consent_capability = create_consent_capability(
         consent_repository=consent_repository,
         case_capability=case_capability,
+        case_repository=case_repository,
         provider_composition=provider_composition,
     )
     review_repository = repositories.document_review_repository

@@ -112,8 +112,9 @@ def test_transient_case_content_enforces_capacity():
 
 def test_postgres_case_and_consent_share_atomic_persistence(monkeypatch):
     from src.storage.provider_composition import ProviderComposition
-    from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
-    from src.storage.repositories.consent import InMemoryConsentRepository
+    from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+    from src.storage.repositories.postgres_consent import PostgresConsentRepository
+    from src.storage.repositories.postgres_consent_case_atomic import PostgresConsentCaseAtomicRepository
 
     monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://test-only")
     plan = (
@@ -121,13 +122,14 @@ def test_postgres_case_and_consent_share_atomic_persistence(monkeypatch):
         .with_provider("civic_case", "postgres")
         .with_provider("consent", "postgres")
     )
+    case_repository = object.__new__(PostgresCivicCaseRepository)
+    consent_repository = object.__new__(PostgresConsentRepository)
     composition = create_surface_case_composition(
         provider_composition=plan,
-        case_repository=InMemoryCivicCaseRepository(),
-        consent_repository=InMemoryConsentRepository(),
+        case_repository=case_repository,
+        consent_repository=consent_repository,
     )
 
-    from src.storage.repositories.postgres_consent_case_atomic import PostgresConsentCaseAtomicRepository
     assert isinstance(
         composition.consent_capability._atomic_repository,
         PostgresConsentCaseAtomicRepository,
@@ -155,4 +157,27 @@ def test_production_rejects_memory_document_review_repository(monkeypatch):
     with pytest.raises(ValueError, match="JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient"):
         create_surface_case_composition(
             case_content_repository=TransientCaseContentRepository(ttl_seconds=60, max_entries=5)
+        )
+
+
+
+def test_atomic_consent_rejects_mixed_repository_pair(monkeypatch):
+    import pytest
+
+    from src.platform.composition_repositories import create_consent_case_atomic_repository
+    from src.storage.provider_composition import ProviderComposition
+    from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+    from src.storage.repositories.consent import InMemoryConsentRepository
+
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://test-only")
+    plan = (
+        ProviderComposition.memory_first()
+        .with_provider("civic_case", "postgres")
+        .with_provider("consent", "postgres")
+    )
+    with pytest.raises(ValueError, match="PostgreSQL Case repository"):
+        create_consent_case_atomic_repository(
+            provider_composition=plan,
+            case_repository=InMemoryCivicCaseRepository(),
+            consent_repository=InMemoryConsentRepository(),
         )
