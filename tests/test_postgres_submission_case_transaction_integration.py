@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,11 +15,13 @@ from src.core.submission import SubmissionRecord
 from src.storage.repositories.postgres_submission_case_transaction import (
     PostgresSubmissionCaseTransactionRepository,
 )
+from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.storage.repositories.submission_case_transaction import SubmissionCaseConcurrencyError
 
 ROOT = Path(__file__).parents[1]
 CANONICAL_MIGRATION = ROOT / "db" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
 IDEMPOTENCY_MIGRATION = ROOT / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
+TELEGRAM_INBOX_MIGRATION = ROOT / "db" / "migrations" / "20261012120000_telegram_update_inbox.sql"
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
@@ -26,6 +29,8 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
     psycopg = pytest.importorskip("psycopg")
     canonical_sql = CANONICAL_MIGRATION.read_text(encoding="utf-8")
     idempotency_sql = IDEMPOTENCY_MIGRATION.read_text(encoding="utf-8")
+    inbox_sql = TELEGRAM_INBOX_MIGRATION.read_text(encoding="utf-8")
+    update_id = time.time_ns() % 9_000_000_000_000_000
 
     case_id = "pg-atomic-case"
     submission_id = "pg-atomic-submission"
@@ -34,6 +39,7 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
             with connection.cursor() as cursor:
                 cursor.execute(canonical_sql)
                 cursor.execute(idempotency_sql)
+                cursor.execute(inbox_sql)
                 cursor.execute("DELETE FROM civic_case_events WHERE case_id = %s", (case_id,))
                 cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s", (case_id,))
                 cursor.execute("DELETE FROM civic_cases WHERE case_id = %s", (case_id,))
@@ -71,6 +77,13 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
         occurred_at="2026-09-14T00:01:00+00:00", actor_id="pg-atomic-user", source_channel="telegram",
     )
 
+    # Simulate a durably accepted Telegram update; the inbox remains incomplete
+    # after the business commit to represent a worker crash in that exact window.
+    inbox = PostgresTelegramInbox(dsn=DSN)
+    assert inbox.accept(update_id, {"update_id": update_id, "case_id": case_id}) is True
+    first_claim = inbox.claim_next()
+    assert first_claim is not None and first_claim["update_id"] == update_id
+
     repository = PostgresSubmissionCaseTransactionRepository(dsn=DSN)
     result = repository.persist_mutation(
         submission=submission, expected_submission_version=1,
@@ -90,6 +103,18 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
             cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (event.event_id,))
             assert cursor.fetchone()[0] == 1
 
+    # Simulate lease expiry and a new worker claiming the still-incomplete update.
+    with psycopg.connect(DSN) as connection:
+        connection.execute(
+            """UPDATE public.telegram_update_inbox
+               SET locked_at = now() - interval '5 minutes'
+               WHERE update_id = %s""",
+            (update_id,),
+        )
+    second_claim = inbox.claim_next(stale_after_seconds=1)
+    assert second_claim is not None and second_claim["update_id"] == update_id
+    assert second_claim["attempts"] == first_claim["attempts"] + 1
+
     replay = PostgresSubmissionCaseTransactionRepository(dsn=DSN).persist_mutation(
         submission=submission, expected_submission_version=1,
         case=case, expected_case_version=1, event=event,
@@ -98,6 +123,17 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
     assert replay.idempotent_replay is True
     assert replay.case_version == 2
     assert replay.submission_version == 2
+    assert replay.idempotent_replay is True
+    inbox.mark_processed(update_id, attempts=second_claim["attempts"])
+    with psycopg.connect(DSN) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT status, payload FROM public.telegram_update_inbox WHERE update_id = %s",
+                (update_id,),
+            )
+            assert cursor.fetchone() == ("processed", None)
+            cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (event.event_id,))
+            assert cursor.fetchone()[0] == 1
 
     # A stale Case writer must not mutate either projection.
     with pytest.raises(SubmissionCaseConcurrencyError):
