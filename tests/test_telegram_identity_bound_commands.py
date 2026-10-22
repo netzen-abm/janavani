@@ -64,3 +64,34 @@ def test_telegram_check_renders_recent_activity_without_private_notes(monkeypatc
     assert "Evidence references: 1" in messages[0]
     assert "Document references: 1" in messages[0]
     assert "private citizen narrative" not in messages[0]
+
+
+def test_telegram_cases_command_lists_only_owned_metadata(monkeypatch):
+    import src.commands.check as check_module
+
+    class Case:
+        case_id = "case-owned-1"
+        status = SimpleNamespace(value="review")
+        evidence_refs = ["evidence-1"]
+        document_refs = ["document-1"]
+        narrative = "private citizen narrative"
+
+    messages = []
+
+    class Message:
+        async def reply_text(self, text):
+            messages.append(text)
+
+    class Capability:
+        def list_owned(self, *, identity, limit):
+            assert limit == 10
+            return [Case()]
+
+    monkeypatch.setattr(check_module, "_case_capability", lambda context: Capability())
+    monkeypatch.setattr(check_module, "_telegram_identity", lambda update, context: object())
+    update = SimpleNamespace(message=Message())
+    asyncio.run(check_module.cases(update, SimpleNamespace()))
+
+    assert messages and "case-owned-1" in messages[0]
+    assert "review" in messages[0]
+    assert "private citizen narrative" not in messages[0]

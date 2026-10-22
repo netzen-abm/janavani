@@ -11,6 +11,7 @@ def test_webapp_registers_case_workspace_routes():
     assert "/cases/{case_id}/review" in paths
     assert "/cases/{case_id}/consent" in paths
     assert "/cases/{case_id}/artifact" in paths
+    assert "/cases" in paths
 
 
 def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):

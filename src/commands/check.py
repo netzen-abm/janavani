@@ -33,6 +33,31 @@ def _owned_case(
     return capability.get_owned(case_id, identity=_telegram_identity(update, context))
 
 
+async def cases(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List recent Cases owned by the current Telegram identity, with metadata only."""
+    if update.message is None:
+        return
+    try:
+        owned = _case_capability(context).list_owned(
+            identity=_telegram_identity(update, context), limit=10
+        )
+    except Exception:
+        await update.message.reply_text("⚠️ Case tracking is temporarily unavailable.")
+        return
+    if not owned:
+        await update.message.reply_text("You have no Cases yet. Use /complaint to start one.")
+        return
+    rows = [
+        f"• {case.case_id} — {case.status.value} · {len(case.evidence_refs)} evidence · "
+        f"{len(case.document_refs)} documents"
+        for case in owned
+    ]
+    await update.message.reply_text(
+        "📄 Your recent Janavani Cases\n\n" + "\n".join(rows)
+        + "\n\nUse /check <Case ID> for recent activity."
+    )
+
+
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show the current user's canonical Case status.
 

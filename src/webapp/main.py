@@ -1,9 +1,9 @@
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
+    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
+from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
 
@@ -45,6 +45,7 @@ def get():
                     ),
                     Button("Create Case", type="submit", cls="button-primary"),
                 ),
+                A("View my Cases", href="/cases"),
                 cls="card",
             ),
         ),
@@ -132,6 +133,7 @@ from src.webapp.identity_pairing_workspace import register_identity_pairing_rout
 
 register_case_workspace_routes(rt)
 register_identity_pairing_routes(rt)
+register_case_list_routes(rt)
 
 if __name__ == "__main__":
     import uvicorn

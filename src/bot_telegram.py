@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 
 from core.config import Config
-from commands.check import check
+from commands.check import cases, check
 from commands.cancel import cancel
 from commands.pair import pair
 from commands.privacy import privacy
@@ -34,6 +34,7 @@ async def _set_bot_commands(application: Application) -> None:
         BotCommand("complaint", "Start a complaint or grievance workflow"),
         BotCommand("search", "Find public-service information"),
         BotCommand("check", "Check a case you own"),
+        BotCommand("cases", "List your recent Cases"),
         BotCommand("pair", "Start account pairing; confirmation is required"),
         BotCommand("privacy", "Understand data handling and privacy limits"),
         BotCommand("cancel", "Clear the current in-memory workflow"),
@@ -100,6 +101,7 @@ def build_application(*, token: str | None = None) -> Application:
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
     application.add_handler(CommandHandler("check", check))
+    application.add_handler(CommandHandler("cases", cases))
     application.add_handler(CommandHandler("pair", pair))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route))
     return application
