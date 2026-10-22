@@ -31,7 +31,13 @@ from src.storage.repositories.document_review import DocumentReviewRepository
 from src.storage.repositories.obligation import AuthorityBackedObligationResolver
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
-from .composition_repositories import (create_consent_case_atomic_repository, create_document_review_repository_for_platform, create_external_channel_repository_for_platform, create_provider_composition, create_submission_repository)
+from .composition_repositories import (
+    create_consent_case_atomic_repository,
+    create_document_review_repository_for_platform,
+    create_external_channel_repository_for_platform,
+    create_provider_composition,
+    create_submission_repository,
+)
 
 
 def create_case_capability(repository: CivicCaseRepository, content_repository: CaseContentRepository | None = None) -> CivicCaseCapability:
@@ -39,8 +45,10 @@ def create_case_capability(repository: CivicCaseRepository, content_repository: 
 
 
 def create_consent_capability(
-    *, consent_repository: ConsentRepository,
+    *,
+    consent_repository: ConsentRepository,
     case_capability: CivicCaseCapability,
+    case_repository=None,
     provider_composition: ProviderComposition | None = None,
     atomic_repository=None,
 ) -> ConsentCapability:
