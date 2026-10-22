@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from fastapi.responses import Response
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Li, P, Select, Option, Textarea, Titled, Ul
+from fasthtml.common import (
+    A, Button, Div, Form, H2, H3, Input, Label, Li, Option,
+    P, Select, Textarea, Titled, Ul,
+)
 from starlette.requests import Request
 
 from src.webapp.services.api_client import client_for_request
