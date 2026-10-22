@@ -4,13 +4,30 @@ from fastapi.testclient import TestClient
 import pytest
 
 from src.identity.context import IdentityContext
+from src.capabilities.civic_case_contract import CAPABILITY_ID
 from src.identity.principal import Principal
 from src.identity.pairing import IdentityPairingService, InMemoryPairingRepository
 import src.web.identity_pairing_router as pairing_router
 
 
 def authenticated_context():
-    return IdentityContext(principal=Principal(principal_id="citizen:test", interface="webapp"))
+    return IdentityContext(
+        principal=Principal(
+            principal_id="citizen:test",
+            interface="webapp",
+            capabilities=frozenset({CAPABILITY_ID}),
+        )
+    )
+
+
+def authenticated_context_without_case_access():
+    return IdentityContext(
+        principal=Principal(
+            principal_id="citizen:test",
+            interface="webapp",
+            capabilities=frozenset(),
+        )
+    )
 
 
 def test_pairing_routes_fail_closed_when_shared_store_is_not_configured(monkeypatch):
@@ -94,3 +111,27 @@ def test_pairing_issue_rejects_missing_bearer_assertion_when_gateway_configured(
     response = TestClient(app).post("/civic/identity-pairings")
     assert response.status_code == 401
     assert response.json()["detail"] == "Authenticated identity required"
+
+
+def test_pairing_requires_existing_case_capability_for_issue_and_confirmation(monkeypatch):
+    service = IdentityPairingService(InMemoryPairingRepository())
+    monkeypatch.setattr(pairing_router, "_pairing_service", service)
+    app = FastAPI()
+    app.include_router(pairing_router.router)
+    app.dependency_overrides[pairing_router.require_authenticated_identity] = (
+        authenticated_context_without_case_access
+    )
+    client = TestClient(app)
+
+    issue = client.post("/civic/identity-pairings")
+    assert issue.status_code == 403
+    assert "Civic Case capability" in issue.json()["detail"]
+
+    challenge = service.issue(principal_id="citizen:test")
+    service.claim_telegram(challenge.code, telegram_subject="telegram:123")
+    confirmation = client.post(
+        f"/civic/identity-pairings/{challenge.pairing_id}/confirm",
+        json={"explicit_confirmation": True},
+    )
+    assert confirmation.status_code == 403
+    assert "Civic Case capability" in confirmation.json()["detail"]
