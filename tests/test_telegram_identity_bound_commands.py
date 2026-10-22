@@ -1,4 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
+import asyncio
+
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,3 +26,41 @@ def test_telegram_check_command_uses_canonical_identity_link_repository():
 
     assert "links = context.application.bot_data.get(\"identity_link_repository\")" in source
     assert "identity_for_telegram_user(user_id, links=links)" in source
+
+def test_telegram_check_renders_recent_activity_without_private_notes(monkeypatch):
+    import src.commands.check as check_module
+
+    class Event:
+        event_type = SimpleNamespace(value="case_created")
+        occurred_at = "2026-10-22T10:00:00Z"
+        notes = "private citizen narrative"
+
+    class Case:
+        case_id = "case-123"
+        status = SimpleNamespace(value="review")
+        evidence_refs = ["evidence-1"]
+        document_refs = ["document-1"]
+        events = [Event()]
+
+    messages = []
+
+    class Message:
+        async def reply_text(self, text):
+            messages.append(text)
+
+    update = SimpleNamespace(
+        effective_user=SimpleNamespace(id=7),
+        message=Message(),
+    )
+    context = SimpleNamespace(args=["case-123"])
+
+    monkeypatch.setattr(check_module, "_case_capability", lambda context: object())
+    monkeypatch.setattr(check_module, "_owned_case", lambda *args: Case())
+
+    asyncio.run(check_module.check(update, context))
+
+    assert messages and "case_created" in messages[0]
+    assert "2026-10-22T10:00:00Z" in messages[0]
+    assert "Evidence references: 1" in messages[0]
+    assert "Document references: 1" in messages[0]
+    assert "private citizen narrative" not in messages[0]
