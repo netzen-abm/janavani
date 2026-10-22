@@ -67,7 +67,7 @@ def register_identity_pairing_routes(rt) -> None:
 
     @rt("/identity/telegram/pair")
     def get_telegram_pairing(request: Request):
-        web_client, pairing_client = _api_client(request)
+        _, pairing_client = _api_client(request)
         if pairing_client is None:
             return _sign_in_required()
         return _page(
