@@ -65,7 +65,6 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
         connection.execute(schema)
         connection.execute(identity_schema)
 
-    case_repository = PostgresCivicCaseRepository(dsn=DSN)
     links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(DSN))
     links.save(ExternalIdentity(
         provider="telegram",
@@ -76,13 +75,21 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
         capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review", "case:evidence"}),
     ))
     telegram_identity = identity_for_telegram_user(telegram_user_id, links=links)
-    composition = create_surface_case_composition(
-        case_repository=case_repository,
-        identity_link_repository=links,
+
+    # Each surface gets an independent repository/composition graph, as it would
+    # when separately deployed. Continuity must come from PostgreSQL plus the
+    # verified identity mapping, not shared in-process memory.
+    web_composition = create_surface_case_composition(
+        case_repository=PostgresCivicCaseRepository(dsn=DSN),
+        identity_link_repository=PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(DSN)),
+    )
+    telegram_composition = create_surface_case_composition(
+        case_repository=PostgresCivicCaseRepository(dsn=DSN),
+        identity_link_repository=PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(DSN)),
     )
 
     monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", secret)
-    monkeypatch.setattr(civic_case_router, "_CAPABILITY", composition.case_capability)
+    monkeypatch.setattr(civic_case_router, "_CAPABILITY", web_composition.case_capability)
     web_headers = _auth_header(secret, principal_id)
     other_headers = _auth_header(secret, "citizen-other-" + uuid4().hex)
     case_ids: list[str] = []
@@ -105,7 +112,7 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
 
             # The verified Telegram identity resolves to the same canonical principal,
             # which can read the Web-created Case through the same shared capability.
-            seen_by_telegram = composition.case_capability.get_owned(
+            seen_by_telegram = telegram_composition.case_capability.get_owned(
                 web_case_id, identity=telegram_identity
             )
             assert seen_by_telegram is not None
@@ -114,11 +121,11 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
 
             # Telegram creates a Case shell through the canonical Telegram adapter.
             telegram_case = create_case_from_telegram(
-                case_repository,
+                telegram_composition.case_repository,
                 identity=telegram_identity,
                 subject="Water leak",
                 narrative="Sensitive Telegram message is not persisted in Case metadata.",
-                case_capability=composition.case_capability,
+                case_capability=telegram_composition.case_capability,
                 case_type=CaseType.COMPLAINT,
             )
             telegram_case_id = telegram_case.case_id
