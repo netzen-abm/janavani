@@ -7,6 +7,7 @@ from src.core.civic_case import CivicCase
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.case_content import CaseContent
+from src.storage.repositories.civic_case import CivicCaseSummary
 
 
 class CivicCaseContentMixin:
@@ -67,15 +68,16 @@ class CivicCaseContentMixin:
             case.jurisdiction = dict(content.jurisdiction)
         return case
 
-    def list_owned(self, *, identity: IdentityContext, limit: int = 20) -> list[CivicCase]:
-        """List owner-scoped lifecycle metadata without rehydrating citizen-authored content."""
+    def list_owned(
+        self, *, identity: IdentityContext, limit: int = 20
+    ) -> list[CivicCaseSummary]:
+        """Return bounded metadata summaries scoped to the verified principal."""
         principal_id = identity.principal.principal_id
-        if not principal_id:
+        if not isinstance(principal_id, str) or not principal_id.strip():
             return []
-        cases = self._repository.list_for_principal(
+        return self._repository.list_for_principal(
             principal_id=principal_id, limit=max(1, min(int(limit), 50))
         )
-        return [case for case in cases if case.created_by == principal_id]
 
     def save_owned(
         self,

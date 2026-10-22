@@ -46,13 +46,13 @@ async def list_cases(
     items = [
         {
             "case_id": case.case_id,
-            "case_type": case.case_type.value,
-            "status": case.status.value,
+            "case_type": case.case_type,
+            "status": case.status,
             "created_at": case.created_at,
             "updated_at": case.updated_at,
-            "evidence_count": len(case.evidence_refs),
-            "document_count": len(case.document_refs),
-            "last_activity_at": case.events[-1].occurred_at if case.events else case.created_at,
+            "evidence_count": case.evidence_count,
+            "document_count": case.document_count,
+            "last_activity_at": case.last_activity_at,
         }
         for case in cases
     ]

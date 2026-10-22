@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 from src.core.civic_case import CivicCase
+from src.storage.repositories.civic_case import CivicCaseSummary
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.unit_of_work import UnitOfWorkFactory
 from src.storage.repositories.postgres_civic_case_codec import hydrate, now
@@ -81,33 +82,59 @@ class PostgresCivicCaseRepository:
                 f"Failed to read Civic Case {case_id}"
             ) from exc
 
-    def list_for_principal(self, principal_id: str, *, limit: int = 20) -> list[CivicCase]:
-        """Query owner-scoped Case metadata under a transaction-local RLS identity."""
+    def list_for_principal(
+        self, principal_id: str, *, limit: int = 20
+    ) -> list[CivicCaseSummary]:
+        """Fetch bounded owner-scoped summaries in one SQL round trip."""
         if not isinstance(principal_id, str) or not principal_id.strip():
             return []
         try:
             effective = self._resolve_principal(principal_id)
             bounded_limit = max(1, min(int(limit), 50))
-            cases = []
             with self._connect() as conn, conn.transaction():
                 bind_postgres_principal(conn, effective)
                 with conn.cursor(row_factory=self._row_factory()) as cur:
                     cur.execute(
-                        """SELECT * FROM civic_cases WHERE created_by = %s
-                           ORDER BY updated_at DESC, created_at DESC LIMIT %s""",
+                        """SELECT
+                               c.case_id, c.case_type, c.status, c.created_at, c.updated_at,
+                               COALESCE(e.last_activity_at, c.updated_at, c.created_at)
+                                   AS last_activity_at,
+                               COALESCE(v.evidence_count, 0) AS evidence_count,
+                               COALESCE(d.document_count, 0) AS document_count
+                           FROM civic_cases AS c
+                           LEFT JOIN LATERAL (
+                               SELECT MAX(occurred_at) AS last_activity_at
+                               FROM civic_case_events WHERE case_id = c.case_id
+                           ) AS e ON TRUE
+                           LEFT JOIN LATERAL (
+                               SELECT COUNT(*) AS evidence_count
+                               FROM civic_case_evidence_refs WHERE case_id = c.case_id
+                           ) AS v ON TRUE
+                           LEFT JOIN LATERAL (
+                               SELECT COUNT(*) AS document_count
+                               FROM civic_case_document_refs WHERE case_id = c.case_id
+                           ) AS d ON TRUE
+                           WHERE c.created_by = %s
+                           ORDER BY c.updated_at DESC NULLS LAST, c.created_at DESC NULLS LAST
+                           LIMIT %s""",
                         (effective, bounded_limit),
                     )
-                    for row in cur.fetchall():
-                        case_id = str(row["case_id"])
-                        children = [
-                            select_children(cur, table, case_id)
-                            for table in (
-                                "civic_case_events", "civic_case_evidence_refs",
-                                "civic_case_document_refs", "civic_case_consents",
-                            )
-                        ]
-                        cases.append(hydrate(row, *children))
-            return cases
+                    return [
+                        CivicCaseSummary(
+                            case_id=str(row["case_id"]),
+                            case_type=str(row["case_type"]),
+                            status=str(row["status"]),
+                            created_at=str(row["created_at"]) if row["created_at"] is not None else None,
+                            updated_at=str(row["updated_at"]) if row["updated_at"] is not None else None,
+                            last_activity_at=(
+                                str(row["last_activity_at"])
+                                if row["last_activity_at"] is not None else None
+                            ),
+                            evidence_count=int(row["evidence_count"]),
+                            document_count=int(row["document_count"]),
+                        )
+                        for row in cur.fetchall()
+                    ]
         except (PostgresCivicCasePersistenceError, PermissionError):
             raise
         except Exception as exc:

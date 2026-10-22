@@ -48,8 +48,8 @@ async def cases(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You have no Cases yet. Use /complaint to start one.")
         return
     rows = [
-        f"• {case.case_id} — {case.status.value} · {len(case.evidence_refs)} evidence · "
-        f"{len(case.document_refs)} documents"
+        f"• {case.case_id} — {case.status} · {case.evidence_count} evidence · "
+        f"{case.document_count} documents"
         for case in owned
     ]
     await update.message.reply_text(
