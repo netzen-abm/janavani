@@ -48,9 +48,12 @@ def test_telegram_check_renders_recent_activity_without_private_notes(monkeypatc
         async def reply_text(self, text):
             messages.append(text)
 
+    message = Message()
     update = SimpleNamespace(
         effective_user=SimpleNamespace(id=7),
-        message=Message(),
+        message=message,
+        effective_message=message,
+        effective_chat=SimpleNamespace(type="private"),
     )
     context = SimpleNamespace(args=["case-123"])
 
@@ -90,7 +93,12 @@ def test_telegram_cases_command_lists_only_owned_metadata(monkeypatch):
 
     monkeypatch.setattr(check_module, "_case_capability", lambda context: Capability())
     monkeypatch.setattr(check_module, "_telegram_identity", lambda update, context: object())
-    update = SimpleNamespace(message=Message())
+    message = Message()
+    update = SimpleNamespace(
+        message=message,
+        effective_message=message,
+        effective_chat=SimpleNamespace(type="private"),
+    )
     asyncio.run(check_module.cases(update, SimpleNamespace()))
 
     assert messages and "case-owned-1" in messages[0]
