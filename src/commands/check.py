@@ -33,9 +33,23 @@ def _owned_case(
     return capability.get_owned(case_id, identity=_telegram_identity(update, context))
 
 
+async def _require_private_case_chat(update: Update) -> bool:
+    """Prevent Case IDs, statuses and activity from leaking into group chats."""
+    message = update.effective_message
+    if message is None:
+        return False
+    chat = update.effective_chat
+    if chat is None or chat.type != "private":
+        await message.reply_text(
+            "For privacy, /cases and /check are available only in a private chat with Janavani."
+        )
+        return False
+    return True
+
+
 async def cases(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """List recent Cases owned by the current Telegram identity, with metadata only."""
-    if update.message is None:
+    if not await _require_private_case_chat(update):
         return
     try:
         owned = _case_capability(context).list_owned(
@@ -64,6 +78,8 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Case reads are routed through the shared CivicCase capability rather than
     accessing the persistence repository directly from the Telegram adapter.
     """
+    if not await _require_private_case_chat(update):
+        return
     if not context.args:
         await update.message.reply_text(
             "❗ Usage:\n/check <Case ID>\n\nExample:\n/check JNV-1234"
