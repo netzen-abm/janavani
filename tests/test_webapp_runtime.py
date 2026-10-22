@@ -33,7 +33,19 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
         identity_assertion = "test-signed-assertion"
 
         def get_case(self, case_id):
-            return {"case_id": case_id, "status": "draft"}
+            return {
+                "case_id": case_id,
+                "status": "draft",
+                "events": [
+                    {
+                        "event_type": "case_created",
+                        "occurred_at": "2026-10-22T10:00:00Z",
+                        "notes": "private narrative must not be rendered in the timeline",
+                    }
+                ],
+                "evidence_refs": ["evidence-test"],
+                "document_refs": ["doc-test"],
+            }
 
         def prepare_document_draft(self, case_id):
             return {
@@ -63,6 +75,10 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     prepared = client.get("/cases/case-test/prepare")
     assert prepared.status_code == 200
     assert "Streetlight outage" in prepared.text
+    assert "Case activity" in prepared.text
+    assert "case_created" in prepared.text
+    assert "Evidence references: 1; document references: 1." in prepared.text
+    assert "private narrative must not be rendered" not in prepared.text
 
     reviewed = client.post(
         "/cases/case-test/review",
