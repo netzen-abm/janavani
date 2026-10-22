@@ -55,7 +55,17 @@ class InMemoryCivicCaseRepository:
             else (case.updated_at or case.created_at or ""),
             reverse=True,
         )
-        return deepcopy(owned[:bounded_limit])
+        metadata = deepcopy(owned[:bounded_limit])
+        for case in metadata:
+            # The in-memory repository can share objects with owner-scoped reads;
+            # explicitly strip transient citizen-authored fields from this list result.
+            case.subject = case.case_type.value
+            case.narrative = ""
+            case.claims = []
+            case.jurisdiction = {}
+            for event in case.events:
+                event.notes = None
+        return metadata
 
     def clear(self) -> None:
         """Clear local state between tests or development sessions."""
