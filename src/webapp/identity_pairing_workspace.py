@@ -65,8 +65,8 @@ def _confirm_form(pairing_id: str, *, note: str = "") -> str:
 def register_identity_pairing_routes(rt) -> None:
     """Register the UI for creating, claiming, and explicitly confirming a pairing."""
 
-    @rt("/identity/telegram/pair")
-    def get(request: Request):
+    @rt("/identity/telegram/pair", methods=["GET"])
+    def get_telegram_pairing(request: Request):
         _, pairing_client = _api_client(request)
         if pairing_client is None:
             return _sign_in_required()
@@ -79,8 +79,8 @@ def register_identity_pairing_routes(rt) -> None:
             '<p>Generating a code does not link accounts. Linking completes only after Telegram claims the code and you explicitly confirm here.</p>',
         )
 
-    @rt("/identity/telegram/pair")
-    def post(request: Request):
+    @rt("/identity/telegram/pair", methods=["POST"])
+    def post_start_telegram_pairing(request: Request):
         web_client, pairing_client = _api_client(request)
         if pairing_client is None:
             return _sign_in_required()
@@ -112,8 +112,8 @@ def register_identity_pairing_routes(rt) -> None:
         )
         return _page("Finish Telegram pairing", body)
 
-    @rt("/identity/telegram/pair/{pairing_id}/confirm")
-    def post(
+    @rt("/identity/telegram/pair/{pairing_id}/confirm", methods=["POST"])
+    def post_confirm_telegram_pairing(
         pairing_id: str,
         request: Request,
         explicit_confirmation: str = "",
