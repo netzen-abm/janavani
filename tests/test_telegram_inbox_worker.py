@@ -58,8 +58,12 @@ def test_worker_retries_when_telegram_handler_reports_error(monkeypatch):
             assert await asyncio.to_thread(inbox.retried.wait, 2), "worker did not retry failed handler"
         finally:
             worker.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await worker
+            try:
+                await asyncio.wait_for(worker, timeout=1)
+            except asyncio.CancelledError:
+                pass
+            except asyncio.TimeoutError:
+                pytest.fail("worker did not stop within 1s after cancellation")
 
     asyncio.run(run_until_retry())
     assert inbox.retried.is_set()
@@ -94,8 +98,12 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
             )
         finally:
             worker.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await worker
+            try:
+                await asyncio.wait_for(worker, timeout=1)
+            except asyncio.CancelledError:
+                pass
+            except asyncio.TimeoutError:
+                pytest.fail("worker did not stop within 1s after cancellation")
 
     asyncio.run(run_until_retry())
     assert inbox.retried.is_set()
