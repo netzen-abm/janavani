@@ -67,6 +67,16 @@ class CivicCaseContentMixin:
             case.jurisdiction = dict(content.jurisdiction)
         return case
 
+    def list_owned(self, *, identity: IdentityContext, limit: int = 20) -> list[CivicCase]:
+        """List owner-scoped lifecycle metadata without rehydrating citizen-authored content."""
+        principal_id = identity.principal.principal_id
+        if not principal_id:
+            return []
+        cases = self._repository.list_for_principal(
+            principal_id=principal_id, limit=max(1, min(int(limit), 50))
+        )
+        return [case for case in cases if case.created_by == principal_id]
+
     def save_owned(
         self,
         case: CivicCase,

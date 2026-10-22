@@ -109,3 +109,9 @@ def test_web_and_telegram_share_durable_identity_and_case_state(monkeypatch):
 
     stranger = _identity("janavani:e2e-stranger", "webapp")
     assert fresh_web.case_capability.get_owned(case_id, identity=stranger) is None
+    assert any(case.case_id == case_id for case in fresh_web.case_capability.list_owned(
+        identity=_identity(principal_id, "webapp")
+    ))
+    assert all(case.case_id != case_id for case in fresh_web.case_capability.list_owned(
+        identity=stranger
+    ))

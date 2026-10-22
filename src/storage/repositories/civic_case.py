@@ -17,6 +17,10 @@ class CivicCaseRepository(Protocol):
         """Return a case by identifier when present."""
         ...
 
+    def list_for_principal(self, principal_id: str, *, limit: int = 20) -> list[CivicCase]:
+        """List only Cases owned by the supplied trusted principal."""
+        ...
+
 
 class InMemoryCivicCaseRepository:
     """Process-local repository used for tests and development."""
@@ -38,6 +42,20 @@ class InMemoryCivicCaseRepository:
 
     def get(self, case_id: str, *, principal_id: str | None = None) -> CivicCase | None:
         return self._cases.get(case_id)
+
+    def list_for_principal(self, principal_id: str, *, limit: int = 20) -> list[CivicCase]:
+        """Return detached metadata-only Cases for one owner; blank identity fails closed."""
+        if not isinstance(principal_id, str) or not principal_id.strip():
+            return []
+        from copy import deepcopy
+        bounded_limit = max(1, min(int(limit), 50))
+        owned = [case for case in self._cases.values() if case.created_by == principal_id]
+        owned.sort(
+            key=lambda case: case.events[-1].occurred_at if case.events
+            else (case.updated_at or case.created_at or ""),
+            reverse=True,
+        )
+        return deepcopy(owned[:bounded_limit])
 
     def clear(self) -> None:
         """Clear local state between tests or development sessions."""

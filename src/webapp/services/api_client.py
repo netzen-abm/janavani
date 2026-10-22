@@ -11,13 +11,11 @@ from typing import Any
 
 import httpx
 
-
 def authorization_headers(identity_assertion: str | None) -> dict[str, str]:
     """Format a request-scoped verified assertion; never use process-wide identity."""
     if not identity_assertion:
         raise RuntimeError("Authenticated Web identity is not configured")
     return {"Authorization": f"Bearer {identity_assertion}"}
-
 
 class JanavaniWebAPIClient:
     """Call canonical civic-case endpoints without duplicating domain logic."""
@@ -29,6 +27,11 @@ class JanavaniWebAPIClient:
 
     def _headers(self) -> dict[str, str]:
         return authorization_headers(self.identity_assertion)
+
+    def list_cases(self, limit: int = 20) -> list[dict[str, Any]]:
+        response = httpx.get(f"{self.base_url}/civic/cases", params={"limit": max(1, min(limit, 50))}, headers=self._headers(), timeout=20.0)
+        response.raise_for_status()
+        return response.json().get("items", [])
 
     def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
         response = httpx.post(
@@ -91,7 +94,6 @@ class JanavaniWebAPIClient:
         )
         response.raise_for_status()
         return response.json()
-
 
     def add_evidence(self, case_id: str, evidence_id: str, *, source_channel: str = "webapp") -> dict[str, Any]:
         response = httpx.post(
@@ -163,8 +165,6 @@ class JanavaniWebAPIClient:
         """Legacy UI hook retained without reviving the retired dispatch path."""
         del bill_code, comments, format_choice
         return None
-
-
 
 def client_for_request(request: object) -> JanavaniWebAPIClient:
     """Build a citizen-scoped API client from a trusted gateway assertion cookie.
