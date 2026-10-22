@@ -1,6 +1,7 @@
 """Provider-neutral persistence boundary for CivicCase."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Protocol
 
 from src.core.civic_case import CivicCase
@@ -63,8 +64,7 @@ class InMemoryCivicCaseRepository:
             case.narrative = ""
             case.claims = []
             case.jurisdiction = {}
-            for event in case.events:
-                event.notes = None
+            case.events = [replace(event, notes=None) for event in case.events]
         return metadata
 
     def clear(self) -> None:
