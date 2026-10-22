@@ -12,7 +12,7 @@ def register_case_list_routes(rt) -> None:
     """Register the collection view separately from single-Case lifecycle routes."""
 
     @rt("/cases")
-    def get_case_list(request: Request):
+    def get(request: Request):
         client = client_for_request(request)
         if not client.identity_assertion:
             return Titled(
