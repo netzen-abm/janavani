@@ -113,3 +113,14 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
 
+
+
+
+def test_webapp_installs_cookie_mutation_origin_guard():
+    from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
+    from src.webapp.main import app
+
+    assert any(
+        middleware.cls is SameOriginCookieMutationMiddleware
+        for middleware in app.user_middleware
+    )
