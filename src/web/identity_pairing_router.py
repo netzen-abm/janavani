@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+from src.capabilities.civic_case_contract import CAPABILITY_ID
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.identity.pairing import IdentityPairingService
-from src.capabilities.civic_case_contract import CAPABILITY_ID
 from src.platform.composition import (
     create_identity_link_repository,
     create_identity_pairing_repository,
