@@ -130,3 +130,51 @@ def test_render_webhook_runtime_exposes_src_import_path():
         "startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app "
         "--host 0.0.0.0 --port $PORT"
     ) in render_config
+
+
+def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    import src.web.telegram_webhook_app as webhook
+    from src.commands.catalogue import telegram_bot_commands
+
+    bot = SimpleNamespace(
+        set_my_commands=AsyncMock(),
+        set_webhook=AsyncMock(),
+    )
+    application = SimpleNamespace(
+        bot=bot,
+        initialize=AsyncMock(),
+        start=AsyncMock(),
+        stop=AsyncMock(),
+        shutdown=AsyncMock(),
+    )
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_URL", "https://bot.example/telegram/webhook")
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "janavani-webhook-test-secret-123456789")
+    monkeypatch.setenv("JANAVANI_TELEGRAM_INBOX_DSN", "postgresql://test-only")
+    monkeypatch.setattr(webhook, "build_application", lambda *, token: application)
+    monkeypatch.setattr(
+        webhook,
+        "PostgresTelegramInbox",
+        lambda *, dsn: SimpleNamespace(dsn=dsn),
+    )
+
+    async def idle_worker(_application, _inbox):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(webhook, "run_inbox_worker", idle_worker)
+
+    with TestClient(webhook.create_webhook_app()) as client:
+        assert client.get("/liveness").status_code == 200
+        bot.set_my_commands.assert_awaited_once_with(telegram_bot_commands())
+        names = [item.command for item in bot.set_my_commands.await_args.args[0]]
+        assert "cases" in names
+        assert len(names) == len(set(names))
+
+    application.stop.assert_awaited_once()
+    application.shutdown.assert_awaited_once()
+
