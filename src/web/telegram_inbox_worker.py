@@ -58,10 +58,7 @@ async def run_inbox_worker(
                 )
                 if lease in done:
                     dispatch.cancel()
-                    try:
-                        await dispatch
-                    except asyncio.CancelledError:
-                        pass
+                    await asyncio.gather(dispatch, return_exceptions=True)
                     raise RuntimeError("telegram_inbox_lease_lost")
                 await dispatch
                 await asyncio.to_thread(inbox.mark_processed, update_id, attempts=attempts)
@@ -82,12 +79,10 @@ async def run_inbox_worker(
                 lease.cancel()
                 if not dispatch.done():
                     dispatch.cancel()
-                for task in (lease, dispatch):
-                    try:
-                        await task
-                    except (asyncio.CancelledError, Exception):
-                        # The task's failure is handled above; cleanup must not mask it.
-                        pass
+                # Gather consumes child-task outcomes without swallowing cancellation
+                # requested on this worker itself. A broad CancelledError handler here
+                # can otherwise turn shutdown into an endless polling loop.
+                await asyncio.gather(lease, dispatch, return_exceptions=True)
     finally:
         application.remove_error_handler(record_handler_error)
 
