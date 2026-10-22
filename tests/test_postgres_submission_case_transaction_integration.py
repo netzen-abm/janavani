@@ -160,7 +160,6 @@ os._exit(73)  # deliberate simulated worker crash after commit, before inbox ack
     assert replay.idempotent_replay is True
     assert replay.case_version == 2
     assert replay.submission_version == 2
-    assert replay.idempotent_replay is True
     inbox.mark_processed(update_id, attempts=second_claim["attempts"])
     with psycopg.connect(DSN) as connection:
         with connection.cursor() as cursor:
