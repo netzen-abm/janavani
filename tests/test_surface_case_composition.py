@@ -106,3 +106,37 @@ def test_transient_case_content_enforces_capacity():
 
     assert repository.get("case-1", principal_id="p") is None
     assert repository.get("case-2", principal_id="p") is not None
+
+
+
+def test_postgres_case_and_consent_share_atomic_persistence(monkeypatch):
+    from src.storage.provider_composition import ProviderComposition
+    from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+    from src.storage.repositories.consent import InMemoryConsentRepository
+
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://test-only")
+    plan = (
+        ProviderComposition.memory_first()
+        .with_provider("civic_case", "postgres")
+        .with_provider("consent", "postgres")
+    )
+    composition = create_surface_case_composition(
+        provider_composition=plan,
+        case_repository=InMemoryCivicCaseRepository(),
+        consent_repository=InMemoryConsentRepository(),
+    )
+
+    from src.storage.repositories.postgres_consent_case_atomic import PostgresConsentCaseAtomicRepository
+    assert isinstance(
+        composition.consent_capability._atomic_repository,
+        PostgresConsentCaseAtomicRepository,
+    )
+
+
+def test_non_postgres_consent_does_not_create_atomic_postgres_writer():
+    from src.storage.provider_composition import ProviderComposition
+
+    composition = create_surface_case_composition(
+        provider_composition=ProviderComposition.memory_first()
+    )
+    assert composition.consent_capability._atomic_repository is None
