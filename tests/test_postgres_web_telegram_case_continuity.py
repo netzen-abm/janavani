@@ -15,10 +15,11 @@ from fastapi.testclient import TestClient
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.commands.shared_case_capability import create_case_from_telegram
 from src.core.civic_case import CaseType
-from src.identity.external import ExternalIdentity
+from src.identity.pairing import IdentityPairingService
 from src.identity.linking import PostgresExternalIdentityLinkRepository
 from src.platform.surface_case_composition import create_surface_case_composition
 from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+from src.storage.repositories.postgres_identity_pairing import PostgresPairingRepository
 from src.web import civic_case_router
 from src.web.canonical_app import app
 
@@ -61,19 +62,20 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
     telegram_subject = str(telegram_user_id)
     schema = (ROOT / "db/migrations/20260912100000_canonical_case_policy_schema.sql").read_text()
     identity_schema = (ROOT / "db/migrations/20260920100000_external_identity_links.sql").read_text()
+    pairing_schema = (ROOT / "db/migrations/20261010120000_external_identity_pairings.sql").read_text()
     with psycopg.connect(DSN) as connection:
         connection.execute(schema)
         connection.execute(identity_schema)
+        connection.execute(pairing_schema)
 
+    pairing = IdentityPairingService(PostgresPairingRepository(dsn=DSN))
+    challenge = pairing.issue(principal_id=principal_id)
+    pairing.claim_telegram(challenge.code, telegram_subject=telegram_subject)
+    pairing.confirm_from_web(
+        challenge.pairing_id, principal_id=principal_id, explicit_confirmation=True
+    )
+    pairing_id = challenge.pairing_id
     links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(DSN))
-    links.save(ExternalIdentity(
-        provider="telegram",
-        subject=telegram_subject,
-        principal_id=principal_id,
-        authentication_method="explicit_verified_link",
-        verified=True,
-        capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review", "case:evidence"}),
-    ))
     telegram_identity = identity_for_telegram_user(telegram_user_id, links=links)
 
     # Each surface gets an independent repository/composition graph, as it would
@@ -163,4 +165,8 @@ def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch
                 connection.execute(
                     "DELETE FROM public.external_identity_links WHERE provider = 'telegram' AND subject = %s",
                     (telegram_subject,),
+                )
+                connection.execute(
+                    "DELETE FROM public.external_identity_pairings WHERE pairing_id = %s",
+                    (pairing_id,),
                 )
