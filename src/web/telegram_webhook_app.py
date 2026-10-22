@@ -11,10 +11,9 @@ from typing import Any, AsyncIterator
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Request
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.ext import Application
 
-from commands.catalog import supported_telegram_commands
 from src.bot_telegram import build_application
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
@@ -29,9 +28,12 @@ def _required_setting(name: str) -> str:
     return value
 
 
-def _webhook_commands():
-    """Compatibility alias for the shared polling/webhook command catalogue."""
-    return supported_telegram_commands()
+def _webhook_commands() -> list[BotCommand]:
+    return [BotCommand("start", "Start Janavani"), BotCommand("help", "View help and available commands"),
+            BotCommand("complaint", "Start a test complaint workflow"),
+            BotCommand("search", "Find public-service information"), BotCommand("check", "Check a case you own"),
+            BotCommand("pair", "Start account pairing"), BotCommand("privacy", "Understand data handling"),
+            BotCommand("cancel", "Clear the current in-memory workflow"), BotCommand("rate", "Share feedback")]
 
 
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
