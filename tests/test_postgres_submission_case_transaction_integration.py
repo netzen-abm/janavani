@@ -84,15 +84,52 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
     first_claim = inbox.claim_next()
     assert first_claim is not None and first_claim["update_id"] == update_id
 
-    repository = PostgresSubmissionCaseTransactionRepository(dsn=DSN)
-    result = repository.persist_mutation(
-        submission=submission, expected_submission_version=1,
-        case=case, expected_case_version=1, event=event,
-        idempotency_key=event.event_id,
+    # Run the first business mutation in a separate interpreter and terminate
+    # it abruptly immediately after the PostgreSQL transaction commits. The
+    # inbox acknowledgement is deliberately never written by that process.
+    crash_after_commit = """import os
+from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
+from src.core.submission import SubmissionRecord
+from src.storage.repositories.postgres_submission_case_transaction import PostgresSubmissionCaseTransactionRepository
+
+case = CivicCase(
+    case_id="pg-atomic-case", case_type=CaseType.COMPLAINT, subject="Atomic test",
+    narrative="Atomic persistence", created_by="pg-atomic-user",
+    status=CaseStatus.SUBMITTED, created_at="2026-09-14T00:00:00+00:00",
+    updated_at="2026-09-14T00:01:00+00:00", version=1,
+)
+submission = SubmissionRecord(
+    submission_id="pg-atomic-submission", case_id="pg-atomic-case",
+    destination_ref="office:test", document_ref="doc:test", channel="telegram",
+    state="submitted", submitted_at="2026-09-14T00:01:00+00:00",
+    created_at="2026-09-14T00:00:00+00:00", updated_at="2026-09-14T00:01:00+00:00",
+    version=2, idempotency_key="pg-atomic-submission-key",
+)
+event = CaseEvent(
+    event_id="pg-atomic-event-1", case_id="pg-atomic-case",
+    event_type=CaseEventType.SUBMITTED, occurred_at="2026-09-14T00:01:00+00:00",
+    actor_id="pg-atomic-user", source_channel="telegram",
+)
+result = PostgresSubmissionCaseTransactionRepository(
+    dsn=os.environ["JANAVANI_POSTGRES_TEST_DSN"]
+).persist_mutation(
+    submission=submission, expected_submission_version=1,
+    case=case, expected_case_version=1, event=event,
+    idempotency_key=event.event_id,
+)
+assert result.idempotent_replay is False
+assert result.submission_version == 2 and result.case_version == 2
+os._exit(73)  # deliberate simulated worker crash after commit, before inbox ack
+"""
+    crashed = subprocess.run(
+        [sys.executable, "-c", crash_after_commit],
+        check=False, capture_output=True, text=True, env=os.environ.copy(),
     )
-    assert result.idempotent_replay is False
-    assert result.submission_version == 2
-    assert result.case_version == 2
+    assert crashed.returncode == 73, (
+        "child must commit the mutation and then hit the deliberate crash point; "
+        f"exit={crashed.returncode}, stderr={crashed.stderr}"
+    )
+    repository = PostgresSubmissionCaseTransactionRepository(dsn=DSN)
 
     with psycopg.connect(DSN) as connection:
         with connection.cursor() as cursor:
