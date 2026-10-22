@@ -7,6 +7,18 @@ import pytest
 from src.web import telegram_inbox_worker
 
 
+async def _wait_for_event(event: threading.Event, timeout: float) -> bool:
+    """Wait without occupying an executor thread during worker shutdown."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while not event.is_set():
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            return False
+        await asyncio.sleep(min(0.01, remaining))
+    return True
+
+
 class _Inbox:
     def __init__(self):
         self.claims = 0
@@ -55,7 +67,7 @@ def test_worker_retries_when_telegram_handler_reports_error(monkeypatch):
             telegram_inbox_worker.run_inbox_worker(application, inbox, poll_seconds=0.01)
         )
         try:
-            assert await asyncio.to_thread(inbox.retried.wait, 2), "worker did not retry failed handler"
+            assert await _wait_for_event(inbox.retried, 2), "worker did not retry failed handler"
         finally:
             worker.cancel()
             try:
@@ -93,7 +105,7 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
             telegram_inbox_worker.run_inbox_worker(application, inbox, poll_seconds=0.01)
         )
         try:
-            assert await asyncio.to_thread(inbox.retried.wait, 2), (
+            assert await _wait_for_event(inbox.retried, 2), (
                 "worker did not retry after lease loss"
             )
         finally:
