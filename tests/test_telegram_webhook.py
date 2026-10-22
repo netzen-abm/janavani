@@ -117,3 +117,16 @@ def test_webhook_liveness_is_available():
         "status": "alive",
         "surface": "telegram-webhook",
     }
+
+
+
+def test_render_webhook_runtime_exposes_src_import_path():
+    from pathlib import Path
+
+    render_config = (Path(__file__).resolve().parents[1] / "render.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        "startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app "
+        "--host 0.0.0.0 --port $PORT"
+    ) in render_config

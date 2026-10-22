@@ -14,7 +14,7 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     # Telegram webhook uses HTTPS ingress; do not run polling alongside it.
-    startCommand: uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT
+    startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /liveness
     envVars:
       - key: TELEGRAM_BOT_TOKEN
