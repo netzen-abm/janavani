@@ -1,4 +1,3 @@
-from telegram import BotCommand
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -8,6 +7,7 @@ from telegram.ext import (
 )
 
 from core.config import Config
+from src.commands.catalogue import telegram_bot_commands
 from commands.check import cases, check
 from commands.cancel import cancel
 from commands.pair import pair
@@ -27,19 +27,8 @@ from src.platform.composition import create_identity_pairing_repository
 
 
 async def _set_bot_commands(application: Application) -> None:
-    """Publish the supported command menu so citizens can discover safe controls."""
-    await application.bot.set_my_commands([
-        BotCommand("start", "Start Janavani"),
-        BotCommand("help", "View help and available commands"),
-        BotCommand("complaint", "Start a complaint or grievance workflow"),
-        BotCommand("search", "Find public-service information"),
-        BotCommand("check", "Check a case you own"),
-        BotCommand("cases", "List your recent Cases"),
-        BotCommand("pair", "Start account pairing; confirmation is required"),
-        BotCommand("privacy", "Understand data handling and privacy limits"),
-        BotCommand("cancel", "Clear the current in-memory workflow"),
-        BotCommand("rate", "Share feedback about the service"),
-    ])
+    """Publish the shared catalogue in polling mode."""
+    await application.bot.set_my_commands(telegram_bot_commands())
 
 
 def build_application(*, token: str | None = None) -> Application:
