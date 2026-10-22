@@ -11,6 +11,7 @@ from hashlib import sha256
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+from src.core.civic_case import CaseEvent, CaseEventType
 from src.identity.context import IdentityContext
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.storage.repositories.consent import ConsentRepository
@@ -65,15 +66,24 @@ class ConsentCapability:
             # Build the final Case projection before the single persistence call.
             if consent.consent_id not in case.consent_refs:
                 case.consent_refs.append(consent.consent_id)
+            consent_event_id = f"event-consent-00-recorded-{consent.consent_id}"
+            if not any(event.event_id == consent_event_id for event in case.events):
+                case.events.append(CaseEvent(
+                    event_id=consent_event_id, case_id=case_id,
+                    event_type=CaseEventType.CONSENT_RECORDED,
+                    occurred_at=consent.created_at,
+                    actor_id=identity.principal.principal_id,
+                    source_ref=consent.proof_ref, notes=consent.purpose,
+                ))
             if case.status.value == "draft":
                 case.start_review(
-                    event_id=f"event-consent-review-{consent.consent_id}",
+                    event_id=f"event-consent-10-review-{consent.consent_id}",
                     occurred_at=consent.created_at,
                     actor_id=identity.principal.principal_id,
                 )
             if case.status.value == "review":
                 case.mark_ready(
-                    event_id=f"event-consent-ready-{consent.consent_id}",
+                    event_id=f"event-consent-20-ready-{consent.consent_id}",
                     occurred_at=consent.created_at,
                     actor_id=identity.principal.principal_id,
                 )

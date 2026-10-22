@@ -36,6 +36,7 @@ class CaseEventType(str, Enum):
     EDITED = "edited"
     REVIEW_STARTED = "review_started"
     APPROVED = "approved"
+    CONSENT_RECORDED = "consent_recorded"
     EVIDENCE_ADDED = "evidence_added"
     DOCUMENT_ADDED = "document_added"
     SUBMITTING = "submitting"

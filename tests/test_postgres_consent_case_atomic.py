@@ -266,7 +266,7 @@ def test_postgres_atomic_consent_case_replay_is_idempotent_after_lost_response()
             ).fetchall()
         assert persisted == ("ready", 2)
         assert consent_count == 1
-        assert [event[0] for event in events] == ["approved", "review_started"]
+        assert [event[0] for event in events] == ["approved", "consent_recorded", "review_started"]
     finally:
         with psycopg.connect(dsn) as connection:
             with connection.transaction():

@@ -5,7 +5,7 @@ import json
 from typing import Any, Callable
 
 from src.core.consent import Consent
-from src.core.civic_case import CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.repositories.postgres_civic_case_codec import event_values, now
 from src.storage.unit_of_work import UnitOfWorkFactory
@@ -75,6 +75,14 @@ class PostgresConsentCaseAtomicRepository:
                 current_version, current_status, current_owner = int(row[0]), row[1], row[2]
                 if current_owner != principal_id:
                     raise PermissionError("Case owner does not match transaction principal")
+                consent_event_id = f"event-consent-00-recorded-{consent.consent_id}"
+                if not any(event.event_id == consent_event_id for event in case.events):
+                    case.events.append(CaseEvent(
+                        event_id=consent_event_id, case_id=case.case_id,
+                        event_type=CaseEventType.CONSENT_RECORDED,
+                        occurred_at=consent.created_at, actor_id=principal_id,
+                        source_ref=consent.proof_ref, notes=consent.purpose,
+                    ))
                 cur.execute("SELECT event_id FROM civic_case_events WHERE case_id=%s", (case.case_id,))
                 existing_events = {str(event[0]) for event in cur.fetchall()}
                 pending_events = [event_values(event) for event in case.events
