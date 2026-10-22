@@ -128,8 +128,10 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, r
     )
 
 from src.webapp.case_workspace import register_case_workspace_routes
+from src.webapp.identity_pairing_workspace import register_identity_pairing_routes
 
 register_case_workspace_routes(rt)
+register_identity_pairing_routes(rt)
 
 if __name__ == "__main__":
     import uvicorn
