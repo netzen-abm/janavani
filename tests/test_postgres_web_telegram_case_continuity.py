@@ -56,6 +56,11 @@ def _auth_header(secret: str, principal_id: str) -> dict[str, str]:
 def test_web_and_telegram_share_postgres_case_and_verified_principal(monkeypatch):
     import psycopg
 
+    runtime_dsns = {os.getenv(k, "").strip() for k in ("JANAVANI_POSTGRES_DSN", "JANAVANI_IDENTITY_LINKS_DSN", "JANAVANI_CASE_DATABASE_URL")} - {""}
+    if DSN in runtime_dsns: pytest.fail("JANAVANI_POSTGRES_TEST_DSN must be separate from all runtime DSNs")
+    if os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower() == "production": pytest.fail("Refusing cross-surface integration test in production runtime mode")
+    if not any(marker in DSN.lower() for marker in ("test", "localhost", "127.0.0.1")): pytest.fail("DSN must identify a test/local database")
+
     secret = "test-cross-surface-" + uuid4().hex
     principal_id = "citizen-" + uuid4().hex
     telegram_user_id = 700_000_000 + int(uuid4().hex[:7], 16)
