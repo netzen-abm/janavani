@@ -22,7 +22,6 @@ from src.capabilities.accountability_feedback import AccountabilityFeedbackCapab
 from src.platform.composition import create_accountability_feedback_repository
 from commands.complaint import complaint
 from conversation.router import route
-from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
 from src.platform.surface_case_composition import create_surface_case_composition
 from src.identity.pairing import IdentityPairingService
@@ -116,7 +115,7 @@ def build_application(*, token: str | None = None) -> Application:
         )
     )
 
-    application.add_handler(CallbackQueryHandler(handle_format))
+    application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("cancel", cancel))
