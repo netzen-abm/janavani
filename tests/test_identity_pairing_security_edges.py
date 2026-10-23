@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from src.identity.external import ExternalIdentity
+from src.identity.linking import InMemoryExternalIdentityLinkRepository
 from src.identity.pairing import IdentityPairingService, InMemoryPairingRepository
 
 
@@ -68,3 +70,34 @@ def test_pairing_requires_explicit_confirmation():
             explicit_confirmation=False,
             now=now + timedelta(seconds=2),
         )
+
+
+def test_in_memory_pairing_remains_unconfirmed_when_identity_link_conflicts():
+    now = datetime(2026, 10, 10, 12, 0, tzinfo=timezone.utc)
+    links = InMemoryExternalIdentityLinkRepository()
+    links.save(ExternalIdentity(
+        provider="telegram",
+        subject="telegram:already-linked",
+        principal_id="citizen:bob",
+        authentication_method="web_telegram_pairing",
+        verified=True,
+    ))
+    repository = InMemoryPairingRepository(identity_link_repository=links)
+    service = IdentityPairingService(repository)
+    challenge = service.issue(principal_id="citizen:alice", now=now)
+    service.claim_telegram(
+        challenge.code,
+        telegram_subject="telegram:already-linked",
+        now=now + timedelta(seconds=1),
+    )
+
+    with pytest.raises((PermissionError, ValueError)):
+        service.confirm_from_web(
+            challenge.pairing_id,
+            principal_id="citizen:alice",
+            explicit_confirmation=True,
+            now=now + timedelta(seconds=2),
+        )
+
+    assert repository._items[challenge.pairing_id].confirmed_at is None
+    assert links.find("telegram", "telegram:already-linked").principal_id == "citizen:bob"
