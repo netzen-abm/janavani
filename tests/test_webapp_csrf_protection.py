@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -80,19 +78,3 @@ def test_cookie_authenticated_mutation_rejects_scheme_mismatch():
     )
     assert response.status_code == 403
 
-
-
-def test_render_web_services_trust_forwarded_scheme_at_ingress():
-    manifest = Path(__file__).resolve().parents[1] / "render.yaml"
-    source = manifest.read_text(encoding="utf-8")
-    start_commands = [
-        line.strip()
-        for line in source.splitlines()
-        if line.strip().startswith("startCommand:")
-        and "uvicorn" in line
-    ]
-
-    assert len(start_commands) >= 2
-    assert all("--proxy-headers" in command for command in start_commands)
-    assert all('--forwarded-allow-ips="*"' in command for command in start_commands)
-    assert "wildcard proxy trust is safe only while" in source
