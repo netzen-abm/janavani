@@ -6,7 +6,8 @@
 
 ## Release preconditions
 
-- [ ] Exactly nine approved physical branch refs remain; CI branch-budget gate is green.
+- [ ] The intended physical branch target is exactly eight sanctioned refs.
+- [ ] Before release acceptance, PR #213 retirement has completed and a fresh GitHub branch query confirms exactly eight refs; a green PR alone does not establish physical compliance.
 - [ ] Candidate commit and all required CI/security/architecture/Docker/dependency checks are green.
 - [ ] Web/API and Telegram webhook are independently deployed and their actual service IDs, commit SHAs, URLs and health state are recorded.
 - [ ] Both processes use the same approved PostgreSQL schema for canonical Cases and verified external identity links. Use separate least-privilege runtime roles where tables/capabilities differ.
