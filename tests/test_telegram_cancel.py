@@ -46,6 +46,7 @@ def test_expired_ephemeral_issue_is_purged_without_another_user_read(monkeypatch
     clear_session(active_user)
     monkeypatch.setattr(session_store, "monotonic", lambda: 0.0)
     set_ephemeral_issue(expired_user, "expired private narrative")
+    set_state(expired_user, "WAITING_FOR_FORMAT")
     monkeypatch.setattr(session_store, "monotonic", lambda: 1000.0)
     set_ephemeral_issue(active_user, "active private narrative")
 
@@ -54,6 +55,8 @@ def test_expired_ephemeral_issue_is_purged_without_another_user_read(monkeypatch
     assert cleared == 1
     assert get_ephemeral_issue(expired_user) is None
     assert get_ephemeral_issue(active_user) == "active private narrative"
+    assert expired_user not in user_sessions
+    assert expired_user not in user_states
     assert "_ephemeral_issue" not in get_session(expired_user)
     assert "_ephemeral_issue" not in get_session(active_user)
     clear_session(expired_user)
