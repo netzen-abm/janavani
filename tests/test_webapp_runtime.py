@@ -125,3 +125,45 @@ def test_webapp_installs_cookie_mutation_origin_guard():
         middleware.cls is SameOriginCookieMutationMiddleware
         for middleware in app.user_middleware
     )
+
+def test_artifact_download_rejects_unknown_format_and_sanitizes_filename(monkeypatch):
+    import src.webapp.case_workspace as workspace
+    from src.webapp.main import app
+
+    calls = []
+
+    class Client:
+        identity_assertion = "test-signed-assertion"
+
+        def prepare_document_draft(self, case_id):
+            calls.append(("prepare", case_id))
+            return {"document_id": "doc-test", "case_id": case_id}
+
+        def generate_artifact(self, case_id, *, document_id, document_format):
+            calls.append(("generate", case_id, document_id, document_format))
+            return b"%PDF-test-payload"
+
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    client = TestClient(app)
+
+    invalid = client.post(
+        "/cases/case-test/artifact", data={"document_format": "pdf\r\nX-Injected: yes"}
+    )
+    assert invalid.status_code == 422
+    assert not calls
+
+    response = client.post(
+        "/cases/case@unsafe/artifact", data={"document_format": "PDF"}
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="janavani-case_unsafe.pdf"'
+    )
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert calls == [
+        ("prepare", "case@unsafe"),
+        ("generate", "case@unsafe", "doc-test", "pdf"),
+    ]
+
