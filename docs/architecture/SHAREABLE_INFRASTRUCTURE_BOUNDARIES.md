@@ -126,7 +126,7 @@ VISION -> DESIGNED -> IMPLEMENTED -> FUNCTIONAL -> TESTED -> SECURITY-VERIFIED -
 
 ## Repository hygiene enforcement
 
-The eight sanctioned branches are the active development lanes. The transition ref is not an active lane and must be retired only by the guarded workflow. Legacy branches are archived by immutable tag before deletion; this preserves recoverability without retaining parallel active development lines. Do not report physical compliance until the live GitHub inventory confirms exactly eight refs.
+The eight sanctioned branches are the active development lanes. The transition ref is not an active lane and must be retired only by the guarded workflow. The workflow creates and verifies an archive tag before deleting a branch ref; a Git tag is not inherently immutable, so long-term immutability requires a matching GitHub tag-protection/ruleset in repository settings. Do not call an archive immutable unless that settings-level protection is verified. Do not report physical compliance until the live GitHub inventory confirms exactly eight refs.
 
 
 ## Deployment-provider neutrality
