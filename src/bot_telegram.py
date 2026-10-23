@@ -1,3 +1,5 @@
+import asyncio
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -7,6 +9,7 @@ from telegram.ext import (
 )
 
 from core.config import Config
+from conversation.session import purge_expired_ephemeral_issues
 from src.commands.catalogue import telegram_bot_commands
 from commands.check import cases, check
 from commands.cancel import cancel
@@ -27,8 +30,39 @@ from src.platform.composition import create_identity_pairing_repository
 
 
 async def _set_bot_commands(application: Application) -> None:
-    """Publish the shared catalogue in polling mode."""
+    """Publish the canonical bot command catalogue."""
     await application.bot.set_my_commands(telegram_bot_commands())
+
+
+async def _post_init(application: Application) -> None:
+    """Initialize shared commands and start privacy cleanup for transient text."""
+    await _set_bot_commands(application)
+    _start_ephemeral_issue_cleanup(application)
+
+
+async def _cleanup_expired_issue_text() -> None:
+    while True:
+        await asyncio.sleep(30)
+        purge_expired_ephemeral_issues()
+
+
+def _start_ephemeral_issue_cleanup(application: Application) -> None:
+    task = application.bot_data.get("janavani_ephemeral_issue_cleanup")
+    if task is None or task.done():
+        application.bot_data["janavani_ephemeral_issue_cleanup"] = asyncio.create_task(
+            _cleanup_expired_issue_text()
+        )
+
+
+async def _stop_ephemeral_issue_cleanup(application: Application) -> None:
+    task = application.bot_data.pop("janavani_ephemeral_issue_cleanup", None)
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 def build_application(*, token: str | None = None) -> Application:
@@ -40,7 +74,8 @@ def build_application(*, token: str | None = None) -> Application:
     application = (
         Application.builder()
         .token(bot_token)
-        .post_init(_set_bot_commands)
+        .post_init(_post_init)
+        .post_stop(_stop_ephemeral_issue_cleanup)
         .build()
     )
 
