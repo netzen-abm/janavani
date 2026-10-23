@@ -65,3 +65,28 @@ def test_expired_issue_text_clears_stale_inline_callback_workflow(monkeypatch):
     assert user_id not in user_states
     assert get_state(user_id) == "NEW"
     assert get_ephemeral_issue(user_id) is None
+
+
+
+def test_inline_callback_after_process_restart_is_acknowledged(monkeypatch):
+    user_id = 882203
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+    message = SimpleNamespace(reply_text=AsyncMock())
+    query = SimpleNamespace(
+        from_user=SimpleNamespace(id=user_id),
+        answer=AsyncMock(),
+    )
+    update = SimpleNamespace(
+        callback_query=query,
+        effective_user=None,
+        message=None,
+        effective_message=message,
+    )
+
+    asyncio.run(run_step(update, SimpleNamespace()))
+
+    query.answer.assert_awaited_once()
+    message.reply_text.assert_awaited_once()
+    assert "earlier workflow" in message.reply_text.await_args.args[0]
+    assert "/complaint" in message.reply_text.await_args.args[0]
