@@ -81,6 +81,14 @@ jobs:
             gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name'
           )
 
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$repo" \
+              gh api --paginate "repos/$repo/pulls?state=open&per_page=100" \
+              --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          }
+
           for branch in "${branches[@]}"; do
             is_sanctioned "$branch" && continue
             if is_retirement_only "$branch"; then
@@ -88,8 +96,7 @@ jobs:
               continue
             fi
 
-            owner="${repo%%/*}"
-            prs="$(gh api "repos/$repo/pulls?state=open&head=$owner:$branch&per_page=100" --jq 'length')"
+            prs="$(count_open_prs_for_branch "$branch")"
             if [ "$prs" != "0" ]; then
               echo "HOLD: $branch (open_prs=$prs)"
               continue
@@ -186,8 +193,14 @@ jobs:
           # sanctioned transition ref. Its content must already be identical
           # to main. Do not require commit ancestry: squash/rebase merges can
           # legitimately rewrite commit identities while preserving the tree.
-          owner="${REPO%%/*}"
-          prs="$(gh api "repos/$REPO/pulls?state=open&head=$owner:$branch&per_page=100" --jq 'length')"
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+              --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          }
+          prs="$(count_open_prs_for_branch "$branch")"
           if [ "$prs" != "0" ]; then
             echo "::error::Retirement held: open PRs still reference $branch."
             exit 2
