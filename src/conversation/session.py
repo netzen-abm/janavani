@@ -32,7 +32,6 @@ def get_session(user_id: int) -> dict:
                 "department": "",
                 "district": "",
             },
-            "offices": [],
         }
     return user_sessions[user_id]
 
