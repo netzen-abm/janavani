@@ -17,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 
 async def run_step(update, context):
+    chat = getattr(update, "effective_chat", None)
+    if chat is None or chat.type != "private":
+        query = getattr(update, "callback_query", None)
+        if query is not None:
+            await query.answer()
+        message = getattr(update, "effective_message", None)
+        if message is not None:
+            await message.reply_text(
+                "For privacy, Janavani complaint workflows are available only in a "
+                "private chat with the bot. Open a private chat and use /complaint."
+            )
+        return
+
     if update.callback_query:
         user_id = update.callback_query.from_user.id
     elif update.effective_user:
