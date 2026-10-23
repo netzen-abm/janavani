@@ -43,10 +43,9 @@ jobs:
               fi
               for path in "${changed[@]}"; do
                 case "$path" in
-                  .github/workflows/ci.yml|.github/workflows/branch-retirement.yml|\
-                  .github/workflows/security-ci.yml|docs/BRANCH_GOVERNANCE.md|\
-                  tests/test_ci_branch_budget.py|scripts/retire_legacy_branches.py|\
-                  docs/MASTER_TASK_CHECKLIST.md)
+                  .github/workflows/ci.yml|.github/workflows/branch-retirement.yml|docs/BRANCH_GOVERNANCE.md|tests/test_ci_branch_budget.py)
+                    ;;
+                  .github/workflows/security-ci.yml|scripts/retire_legacy_branches.py|docs/MASTER_TASK_CHECKLIST.md)
                     ;;
                   *)
                     echo "::error::Retirement-only branch includes non-governance file: $path"
