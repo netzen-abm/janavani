@@ -24,6 +24,7 @@ def test_expired_issue_text_clears_stale_message_workflow(monkeypatch):
     message = SimpleNamespace(reply_text=AsyncMock())
     update = SimpleNamespace(
         callback_query=None,
+        effective_chat=SimpleNamespace(type="private"),
         effective_user=SimpleNamespace(id=user_id),
         message=message,
         effective_message=message,
@@ -52,6 +53,7 @@ def test_expired_issue_text_clears_stale_inline_callback_workflow(monkeypatch):
     )
     update = SimpleNamespace(
         callback_query=query,
+        effective_chat=SimpleNamespace(type="private"),
         effective_user=None,
         message=None,
         effective_message=message,
@@ -133,5 +135,58 @@ def test_new_conversation_processes_first_plain_text_as_issue(monkeypatch):
     assert get_state(user_id) == WAITING_FOR_DOCUMENT
     assert get_ephemeral_issue(user_id) == message.text
     assert replies and "Streetlight outage" in replies[0]
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+
+
+def test_group_message_is_rejected_before_issue_text_is_retained():
+    user_id = 882205
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+    set_state(user_id, "WAITING_FOR_ISSUE")
+    message = SimpleNamespace(
+        text="My private address and civic complaint",
+        reply_text=AsyncMock(),
+    )
+    update = SimpleNamespace(
+        callback_query=None,
+        effective_chat=SimpleNamespace(type="group"),
+        effective_user=SimpleNamespace(id=user_id),
+        message=message,
+        effective_message=message,
+    )
+
+    asyncio.run(run_step(update, SimpleNamespace()))
+
+    assert get_ephemeral_issue(user_id) is None
+    assert user_id not in user_sessions
+    assert get_state(user_id) == "WAITING_FOR_ISSUE"
+    message.reply_text.assert_awaited_once()
+    assert "private chat" in message.reply_text.await_args.args[0]
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+
+
+def test_complaint_command_in_group_does_not_reset_or_start_workflow():
+    from commands.complaint import complaint
+
+    user_id = 882206
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+    set_state(user_id, WAITING_FOR_FORMAT)
+    set_ephemeral_issue(user_id, "existing private narrative")
+    message = SimpleNamespace(reply_text=AsyncMock())
+    update = SimpleNamespace(
+        effective_chat=SimpleNamespace(type="group"),
+        effective_user=SimpleNamespace(id=user_id),
+        message=message,
+    )
+
+    asyncio.run(complaint(update, SimpleNamespace()))
+
+    assert get_state(user_id) == WAITING_FOR_FORMAT
+    assert get_ephemeral_issue(user_id) == "existing private narrative"
+    message.reply_text.assert_awaited_once()
+    assert "private chat" in message.reply_text.await_args.args[0]
     clear_session(user_id)
     user_states.pop(user_id, None)
