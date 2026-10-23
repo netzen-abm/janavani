@@ -1,29 +1,30 @@
-"""Ephemeral Telegram workflow state.
+"""Non-sensitive Telegram workflow state and TTL-scoped transient issue content.
 
-Privacy invariant:
-- This state is process-local only.
-- It must never contain citizen names, addresses, contact details, identity
-  documents, raw issue narratives, evidence bytes, or other personal/sensitive
-  content.
-- Citizen content is consumed from the current Telegram update when required
-  and is not copied into this session store.
+Workflow metadata and raw citizen narratives have separate in-process stores.
+The narrative buffer has a short TTL and is purged by the Telegram runtimes.
+Neither store is durable.
 """
 from __future__ import annotations
 
 from time import monotonic
 
 user_sessions: dict[int, dict] = {}
+_ephemeral_issues: dict[int, tuple[str, float]] = {}
 _EPHEMERAL_TTL_SECONDS = 15 * 60
 
 
 def get_session(user_id: int) -> dict:
-    """Return minimal non-sensitive workflow state for a Telegram user."""
+    """Return non-sensitive workflow metadata without citizen-authored narrative."""
     if user_id not in user_sessions:
         user_sessions[user_id] = {
             "workflow": "Complaint",
             "district": "",
             "department": "",
             "offices": [],
+            "identity_mode": "anonymous",
+            "case_id": "",
+            "format": "",
+            "document_id": "",
             "office": {
                 "office_id": "",
                 "office_name": "",
@@ -31,59 +32,47 @@ def get_session(user_id: int) -> dict:
                 "department": "",
                 "district": "",
             },
-            "identity_mode": "anonymous",
-            "case_id": "",
-            "format": "",
-            "document_id": "",
-            "_ephemeral_issue": None,
-            "_ephemeral_issue_expires": 0.0,
+            "offices": [],
         }
     return user_sessions[user_id]
 
 
 def clear_session(user_id: int) -> None:
-    """Discard all ephemeral workflow state."""
+    """Discard workflow metadata and any associated transient citizen content."""
     user_sessions.pop(user_id, None)
-
-
-# IMPORTANT: citizen content may exist only through the explicit ephemeral helpers above. It must never be persisted, serialized, logged, or sent to a durable Janavani repository.
-# Do not persist this mapping, serialize it, log it, or send it to a storage adapter.
-# A Telegram transport necessarily receives message content transiently; Janavani
-# treats that processing as an ephemeral transport boundary, not citizen storage.
+    _ephemeral_issues.pop(user_id, None)
 
 
 def set_ephemeral_issue(user_id: int, value: str) -> None:
-    """Keep citizen content only in process memory for a short workflow window."""
-    session = get_session(user_id)
-    session["_ephemeral_issue"] = value
-    session["_ephemeral_issue_expires"] = monotonic() + _EPHEMERAL_TTL_SECONDS
+    """Keep citizen narrative in a separate in-memory buffer for at most 15 minutes."""
+    get_session(user_id)
+    _ephemeral_issues[user_id] = (value, monotonic() + _EPHEMERAL_TTL_SECONDS)
 
 
 def get_ephemeral_issue(user_id: int) -> str | None:
     """Return transient issue content only while its short TTL is valid."""
-    session = get_session(user_id)
-    if monotonic() >= float(session.get("_ephemeral_issue_expires", 0.0)):
-        clear_ephemeral_issue(user_id)
+    entry = _ephemeral_issues.get(user_id)
+    if entry is None:
         return None
-    return session.get("_ephemeral_issue")
+    value, expires_at = entry
+    if monotonic() >= expires_at:
+        _ephemeral_issues.pop(user_id, None)
+        return None
+    return value
 
 
 def purge_expired_ephemeral_issues(now: float | None = None) -> int:
     """Remove expired issue text even when its owner abandons the workflow."""
     current = monotonic() if now is None else now
-    cleared = 0
-    for session in user_sessions.values():
-        if (
-            session.get("_ephemeral_issue") is not None
-            and current >= float(session.get("_ephemeral_issue_expires", 0.0))
-        ):
-            session["_ephemeral_issue"] = None
-            session["_ephemeral_issue_expires"] = 0.0
-            cleared += 1
-    return cleared
+    expired = [
+        user_id for user_id, (_, expires_at) in _ephemeral_issues.items()
+        if current >= expires_at
+    ]
+    for user_id in expired:
+        _ephemeral_issues.pop(user_id, None)
+    return len(expired)
 
 
 def clear_ephemeral_issue(user_id: int) -> None:
-    session = get_session(user_id)
-    session["_ephemeral_issue"] = None
-    session["_ephemeral_issue_expires"] = 0.0
+    """Clear only the citizen-content buffer; preserve non-sensitive workflow metadata."""
+    _ephemeral_issues.pop(user_id, None)
