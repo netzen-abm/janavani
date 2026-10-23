@@ -55,9 +55,22 @@ def branches() -> list[str]:
 
 
 def open_prs(branch: str) -> list[dict[str, Any]]:
-    return gh_api(
-        f"repos/{REPO}/pulls?state=open&head=netzen-abm:{branch}&per_page=100"
-    )
+    """Find same-repository open PRs without interpolating a ref into a URL query."""
+    matches: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        rows = gh_api(
+            f"repos/{REPO}/pulls?state=open&per_page=100&page={page}"
+        )
+        matches.extend(
+            pr
+            for pr in rows
+            if pr.get("head", {}).get("ref") == branch
+            and (pr.get("head", {}).get("repo") or {}).get("full_name") == REPO
+        )
+        if len(rows) < 100:
+            return matches
+        page += 1
 
 
 def fetch_and_verify_git_ref(branch: str, expected_sha: str) -> tuple[bool, str]:
