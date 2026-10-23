@@ -36,9 +36,21 @@ def test_retirement_branch_is_not_an_active_role_and_is_path_limited() -> None:
 
     assert "feat/canonical-capability-execution-envelope)" in source
     assert "Retirement-only branch" in source
+    assert ".github/workflows/security-ci.yml" in source
     assert "docs/BRANCH_GOVERNANCE.md" in source
     assert "scripts/retire_legacy_branches.py" in source
     assert "Janavani requires exactly eight physical branch refs" in source
+
+
+def test_main_ruleset_required_checks_have_matching_workflow_job_names() -> None:
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    security = (
+        ROOT / ".github" / "workflows" / "security-ci.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "name: Python Lint & Test" in ci
+    assert "name: Rust Compilation & Clippy" in ci
+    assert "name: Secret Leak Check" in security
 
 
 def test_retirement_workflow_archives_and_verifies_before_deleting() -> None:
