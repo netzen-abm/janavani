@@ -147,3 +147,32 @@ def test_production_requires_explicit_transient_document_review_policy() -> None
         match="JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient",
     ):
         validate_runtime_configuration(environment="production", environ=environ)
+
+def test_telegram_factory_fails_closed_for_incomplete_production_configuration(monkeypatch):
+    from src.bot_telegram import build_application
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    required_settings = (
+        "JANAVANI_CASE_REPOSITORY_PROVIDER",
+        "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER",
+        "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER",
+        "JANAVANI_ARTIFACT_BLOB_PROVIDER",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER",
+        "JANAVANI_IDENTITY_ASSERTION_SECRET",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE",
+        "JANAVANI_POSTGRES_DSN",
+        "JANAVANI_IDENTITY_LINKS_DSN",
+        "JANAVANI_ARTIFACT_S3_BUCKET",
+    )
+    for name in required_settings:
+        monkeypatch.delenv(name, raising=False)
+
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="Production requires durable persistence providers",
+    ):
+        build_application(token="test-only-token")
