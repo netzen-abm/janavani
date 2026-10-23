@@ -19,6 +19,11 @@ permissions:
   contents: write
   pull-requests: read
 
+# Serialize the manual legacy-retirement path and the automatic transition-ref retirement.
+concurrency:
+  group: janavani-branch-retirement
+  cancel-in-progress: false
+
 jobs:
   retire:
     if: github.event_name == 'workflow_dispatch'
@@ -83,7 +88,8 @@ jobs:
               continue
             fi
 
-            prs="$(gh api "repos/$repo/pulls?state=open&head=$repo:$branch&per_page=100" --jq 'length')"
+            owner="${repo%%/*}"
+            prs="$(gh api "repos/$repo/pulls?state=open&head=$owner:$branch&per_page=100" --jq 'length')"
             if [ "$prs" != "0" ]; then
               echo "HOLD: $branch (open_prs=$prs)"
               continue
