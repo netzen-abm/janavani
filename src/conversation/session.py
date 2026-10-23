@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from time import monotonic
 
+from conversation.state import user_states
+
 user_sessions: dict[int, dict] = {}
 _ephemeral_issues: dict[int, tuple[str, float]] = {}
 _EPHEMERAL_TTL_SECONDS = 15 * 60
@@ -69,6 +71,10 @@ def purge_expired_ephemeral_issues(now: float | None = None) -> int:
     ]
     for user_id in expired:
         _ephemeral_issues.pop(user_id, None)
+        # Once the only copy of the citizen narrative expires, its remaining
+        # process-local workflow metadata can no longer complete the same flow.
+        user_sessions.pop(user_id, None)
+        user_states.pop(user_id, None)
     return len(expired)
 
 
