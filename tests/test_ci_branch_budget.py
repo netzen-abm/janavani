@@ -90,5 +90,9 @@ def test_retirement_workflow_archives_and_verifies_before_deleting() -> None:
     assert "ARCHIVE VERIFIED" in source
     assert "Retirement-only branch" in source
     assert "ahead_by" not in source  # Compare is performed from fetched Git refs.
-    assert "git rev-list --count" in source
-    assert "git diff --quiet" in source
+    transition = source.split("retire-canonical-capability-envelope:", 1)[1]
+    assert "git rev-list --count" not in transition
+    assert "git diff --quiet refs/remotes/origin/main" in transition
+    assert "git rev-list --count" in source.split(
+        "retire-canonical-capability-envelope:", 1
+    )[0]
