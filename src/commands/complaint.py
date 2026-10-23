@@ -9,6 +9,13 @@ from conversation.constants import WAITING_FOR_ISSUE
 async def complaint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user is None or update.message is None:
         return
+    chat = getattr(update, "effective_chat", None)
+    if chat is None or chat.type != "private":
+        await update.message.reply_text(
+            "For privacy, Janavani complaint workflows are available only in a "
+            "private chat with the bot. Open a private chat and use /complaint."
+        )
+        return
     user_id = update.effective_user.id
     clear_ephemeral_issue(user_id)
     clear_session(user_id)
