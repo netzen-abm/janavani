@@ -122,17 +122,36 @@ def test_web_client_lists_owned_case_metadata_with_request_scoped_identity(monke
 
 
 
-def test_case_api_paths_encode_untrusted_ids_and_keep_endpoint_boundaries():
+def test_case_api_paths_encode_untrusted_ids_and_keep_endpoint_boundaries(monkeypatch):
+    import src.webapp.services.api_client as api_module
+
+    calls = []
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"case_id": "case-123"}
+
+    def fake_get(url, *, headers, timeout):
+        calls.append(url)
+        return Response()
+
+    monkeypatch.setattr(api_module.httpx, "get", fake_get)
     client = JanavaniWebAPIClient(
         base_url="https://api.example.test",
         identity_assertion="signed-citizen-assertion",
     )
 
-    assert client._case_url("case-123") == "https://api.example.test/civic/cases/case-123"
-    assert client._case_url("case ?#id", "/document/draft") == (
-        "https://api.example.test/civic/cases/case%20%3F%23id/document/draft"
-    )
+    assert client.get_case("case-123") == {"case_id": "case-123"}
+    client.prepare_document_draft("case ?#id")
+    assert calls == [
+        "https://api.example.test/civic/cases/case-123",
+        "https://api.example.test/civic/cases/case%20%3F%23id/document/draft",
+    ]
 
     for invalid_case_id in ("", ".", "..", "nested/id", r"nested\\id"):
         with pytest.raises(ValueError, match="Invalid Case ID"):
-            client._case_url(invalid_case_id)
+            client.get_case(invalid_case_id)
+    assert len(calls) == 2
