@@ -38,8 +38,22 @@ def test_retirement_branch_is_not_an_active_role_and_is_path_limited() -> None:
     assert "Retirement-only branch" in source
     assert ".github/workflows/security-ci.yml" in source
     assert "docs/BRANCH_GOVERNANCE.md" in source
+    assert "docs/MASTER_TASK_CHECKLIST.md" in source
+    assert "docs/governance/MASTER_TASK_REGISTER.md" in source
+    assert "docs/architecture/SHAREABLE_INFRASTRUCTURE_BOUNDARIES.md" in source
     assert "scripts/retire_legacy_branches.py" in source
     assert "Janavani requires exactly eight physical branch refs" in source
+
+
+def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "group: janavani-branch-retirement" in source
+    assert 'owner="${repo%%/*}"' in source
+    assert 'head=$owner:$branch' in source
+    assert 'head=$REPO:$branch' not in source
 
 
 def test_main_ruleset_required_checks_have_matching_workflow_job_names() -> None:
