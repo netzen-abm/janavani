@@ -122,13 +122,15 @@ class InMemoryPairingRepository:
             or item.provider != "telegram" or not item.subject or item.confirmed_at is not None
         ):
             return None
-        item.confirmed_at = now
         identity = ExternalIdentity(
             provider=item.provider, subject=item.subject, principal_id=item.principal_id,
             authentication_method="web_telegram_pairing", verified=True,
         )
+        # Mirror PostgreSQL transaction semantics: do not consume the challenge
+        # until the identity-link write succeeds.
         if self._identity_link_repository is not None:
             self._identity_link_repository.save(identity)
+        item.confirmed_at = now
         return identity
 
 
