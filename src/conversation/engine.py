@@ -51,12 +51,13 @@ async def run_step(update, context):
                     "That button belongs to an earlier workflow. Use /complaint "
                     "to start a new one; expired issue text is not recoverable."
                 )
-        elif update.message:
-            await update.message.reply_text(
-                "👋 Welcome to Janavani. Use /complaint to begin, "
-                "or describe your civic issue in your next message."
-            )
-        return
+            return
+        if update.message:
+            # The welcome flow promises free-text intake: dispatch the first
+            # plain-text message to the same issue handler as /complaint.
+            state = WAITING_FOR_ISSUE
+        else:
+            return
 
     handler = get_handler(state)
     if handler is None:
