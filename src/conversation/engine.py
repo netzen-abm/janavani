@@ -43,7 +43,15 @@ async def run_step(update, context):
         return
 
     if state == "NEW":
-        if update.message:
+        if update.callback_query:
+            await update.callback_query.answer()
+            message = getattr(update, "effective_message", None)
+            if message is not None:
+                await message.reply_text(
+                    "That button belongs to an earlier workflow. Use /complaint "
+                    "to start a new one; expired issue text is not recoverable."
+                )
+        elif update.message:
             await update.message.reply_text(
                 "👋 Welcome to Janavani. Use /complaint to begin, "
                 "or describe your civic issue in your next message."
