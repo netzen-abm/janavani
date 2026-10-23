@@ -1,7 +1,13 @@
 import asyncio
 from types import SimpleNamespace
 
-from conversation.session import clear_ephemeral_issue, clear_session, get_session, set_ephemeral_issue
+from conversation.session import (
+    clear_ephemeral_issue,
+    clear_session,
+    get_ephemeral_issue,
+    get_session,
+    set_ephemeral_issue,
+)
 from conversation.state import get_state
 from conversation.constants import COMPLETED
 from conversation.steps import generate
@@ -44,6 +50,8 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
     user_id = 775501
     clear_session(user_id)
     set_ephemeral_issue(user_id, "The streetlight has been out for three nights.")
+    assert "_ephemeral_issue" not in get_session(user_id)
+    assert get_ephemeral_issue(user_id) == "The streetlight has been out for three nights."
     session = {
         "case_id": "case-test",
         "category": "Streetlight outage",
@@ -111,7 +119,8 @@ def test_generate_handler_sends_document_then_clears_transient_content(monkeypat
     assert "has not transmitted" in message.sent[1]
     assert case_content.cleared == ("case-test", identity)
     assert get_state(user_id) == COMPLETED
-    assert get_session(user_id).get("_ephemeral_issue") is None
+    assert get_ephemeral_issue(user_id) is None
+    assert "_ephemeral_issue" not in get_session(user_id)
     clear_session(user_id)
 
 
