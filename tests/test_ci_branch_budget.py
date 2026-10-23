@@ -51,9 +51,21 @@ def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> N
     ).read_text(encoding="utf-8")
 
     assert "group: janavani-branch-retirement" in source
-    assert 'owner="${repo%%/*}"' in source
-    assert 'head=$owner:$branch' in source
-    assert 'head=$REPO:$branch' not in source
+    assert "count_open_prs_for_branch" in source
+    assert "env.BRANCH" in source
+    assert "env.REPO" in source
+    assert "head=$owner:$branch" not in source
+    assert "head=$REPO:$branch" not in source
+
+
+def test_legacy_retirement_helper_does_not_interpolate_branch_names_into_url() -> None:
+    source = (
+        ROOT / "scripts" / "retire_legacy_branches.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'pulls?state=open&per_page=100&page={page}' in source
+    assert 'pr.get("head", {}).get("ref") == branch' in source
+    assert 'head=netzen-abm:{branch}' not in source
 
 
 def test_main_ruleset_required_checks_have_matching_workflow_job_names() -> None:
