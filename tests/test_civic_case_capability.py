@@ -9,6 +9,7 @@ from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.storage.repositories.case_content import CaseContent, InMemoryCaseContentRepository
 
 
 def _identity(*capabilities: str) -> IdentityContext:
@@ -115,3 +116,43 @@ def test_execution_envelope_rejects_wrong_capability() -> None:
         pass
     else:
         raise AssertionError("Expected execution capability mismatch to be rejected")
+
+
+
+def test_case_content_repository_isolates_nested_mutable_values() -> None:
+    repository = InMemoryCaseContentRepository()
+    claims = [{"claim": "road damage", "details": {"photos": ["photo-1"]}}]
+    jurisdiction = {"district": {"name": "Example", "wards": [1, 2]}}
+    content = CaseContent(
+        subject="Broken road",
+        narrative="A pothole is blocking the lane.",
+        claims=tuple(claims),
+        jurisdiction=jurisdiction,
+    )
+
+    repository.save("case-1", content, principal_id="citizen:owner")
+    claims[0]["details"]["photos"].append("untrusted-mutation")
+    jurisdiction["district"]["wards"].append(99)
+
+    stored = repository.get("case-1", principal_id="citizen:owner")
+    assert stored is not None
+    assert stored.claims[0]["details"]["photos"] == ["photo-1"]
+    assert stored.jurisdiction["district"]["wards"] == [1, 2]
+
+    stored.claims[0]["details"]["photos"].append("read-mutation")
+    stored.jurisdiction["district"]["wards"].append(100)
+    reread = repository.get("case-1", principal_id="citizen:owner")
+    assert reread is not None
+    assert reread.claims[0]["details"]["photos"] == ["photo-1"]
+    assert reread.jurisdiction["district"]["wards"] == [1, 2]
+
+
+def test_case_content_repository_isolates_principals() -> None:
+    repository = InMemoryCaseContentRepository()
+    repository.save(
+        "case-1",
+        CaseContent(subject="Private", narrative="Owner-only content"),
+        principal_id="citizen:owner",
+    )
+
+    assert repository.get("case-1", principal_id="citizen:other") is None
