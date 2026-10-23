@@ -7,6 +7,7 @@ or device-backed content when needed. This module never persists citizen content
 from __future__ import annotations
 
 from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass, field
 from threading import RLock
 from time import monotonic
@@ -40,8 +41,8 @@ def _copy_content(content: CaseContent) -> CaseContent:
     return CaseContent(
         subject=content.subject,
         narrative=content.narrative,
-        claims=tuple(dict(claim) for claim in content.claims),
-        jurisdiction=dict(content.jurisdiction),
+        claims=tuple(deepcopy(claim) for claim in content.claims),
+        jurisdiction=deepcopy(content.jurisdiction),
     )
 
 
