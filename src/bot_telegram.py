@@ -9,6 +9,7 @@ from telegram.ext import (
 )
 
 from core.config import Config
+from src.config.runtime import validate_runtime_configuration
 from conversation.session import purge_expired_ephemeral_issues
 from src.commands.catalogue import telegram_bot_commands
 from commands.check import cases, check
@@ -69,6 +70,9 @@ def build_application(*, token: str | None = None) -> Application:
     bot_token = token or Config.TELEGRAM_BOT_TOKEN
     if not bot_token:
         raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
+
+    # Do not let a production Telegram process silently compose memory-backed domains.
+    validate_runtime_configuration()
 
     application = (
         Application.builder()
