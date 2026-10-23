@@ -1,6 +1,9 @@
 """Citizen case-workspace routes; canonical API owns lifecycle and authorization."""
 from __future__ import annotations
 
+import re
+
+from fastapi import HTTPException
 from fastapi.responses import Response
 from fasthtml.common import (
     A, Button, Div, Form, H2, H3, Input, Label, Li, Option,
@@ -131,20 +134,35 @@ def register_case_workspace_routes(rt) -> None:
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
+
+        # Treat form fields and route parameters as untrusted. Validate the
+        # extension and remove header-sensitive characters before rendering a
+        # Content-Disposition value. The API remains responsible for Case
+        # ownership and the document's canonical content.
+        formats = {
+            "pdf": "application/pdf",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        normalized_format = document_format.strip().lower()
+        media_type = formats.get(normalized_format)
+        if media_type is None:
+            raise HTTPException(status_code=422, detail="Unsupported document format")
+
+        safe_case_id = re.sub(r"[^A-Za-z0-9_-]", "_", case_id)[:80] or "case"
         draft = client.prepare_document_draft(case_id)
         payload = client.generate_artifact(
-            case_id, document_id=draft["document_id"], document_format=document_format
-        )
-        media_type = (
-            "application/pdf" if document_format == "pdf"
-            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            case_id, document_id=draft["document_id"], document_format=normalized_format
         )
         return Response(
             content=payload,
             media_type=media_type,
             headers={
-                "Content-Disposition": f'attachment; filename="janavani-{case_id}.{document_format}"',
+                "Content-Disposition": (
+                    f'attachment; filename="janavani-{safe_case_id}.{normalized_format}"'
+                ),
                 "Cache-Control": "no-store, private",
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "no-referrer",
             },
         )
 
