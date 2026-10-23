@@ -45,7 +45,7 @@ jobs:
                 case "$path" in
                   .github/workflows/ci.yml|.github/workflows/branch-retirement.yml|docs/BRANCH_GOVERNANCE.md|tests/test_ci_branch_budget.py)
                     ;;
-                  .github/workflows/security-ci.yml|scripts/retire_legacy_branches.py|docs/MASTER_TASK_CHECKLIST.md)
+                  .github/workflows/security-ci.yml|scripts/retire_legacy_branches.py|docs/MASTER_TASK_CHECKLIST.md|docs/governance/MASTER_TASK_REGISTER.md|docs/architecture/SHAREABLE_INFRASTRUCTURE_BOUNDARIES.md)
                     ;;
                   *)
                     echo "::error::Retirement-only branch includes non-governance file: $path"
