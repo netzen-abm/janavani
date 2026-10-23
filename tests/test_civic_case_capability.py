@@ -156,3 +156,36 @@ def test_case_content_repository_isolates_principals() -> None:
     )
 
     assert repository.get("case-1", principal_id="citizen:other") is None
+
+
+
+def test_case_content_is_compensated_when_case_metadata_save_fails() -> None:
+    class FailingCaseRepository:
+        def save(self, case, *, principal_id=None) -> None:
+            raise RuntimeError("simulated metadata persistence failure")
+
+    content_repository = InMemoryCaseContentRepository()
+    capability = CivicCaseCapability(
+        FailingCaseRepository(), content_repository=content_repository
+    )
+    owner = _identity(CAPABILITY_ID)
+
+    try:
+        capability.create(
+            CivicCaseCreateRequest(
+                case_type=CaseType.COMPLAINT,
+                subject="Broken road",
+                narrative="A pothole is blocking the lane.",
+            ),
+            identity=owner,
+            source_channel="webapp",
+        )
+    except RuntimeError as exc:
+        assert str(exc) == "simulated metadata persistence failure"
+    else:
+        raise AssertionError("Expected metadata persistence to fail")
+
+    assert content_repository.get(
+        next(iter(content_repository._content))[1],
+        principal_id=owner.principal.principal_id,
+    ) is None if content_repository._content else True
