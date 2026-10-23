@@ -312,5 +312,5 @@ jobs:
       - name: Compile workspace libraries and binaries
         run: cargo check --workspace
 
-      - name: Run Clippy on the application library
-        run: cargo clippy -p janavani-application --lib
+      - name: Run Clippy on the application library without re-linting dependencies
+        run: cargo clippy -p janavani-application --lib --no-deps
