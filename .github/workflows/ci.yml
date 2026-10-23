@@ -53,7 +53,8 @@ jobs:
               done
               ;;
             *)
-              echo "::error::Janavani branch budget violation: '$branch' is outside the eight active roles and the explicit retirement-only exception."
+              echo "::error::Unapproved Janavani branch role: '$branch'."
+              echo "::error::Only eight active roles plus the path-limited retirement exception are permitted."
               exit 1
               ;;
           esac
