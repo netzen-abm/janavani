@@ -178,8 +178,10 @@ jobs:
 
           # The merged governance PR is the only event allowed to retire this
           # sanctioned transition ref. Its content must already be identical
-          # to main, with no branch-only commits remaining.
-          prs="$(gh api "repos/$REPO/pulls?state=open&head=$REPO:$branch&per_page=100" --jq 'length')"
+          # to main. Do not require commit ancestry: squash/rebase merges can
+          # legitimately rewrite commit identities while preserving the tree.
+          owner="${REPO%%/*}"
+          prs="$(gh api "repos/$REPO/pulls?state=open&head=$owner:$branch&per_page=100" --jq 'length')"
           if [ "$prs" != "0" ]; then
             echo "::error::Retirement held: open PRs still reference $branch."
             exit 2
@@ -192,11 +194,6 @@ jobs:
             exit 2
           fi
 
-          ahead="$(git rev-list --count "refs/remotes/origin/main..$git_ref")"
-          if [ "$ahead" != "0" ]; then
-            echo "::error::Retirement held: branch contains $ahead commit(s) not contained in main."
-            exit 2
-          fi
           if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
             echo "::error::Retirement held: branch tree differs from main."
             exit 2
