@@ -68,6 +68,21 @@ def get_ephemeral_issue(user_id: int) -> str | None:
     return session.get("_ephemeral_issue")
 
 
+def purge_expired_ephemeral_issues(now: float | None = None) -> int:
+    """Remove expired issue text even when its owner abandons the workflow."""
+    current = monotonic() if now is None else now
+    cleared = 0
+    for session in user_sessions.values():
+        if (
+            session.get("_ephemeral_issue") is not None
+            and current >= float(session.get("_ephemeral_issue_expires", 0.0))
+        ):
+            session["_ephemeral_issue"] = None
+            session["_ephemeral_issue_expires"] = 0.0
+            cleared += 1
+    return cleared
+
+
 def clear_ephemeral_issue(user_id: int) -> None:
     session = get_session(user_id)
     session["_ephemeral_issue"] = None
