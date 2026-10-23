@@ -81,6 +81,7 @@ def test_inline_callback_after_process_restart_is_acknowledged(monkeypatch):
     )
     update = SimpleNamespace(
         callback_query=query,
+        effective_chat=SimpleNamespace(type="private"),
         effective_user=None,
         message=None,
         effective_message=message,
@@ -125,6 +126,7 @@ def test_new_conversation_processes_first_plain_text_as_issue(monkeypatch):
     )
     update = SimpleNamespace(
         callback_query=None,
+        effective_chat=SimpleNamespace(type="private"),
         effective_user=SimpleNamespace(id=user_id),
         message=message,
         effective_message=message,
