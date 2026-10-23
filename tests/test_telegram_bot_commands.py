@@ -2,7 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from src.bot_telegram import _set_bot_commands
+from src.bot_telegram import _post_init, _set_bot_commands, _stop_ephemeral_issue_cleanup
 from src.commands.catalogue import telegram_bot_commands
 
 
@@ -37,3 +37,19 @@ def test_startup_publishes_unique_discoverable_bot_commands():
     assert "in-memory workflow" in next(
         command.description for command in commands if command.command == "cancel"
     )
+
+
+def test_polling_runtime_starts_and_stops_expiry_cleanup_task():
+    application = SimpleNamespace(
+        bot=SimpleNamespace(set_my_commands=AsyncMock()),
+        bot_data={},
+    )
+
+    async def run_lifecycle():
+        await _post_init(application)
+        task = application.bot_data.get("janavani_ephemeral_issue_cleanup")
+        assert task is not None and not task.done()
+        await _stop_ephemeral_issue_cleanup(application)
+        assert task.cancelled()
+
+    asyncio.run(run_lifecycle())
