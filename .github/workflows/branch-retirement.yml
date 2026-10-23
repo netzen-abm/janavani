@@ -91,6 +91,29 @@ jobs:
 
             head_sha="$(gh api "repos/$repo/git/ref/heads/$branch" --jq '.object.sha')"
             tag="archive/branches/$branch"
+            git_ref="refs/remotes/origin/retirement-candidate"
+            git fetch --no-tags origin \
+              "+refs/heads/$branch:$git_ref" \
+              "+refs/heads/main:refs/remotes/origin/main"
+            if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
+              echo "HOLD: $branch (GitHub ref and fetched head disagree)"
+              continue
+            fi
+            ahead="$(git rev-list --count "refs/remotes/origin/main..$git_ref")"
+            if [ "$ahead" != "0" ]; then
+              echo "HOLD: $branch ($ahead commit(s) not contained in main)"
+              continue
+            fi
+            if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
+              echo "HOLD: $branch (tree differs from main; selective extraction required)"
+              continue
+            fi
+
+            # Dry-run must not create tags or delete refs.
+            if [ "$EXECUTE" != "true" ]; then
+              echo "DRY RUN: would archive $branch -> $tag @ $head_sha and then delete the branch"
+              continue
+            fi
 
             if gh api "repos/$repo/git/ref/tags/$tag" >/dev/null 2>&1; then
               existing_sha="$(gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha')"
@@ -98,15 +121,26 @@ jobs:
                 echo "HOLD: $branch (archive tag exists at a different commit)"
                 continue
               fi
+              echo "ARCHIVE VERIFIED: $branch -> $tag @ $head_sha"
             else
-              gh api --method POST "repos/$repo/git/refs"                 -f "ref=refs/tags/$tag"                 -f "sha=$head_sha"
+              gh api --method POST "repos/$repo/git/refs" \
+                -f "ref=refs/tags/$tag" \
+                -f "sha=$head_sha"
               echo "ARCHIVED: $branch -> $tag @ $head_sha"
             fi
 
-            if [ "$EXECUTE" = "true" ]; then
-              gh api --method DELETE "repos/$repo/git/refs/heads/$branch"
-              echo "DELETED: $branch"
+            current_sha="$(gh api "repos/$repo/git/ref/heads/$branch" --jq '.object.sha')"
+            archive_sha="$(gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha')"
+            if [ "$current_sha" != "$head_sha" ] || [ "$archive_sha" != "$head_sha" ]; then
+              echo "HOLD: $branch (branch head moved or archive SHA is not exact)"
+              continue
             fi
+            gh api --method DELETE "repos/$repo/git/refs/heads/$branch"
+            if gh api "repos/$repo/git/ref/heads/$branch" >/dev/null 2>&1; then
+              echo "ERROR: branch ref still exists after deletion: $branch"
+              exit 2
+            fi
+            echo "DELETED AFTER VERIFIED ARCHIVE: $branch"
           done
 
           remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
