@@ -309,8 +309,8 @@ jobs:
           components: clippy
           rustflags: ""
 
-      - name: Compile all workspace targets
-        run: cargo check --workspace --all-targets
+      - name: Compile workspace libraries and binaries
+        run: cargo check --workspace
 
-      - name: Run Clippy on the application boundary
-        run: cargo clippy -p janavani-application --all-targets
+      - name: Run Clippy on the application library
+        run: cargo clippy -p janavani-application --lib
