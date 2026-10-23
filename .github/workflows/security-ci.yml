@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   secret-scan:
-    name: Secret & Privacy Leak Detection
+    name: Secret Leak Check
     runs-on: ubuntu-latest
     permissions:
       contents: read
