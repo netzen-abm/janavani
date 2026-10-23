@@ -11,6 +11,8 @@ from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.case_content import CaseContent, InMemoryCaseContentRepository
 
+import pytest
+
 
 def _identity(*capabilities: str) -> IdentityContext:
     return IdentityContext(
@@ -193,3 +195,35 @@ def test_case_content_is_compensated_when_case_metadata_save_fails() -> None:
     assert content_repository.get(
         repository.case_id, principal_id=owner.principal.principal_id
     ) is None
+
+
+
+def test_case_content_cleanup_failure_preserves_metadata_error() -> None:
+    class FailingCaseRepository:
+        def save(self, case, *, principal_id=None) -> None:
+            raise ValueError("primary metadata failure")
+
+    class FailingCleanupRepository(InMemoryCaseContentRepository):
+        def delete(self, case_id: str, *, principal_id: str) -> None:
+            raise RuntimeError("secondary cleanup failure")
+
+    capability = CivicCaseCapability(
+        FailingCaseRepository(),
+        content_repository=FailingCleanupRepository(),
+    )
+
+    with pytest.raises(ValueError, match="primary metadata failure") as captured:
+        capability.create(
+            CivicCaseCreateRequest(
+                case_type=CaseType.COMPLAINT,
+                subject="Broken road",
+                narrative="A pothole is blocking the lane.",
+            ),
+            identity=_identity(CAPABILITY_ID),
+            source_channel="webapp",
+        )
+
+    assert any(
+        "secondary cleanup failure" in note
+        for note in getattr(captured.value, "__notes__", [])
+    )
