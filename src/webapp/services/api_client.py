@@ -30,7 +30,8 @@ class JanavaniWebAPIClient:
         return authorization_headers(self.identity_assertion)
 
     def _case_url(self, case_id: str, endpoint: str = "") -> str:
-        if not isinstance(case_id, str) or not case_id or case_id in {".", ".."} or "/" in case_id or "\\" in case_id: raise ValueError("Invalid Case ID")
+        if not isinstance(case_id, str) or not case_id or case_id in {".", ".."} or "/" in case_id or "\\" in case_id:
+            raise ValueError("Invalid Case ID")
         return f"{self.base_url}/civic/cases/{quote(case_id, safe='')}{endpoint}"
 
     def list_cases(self, limit: int = 20) -> list[dict[str, Any]]:
@@ -169,11 +170,8 @@ class JanavaniWebAPIClient:
         return None
 
 def client_for_request(request: object) -> JanavaniWebAPIClient:
-    """Build a citizen-scoped API client from a trusted gateway assertion cookie.
-
-    The API independently verifies the signature, issuer, audience and expiry.
-    This adapter never treats a cookie value as identity without that verification.
-    """
+    """Use request-scoped identity; the API independently verifies each assertion."""
     cookies = getattr(request, "cookies", {})
-    assertion = cookies.get("janavani_identity_assertion") if cookies else None
-    return JanavaniWebAPIClient(identity_assertion=assertion)
+    return JanavaniWebAPIClient(
+        identity_assertion=cookies.get("janavani_identity_assertion") if cookies else None
+    )
