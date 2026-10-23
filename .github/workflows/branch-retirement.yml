@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       execute:
-        description: "Actually archive and delete non-sanctioned branches"
+        description: "Actually archive and delete eligible legacy branches"
         required: true
         default: false
         type: boolean
@@ -12,6 +12,8 @@ on:
         description: "Type RETIRE-LEGACY-BRANCHES to permit deletion"
         required: true
         type: string
+  pull_request:
+    types: [closed]
 
 permissions:
   contents: write
@@ -19,8 +21,14 @@ permissions:
 
 jobs:
   retire:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
       - name: Archive and retire legacy branches
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,18 +48,26 @@ jobs:
             "main"
             "integration/canonical-platform"
             "feat/canonical-case-kernel"
-            "feat/canonical-capability-execution-envelope"
             "feat/canonical-civic-action-vertical-slice"
             "feat/canonical-sos-contract"
             "feat/capability-scoped-consent-agent-enforcement"
             "audit/postgres-provider-production-gates"
             "chore/ecosystem-shared-capability-infrastructure"
           )
+          retirement_only=("feat/canonical-capability-execution-envelope")
 
           is_sanctioned() {
             local branch="$1"
             for allowed in "${sanctioned[@]}"; do
               [ "$branch" = "$allowed" ] && return 0
+            done
+            return 1
+          }
+
+          is_retirement_only() {
+            local branch="$1"
+            for candidate in "${retirement_only[@]}"; do
+              [ "$branch" = "$candidate" ] && return 0
             done
             return 1
           }
@@ -62,6 +78,10 @@ jobs:
 
           for branch in "${branches[@]}"; do
             is_sanctioned "$branch" && continue
+            if is_retirement_only "$branch"; then
+              echo "RETIREMENT-ONLY: $branch is deleted only by the post-merge controlled workflow."
+              continue
+            fi
 
             prs="$(gh api "repos/$repo/pulls?state=open&head=$repo:$branch&per_page=100" --jq 'length')"
             if [ "$prs" != "0" ]; then
@@ -92,7 +112,90 @@ jobs:
           remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
           echo "Remaining physical branch refs: $remaining"
 
-          if [ "$EXECUTE" = "true" ] && [ "$remaining" -ne 9 ]; then
+          if [ "$EXECUTE" = "true" ] && [ "$remaining" -ne 8 ]; then
             echo "Retirement incomplete: open-PR or archive-integrity holds remain."
             exit 2
           fi
+
+  retire-canonical-capability-envelope:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'feat/canonical-capability-execution-envelope' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Archive, verify and retire the merged transition branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="feat/canonical-capability-execution-envelope"
+          tag="archive/branches/$branch"
+          git_ref="refs/remotes/origin/retirement-candidate"
+
+          # The merged governance PR is the only event allowed to retire this
+          # sanctioned transition ref. Its content must already be identical
+          # to main, with no branch-only commits remaining.
+          prs="$(gh api "repos/$REPO/pulls?state=open&head=$REPO:$branch&per_page=100" --jq 'length')"
+          if [ "$prs" != "0" ]; then
+            echo "::error::Retirement held: open PRs still reference $branch."
+            exit 2
+          fi
+
+          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          git fetch --no-tags origin "refs/heads/$branch:$git_ref"
+          if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
+            echo "::error::Retirement held: fetched ref does not match GitHub head."
+            exit 2
+          fi
+
+          ahead="$(git rev-list --count "refs/remotes/origin/main..$git_ref")"
+          if [ "$ahead" != "0" ]; then
+            echo "::error::Retirement held: branch contains $ahead commit(s) not contained in main."
+            exit 2
+          fi
+          if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
+            echo "::error::Retirement held: branch tree differs from main."
+            exit 2
+          fi
+
+          if gh api "repos/$REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+            if [ "$archive_sha" != "$head_sha" ]; then
+              echo "::error::Retirement held: archive tag already points to a different SHA."
+              exit 2
+            fi
+            echo "ARCHIVE VERIFIED: $branch -> $tag @ $head_sha"
+          else
+            gh api --method POST "repos/$REPO/git/refs" \
+              -f "ref=refs/tags/$tag" \
+              -f "sha=$head_sha"
+          fi
+
+          archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$archive_sha" != "$head_sha" ] || [ "$current_sha" != "$head_sha" ]; then
+            echo "::error::Retirement held: branch head changed or archive SHA is not exact."
+            exit 2
+          fi
+
+          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
+          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            echo "::error::Retirement failed: branch ref still exists."
+            exit 2
+          fi
+          if [ "$remaining" -ne 8 ]; then
+            echo "::error::Expected exactly eight physical branches after retirement; found $remaining."
+            exit 2
+          fi
+          echo "RETIREMENT VERIFIED: exact archive exists, ref is deleted, and eight physical branches remain."
