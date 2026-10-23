@@ -1,3 +1,5 @@
+import pytest
+
 from src.access.authorization import AuthorizationDecision
 from src.capabilities.civic_case import (
     CAPABILITY_ID,
@@ -10,9 +12,6 @@ from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.case_content import CaseContent, InMemoryCaseContentRepository
-
-import pytest
-
 
 def _identity(*capabilities: str) -> IdentityContext:
     return IdentityContext(
