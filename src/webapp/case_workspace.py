@@ -65,7 +65,6 @@ def register_case_workspace_routes(rt) -> None:
                 A("Return to dashboard", href="/"),
             ),
         )
-
     @rt("/cases/{case_id}/review")
     def post_case_review(case_id: str, request: Request, subject: str, body: str, reason: str = ""):
         client = client_for_request(request)
@@ -96,7 +95,6 @@ def register_case_workspace_routes(rt) -> None:
                 A("Continue case review", href=f"/cases/{case_id}/prepare"),
             ),
         )
-
     @rt("/cases/{case_id}/consent")
     def post_case_consent(case_id: str, request: Request, explicit_confirmation: str = ""):
         if explicit_confirmation != "yes":
@@ -128,17 +126,12 @@ def register_case_workspace_routes(rt) -> None:
                 A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
             ),
         )
-
     @rt("/cases/{case_id}/artifact")
     def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf"):
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
-
-        # Treat form fields and route parameters as untrusted. Validate the
-        # extension and remove header-sensitive characters before rendering a
-        # Content-Disposition value. The API remains responsible for Case
-        # ownership and the document's canonical content.
+        # Form fields and route parameters are untrusted; the API still owns Case authorization.
         formats = {
             "pdf": "application/pdf",
             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -147,7 +140,6 @@ def register_case_workspace_routes(rt) -> None:
         media_type = formats.get(normalized_format)
         if media_type is None:
             raise HTTPException(status_code=422, detail="Unsupported document format")
-
         safe_case_id = re.sub(r"[^A-Za-z0-9_-]", "_", case_id)[:80] or "case"
         draft = client.prepare_document_draft(case_id)
         payload = client.generate_artifact(
@@ -165,7 +157,6 @@ def register_case_workspace_routes(rt) -> None:
                 "Referrer-Policy": "no-referrer",
             },
         )
-
     @rt("/cases/{case_id}/ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
