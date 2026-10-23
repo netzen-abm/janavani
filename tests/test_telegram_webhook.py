@@ -146,6 +146,7 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
     )
     application = SimpleNamespace(
         bot=bot,
+        bot_data={},
         initialize=AsyncMock(),
         start=AsyncMock(),
         stop=AsyncMock(),
@@ -168,13 +169,18 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
 
     monkeypatch.setattr(webhook, "run_inbox_worker", idle_worker)
 
+    cleanup_task = None
     with TestClient(webhook.create_webhook_app()) as client:
         assert client.get("/liveness").status_code == 200
         bot.set_my_commands.assert_awaited_once_with(telegram_bot_commands())
         names = [item.command for item in bot.set_my_commands.await_args.args[0]]
         assert "cases" in names
         assert len(names) == len(set(names))
+        cleanup_task = application.bot_data.get("janavani_ephemeral_issue_cleanup")
+        assert cleanup_task is not None and not cleanup_task.done()
 
+    assert cleanup_task.cancelled()
+    assert application.bot_data.get("janavani_ephemeral_issue_cleanup") is None
     application.stop.assert_awaited_once()
     application.shutdown.assert_awaited_once()
 
