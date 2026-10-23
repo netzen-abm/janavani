@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import conversation.session as session_store
-from conversation.constants import WAITING_FOR_FORMAT
+from conversation.constants import WAITING_FOR_DOCUMENT, WAITING_FOR_FORMAT
 from conversation.engine import run_step
 from conversation.session import clear_session, get_ephemeral_issue, set_ephemeral_issue, user_sessions
 from conversation.state import get_state, set_state, user_states
@@ -90,3 +90,48 @@ def test_inline_callback_after_process_restart_is_acknowledged(monkeypatch):
     message.reply_text.assert_awaited_once()
     assert "earlier workflow" in message.reply_text.await_args.args[0]
     assert "/complaint" in message.reply_text.await_args.args[0]
+
+
+
+def test_new_conversation_processes_first_plain_text_as_issue(monkeypatch):
+    import conversation.steps.issue as issue_step
+
+    user_id = 882204
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+    monkeypatch.setattr(
+        issue_step,
+        "identity_for_telegram_user",
+        lambda user_id, links: object(),
+    )
+    monkeypatch.setattr(
+        issue_step,
+        "classify_issue",
+        lambda _text: SimpleNamespace(
+            category="Streetlight outage",
+            department="Municipality",
+        ),
+    )
+    replies = []
+
+    async def reply_text(text):
+        replies.append(text)
+
+    message = SimpleNamespace(
+        text="The streetlight has been broken for three nights",
+        reply_text=reply_text,
+    )
+    update = SimpleNamespace(
+        callback_query=None,
+        effective_user=SimpleNamespace(id=user_id),
+        message=message,
+        effective_message=message,
+    )
+
+    asyncio.run(run_step(update, SimpleNamespace(bot_data={})))
+
+    assert get_state(user_id) == WAITING_FOR_DOCUMENT
+    assert get_ephemeral_issue(user_id) == message.text
+    assert replies and "Streetlight outage" in replies[0]
+    clear_session(user_id)
+    user_states.pop(user_id, None)
