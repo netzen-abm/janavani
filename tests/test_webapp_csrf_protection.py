@@ -69,3 +69,11 @@ def test_origin_port_normalizes_default_https_port():
 def test_read_only_request_is_not_subject_to_mutation_origin_gate():
     response = _client().get("/read", headers={"Origin": "https://attacker.test"})
     assert response.status_code == 200
+
+
+
+def test_cookie_authenticated_mutation_rejects_scheme_mismatch():
+    response = _client().post(
+        "/mutate", headers={"Origin": "http://janavani.test"}
+    )
+    assert response.status_code == 403
