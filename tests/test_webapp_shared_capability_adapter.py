@@ -151,7 +151,7 @@ def test_case_api_paths_encode_untrusted_ids_and_keep_endpoint_boundaries(monkey
         "https://api.example.test/civic/cases/case%20%3F%23id/document/draft",
     ]
 
-    for invalid_case_id in ("", ".", "..", "nested/id", r"nested\\id"):
+    for invalid_case_id in ("", ".", "..", "nested/id", r"nested\id"):
         with pytest.raises(ValueError, match="Invalid Case ID"):
             client.get_case(invalid_case_id)
     assert len(calls) == 2
