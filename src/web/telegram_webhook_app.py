@@ -14,7 +14,11 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import Update
 from telegram.ext import Application
 
-from src.bot_telegram import build_application
+from src.bot_telegram import (
+    _start_ephemeral_issue_cleanup,
+    _stop_ephemeral_issue_cleanup,
+    build_application,
+)
 from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
@@ -66,6 +70,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         await bot_app.bot.set_my_commands(telegram_bot_commands())
         await bot_app.bot.set_webhook(url=webhook_url, secret_token=secret,
                                       allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
+        _start_ephemeral_issue_cleanup(bot_app)
         app.state.telegram_application, app.state.telegram_inbox = bot_app, durable_inbox
         app.state.webhook_secret = secret
         worker = asyncio.create_task(run_inbox_worker(bot_app, durable_inbox))
@@ -78,6 +83,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                 await worker
             except asyncio.CancelledError:
                 pass
+            await _stop_ephemeral_issue_cleanup(bot_app)
             await bot_app.stop()
             await bot_app.shutdown()
 
