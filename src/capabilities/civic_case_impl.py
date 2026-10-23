@@ -67,10 +67,17 @@ class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
         )
         try:
             self._repository.save(case, principal_id=identity.principal.principal_id)
-        except Exception:
-            self._content.delete(
-                case.case_id, principal_id=identity.principal.principal_id
-            )
+        except Exception as persistence_error:
+            try:
+                self._content.delete(
+                    case.case_id, principal_id=identity.principal.principal_id
+                )
+            except Exception as cleanup_error:
+                # Preserve the primary persistence failure while exposing that
+                # compensating cleanup also failed and may require reconciliation.
+                persistence_error.add_note(
+                    f"Compensating Case-content cleanup failed: {cleanup_error!r}"
+                )
             raise
         return CivicCaseResult(case, decision)
 
