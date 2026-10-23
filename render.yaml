@@ -5,8 +5,7 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     # Canonical Web/API runtime. Keep this service independent of Telegram.
-    # Render terminates TLS at its trusted ingress; wildcard proxy trust is safe only while the service has no direct untrusted ingress.
-    startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /liveness
 
   - type: web
@@ -15,8 +14,7 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     # Telegram webhook uses HTTPS ingress; do not run polling alongside it.
-    # This webhook is reached through Render ingress; wildcard proxy trust is safe only while direct untrusted ingress is impossible.
-    startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /liveness
     envVars:
       - key: TELEGRAM_BOT_TOKEN
