@@ -161,12 +161,16 @@ def test_case_content_repository_isolates_principals() -> None:
 
 def test_case_content_is_compensated_when_case_metadata_save_fails() -> None:
     class FailingCaseRepository:
+        case_id: str | None = None
+
         def save(self, case, *, principal_id=None) -> None:
+            self.case_id = case.case_id
             raise RuntimeError("simulated metadata persistence failure")
 
+    repository = FailingCaseRepository()
     content_repository = InMemoryCaseContentRepository()
     capability = CivicCaseCapability(
-        FailingCaseRepository(), content_repository=content_repository
+        repository, content_repository=content_repository
     )
     owner = _identity(CAPABILITY_ID)
 
@@ -185,7 +189,7 @@ def test_case_content_is_compensated_when_case_metadata_save_fails() -> None:
     else:
         raise AssertionError("Expected metadata persistence to fail")
 
+    assert repository.case_id is not None
     assert content_repository.get(
-        next(iter(content_repository._content))[1],
-        principal_id=owner.principal.principal_id,
-    ) is None if content_repository._content else True
+        repository.case_id, principal_id=owner.principal.principal_id
+    ) is None
