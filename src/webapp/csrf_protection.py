@@ -12,14 +12,16 @@ _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _IDENTITY_COOKIE = "janavani_identity_assertion"
 
 
-def _same_origin(source: str | None, host: str | None) -> bool:
-    """Compare source and request host, normalizing default HTTP(S) ports."""
-    if not source or not host:
+def _same_origin(source: str | None, host: str | None, request_scheme: str | None) -> bool:
+    """Compare scheme, host and port against the request origin."""
+    if not source or not host or request_scheme not in {"http", "https"}:
         return False
     try:
         source_url = urlsplit(source)
         request_host = urlsplit("//" + host)
-        if source_url.scheme not in {"http", "https"} or not source_url.hostname or not request_host.hostname:
+        if source_url.scheme not in {"http", "https"} or source_url.scheme != request_scheme:
+            return False
+        if not source_url.hostname or not request_host.hostname:
             return False
         if source_url.hostname.lower() != request_host.hostname.lower():
             return False
@@ -57,7 +59,7 @@ class SameOriginCookieMutationMiddleware:
         # A supplied Origin is authoritative; do not fall back to a friendly
         # Referer when Origin is present but invalid.
         source = headers.get("origin") if headers.get("origin") is not None else headers.get("referer")
-        if not _same_origin(source, headers.get("host")):
+        if not _same_origin(source, headers.get("host"), scope.get("scheme")):
             response = JSONResponse(
                 {"detail": "Cross-origin browser mutation rejected"},
                 status_code=403,
