@@ -17,8 +17,8 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Identify and converge duplicate capability owners.
 - [ ] Identify remaining legacy bypasses and archive only after evidence.
 - [ ] Update Source of Truth and architecture decision records from audit evidence.
-- [x] Establish strict nine-branch operating target; no new long-lived branch without explicit architectural purpose.
-- [x] Safely retire all non-survivor branches; GitHub branch inventory currently verifies exactly nine active branch refs. Historical work is preserved as archive evidence; no extra active branch refs remain.
+- [x] Historical nine-branch policy recorded; superseded on 2026-10-23 by the eight-role transition.
+- [ ] Complete archive-first retirement of `feat/canonical-capability-execution-envelope`, then re-query GitHub and verify exactly eight physical branch refs. Until that verification, the repository remains at nine physical refs.
 - [x] Promote Civic Case Python/Rust lifecycle parity evidence to `main`.
 
 ## P0 — Canonical runtime and persistence boundary
@@ -98,39 +98,37 @@ This is the execution register. Older checklists, roadmaps, issue lists, and bra
 - [ ] Hardware/device evidence and trusted-capture research evaluated behind capability contracts.
 - [ ] Future technologies evaluated using reuse-first, evidence-first, provider-neutral criteria.
 
-## Branch operating policy — strict nine-branch target
+## Branch operating policy — eight-role target (transition in progress)
 
-The repository operating target is exactly nine long-lived branches:
+The intended active set is exactly eight long-lived branch roles:
 
 1. `main` — canonical convergence line.
 2. `integration/canonical-platform` — shared platform integration.
 3. `feat/canonical-case-kernel` — canonical Case kernel work.
-4. `feat/canonical-capability-execution-envelope` — shared execution-context contract.
-5. `feat/canonical-civic-action-vertical-slice` — civic-action vertical slice.
-6. `feat/canonical-sos-contract` — SOS contract/decomposition.
-7. `feat/capability-scoped-consent-agent-enforcement` — consent/agent security.
-8. `audit/postgres-provider-production-gates` — durable-provider readiness.
-9. `chore/ecosystem-shared-capability-infrastructure` — shared ecosystem infrastructure.
+4. `feat/canonical-civic-action-vertical-slice` — civic-action vertical slice.
+5. `feat/canonical-sos-contract` — SOS contract/decomposition.
+6. `feat/capability-scoped-consent-agent-enforcement` — consent/agent security.
+7. `audit/postgres-provider-production-gates` — durable-provider readiness.
+8. `chore/ecosystem-shared-capability-infrastructure` — shared ecosystem infrastructure.
 
-This is the active survivor target. Existing refs must be compared with `main`; useful deltas are selectively converged, evidence is preserved, and only then are source refs deleted.
+The ref `feat/canonical-capability-execution-envelope` is a retirement-only transition ref, not an active role. It may contain only the policy changes needed to retire itself. The live physical inventory must remain reported as nine until the guarded workflow archives the exact branch head, verifies eligibility, deletes the ref, and re-queries GitHub to confirm eight.
 
 ### Branch lifecycle
 
-`one focused branch → verify → converge/promote → archive evidence → delete`
+`one focused branch → verify → converge/promote → archive exact head → delete → re-inventory`
 
 Rules:
 
-1. No `-v2`, `-v3`, `-final`, `-clean` branch generations.
-2. No new long-lived branch unless it matches an approved role.
+1. No `-v2`, `-v3`, `-final`, or `-clean` branch generations.
+2. No new long-lived branch unless it replaces an approved role.
 3. Never blindly merge a stale branch merely to reduce branch count.
 4. Archive-first applies to branch retirement.
-5. A branch fully behind `main` is a retirement candidate.
-6. A branch whose useful delta is already on `main` is a retirement candidate.
-7. Open PRs are not canonical merely because they exist.
-8. Current `main` is the convergence authority.
-9. Physical deletion must be real deletion; force-moving a ref is not deletion.
+5. Compare branch history and content; preserve unique useful work before deletion.
+6. Hold any branch with an open PR, unique commits, or a tree delta requiring selective extraction.
+7. Physical deletion must be real deletion; moving a ref is not deletion.
+8. `main` is the convergence authority, but branch-count compliance is not product-readiness evidence.
 
-`main` currently has historical refs beyond this nine-role target. The repository must not be reported as physically converged until those refs are actually deleted.
+The repository is not physically compliant with the eight-branch target until GitHub returns exactly the eight sanctioned refs after the retirement operation.
 
 ## Rules for execution
 
@@ -147,6 +145,6 @@ Rules:
 11. Never report green unless the exact current commit has verified green evidence.
 
 
-## 2026-09-22 branch hygiene re-verification
+## Historical note — 2026-09-22 branch hygiene re-verification (superseded)
 
-GitHub's live branch inventory for `netzen-abm/janavani` was queried directly and returned exactly the nine sanctioned active branch refs. No additional active branch ref remains. The earlier 249-ref retirement baseline is historical evidence and must not be used as the current active-branch count. Responsibility-boundary audits continue independently; branch hygiene is now at the nine-branch target.
+At that date, GitHub's live branch inventory returned nine sanctioned branch refs. This is retained as dated evidence only; it is not the current branch target or proof of current compliance. The current policy is the eight-role transition above, and the live inventory must be queried after actual retirement.

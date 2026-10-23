@@ -11,6 +11,28 @@
 
 > **Completion rule:** A task is not COMPLETE merely because code or documentation exists. Engineering completion requires implementation, tests, repository verification, security/privacy review where applicable, functional verification, and evidence. Design completion is explicitly labelled DESIGN COMPLETE and must not be confused with implementation completion.
 
+## 0B. CURRENT EXECUTION UPDATE — 23 OCTOBER 2026
+
+**Current objective:** converge the shared civic-action workflow, verify WebApp and Telegram independently, and retire one proven redundant branch without creating a tenth branch.
+
+### Current branch-policy transition
+- Target: exactly **eight active branch roles**.
+- Live physical inventory at last GitHub check: **nine refs**. Do not report the target achieved until a fresh GitHub query returns eight.
+- Eight intended active roles: `main`, `integration/canonical-platform`, `feat/canonical-case-kernel`, `feat/canonical-civic-action-vertical-slice`, `feat/canonical-sos-contract`, `feat/capability-scoped-consent-agent-enforcement`, `audit/postgres-provider-production-gates`, `chore/ecosystem-shared-capability-infrastructure`.
+- `feat/canonical-capability-execution-envelope` is a narrowly scoped retirement-only transition ref. It is verified as zero commits ahead of `main`, one behind, with no differing files; the controlled post-merge job must archive the exact head, verify no remaining open PR or unique tree/commit work, delete the ref, and prove eight physical refs remain.
+- Branch-budget CI expects eight and has a retirement-only path for policy files on the transition branch. The branch remains physically present until the governance PR merges and the protected workflow completes. Do not simulate deletion or lower the gate before the ref is actually gone.
+- Future single-`main` consolidation remains gated on product readiness and cross-surface acceptance.
+
+### Current delivery blockers
+1. Approve the explicit Case-content privacy/retention/recovery contract (Issue #212).
+2. Verify trusted identity assertion issuance/session-cookie setup and deploy the actual authenticated WebApp runtime (Issue #209).
+3. Prove Telegram workflow behavior across process restart: durable inbox does not itself persist process-local conversation state (Issue #210).
+4. Prove the deployed WebApp and Telegram citizen journeys, owner isolation, review/consent, replay and failure isolation (Issue #207).
+5. Complete the controlled branch retirement and verify exactly eight refs.
+
+### Latest verification baseline
+Candidate integration head `c0d64261c731a1d392c4235a494c3d576b5312b4` passed PR CI and push CI: 673 Python tests passed, 2 warnings, and the full canonical suite including Rust/integration stages passed. Security CI, Docker, Dependency Review, Architecture Guard, and CodeQL JavaScript/TypeScript, Python, Rust and Actions analyses passed. These checks do not establish production deployment or complete citizen-journey acceptance.
+
 ## 0A. EXECUTIVE REBASELINE — 08 OCTOBER 2026
 
 **Decision:** Convergence before expansion. The ecosystem scope remains unchanged; the immediate objective is to make one canonical civic-action system correct, durable, testable and reusable across independent surfaces.
@@ -46,7 +68,7 @@ The Dynamic Web is the first proving surface, while Telegram remains independent
 Only after the canonical slice is green: Mini App, WhatsApp/Messenger, Android/iOS, AI/RAG/Agentic expansion, DApp/Web3, resilience/mesh/satellite and advanced governance capabilities.
 
 ### P5 — Repository hygiene
-- Exactly **nine active branches**; the live repository currently satisfies this.
+- Exactly **eight active branch roles** are the target; the current live inventory still has nine physical refs until the guarded retirement workflow deletes the transition branch.
 - No blind merge or deletion of historical work.
 - Preserve useful work, selectively extract unique changes, verify, then retire/archive references.
 - Do not create another architecture generation merely to solve an existing convergence problem.
@@ -56,11 +78,11 @@ Only after the canonical slice is green: Mini App, WhatsApp/Messenger, Android/i
 2. **Once that cascade is green, isolate the genuinely independent failures—identity, PostgreSQL/RLS, AI provider, session expiry and Rust parity—without introducing architectural coupling.**
 
 ### Branch policy
-The nine approved active branches are: main, integration/canonical-platform, feat/canonical-case-kernel, feat/canonical-capability-execution-envelope, feat/canonical-civic-action-vertical-slice, feat/canonical-sos-contract, feat/capability-scoped-consent-agent-enforcement, audit/postgres-provider-production-gates, chore/ecosystem-shared-capability-infrastructure.
+The eight approved active branch roles are: main, integration/canonical-platform, feat/canonical-case-kernel, feat/canonical-civic-action-vertical-slice, feat/canonical-sos-contract, feat/capability-scoped-consent-agent-enforcement, audit/postgres-provider-production-gates, chore/ecosystem-shared-capability-infrastructure. The canonical-capability-execution-envelope ref is retirement-only until its guarded post-merge deletion is verified.
 
 ### Evidence baseline from live GitHub audit
-- Exactly 9 branches observed.
-- feat/canonical-capability-execution-envelope and chore/ecosystem-shared-capability-infrastructure are 0 commits ahead of main; they do not need merging.
+- Nine physical refs were observed at the beginning of the 23 October transition; the target is eight, and current compliance requires post-merge deletion plus a fresh inventory.
+- feat/canonical-capability-execution-envelope is zero commits ahead and has no differing files, so it is being retired through the guarded archive-before-delete workflow; do not treat it as an active role.
 - integration/canonical-platform contains unique work but is deeply behind main; do not wholesale-merge.
 - Case-kernel, civic-action and SOS branches contain historical/divergent work; selectively extract only missing, still-valid changes.
 - Consent/agent and PostgreSQL-gate branches contain unique work but are based on old generations; re-evaluate against current contracts before integration.

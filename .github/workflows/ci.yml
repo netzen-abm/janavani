@@ -15,24 +15,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Enforce nine-branch policy
+      - name: Enforce eight active roles and retirement-only exception
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
           REF_BRANCH: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
+          set -euo pipefail
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
-            main|integration/canonical-platform|feat/canonical-case-kernel|feat/canonical-capability-execution-envelope) 
-              echo "Allowed branch role: $branch"
+            main|integration/canonical-platform|feat/canonical-case-kernel)
+              echo "Allowed active branch role: $branch"
               ;;
             feat/canonical-civic-action-vertical-slice|feat/canonical-sos-contract|feat/capability-scoped-consent-agent-enforcement)
-              echo "Allowed branch role: $branch"
+              echo "Allowed active branch role: $branch"
               ;;
             audit/postgres-provider-production-gates|chore/ecosystem-shared-capability-infrastructure)
-              echo "Allowed branch role: $branch"
+              echo "Allowed active branch role: $branch"
+              ;;
+            feat/canonical-capability-execution-envelope)
+              echo "Retirement-only branch; policy files only, then archive/delete after merge."
+              git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+              mapfile -t changed < <(git diff --name-only refs/remotes/origin/main HEAD | sed '/^$/d' | sort -u)
+              if [ "${#changed[@]}" -eq 0 ]; then
+                echo "::error::Retirement-only branch contains no proposed policy change."
+                exit 1
+              fi
+              for path in "${changed[@]}"; do
+                case "$path" in
+                  .github/workflows/ci.yml|.github/workflows/branch-retirement.yml|docs/BRANCH_GOVERNANCE.md|tests/test_ci_branch_budget.py)
+                    ;;
+                  .github/workflows/security-ci.yml|scripts/retire_legacy_branches.py|docs/MASTER_TASK_CHECKLIST.md)
+                    ;;
+                  docs/governance/MASTER_TASK_REGISTER.md|docs/architecture/SHAREABLE_INFRASTRUCTURE_BOUNDARIES.md)
+                    ;;
+                  *)
+                    echo "::error::Retirement-only branch includes non-governance file: $path"
+                    exit 1
+                    ;;
+                esac
+              done
               ;;
             *)
-              echo "::error::Janavani branch budget violation: '$branch' is outside the nine approved branch roles."
+              echo "::error::Unapproved Janavani branch role: '$branch'."
+              echo "::error::Only eight active roles plus the path-limited retirement exception are permitted."
               exit 1
               ;;
           esac
@@ -40,17 +66,29 @@ jobs:
       - name: Enforce physical branch budget on canonical line
         if: github.ref_name == 'main' && github.event_name == 'push'
         run: |
-          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
-          mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | sed '/^$/d; /^HEAD$/d' | sort)
-          count="${#branches[@]}"
-          echo "Observed remote branch refs: $count"
-          printf '%s\\n' "${branches[@]}"
-          if [ "$count" -ne 9 ]; then
-            echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
+          set -euo pipefail
+          count_branches() {
+            git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+            mapfile -t branches < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | sed '/^$/d; /^HEAD$/d' | sort)
+            count="${#branches[@]}"
+            echo "Observed remote branch refs: $count"
+            printf '%s\n' "${branches[@]}"
+          }
+
+          count_branches
+          for attempt in $(seq 1 12); do
+            [ "$count" -eq 8 ] && break
+            echo "Waiting for the merged retirement workflow to archive/delete the transition ref (attempt $attempt/12)."
+            sleep 5
+            count_branches
+          done
+          if [ "$count" -ne 8 ]; then
+            echo "::error::Janavani requires exactly eight physical branch refs; observed $count."
             exit 1
           fi
 
   test:
+    name: Python Lint & Test
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -256,3 +294,25 @@ jobs:
           END
           $$;
           SQL
+
+
+  rust-quality:
+    name: Rust Compilation & Clippy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust stable and Clippy
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: clippy
+          rustflags: ""
+
+      - name: Compile workspace libraries and binaries
+        run: cargo check --workspace
+
+      - name: Run Clippy on the application library without re-linting dependencies
+        run: cargo clippy -p janavani-application --lib --no-deps
