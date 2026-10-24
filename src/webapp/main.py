@@ -5,7 +5,7 @@ from fasthtml.common import (
 from starlette.requests import Request
 from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
-from src.webapp.api_errors import safe_api_errors
+from src.webapp.api_errors import PlatformAPIContractError, safe_api_errors
 from src.webapp.services.api_client import client_for_request
 
 # Initialize the stateless web interface client
@@ -70,7 +70,7 @@ def post(citizen_input: str, request: Request):
     case_id = result.get("case_id")
     status = result.get("status")
     if not isinstance(case_id, str) or not case_id.strip() or not isinstance(status, str) or not status.strip():
-        raise RuntimeError("Platform API returned an incomplete Case result")
+        raise PlatformAPIContractError("Platform API returned an incomplete Case result")
 
     return Div(
         Div(
