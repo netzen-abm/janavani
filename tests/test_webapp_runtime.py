@@ -63,7 +63,11 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
             return {"status": "review"}
 
         def record_explicit_consent(self, case_id):
-            return {"status": "ready"}
+            return {
+                "status": "ready",
+                "consent_recorded": True,
+                "scope": "citizen_download_and_self_send",
+            }
 
         def generate_artifact(self, case_id, **kwargs):
             assert kwargs["document_id"] == "doc-test"
