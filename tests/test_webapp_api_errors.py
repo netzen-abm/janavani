@@ -82,6 +82,17 @@ def test_safe_api_errors_converts_expected_failures_without_swallowing_programmi
     else:
         raise AssertionError("Unexpected programming errors must not be hidden")
 
+    @safe_api_errors("read Case")
+    def runtime_bug():
+        raise RuntimeError("unexpected programming defect")
+
+    try:
+        runtime_bug()
+    except RuntimeError as exc:
+        assert "unexpected programming defect" in str(exc)
+    else:
+        raise AssertionError("Unexpected runtime defects must remain visible")
+
 
 def test_user_controlled_action_label_is_html_escaped():
     response = api_failure_response(RuntimeError("private details"), action="<script>secret()</script>")
