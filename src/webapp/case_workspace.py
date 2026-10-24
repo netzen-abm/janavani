@@ -1,16 +1,12 @@
 """Citizen case-workspace routes; canonical API owns lifecycle and authorization."""
 from __future__ import annotations
-
 import re
-
 from fastapi import HTTPException
 from fastapi.responses import Response
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Li, Option, P, Select, Textarea, Titled, Ul
 from starlette.requests import Request
-
-from src.webapp.api_errors import safe_api_errors
+from src.webapp.api_errors import PlatformAPIContractError, safe_api_errors
 from src.webapp.services.api_client import client_for_request
-
 def _sign_in_required():
     """Render a safe, user-facing response when no request identity is present."""
     return Titled(
@@ -21,7 +17,6 @@ def _sign_in_required():
             A("Return to dashboard", href="/"),
         ),
     )
-
 def register_case_workspace_routes(rt) -> None:
     """Register UI routes that forward each request's verified identity assertion."""
 
@@ -76,6 +71,8 @@ def register_case_workspace_routes(rt) -> None:
             body=body,
             reason=reason or None,
         )
+        if reviewed.get("document_id") != draft.get("document_id"):
+            raise PlatformAPIContractError("Platform API did not confirm the reviewed document")
         result = client.start_review(case_id, subject=subject, narrative=body)
         return Titled(
             "Draft review saved",
@@ -109,6 +106,8 @@ def register_case_workspace_routes(rt) -> None:
         if not client.identity_assertion:
             return _sign_in_required()
         result = client.record_explicit_consent(case_id)
+        if result.get("consent_recorded") is not True or result.get("scope") != "citizen_download_and_self_send":
+            raise PlatformAPIContractError("Platform API did not confirm the requested consent scope")
         return Titled(
             "Consent recorded",
             Div(
@@ -145,6 +144,8 @@ def register_case_workspace_routes(rt) -> None:
         payload = client.generate_artifact(
             case_id, document_id=draft["document_id"], document_format=normalized_format
         )
+        if not payload:
+            raise PlatformAPIContractError("Platform API returned an empty document artifact")
         return Response(
             content=payload,
             media_type=media_type,
