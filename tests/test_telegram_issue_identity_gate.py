@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from conversation.session import clear_session, get_session
+from conversation.session import clear_session, get_ephemeral_issue, get_session
 from conversation.steps.issue import handle_issue
 from src.identity.linking import InMemoryExternalIdentityLinkRepository
 
@@ -31,6 +31,7 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
     asyncio.run(run())
     session = get_session(user_id)
     assert replies and "no Case was created" in replies[0]
-    assert session.get("_ephemeral_issue") is None
+    assert get_ephemeral_issue(user_id) is None
+    assert "_ephemeral_issue" not in session
     assert session.get("case_id", "") == ""
     clear_session(user_id)

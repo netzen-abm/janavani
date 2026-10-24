@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 
 class CapabilitySessionState(str, Enum):
@@ -36,7 +37,7 @@ class CapabilitySession:
 class CapabilitySessionManager:
     """Deterministic, terminal lifecycle for one purpose-bound resource use."""
 
-    _TRANSITIONS = {
+    _TRANSITIONS: ClassVar[dict[CapabilitySessionState, set[CapabilitySessionState]]] = {
         CapabilitySessionState.NOT_REQUESTED: {
             CapabilitySessionState.PURPOSE_PRESENTED,
         },

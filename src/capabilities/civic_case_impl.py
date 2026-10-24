@@ -50,12 +50,35 @@ class CivicCaseCapability(CivicCaseContentMixin, CivicCaseLifecycleMixin):
         if request.claims is not None:
             case.claims = [dict(claim) for claim in request.claims]
         case.events.append(self._event(case_id, CaseEventType.CREATED, identity, now, source_channel))
-        self._repository.save(case, principal_id=identity.principal.principal_id)
-        self._content.save(case.case_id, CaseContent(
-            subject=subject, narrative=narrative,
-            claims=tuple(dict(claim) for claim in case.claims),
-            jurisdiction=dict(case.jurisdiction),
-        ), principal_id=identity.principal.principal_id)
+        # Content and Case metadata use different persistence boundaries. Write
+        # transient content first, then commit metadata; compensate if metadata
+        # persistence fails so a failed create does not leave orphaned content.
+        # This is not a distributed transaction: the content adapter must remain
+        # transient/device-local unless a future atomic provider contract is approved.
+        self._content.save(
+            case.case_id,
+            CaseContent(
+                subject=subject,
+                narrative=narrative,
+                claims=tuple(dict(claim) for claim in case.claims),
+                jurisdiction=dict(case.jurisdiction),
+            ),
+            principal_id=identity.principal.principal_id,
+        )
+        try:
+            self._repository.save(case, principal_id=identity.principal.principal_id)
+        except Exception as persistence_error:
+            try:
+                self._content.delete(
+                    case.case_id, principal_id=identity.principal.principal_id
+                )
+            except Exception as cleanup_error:
+                # Preserve the primary persistence failure while exposing that
+                # compensating cleanup also failed and may require reconciliation.
+                persistence_error.add_note(
+                    f"Compensating Case-content cleanup failed: {cleanup_error!r}"
+                )
+            raise
         return CivicCaseResult(case, decision)
 
     def create_shell(self, request: CivicCaseCreateRequest, *, identity: IdentityContext,

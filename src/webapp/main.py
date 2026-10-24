@@ -1,9 +1,11 @@
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
+    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
+from src.webapp.case_list import register_case_list_routes
+from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
+from src.webapp.api_errors import PlatformAPIContractError, safe_api_errors
 from src.webapp.services.api_client import client_for_request
 
 # Initialize the stateless web interface client
@@ -18,6 +20,7 @@ app, rt = fast_app(
         """)
     )
 )
+app.add_middleware(SameOriginCookieMutationMiddleware)
 
 @rt("/")
 def get():
@@ -42,18 +45,18 @@ def get():
                     ),
                     Button("Create Case", type="submit", cls="button-primary"),
                 ),
+                A("View my Cases", href="/cases"),
                 cls="card",
             ),
         ),
     )
 
 @rt("/submit-issue")
+@safe_api_errors("create a civic Case")
 def post(citizen_input: str, request: Request):
-    """Sends user text to the backend microservice and displays the structured draft fields."""
-    try:
-        client = client_for_request(request)
-        result = client.submit_complaint_draft(citizen_input)
-    except (RuntimeError, ValueError):
+    """Create a Case through the canonical API without echoing upstream failures."""
+    client = client_for_request(request)
+    if not client.identity_assertion:
         return Div(
             Div(
                 H3("Sign-in required"),
@@ -62,19 +65,20 @@ def post(citizen_input: str, request: Request):
                 cls="card",
             )
         )
-    
-    if "error" in result:
-        return Div(
-            Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
-        )
-        
+
+    result = client.submit_complaint_draft(citizen_input)
+    case_id = result.get("case_id")
+    status = result.get("status")
+    if not isinstance(case_id, str) or not case_id.strip() or not isinstance(status, str) or not status.strip():
+        raise PlatformAPIContractError("Platform API returned an incomplete Case result")
+
     return Div(
         Div(
             H2("📁 Civic Case Created"),
-            P(f"Case ID: {result.get('case_id')}"),
-            P(f"Status: {result.get('status')}"),
+            P(f"Case ID: {case_id}"),
+            P(f"Status: {status}"),
             P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
-            Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
+            Form(action=f"/cases/{case_id}/prepare", method="get")(
                 Button("Open Case Workspace", type="submit"),
             ),
             A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
@@ -125,11 +129,13 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, r
     )
 
 from src.webapp.case_workspace import register_case_workspace_routes
+from src.webapp.identity_pairing_workspace import register_identity_pairing_routes
 
 register_case_workspace_routes(rt)
+register_identity_pairing_routes(rt)
+register_case_list_routes(rt)
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.webapp.main:app", host="0.0.0.0", port=8080, reload=True)
-
 

@@ -29,6 +29,14 @@ def records() -> InMemoryAuthorityRepository:
             primary_contact=AuthorityContact(name="Unknown", address="Unknown"),
             verification_status="UNVERIFIED",
         ),
+        AuthorityRecord(
+            authority_id="office-3",
+            name="Verified Office Without Destination",
+            authority_type="district",
+            jurisdiction={"city": "Kochi"},
+            primary_contact=None,
+            verification_status="VERIFIED",
+        ),
     ])
 
 
@@ -42,7 +50,16 @@ def test_authority_capability_resolves_by_id() -> None:
 def test_authority_capability_search_is_provider_neutral() -> None:
     capability = AuthorityCapability(records())
     result = capability.search(AuthorityLookupRequest(authority_type="district", city="Kochi"))
-    assert [item.authority_id for item in result] == ["office-1", "office-2"]
+    assert [item.authority_id for item in result] == ["office-1"]
+
+
+def test_authority_search_excludes_unverified_or_missing_destinations() -> None:
+    capability = AuthorityCapability(records())
+    result = capability.search(
+        AuthorityLookupRequest(authority_type="district", city="Kochi", limit=5)
+    )
+    assert all(item.verified and item.primary_contact is not None for item in result)
+    assert {item.authority_id for item in result} == {"office-1"}
 
 
 def test_authority_capability_requires_verified_destination() -> None:

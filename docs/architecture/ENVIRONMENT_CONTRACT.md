@@ -43,11 +43,16 @@ Production persistence is fail-closed and requires:
 - `JANAVANI_CASE_REPOSITORY_PROVIDER=postgres`
 - `JANAVANI_ARTIFACT_REPOSITORY_PROVIDER=postgres`
 - `JANAVANI_EVIDENCE_REPOSITORY_PROVIDER=postgres`
+- `JANAVANI_CONSENT_REPOSITORY_PROVIDER=postgres`
+- `JANAVANI_SUBMISSION_REPOSITORY_PROVIDER=postgres`
 - `JANAVANI_ARTIFACT_BLOB_PROVIDER=s3`
+- `JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient` — explicit policy for bounded, short-lived drafts until a durable content adapter is separately approved.
 - `JANAVANI_POSTGRES_DSN=<secret connection string>`
 - `JANAVANI_ARTIFACT_S3_BUCKET=<bucket name>`
 
 These are application configuration values except the DSN, which must be treated as a secret.
+
+Document-review drafts currently use a bounded in-process store (15-minute TTL, maximum 1,000 drafts). They are never written to disk or PostgreSQL and are lost on process restart or replacement. Production must explicitly select `JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient`; do not switch to durable citizen-content storage without an explicit retention/consent decision and a reviewed adapter.
 
 ## Canonical interface credentials
 
@@ -68,6 +73,9 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `JANAVANI_CASE_REPOSITORY_PROVIDER` | Yes | If directly persists cases | No | No | Fixture | Provider selection |
 | `JANAVANI_ARTIFACT_REPOSITORY_PROVIDER` | Yes | If directly persists artifacts | No | No | Fixture | Provider selection |
 | `JANAVANI_EVIDENCE_REPOSITORY_PROVIDER` | Yes | If directly persists evidence | No | No | Fixture | Provider selection |
+| `JANAVANI_CONSENT_REPOSITORY_PROVIDER` | Yes | If directly records consent | No | No | Fixture | Durable provider |
+| `JANAVANI_SUBMISSION_REPOSITORY_PROVIDER` | If submission is enabled | If submission is enabled | No | No | Fixture | Durable provider |
+| `JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER` | Yes | If directly reviews drafts | No | No | Fixture | Explicit `transient` privacy policy |
 | `JANAVANI_ARTIFACT_BLOB_PROVIDER` | Yes | If directly stores artifacts | No | No | Fixture | Provider selection |
 | `JANAVANI_POSTGRES_DSN` | Yes | Only if directly using DB | No | No | `JANAVANI_POSTGRES_TEST_DSN` for integration tests | Secret |
 | `JANAVANI_ARTIFACT_S3_BUCKET` | Yes | Only if directly storing blobs | No | No | Fixture | Storage config |

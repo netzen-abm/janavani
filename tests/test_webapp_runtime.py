@@ -11,6 +11,7 @@ def test_webapp_registers_case_workspace_routes():
     assert "/cases/{case_id}/review" in paths
     assert "/cases/{case_id}/consent" in paths
     assert "/cases/{case_id}/artifact" in paths
+    assert "/cases" in paths
 
 
 def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
@@ -33,7 +34,19 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
         identity_assertion = "test-signed-assertion"
 
         def get_case(self, case_id):
-            return {"case_id": case_id, "status": "draft"}
+            return {
+                "case_id": case_id,
+                "status": "draft",
+                "events": [
+                    {
+                        "event_type": "case_created",
+                        "occurred_at": "2026-10-22T10:00:00Z",
+                        "notes": "private narrative must not be rendered in the timeline",
+                    }
+                ],
+                "evidence_refs": ["evidence-test"],
+                "document_refs": ["doc-test"],
+            }
 
         def prepare_document_draft(self, case_id):
             return {
@@ -50,7 +63,11 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
             return {"status": "review"}
 
         def record_explicit_consent(self, case_id):
-            return {"status": "ready"}
+            return {
+                "status": "ready",
+                "consent_recorded": True,
+                "scope": "citizen_download_and_self_send",
+            }
 
         def generate_artifact(self, case_id, **kwargs):
             assert kwargs["document_id"] == "doc-test"
@@ -63,6 +80,10 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     prepared = client.get("/cases/case-test/prepare")
     assert prepared.status_code == 200
     assert "Streetlight outage" in prepared.text
+    assert "Case activity" in prepared.text
+    assert "case_created" in prepared.text
+    assert "Evidence references: 1; document references: 1." in prepared.text
+    assert "private narrative must not be rendered" not in prepared.text
 
     reviewed = client.post(
         "/cases/case-test/review",
@@ -96,4 +117,57 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert response.status_code == 200
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
+
+
+
+
+def test_webapp_installs_cookie_mutation_origin_guard():
+    from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
+    from src.webapp.main import app
+
+    assert any(
+        middleware.cls is SameOriginCookieMutationMiddleware
+        for middleware in app.user_middleware
+    )
+
+def test_artifact_download_rejects_unknown_format_and_sanitizes_filename(monkeypatch):
+    import src.webapp.case_workspace as workspace
+    from src.webapp.main import app
+
+    calls = []
+
+    class Client:
+        identity_assertion = "test-signed-assertion"
+
+        def prepare_document_draft(self, case_id):
+            calls.append(("prepare", case_id))
+            return {"document_id": "doc-test", "case_id": case_id}
+
+        def generate_artifact(self, case_id, *, document_id, document_format):
+            calls.append(("generate", case_id, document_id, document_format))
+            return b"%PDF-test-payload"
+
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    client = TestClient(app)
+
+    invalid = client.post(
+        "/cases/case-test/artifact", data={"document_format": "pdf\r\nX-Injected: yes"}
+    )
+    assert invalid.status_code == 422
+    assert not calls
+
+    response = client.post(
+        "/cases/case@unsafe/artifact", data={"document_format": "PDF"}
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="janavani-case_unsafe.pdf"'
+    )
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert calls == [
+        ("prepare", "case@unsafe"),
+        ("generate", "case@unsafe", "doc-test", "pdf"),
+    ]
 

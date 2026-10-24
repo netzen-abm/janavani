@@ -4,6 +4,10 @@
 **Version:** 2.1  
 **Date:** 24 August 2026  
 **Repository:** `netzen-abm/janavani`
+**Primary public site (current):** https://netzen-abm.github.io/janavani/
+**Brochure / showcase site:** https://netzen-abm.github.io/janavani-website/
+
+The primary site is the current product-facing entry point. The separate brochure/showcase site presents Janavani's mission, vision and public information. The citizen drafting workspace is under review; the current deployed `main` runtime does not yet expose `/app`. Link to that route only after the change is merged, deployed and runtime-verified.
 
 ## What is Janavani?
 

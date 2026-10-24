@@ -1,6 +1,6 @@
 """HTTP adapter for the shared civic case and civic action capabilities."""
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
@@ -35,6 +35,28 @@ async def create_case(request: CaseCreateRequest, context: IdentityContext = Dep
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+@router.get("")
+async def list_cases(
+    limit: int = Query(default=20, ge=1, le=50),
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, object]:
+    """Return an authenticated citizen's metadata-only Case list."""
+    cases = _CAPABILITY.list_owned(identity=context, limit=limit)
+    items = [
+        {
+            "case_id": case.case_id,
+            "case_type": case.case_type,
+            "status": case.status,
+            "created_at": case.created_at,
+            "updated_at": case.updated_at,
+            "evidence_count": case.evidence_count,
+            "document_count": case.document_count,
+            "last_activity_at": case.last_activity_at,
+        }
+        for case in cases
+    ]
+    return {"items": items, "count": len(items)}
 
 @router.get("/{case_id}")
 async def get_case(case_id: str, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:

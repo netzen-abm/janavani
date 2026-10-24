@@ -74,3 +74,20 @@ def test_none_authentication_method_is_rejected():
 
     with pytest.raises(ValueError, match="authenticated identity requires"):
         DefaultIdentityAdapter().resolve(identity)
+
+
+
+def test_web_telegram_pairing_maps_to_canonical_authentication_method():
+    identity = ExternalIdentity(
+        provider="telegram",
+        subject="telegram-subject-1",
+        principal_id="principal-1",
+        authentication_method="web_telegram_pairing",
+        verified=True,
+        capabilities=frozenset({"JNV-CIVIC-COMPLAINT"}),
+    )
+
+    context = DefaultIdentityAdapter().resolve(identity)
+
+    assert context.principal.authentication_method == AuthenticationMethod.WEB_TELEGRAM_PAIRING
+    assert context.principal.capabilities == frozenset({"JNV-CIVIC-COMPLAINT"})
