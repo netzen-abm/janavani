@@ -89,3 +89,48 @@ def test_user_controlled_action_label_is_html_escaped():
 
     assert "<script>" not in body
     assert "&lt;script&gt;" in body
+
+def test_case_creation_route_does_not_leak_transport_errors(monkeypatch):
+    from fastapi.testclient import TestClient
+    import src.webapp.main as webmain
+
+    class Client:
+        identity_assertion = "synthetic-test-assertion"
+
+        def submit_complaint_draft(self, citizen_input):
+            request = httpx.Request("POST", "https://internal.example/civic/cases")
+            raise httpx.ConnectError("internal host and bearer=synthetic-secret", request=request)
+
+    monkeypatch.setattr(webmain, "client_for_request", lambda request: Client())
+    response = TestClient(webmain.app).post(
+        "/submit-issue",
+        data={"citizen_input": "Synthetic streetlight issue"},
+    )
+
+    assert response.status_code == 503
+    assert "could not confirm the result" in response.text
+    assert "internal.example" not in response.text
+    assert "synthetic-secret" not in response.text
+    assert "Civic Case Created" not in response.text
+    assert response.headers["cache-control"] == "no-store, private"
+
+
+def test_case_creation_route_never_calls_api_error_payload_a_success(monkeypatch):
+    from fastapi.testclient import TestClient
+    import src.webapp.main as webmain
+
+    class Client:
+        identity_assertion = "synthetic-test-assertion"
+
+        def submit_complaint_draft(self, citizen_input):
+            return {"error": "private upstream database details"}
+
+    monkeypatch.setattr(webmain, "client_for_request", lambda request: Client())
+    response = TestClient(webmain.app).post(
+        "/submit-issue",
+        data={"citizen_input": "Synthetic streetlight issue"},
+    )
+
+    assert response.status_code == 503
+    assert "Civic Case Created" not in response.text
+    assert "private upstream database details" not in response.text
