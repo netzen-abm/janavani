@@ -15,6 +15,11 @@ import httpx
 from starlette.responses import HTMLResponse
 
 
+class PlatformAPIContractError(RuntimeError):
+    """Raised when a successful upstream response violates the Platform API contract."""
+
+
+
 def api_failure_response(exc: Exception, *, action: str) -> HTMLResponse:
     """Return a no-store response with a stable status and no internal details."""
     status_code = 503
@@ -84,7 +89,7 @@ def safe_api_errors(action: str):
         def wrapped(*args, **kwargs):
             try:
                 return handler(*args, **kwargs)
-            except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+            except (httpx.HTTPError, PlatformAPIContractError, ValueError) as exc:
                 return api_failure_response(exc, action=action)
         return wrapped
     return decorate
