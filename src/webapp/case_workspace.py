@@ -5,14 +5,11 @@ import re
 
 from fastapi import HTTPException
 from fastapi.responses import Response
-from fasthtml.common import (
-    A, Button, Div, Form, H2, H3, Input, Label, Li, Option,
-    P, Select, Textarea, Titled, Ul,
-)
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Li, Option, P, Select, Textarea, Titled, Ul
 from starlette.requests import Request
 
+from src.webapp.api_errors import safe_api_errors
 from src.webapp.services.api_client import client_for_request
-
 
 def _sign_in_required():
     """Render a safe, user-facing response when no request identity is present."""
@@ -25,11 +22,11 @@ def _sign_in_required():
         ),
     )
 
-
 def register_case_workspace_routes(rt) -> None:
     """Register UI routes that forward each request's verified identity assertion."""
 
     @rt("/cases/{case_id}/prepare")
+    @safe_api_errors("open the Case workspace")
     def get_case_workspace(case_id: str, request: Request):
         client = client_for_request(request)
         if not client.identity_assertion:
@@ -66,6 +63,7 @@ def register_case_workspace_routes(rt) -> None:
             ),
         )
     @rt("/cases/{case_id}/review")
+    @safe_api_errors("save the reviewed document")
     def post_case_review(case_id: str, request: Request, subject: str, body: str, reason: str = ""):
         client = client_for_request(request)
         if not client.identity_assertion:
@@ -96,6 +94,7 @@ def register_case_workspace_routes(rt) -> None:
             ),
         )
     @rt("/cases/{case_id}/consent")
+    @safe_api_errors("record explicit consent")
     def post_case_consent(case_id: str, request: Request, explicit_confirmation: str = ""):
         if explicit_confirmation != "yes":
             return Titled(
@@ -127,6 +126,7 @@ def register_case_workspace_routes(rt) -> None:
             ),
         )
     @rt("/cases/{case_id}/artifact")
+    @safe_api_errors("download the reviewed document")
     def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf"):
         client = client_for_request(request)
         if not client.identity_assertion:
@@ -158,6 +158,7 @@ def register_case_workspace_routes(rt) -> None:
             },
         )
     @rt("/cases/{case_id}/ready")
+    @safe_api_errors("mark the Case ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
         if not client.identity_assertion:
