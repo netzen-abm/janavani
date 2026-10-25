@@ -30,7 +30,7 @@ async def privacy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• Use /cancel to clear the current in-memory workflow. This does not delete "
         "Telegram messages, webhook-inbox records that have not reached a terminal "
         "state, downloaded files, or any separately saved Case.\n"
-        "• Until the inbox retention deadline is enforced, share only the minimum "
+        "• Until any legacy payload-bearing rows have been verified cleared, share only the minimum "
         "necessary information and avoid highly sensitive details or identity documents.\n"
         "• A pairing code is not a completed account link. Confirm only in an authenticated "
         "Janavani account-linking screen that reports success.\n"
