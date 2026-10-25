@@ -231,7 +231,7 @@ def test_durable_webhook_encrypts_update_before_acknowledging():
     assert response.json() == {"status": "accepted"}
     assert inbox.enqueued == {123: _payload()}
     assert inbox.claim_next_calls >= 1
-    application.process_update.assert_not_awaited()
+    application.process_update.assert_not_called()
     application.update_queue.put.assert_not_awaited()
 
 
