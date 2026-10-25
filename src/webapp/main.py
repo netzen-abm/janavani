@@ -25,14 +25,28 @@ app, rt = fast_app(
 )
 validate_web_identity_configuration()
 app.add_middleware(SameOriginCookieMutationMiddleware)
-app.add_middleware(SessionMiddleware, secret_key=session_secret_for_middleware(), session_cookie="janavani_web_session", max_age=1800, same_site="lax", https_only=os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() == "production")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=session_secret_for_middleware(),
+    session_cookie="janavani_web_session",
+    max_age=1800,
+    same_site="lax",
+    https_only=os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() == "production",
+)
 
 @rt("/")
 def get(request: Request):
     """Render a truthful workspace with a provider-backed sign-in entry."""
     authenticated = bool(client_for_request(request).identity_assertion)
     if not authenticated:
-        return Titled("Janavani — Citizen Action Hub", Div(H1("JANAVANI"), P("Sign in to create a Case, select a verified authority, and continue securely across Janavani surfaces."), A("Sign in securely", href="/auth/login")))
+        return Titled(
+            "Janavani — Citizen Action Hub",
+            Div(
+                H1("JANAVANI"),
+                P("Sign in to create a Case, select a verified authority, and continue securely across Janavani surfaces."),
+                A("Sign in securely", href="/auth/login"),
+            ),
+        )
     return Titled(
         "🇮🇳 Janavani — Citizen Action Hub",
         Div(
