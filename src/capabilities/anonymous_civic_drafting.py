@@ -6,22 +6,13 @@ persist narratives, or submit anything.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+
+from src.documents.anonymous_draft_contract import AnonymousCivicDraft
 
 
 _MAX_NARRATIVE_CHARS = 5_000
 _DOCUMENT_TYPES = ("complaint", "rti")
-
-
-@dataclass(frozen=True, slots=True)
-class AnonymousCivicDraft:
-    """User-owned draft content that is not attached to a registered Case."""
-
-    document_type: str
-    title: str
-    subject: str
-    body: str
 
 
 def recommend_document_types(narrative: str) -> tuple[tuple[str, ...], str]:
