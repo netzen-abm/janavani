@@ -71,7 +71,7 @@ def get(request: Request):
                 Form(action="/draft", method="post")(
                     Textarea(
                         name="narrative",
-                        placeholder="Example: The streetlights in our lane have not worked for two weeks. I want the municipality to repair them and I would also like copies of the complaint and action-taken records.",
+                        placeholder=(\n                            "Example: The streetlights in our lane have not worked for two weeks. " \n                            "I want the municipality to repair them and provide copies of complaint and action-taken records."\n                        ),
                         rows=8,
                         required=True,
                         maxlength=5000,
