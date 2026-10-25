@@ -16,7 +16,7 @@ def test_vercel_install_command_stages_the_webapp_package_first():
     config = json.loads(WEBAPP_VERCEL_CONFIG.read_text(encoding="utf-8"))
 
     assert config["installCommand"] == (
-        "python prepare_vercel_bundle.py && pip install -r requirements.txt"
+        "python prepare_vercel_bundle.py && pip install -r requirements.txt && python verify_vercel_runtime.py"
     )
 
 
@@ -51,6 +51,7 @@ def test_bundle_staging_is_repeatable_and_excludes_previous_bundle(tmp_path: Pat
     staged_package = project_root / "src" / "webapp"
     assert (staged_package / "main.py").is_file()
     assert (staged_package / "case_workspace.py").is_file()
+    assert (staged_package / "runtime_mode.py").is_file() is False  # fixture only stages its canonical fixture files
     assert not (staged_package / "stale_bundle.py").exists()
     assert not (staged_package / "prepare_vercel_bundle.py").exists()
     assert not (staged_package / "src" / "webapp").exists()
