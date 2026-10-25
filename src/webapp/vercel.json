@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "python prepare_vercel_bundle.py && pip install -r requirements.txt"
+  "installCommand": "python prepare_vercel_bundle.py && pip install -r requirements.txt && python verify_vercel_runtime.py"
 }
