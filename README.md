@@ -1,8 +1,8 @@
 # 🇮🇳 JANAVANI — CITIZEN-GOVERNANCE ECOSYSTEM
 
 **Status:** ACTIVE — ECOSYSTEM BUILD  
-**Version:** 2.1  
-**Date:** 24 August 2026  
+**Version:** 2.2  
+**Date:** 25 October 2026  
 **Repository:** `netzen-abm/janavani`
 **Primary public site (current):** https://netzen-abm.github.io/janavani/
 **Brochure / showcase site:** https://netzen-abm.github.io/janavani-website/
