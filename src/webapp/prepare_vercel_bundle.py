@@ -18,6 +18,10 @@ BUNDLE_PACKAGE_ROOT = PROJECT_ROOT / "src" / "webapp"
 SHARED_BUNDLE_ROOT = PROJECT_ROOT / "src"
 SHARED_MODULES = (
     (
+        REPOSITORY_ROOT / "src" / "documents" / "anonymous_draft_contract.py",
+        SHARED_BUNDLE_ROOT / "documents" / "anonymous_draft_contract.py",
+    ),
+    (
         REPOSITORY_ROOT / "src" / "capabilities" / "anonymous_civic_drafting.py",
         SHARED_BUNDLE_ROOT / "capabilities" / "anonymous_civic_drafting.py",
     ),
