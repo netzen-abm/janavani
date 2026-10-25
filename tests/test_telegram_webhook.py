@@ -184,3 +184,93 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
     application.stop.assert_awaited_once()
     application.shutdown.assert_awaited_once()
 
+class _ReceiptOnlyInbox:
+    """Test receipt state without an API that accepts or persists raw payloads."""
+
+    def __init__(self):
+        self.status = "claimed"
+        self.claimed_ids = []
+        self.processed = []
+        self.retried = []
+        self.legacy_payload_accepts = 0
+
+    def claim_update(self, update_id):
+        self.claimed_ids.append(update_id)
+        return {"status": self.status, "attempts": 1}
+
+    def mark_processed(self, update_id, *, attempts):
+        self.processed.append((update_id, attempts))
+        self.status = "processed"
+
+    def retry_or_dead_letter(self, update_id, *, attempts, error_code):
+        self.retried.append((update_id, attempts, error_code))
+        self.status = "pending"
+
+    def claim_next(self):
+        # The compatibility worker must have no new payload-bearing rows to claim.
+        return None
+
+    def accept_legacy_payload(self, update_id, payload):
+        self.legacy_payload_accepts += 1
+        raise AssertionError("New webhook updates must not enqueue raw payloads")
+
+
+def test_durable_webhook_processes_inline_and_stores_only_receipt_state():
+    application = _application()
+    application.process_update = AsyncMock()
+    inbox = _ReceiptOnlyInbox()
+    client_app = create_webhook_app(application=application, inbox=inbox)
+
+    with TestClient(client_app) as client:
+        response = _post(client, json=_payload())
+
+    assert response.status_code == 202
+    assert response.json() == {"status": "accepted"}
+    assert inbox.claimed_ids == [123]
+    assert inbox.processed == [(123, 1)]
+    assert inbox.retried == []
+    assert inbox.legacy_payload_accepts == 0
+    application.process_update.assert_awaited_once()
+    application.update_queue.put.assert_not_awaited()
+
+
+def test_durable_webhook_returns_retryable_failure_when_handler_raises():
+    application = _application()
+    application.process_update = AsyncMock(side_effect=RuntimeError("synthetic failure"))
+    inbox = _ReceiptOnlyInbox()
+    client_app = create_webhook_app(application=application, inbox=inbox)
+
+    with TestClient(client_app) as client:
+        response = _post(client, json=_payload())
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Telegram update could not be completed; retry delivery"
+    )
+    assert inbox.claimed_ids == [123]
+    assert inbox.processed == []
+    assert inbox.retried == [(123, 1, "RuntimeError")]
+    assert inbox.legacy_payload_accepts == 0
+
+
+def test_durable_webhook_returns_retryable_failure_when_ptb_reports_handler_error():
+    from types import SimpleNamespace
+
+    application = _application()
+    inbox = _ReceiptOnlyInbox()
+    client_app = create_webhook_app(application=application, inbox=inbox)
+
+    async def report_error(update):
+        registered = application.add_error_handler.call_args_list
+        inline_handler = registered[0].args[0]
+        await inline_handler(update, SimpleNamespace(error=RuntimeError("handler failed")))
+
+    application.process_update = AsyncMock(side_effect=report_error)
+
+    with TestClient(client_app) as client:
+        response = _post(client, json=_payload())
+
+    assert response.status_code == 503
+    assert inbox.processed == []
+    assert inbox.retried == [(123, 1, "RuntimeError")]
+
