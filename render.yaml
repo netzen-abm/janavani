@@ -64,6 +64,8 @@ services:
         sync: false
       - key: JANAVANI_TELEGRAM_INBOX_DSN
         sync: false
+      - key: JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS
+        sync: false
       - key: JANAVANI_RUNTIME_MODE
         value: test
       - key: JANAVANI_CASE_CONTENT_POLICY
