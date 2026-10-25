@@ -15,6 +15,17 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 REPOSITORY_ROOT = PROJECT_ROOT.parents[1]
 CANONICAL_WEBAPP = REPOSITORY_ROOT / "src" / "webapp"
 BUNDLE_PACKAGE_ROOT = PROJECT_ROOT / "src" / "webapp"
+SHARED_BUNDLE_ROOT = PROJECT_ROOT / "src"
+SHARED_MODULES = (
+    (
+        REPOSITORY_ROOT / "src" / "capabilities" / "anonymous_civic_drafting.py",
+        SHARED_BUNDLE_ROOT / "capabilities" / "anonymous_civic_drafting.py",
+    ),
+    (
+        REPOSITORY_ROOT / "src" / "documents" / "anonymous_draft_renderer.py",
+        SHARED_BUNDLE_ROOT / "documents" / "anonymous_draft_renderer.py",
+    ),
+)
 
 
 def prepare_bundle() -> None:
@@ -45,6 +56,19 @@ def prepare_bundle() -> None:
 
     if not (BUNDLE_PACKAGE_ROOT / "main.py").is_file():
         raise RuntimeError("WebApp deployment bundle preparation did not complete.")
+
+    # Stage only the shared anonymous-drafting capability and its byte renderer.
+    # All other domain logic remains owned by the API; don't copy the whole monorepo.
+    (SHARED_BUNDLE_ROOT / "__init__.py").touch()
+    for source, target in SHARED_MODULES:
+        if not source.is_file():
+            raise RuntimeError(f"Missing canonical shared module: {source.name}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        (target.parent / "__init__.py").touch()
+        shutil.copy2(source, target)
+    for _, target in SHARED_MODULES:
+        if not target.is_file():
+            raise RuntimeError(f"Shared module was not bundled: {target.name}")
 
 
 if __name__ == "__main__":
