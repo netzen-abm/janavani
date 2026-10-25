@@ -171,22 +171,15 @@ Bun.serve({
           note: "Add TELEGRAM_BOT_TOKEN in Railway to activate the bot.",
         }, 503);
       }
-      try {
-        await registerWebhookIfConfigured();
-      } catch {
-        return json({
-          status: "degraded",
-          service: "janavani-telegram-webhook",
-          botConfigured,
-          webhookConfigured,
-          note: "Telegram webhook registration failed; inspect sanitized runtime logs.",
-        }, 503);
-      }
+      // This function is retained as a fallback receiver only. The canonical
+      // Python service owns setWebhook registration to avoid two surfaces
+      // competing to redirect the same Telegram bot.
       return json({
-        status: "ready",
+        status: "legacy_fallback_only",
         service: "janavani-telegram-webhook",
         botConfigured,
         webhookConfigured,
+        note: "Canonical webhook registration is managed by the Python service.",
       });
     }
 
