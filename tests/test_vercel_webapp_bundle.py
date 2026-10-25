@@ -29,6 +29,9 @@ def test_bundle_staging_is_repeatable_and_excludes_previous_bundle(tmp_path: Pat
     (project_root / "case_workspace.py").write_text(
         "CANONICAL_CASE_MODULE = True\n", encoding="utf-8"
     )
+    (project_root / "runtime_mode.py").write_text(
+        "PRODUCTION_MODE_CHECK = True\n", encoding="utf-8"
+    )
     (project_root / "prepare_vercel_bundle.py").write_text(
         BUNDLE_HELPER.read_text(encoding="utf-8"), encoding="utf-8"
     )
@@ -51,7 +54,7 @@ def test_bundle_staging_is_repeatable_and_excludes_previous_bundle(tmp_path: Pat
     staged_package = project_root / "src" / "webapp"
     assert (staged_package / "main.py").is_file()
     assert (staged_package / "case_workspace.py").is_file()
-    assert (staged_package / "runtime_mode.py").is_file() is False  # fixture only stages its canonical fixture files
+    assert (staged_package / "runtime_mode.py").is_file()
     assert not (staged_package / "stale_bundle.py").exists()
     assert not (staged_package / "prepare_vercel_bundle.py").exists()
     assert not (staged_package / "src" / "webapp").exists()
