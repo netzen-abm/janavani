@@ -4,18 +4,18 @@ Status: required acceptance gate; not yet proven end-to-end.
 
 ## Invariant
 
-Telegram webhook delivery is at-least-once. The current candidate processes each new parsed update in request memory, while PostgreSQL stores a content-free receipt keyed by Telegram `update_id`. The HTTP request receives a success response only after the handler and durable receipt completion succeed. Processing failures return a retryable non-2xx response.
+Telegram webhook delivery is at-least-once, but provider retry windows are not a durable application queue. The webhook now encrypts each parsed update using the configured Fernet key ring before inserting it into PostgreSQL, then returns HTTP 202 only after the encrypted payload is durably accepted. A separate worker decrypts the payload in memory, dispatches it through the real handler, and clears ciphertext on success or terminal dead-letter. Transient processing failures retain ciphertext for bounded worker retries, subject to the 24-hour processing deadline.
 
-A process may still crash after a business transaction commits but before the receipt is marked processed or the response reaches Telegram. Redelivery must not duplicate consequential business effects. Inbox receipt deduplication is necessary but insufficient; the canonical business mutation still needs durable idempotency.
+A process may still crash after a business transaction commits but before the inbox row is marked processed. The worker can reclaim the encrypted payload after the lease expires; redelivery must not duplicate consequential business effects. Queue encryption protects payload confidentiality at rest, but inbox receipt deduplication is not business-effect idempotency.
 
 ## Required test scenario
 
 Run against the same PostgreSQL-backed Case/Submission mutation path used by the Telegram application:
 
-1. Receive a valid Telegram update and claim a PostgreSQL receipt containing the `update_id`, status and attempt/lease metadata only; assert `payload IS NULL`.
-2. Dispatch the parsed update through the real Telegram handler from request memory and commit one canonical business mutation.
-3. Inject a crash/failure after the business transaction commits but before `mark_processed` or the HTTP success response is confirmed.
-4. Return or simulate a retryable non-2xx/lost response, allow the content-free receipt claim to become reclaimable, and redeliver/reprocess the same Telegram `update_id`.
+1. Accept a valid Telegram update and assert PostgreSQL stores `payload IS NULL`, a non-NULL Fernet ciphertext, and an expiry no more than 24 hours after acceptance; assert the plaintext marker is absent from the stored bytes.
+2. Claim/decrypt the update through the existing inbox worker and dispatch it through the real Telegram handler and canonical capability, committing one business mutation.
+3. Inject a crash/failure after the business transaction commits but before `mark_processed`.
+4. Allow the claim lease to expire, reclaim and decrypt the same update from PostgreSQL, then assert exactly one durable Case/Submission mutation and one lifecycle event.
 5. Assert the canonical Case projection and version, Submission projection and version, and lifecycle-event count are unchanged by the replay.
 6. Assert external or other consequential effects are deduplicated by a durable idempotency boundary or are safely repeatable. Do not treat a mocked counter alone as proof of production behavior.
 7. Assert the inbox eventually reaches `processed`, and a conflicting reuse of the business idempotency key is rejected.
@@ -30,8 +30,10 @@ Run against the same PostgreSQL-backed Case/Submission mutation path used by the
 
 ## Design constraints
 
-- New webhook deliveries must not write full Telegram update JSON or citizen narrative to PostgreSQL. The receipt-only method accepts the update ID, not the payload.
-- The background worker may claim only payload-bearing compatibility rows from the old implementation; it must not claim receipt-only rows.
+- New webhook deliveries must never write plaintext Telegram JSON to PostgreSQL. `accept_encrypted()` persists a Fernet ciphertext and an expiry; the key ring lives in a separately configured secret, never in the database or source.
+- The existing worker claims both newly encrypted rows and legacy plaintext rows. Startup encrypts legacy payloads before registering the webhook; expired rows are terminalized and cleared.
+- Ciphertext is cleared after success or terminal failure. If the worker is offline at expiry, cleanup occurs when it resumes; the deadline prevents processing after expiry but is not a hard external storage TTL while every worker is offline.
+- Rotate keys by adding the new key first in `JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS` and retaining previous keys until their payloads and backups no longer require them.
 - Reuse the canonical Case/Submission transaction and idempotency contracts where they already enforce the invariant.
 - Do not add a second generic idempotency framework or process-local deduplication as the correctness mechanism.
 - Keep Telegram transport, webhook acceptance, inbox worker, and business mutation responsibilities separate only at their existing trust/runtime boundaries.
@@ -48,4 +50,4 @@ In the same test environment, prove:
 
 ## Current limitation
 
-The PostgreSQL inbox tests now cover content-free receipt storage, duplicate update-ID detection, inline receipt claim completion and stale-claim fencing; separate compatibility tests cover old payload-bearing queue rows. The existing Submission/Case transaction integration test proves atomic mutation and durable replay at the repository boundary. These tests do not, separately or together, prove the handler crash between business commit and HTTP acknowledgement. This contract must remain open until the real-handler replay test above passes in CI without being skipped.
+The PostgreSQL inbox tests now cover ciphertext-at-rest, plaintext absence, duplicate update-ID detection, encrypted worker claim/decryption, bounded expiry, retry ciphertext retention, terminal payload clearing, legacy-payload migration and stale-claim fencing. These tests do not, separately or together, prove the real-handler crash between business commit and `mark_processed`. This contract must remain open until the handler-level PostgreSQL replay test above passes in CI without being skipped.
