@@ -1,4 +1,4 @@
-"""Compatibility worker for payload-bearing Telegram updates accepted by older code."""
+"""Durably process encrypted Telegram update payloads with bounded retries."""
 from __future__ import annotations
 
 import asyncio
