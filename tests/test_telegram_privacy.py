@@ -28,7 +28,7 @@ def test_privacy_command_discloses_durable_webhook_inbox_boundary():
     asyncio.run(privacy(update, SimpleNamespace()))
 
     text = message.reply_text.await_args.args[0]
-    assert "PostgreSQL stores only the Telegram update ID and processing status" in text
+    assert "PostgreSQL stores only the Telegram update ID plus processing/attempt/lease metadata" in text
     assert "A previous webhook implementation persisted full Telegram JSON" in text
     assert "No independent cleanup job runs while that worker is offline" in text
     assert "up to 15 minutes" in text
