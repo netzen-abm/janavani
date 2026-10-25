@@ -24,8 +24,9 @@ def prepare_bundle() -> None:
             "is missing. Check Vercel Root Directory and source-files settings."
         )
 
-    # Stage outside the source tree first; the destination is nested under
-    # the project's root and must never be recursively copied into itself.
+    # Copy the canonical package into a temporary directory first. Ignore the
+    # generated nested bundle so repeat installs are idempotent rather than
+    # recursively copying a previous build into itself.
     with tempfile.TemporaryDirectory(prefix="janavani-webapp-bundle-") as temp_dir:
         staged_source = Path(temp_dir) / "webapp"
         shutil.copytree(
@@ -33,7 +34,7 @@ def prepare_bundle() -> None:
             staged_source,
             ignore=shutil.ignore_patterns(
                 "__pycache__", ".pytest_cache", "*.pyc", "tests",
-                "test_*.py", "*_test.py", ".git",
+                "test_*.py", "*_test.py", ".git", "src",
                 "prepare_vercel_bundle.py",
             ),
         )
