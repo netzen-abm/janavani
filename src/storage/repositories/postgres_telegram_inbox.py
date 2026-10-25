@@ -167,7 +167,7 @@ class PostgresTelegramInbox:
                        SELECT update_id
                        FROM public.telegram_update_inbox
                        WHERE (payload IS NOT NULL OR encrypted_payload IS NOT NULL)
-                         AND (payload_expires_at IS NULL OR payload_expires_at > now())
+                         AND payload_expires_at > now()
                          AND (
                              (status = 'pending' AND available_at <= now())
                              OR (status = 'processing'
