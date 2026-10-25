@@ -5,11 +5,8 @@ import asyncio
 import hmac
 import json
 import logging
-import os
-import re
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
-from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import Update
@@ -23,17 +20,10 @@ from src.bot_telegram import (
 from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
+from src.web.telegram_webhook_config import load_telegram_webhook_settings
 
 logger = logging.getLogger(__name__)
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
-
-
-def _required_setting(name: str) -> str:
-    value = os.getenv(name, "").strip()
-    if not value:
-        raise RuntimeError(f"{name} must be configured for Telegram webhook mode")
-    return value
-
 
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
     """Create an endpoint that acknowledges only updates durably encrypted in PostgreSQL."""
@@ -59,27 +49,12 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                         pass
             return
 
-        token = _required_setting("TELEGRAM_BOT_TOKEN")
-        webhook_url = _required_setting("TELEGRAM_WEBHOOK_URL")
-        secret = _required_setting("TELEGRAM_WEBHOOK_SECRET")
-        dsn = _required_setting("JANAVANI_TELEGRAM_INBOX_DSN")
-        key_config = _required_setting("JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS")
-        encryption_keys = [value.strip() for value in key_config.split(",") if value.strip()]
-        if not encryption_keys:
-            raise RuntimeError("JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS must contain at least one key")
-        if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", secret):
-            raise RuntimeError("TELEGRAM_WEBHOOK_SECRET must be 32-256 URL-safe characters")
-        parsed = urlsplit(webhook_url)
-        if (
-            parsed.scheme != "https"
-            or not parsed.netloc
-            or parsed.path != "/telegram/webhook"
-            or parsed.query
-            or parsed.fragment
-            or parsed.username
-            or parsed.password
-        ):
-            raise RuntimeError("TELEGRAM_WEBHOOK_URL must be HTTPS and end in /telegram/webhook")
+        settings = load_telegram_webhook_settings()
+        token = settings.bot_token
+        webhook_url = settings.webhook_url
+        secret = settings.secret
+        dsn = settings.inbox_dsn
+        encryption_keys = list(settings.encryption_keys)
 
         bot_app = build_application(token=token)
         durable_inbox = PostgresTelegramInbox(dsn=dsn, encryption_keys=encryption_keys)
@@ -198,6 +173,5 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         return {"status": "accepted"}
 
     return app
-
 
 app = create_webhook_app()
