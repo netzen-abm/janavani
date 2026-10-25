@@ -35,9 +35,9 @@ At review time:
 
 ### P0.2 — Telegram inbox privacy/retention
 
-The earlier `PostgresTelegramInbox.accept` implementation stored the full Telegram update JSON in the durable inbox. The candidate now uses `claim_update(update_id)` for new deliveries: raw update data remains in request memory, while PostgreSQL stores only update ID, status, attempts and lease timestamps. The old payload-bearing path has been renamed `accept_legacy_payload`, and the worker now claims only non-NULL payload rows to drain any compatibility backlog.
+The earlier `PostgresTelegramInbox.accept` implementation stored the full Telegram update JSON as plaintext JSONB. The current candidate uses `accept_encrypted(update_id, payload)` to persist Fernet ciphertext with a maximum 24-hour processing deadline. The encryption key ring is configured out-of-band, not in PostgreSQL or source. The existing worker decrypts in memory, retains ciphertext for bounded retries, and clears it on success, terminal dead-letter or expiry. Startup encrypts legacy plaintext rows before registering the webhook.
 
-The Case table's metadata-only rule did not, by itself, establish that citizen narrative never entered durable Janavani storage. The current candidate now encrypts Telegram webhook payloads at the existing persistence boundary and sets an explicit 24-hour processing deadline. The expiry sweeper runs through the worker; if the worker is offline at the deadline, ciphertext may physically remain until it resumes. Issue #219 remains open for migration rollout, plaintext-row conversion, key rotation/backup review, worker-offline expiry evidence and replay verification.
+The Case table's metadata-only rule did not, by itself, establish that citizen narrative never entered durable Janavani storage. The current candidate encrypts Telegram webhook payloads at the persistence boundary and sets an explicit 24-hour processing deadline. Expiry cleanup runs through the worker; if the worker is offline at the deadline, ciphertext may physically remain until it resumes. Issue #219 remains open for migration rollout, plaintext-row conversion, key rotation/backup review, worker-offline expiry evidence and replay verification.
 
 Required response:
 - define precisely which fields may be durably retained;
@@ -341,16 +341,24 @@ The canonical API is built around ASGI/FastAPI. The separate Telegram bot is a l
 The focused companion audit is [2026-10-25-vercel-production-risk-audit.md](2026-10-25-vercel-production-risk-audit.md). It records the production deployment ID/SHA, the Flask/FastAPI configuration discrepancy, active Flask use by the WhatsApp/Messenger adapters, authorization errors, production-configuration validation requirements, and the safe read-only → preview-test → reconcile → verify sequence. Follow Issue #221 for closure.
 
 
-## Telegram privacy disclosure correction — 25 October 2026
+## Telegram privacy and reliability correction — 25 October 2026
 
-A targeted source review confirmed that the previous webhook implementation persisted full Telegram update JSON in PostgreSQL. The candidate now records content-free receipts for new deliveries and dispatches parsed updates inline; the compatibility worker is restricted to payload-bearing rows created by the earlier implementation. The privacy command and `/start` now describe both the new flow and the residual legacy backlog honestly.
+The first interim patch used content-free receipts and inline processing. A deeper review found that this could not recover an update if Telegram eventually exhausted its webhook retry window while a receipt had no payload. That interim design was superseded before production deployment and preserved at `archive/legacy/migrations/2026-10-25-content-free-telegram-receipt-proposal.md`.
 
-Added or updated evidence on the existing review branch:
-- `src/storage/repositories/postgres_telegram_inbox.py`: content-free `claim_update(update_id)` plus an explicitly named `accept_legacy_payload` method for compatibility tests; the worker claims only rows with payload data.
-- `db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql`: allows receipt rows with a NULL payload.
-- `src/web/telegram_webhook_app.py`: dispatches a newly claimed update in request memory, marks the receipt processed only after handlers succeed, and returns a retryable non-2xx response on processing failures.
-- `tests/test_postgres_telegram_inbox.py`: PostgreSQL tests assert `payload IS NULL` for new receipts and test duplicate/stale claims.
-- `tests/test_telegram_webhook.py`: tests inline success, exception retry and handler-reported failure.
-- `src/commands/privacy.py`, `src/commands/start.py`, and `tests/test_telegram_privacy.py`: disclose the content-free receipt behavior and legacy queue limitation.
+The current candidate instead preserves the existing PostgreSQL inbox/worker boundary:
+- Webhook ingress validates the update and calls `PostgresTelegramInbox.accept_encrypted()`.
+- The parsed update is Fernet-encrypted before it is persisted in `encrypted_payload BYTEA`; raw update JSON is not newly written to PostgreSQL.
+- The encryption key ring is configured as `JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS`, out-of-band from the database. The active key must be first; previous keys remain until payloads and relevant backups no longer require them.
+- The worker decrypts payloads in memory, dispatches the existing handler path, and clears payload material on successful processing or terminal dead-letter.
+- The default processing deadline is 24 hours. The worker clears expired rows whenever it runs; if all workers remain offline past the deadline, ciphertext can physically remain until a worker resumes. Expiry makes the row ineligible for processing when the worker resumes.
+- At startup, legacy plaintext rows are encrypted before the webhook is registered; expired rows are terminalized and cleared.
 
-This is not closure of Issue #219 or #217. The migration must be applied before deploying the new webhook handler, any legacy payload-bearing backlog must drain, and exact-head PostgreSQL integration plus post-commit handler replay tests must pass. Until then, do not claim production privacy verification or effectively-once consequential behavior.
+Implementation and tests on the existing review branch:
+- `src/storage/repositories/postgres_telegram_inbox.py`: Fernet/MultiFernet encryption, bounded expiry, ciphertext retry, terminal clearing and legacy-row encryption.
+- `src/web/telegram_webhook_app.py`: durable encrypted enqueue and fail-closed startup validation for the key ring.
+- `src/web/telegram_inbox_worker.py`: retained worker/lease/retry path; logs remain limited to update ID and error class rather than message contents.
+- `db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql`: ciphertext/expiry columns and envelope-state constraints.
+- PostgreSQL tests cover encrypted bytes/no plaintext marker, worker decryption, retry retention, stale-lease fencing, expiry clearing and legacy conversion.
+
+This is **not closure of Issue #219 or #217**. The migration has to be applied before deploying this code, the external key and rotation/backup policies need operational configuration, PostgreSQL tests must pass on the exact head, worker-offline expiry must be verified, and real-handler post-commit replay must prove one durable business effect.
+
