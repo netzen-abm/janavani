@@ -47,9 +47,9 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             inline_failed_updates.add(update_id)
         # Deliberately log only the Telegram update ID and exception, never the payload.
         logger.error(
-            "Telegram inline webhook handler failed for update_id=%s",
+            "Telegram inline webhook handler failed for update_id=%s error_type=%s",
             update_id,
-            exc_info=context.error,
+            type(context.error).__name__,
         )
 
     @asynccontextmanager
@@ -226,9 +226,10 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                     error_code=type(exc).__name__,
                 )
             except Exception:
-                logger.exception(
-                    "Could not update retry state for Telegram update_id=%s",
+                logger.error(
+                    "Could not update retry state for Telegram update_id=%s error_type=%s",
                     update_id,
+                    type(exc).__name__,
                 )
             raise HTTPException(
                 status_code=503,
