@@ -278,14 +278,15 @@ def test_retired_constitutional_dispatch_returns_gone_without_generating():
     assert "no file was generated" in response.text.lower()
     assert "nothing was transmitted" in response.text.lower()
 
-def test_vercel_webapp_entrypoint_wraps_the_canonical_fasthtml_app():
+def test_vercel_webapp_entrypoint_exposes_canonical_asgi_app():
     from fastapi import FastAPI
     import src.webapp.vercel_entrypoint as entrypoint
-    from src.webapp.main import app as canonical_webapp
+    from src.webapp.main import app as canonical_webapp, webapp
 
-    assert isinstance(entrypoint.app, FastAPI)
-    assert entrypoint.app.routes[-1].path == "/"
-    assert entrypoint.app.routes[-1].app is canonical_webapp
+    assert isinstance(canonical_webapp, FastAPI)
+    assert entrypoint.app is canonical_webapp
+    assert canonical_webapp.routes[-1].path == "/"
+    assert canonical_webapp.routes[-1].app is webapp
     client = TestClient(entrypoint.app)
     response = client.get("/")
     assert response.status_code == 200

@@ -3,6 +3,7 @@ from fasthtml.common import (
     A, Button, Div, Form, H1, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
+from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -13,7 +14,7 @@ from src.webapp.services.api_client import client_for_request
 from src.webapp.authority_intake import register_authority_intake_routes
 
 # Initialize the stateless web interface client
-app, rt = fast_app(
+webapp, rt = fast_app(
     hdrs=(
         Style("""
             body { padding: 2rem 0; background-color: #f8f9fa; }
@@ -25,8 +26,8 @@ app, rt = fast_app(
     )
 )
 validate_web_identity_configuration()
-app.add_middleware(SameOriginCookieMutationMiddleware)
-app.add_middleware(
+webapp.add_middleware(SameOriginCookieMutationMiddleware)
+webapp.add_middleware(
     SessionMiddleware,
     secret_key=session_secret_for_middleware(),
     session_cookie="janavani_web_session",
@@ -142,6 +143,18 @@ register_authority_intake_routes(rt)
 @rt("/liveness")
 def webapp_liveness():
     return P("alive")
+
+
+# Vercel and ASGI hosts need a conventional top-level application instance.
+# Keep FastHTML route registration and its middleware cohesive in `webapp`;
+# the ASGI wrapper owns only the deployment boundary.
+app = FastAPI(
+    title="Janavani Citizen WebApp",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
+app.mount("/", webapp)
 
 if __name__ == "__main__":
     import uvicorn
