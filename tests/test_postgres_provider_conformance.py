@@ -94,7 +94,7 @@ def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
 
     assert "durable_inbox.accept_encrypted" in webhook
     assert "durable_inbox.secure_legacy_payloads" in webhook
-    assert "durable_inbox.accept_legacy_payload" not in webhook
+    assert "accept_legacy_payload" not in inbox
     assert "MultiFernet" in inbox
     assert "payload IS NOT NULL OR encrypted_payload IS NOT NULL" in inbox
     assert "payload_expires_at" in migration
