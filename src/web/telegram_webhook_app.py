@@ -237,6 +237,8 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             ) from exc
         finally:
             lease.cancel()
+            if not dispatch.done():
+                dispatch.cancel()
             await asyncio.gather(lease, dispatch, return_exceptions=True)
         return {"status": "accepted"}
 
