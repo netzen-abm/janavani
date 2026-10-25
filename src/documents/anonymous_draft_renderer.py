@@ -4,7 +4,7 @@ from __future__ import annotations
 from io import BytesIO
 from xml.sax.saxutils import escape as xml_escape
 
-from src.capabilities.anonymous_civic_drafting import AnonymousCivicDraft
+from src.documents.anonymous_draft_contract import AnonymousCivicDraft
 
 
 def render_anonymous_draft(draft: AnonymousCivicDraft, document_format: str) -> tuple[bytes, str, str]:
