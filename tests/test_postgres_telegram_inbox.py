@@ -158,3 +158,81 @@ def test_postgres_inline_receipt_reclaims_stale_claim_without_payload():
                 "DELETE FROM public.telegram_update_inbox WHERE update_id = %s", (update_id,)
             )
 
+@pytest.mark.integration
+@pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
+def test_postgres_inline_claim_routes_legacy_payload_to_compatibility_worker():
+    import psycopg
+
+    update_id = time.time_ns() % 9_000_000_000_000_000
+    payload = {"update_id": update_id, "message": {"text": "legacy-test-payload"}}
+    _apply_migrations(DSN)
+    inbox = PostgresTelegramInbox(dsn=DSN)
+    try:
+        assert inbox.accept_legacy_payload(update_id, payload) is True
+
+        inline_claim = inbox.claim_update(update_id)
+        assert inline_claim["status"] == "legacy_payload"
+
+        legacy_claim = inbox.claim_next()
+        assert legacy_claim is not None
+        assert legacy_claim["update_id"] == update_id
+        assert legacy_claim["payload"]["message"]["text"] == "legacy-test-payload"
+
+        with psycopg.connect(DSN) as conn:
+            row = conn.execute(
+                "SELECT status, payload FROM public.telegram_update_inbox WHERE update_id = %s",
+                (update_id,),
+            ).fetchone()
+        assert row[0] == "processing"
+        assert row[1]["message"]["text"] == "legacy-test-payload"
+    finally:
+        with psycopg.connect(DSN) as conn:
+            conn.execute(
+                "DELETE FROM public.telegram_update_inbox WHERE update_id = %s", (update_id,)
+            )
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
+def test_postgres_inline_receipt_retry_keeps_payload_null():
+    import psycopg
+
+    update_id = time.time_ns() % 9_000_000_000_000_000
+    _apply_migrations(DSN)
+    inbox = PostgresTelegramInbox(dsn=DSN)
+    try:
+        first = inbox.claim_update(update_id)
+        inbox.retry_or_dead_letter(
+            update_id,
+            attempts=first["attempts"],
+            error_code="SyntheticFailure",
+            max_attempts=8,
+        )
+        with psycopg.connect(DSN) as conn:
+            row = conn.execute(
+                "SELECT status, payload, last_error_code FROM public.telegram_update_inbox "
+                "WHERE update_id = %s",
+                (update_id,),
+            ).fetchone()
+        assert row == ("pending", None, "SyntheticFailure")
+
+        with psycopg.connect(DSN) as conn:
+            conn.execute(
+                "UPDATE public.telegram_update_inbox SET available_at = now() - interval '1 second' "
+                "WHERE update_id = %s",
+                (update_id,),
+            )
+        retry = inbox.claim_update(update_id)
+        assert retry == {"status": "claimed", "attempts": 2}
+        with psycopg.connect(DSN) as conn:
+            row = conn.execute(
+                "SELECT status, payload FROM public.telegram_update_inbox WHERE update_id = %s",
+                (update_id,),
+            ).fetchone()
+        assert row == ("processing", None)
+    finally:
+        with psycopg.connect(DSN) as conn:
+            conn.execute(
+                "DELETE FROM public.telegram_update_inbox WHERE update_id = %s", (update_id,)
+            )
+
