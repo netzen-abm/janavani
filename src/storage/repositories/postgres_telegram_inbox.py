@@ -26,8 +26,13 @@ class PostgresTelegramInbox:
             raise RuntimeError("Psycopg 3 is required for the Telegram inbox") from exc
         return psycopg.connect(self._dsn)
 
-    def accept(self, update_id: int, payload: dict[str, Any]) -> bool:
-        """Return True for new durable work, False for a previously accepted ID."""
+    def accept_legacy_payload(self, update_id: int, payload: dict[str, Any]) -> bool:
+        """Compatibility-only enqueue for draining pre-existing payload-bearing inbox work.
+
+        New webhook deliveries must use claim_update() and never write their message
+        body to durable storage. Keep this method explicit so it is not mistaken for
+        the preferred acceptance path.
+        """
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO public.telegram_update_inbox (update_id, payload)
@@ -37,15 +42,73 @@ class PostgresTelegramInbox:
             )
             return cur.fetchone() is not None
 
+    def claim_update(
+        self, update_id: int, *, stale_after_seconds: int = 120
+    ) -> dict[str, Any]:
+        """Claim an inline webhook receipt without durably storing its payload."""
+        with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO public.telegram_update_inbox
+                       (update_id, payload, status, attempts, locked_at)
+                   VALUES (%s, NULL, 'processing', 1, now())
+                   ON CONFLICT (update_id) DO NOTHING
+                   RETURNING attempts""",
+                (update_id,),
+            )
+            inserted = cur.fetchone()
+            if inserted is not None:
+                return {"status": "claimed", "attempts": inserted[0]}
+
+            cur.execute(
+                """SELECT status, attempts, payload IS NOT NULL,
+                          (locked_at >= now() - (%s * interval '1 second')),
+                          (available_at > now())
+                   FROM public.telegram_update_inbox
+                   WHERE update_id = %s
+                   FOR UPDATE""",
+                (stale_after_seconds, update_id),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise RuntimeError("Telegram inbox receipt disappeared during claim")
+
+            status, attempts, has_payload, lease_active, retry_wait = row
+            if status in {"processed", "dead_letter"}:
+                return {"status": status, "attempts": attempts}
+            if has_payload:
+                # Compatibility-only rows were accepted by the old durable-payload
+                # path and must be drained by the legacy worker, not dispatched twice.
+                return {"status": "legacy_payload", "attempts": attempts}
+            if status == "processing" and lease_active:
+                return {"status": "busy", "attempts": attempts}
+            if status == "pending" and retry_wait:
+                return {"status": "busy", "attempts": attempts}
+
+            cur.execute(
+                """UPDATE public.telegram_update_inbox
+                   SET status = 'processing', attempts = attempts + 1,
+                       locked_at = now(), available_at = now()
+                   WHERE update_id = %s AND payload IS NULL
+                     AND status IN ('pending', 'processing')
+                   RETURNING attempts""",
+                (update_id,),
+            )
+            claimed = cur.fetchone()
+            if claimed is None:
+                return {"status": "busy", "attempts": attempts}
+            return {"status": "claimed", "attempts": claimed[0]}
+
     def claim_next(self, *, stale_after_seconds: int = 120) -> dict[str, Any] | None:
         """Claim one available update; attempts acts as a fencing generation."""
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """WITH candidate AS (
                        SELECT update_id FROM public.telegram_update_inbox
-                       WHERE (status = 'pending' AND available_at <= now())
-                          OR (status = 'processing'
-                              AND locked_at < now() - (%s * interval '1 second'))
+                       WHERE payload IS NOT NULL AND (
+                             (status = 'pending' AND available_at <= now())
+                             OR (status = 'processing'
+                                 AND locked_at < now() - (%s * interval '1 second'))
+                         )
                        ORDER BY received_at
                        LIMIT 1 FOR UPDATE SKIP LOCKED
                    )
