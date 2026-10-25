@@ -5,6 +5,7 @@ import asyncio
 import hmac
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
