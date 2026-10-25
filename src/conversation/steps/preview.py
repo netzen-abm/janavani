@@ -1,4 +1,5 @@
 from telegram import Update
+import logging
 from telegram.ext import ContextTypes
 
 from conversation.session import get_session, get_ephemeral_issue
@@ -6,6 +7,8 @@ from conversation.state import set_state
 from conversation.constants import WAITING_FOR_IDENTITY
 from src.capabilities.civic_case import CivicCaseCapability
 from src.adapters.telegram.identity import identity_for_telegram_user
+
+logger = logging.getLogger(__name__)
 
 
 def build_case_preview(*, capability: CivicCaseCapability, case_id: str, user_id: int, identity_links) -> str:
@@ -51,7 +54,7 @@ async def handle_preview(
             identity_links=identity_links,
         )
     except (LookupError, ValueError) as exc:
-        print("❌ PREVIEW ERROR:", exc)
+        logger.info("telegram_preview_unavailable error_type=%s", type(exc).__name__)
         await update.message.reply_text(
             "⚠️ Your canonical case could not be loaded. Please restart the civic issue flow."
         )
