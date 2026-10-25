@@ -4,18 +4,18 @@ Status: required acceptance gate; not yet proven end-to-end.
 
 ## Invariant
 
-Telegram inbox delivery is at-least-once. A worker may crash after a business transaction commits and before the inbox row is marked processed. Redelivery must not duplicate consequential business effects.
+Telegram webhook delivery is at-least-once. The current candidate processes each new parsed update in request memory, while PostgreSQL stores a content-free receipt keyed by Telegram `update_id`. The HTTP request receives a success response only after the handler and durable receipt completion succeed. Processing failures return a retryable non-2xx response.
 
-Inbox deduplication by Telegram `update_id` is necessary but insufficient: it prevents duplicate acceptance, not replay of an already-claimed update.
+A process may still crash after a business transaction commits but before the receipt is marked processed or the response reaches Telegram. Redelivery must not duplicate consequential business effects. Inbox receipt deduplication is necessary but insufficient; the canonical business mutation still needs durable idempotency.
 
 ## Required test scenario
 
 Run against the same PostgreSQL-backed Case/Submission mutation path used by the Telegram application:
 
-1. Accept a Telegram update durably and claim it.
-2. Dispatch it through the real Telegram handler and commit one canonical business mutation.
-3. Inject a crash/failure after the database commit but before `mark_processed`.
-4. Allow the inbox claim to become reclaimable, then redeliver/reprocess the same accepted update.
+1. Receive a valid Telegram update and claim a PostgreSQL receipt containing the `update_id`, status and attempt/lease metadata only; assert `payload IS NULL`.
+2. Dispatch the parsed update through the real Telegram handler from request memory and commit one canonical business mutation.
+3. Inject a crash/failure after the business transaction commits but before `mark_processed` or the HTTP success response is confirmed.
+4. Return or simulate a retryable non-2xx/lost response, allow the content-free receipt claim to become reclaimable, and redeliver/reprocess the same Telegram `update_id`.
 5. Assert the canonical Case projection and version, Submission projection and version, and lifecycle-event count are unchanged by the replay.
 6. Assert external or other consequential effects are deduplicated by a durable idempotency boundary or are safely repeatable. Do not treat a mocked counter alone as proof of production behavior.
 7. Assert the inbox eventually reaches `processed`, and a conflicting reuse of the business idempotency key is rejected.
@@ -30,6 +30,8 @@ Run against the same PostgreSQL-backed Case/Submission mutation path used by the
 
 ## Design constraints
 
+- New webhook deliveries must not write full Telegram update JSON or citizen narrative to PostgreSQL. The receipt-only method accepts the update ID, not the payload.
+- The background worker may claim only payload-bearing compatibility rows from the old implementation; it must not claim receipt-only rows.
 - Reuse the canonical Case/Submission transaction and idempotency contracts where they already enforce the invariant.
 - Do not add a second generic idempotency framework or process-local deduplication as the correctness mechanism.
 - Keep Telegram transport, webhook acceptance, inbox worker, and business mutation responsibilities separate only at their existing trust/runtime boundaries.
@@ -46,4 +48,4 @@ In the same test environment, prove:
 
 ## Current limitation
 
-The existing inbox tests prove durable acceptance, duplicate update-ID rejection, claim completion, and stale-worker fencing. The existing submission/Case transaction integration test proves atomic mutation and durable replay at the repository boundary. Those tests do not, separately or together, prove the injected worker crash between business commit and inbox completion. This contract must remain open until the end-to-end test above passes in CI.
+The PostgreSQL inbox tests now cover content-free receipt storage, duplicate update-ID detection, inline receipt claim completion and stale-claim fencing; separate compatibility tests cover old payload-bearing queue rows. The existing Submission/Case transaction integration test proves atomic mutation and durable replay at the repository boundary. These tests do not, separately or together, prove the handler crash between business commit and HTTP acknowledgement. This contract must remain open until the real-handler replay test above passes in CI without being skipped.
