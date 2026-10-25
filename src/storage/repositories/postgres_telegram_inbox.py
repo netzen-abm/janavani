@@ -1,4 +1,4 @@
-"""PostgreSQL-backed idempotent inbox for Telegram webhook updates."""
+"""PostgreSQL receipt ledger plus compatibility support for legacy payload rows."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 
 class PostgresTelegramInbox:
-    """Persist accepted updates and fence stale workers after a lease is reclaimed."""
+    """Fence stale worker claims; new webhook receipts contain no payload."""
 
     def __init__(
         self, connection_factory: Callable[[], Any] | None = None, *, dsn: str | None = None
@@ -99,7 +99,7 @@ class PostgresTelegramInbox:
             return {"status": "claimed", "attempts": claimed[0]}
 
     def claim_next(self, *, stale_after_seconds: int = 120) -> dict[str, Any] | None:
-        """Claim one available update; attempts acts as a fencing generation."""
+        """Claim one payload-bearing legacy update; receipt-only rows run inline."""
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """WITH candidate AS (
