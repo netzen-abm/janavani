@@ -23,11 +23,11 @@ _CITIZEN_CAPABILITIES = (
 
 def session_secret_for_middleware() -> str:
     secret = os.getenv("JANAVANI_WEB_SESSION_SECRET", "").strip()
-    if is_production_runtime():
-        if len(secret) < 32:
-            raise OIDCConfigurationError("Production WebApp requires JANAVANI_WEB_SESSION_SECRET")
+    if len(secret) >= 32:
         return secret
-    return secret or secrets.token_urlsafe(48)
+    # Anonymous drafting must remain available without configured sign-in.
+    # OIDCSettings still requires this fixed secret before login can succeed.
+    return secrets.token_urlsafe(48)
 
 
 def validate_web_identity_configuration() -> None:
@@ -101,6 +101,7 @@ def register_identity_gateway_routes(rt) -> None:
     @rt("/auth/login")
     def get_auth_login():
         try:
+            validate_web_identity_configuration()
             settings = OIDCSettings.from_environment()
             transaction = new_login_transaction()
             url = authorization_url(settings, transaction)
@@ -116,6 +117,7 @@ def register_identity_gateway_routes(rt) -> None:
     def get_auth_callback(request: Request, code: str = "", state: str = "", error: str = ""):
         cookie = request.cookies.get(_TRANSACTION_COOKIE, "")
         try:
+            validate_web_identity_configuration()
             settings = OIDCSettings.from_environment()
             if (error or not code or not state or not cookie or
                     len(request.query_params.getlist("code")) != 1 or
