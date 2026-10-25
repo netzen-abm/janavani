@@ -15,6 +15,8 @@
 - [ ] Production provider configuration passes `validate_runtime_configuration()`; no process-local fallback is used for durable Case, artifact, evidence, consent, submission, authority-directory or identity-link state.
 - [ ] `JANAVANI_AUTHORITY_REPOSITORY_PROVIDER=postgres` is configured in production. The shared directory is seeded with source-backed records, and only records explicitly marked verified with a usable destination are offered to citizens.
 - [ ] Artifact storage, citizen-content retention/deletion policy, migration state, backup/restore and operational alerting are approved.
+- [ ] Apply `db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql` before deploying the content-free webhook code. Do not roll back to the old raw-payload webhook implementation after new content-free receipts exist; use a forward-compatible recovery build.
+- [ ] Inspect `SELECT count(*) FROM public.telegram_update_inbox WHERE payload IS NOT NULL`; if non-zero, verify the compatibility worker can process the legacy backlog and do not mark privacy acceptance complete until zero.
 - [ ] The WebApp uses a trusted OIDC issuer/client and HTTPS callback; authorization-code PKCE (S256), state, nonce, JWKS signature, issuer, audience and expiry validation pass. Client/session secrets exist only in server-side deployment secrets.
 - [ ] Web sessions use HttpOnly, SameSite=Lax cookies and Secure cookies in production; the encrypted OIDC transaction cookie is short-lived. API assertions are freshly minted for five minutes and independently verified; the browser cannot choose a principal or capability list.
 - [ ] Telegram webhook secret is configured in the provider and service; webhook URL is HTTPS and points to the actual deployed Telegram service.
@@ -65,14 +67,17 @@ Create two synthetic citizens, **A** and **B**, and one non-sensitive test Case 
 **Pass:** Both directions use canonical persistence and consistent domain rules.
 
 ### 5. Delivery, idempotency and worker recovery
-- [ ] Submit the same synthetic Telegram `update_id` twice; duplicate delivery is acknowledged without duplicate inbox work or duplicate business effects.
-- [ ] Simulate a transient database outage in staging; webhook acceptance fails retryably (HTTP 503) rather than acknowledging an unpersisted update.
-- [ ] Stop a worker while a synthetic update is pending, restart it, and verify the update is processed or reaches the documented retry/dead-letter terminal state.
+- [ ] Submit the same synthetic Telegram `update_id` twice; a content-free receipt suppresses completed duplicates without duplicate business effects.
+- [ ] Inspect the database row during processing and after completion; the new webhook receipt has `payload IS NULL` throughout.
+- [ ] Simulate a transient database outage in staging; receipt claim fails retryably (HTTP 503) rather than acknowledging an unprocessed update.
+- [ ] Simulate handler failure; the route returns HTTP 503, records retry state without persisting the raw payload, and permits Telegram redelivery.
+- [ ] Inject a process crash after the business transaction commits but before receipt completion/HTTP acknowledgement; redelivery must not duplicate the Case/Submission mutation or lifecycle event.
+- [ ] If legacy payload rows exist, stop/restart the compatibility worker and verify legacy rows drain, terminal payload clearing occurs, and the payload row count reaches zero.
 - [ ] Run concurrent workers and verify stale lease holders cannot commit after their claim has been fenced.
 - [ ] Replay an update that would trigger a consequential action; prove the domain operation has its own idempotency guard. Inbox deduplication alone is not enough.
 - [ ] Verify retry limits, dead-letter visibility, payload cleanup/retention and alerting.
 
-**Pass:** No acknowledged update is silently lost, stale workers cannot commit, and replay cannot duplicate consequential business effects.
+**Pass:** New webhook requests store no raw payload, non-2xx responses permit retries, stale receipt claims are fenced, any legacy payload queue is drained, and replay cannot duplicate consequential business effects. Do not call the replay gate passed until the injected post-commit failure test succeeds against PostgreSQL.
 
 ### 6. Persistence and restart
 - [ ] Restart the Web/API process and retrieve A's Case from a new session.
