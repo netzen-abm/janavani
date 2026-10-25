@@ -95,8 +95,12 @@ async def run_step(update, context):
                 "⚠️ I could not complete that step. "
                 "Please review the information and try again."
             )
-    except Exception:
-        logger.exception("telegram_workflow_failure state=%s", state)
+    except Exception as exc:
+        logger.error(
+            "telegram_workflow_failure state=%s error_type=%s",
+            state,
+            type(exc).__name__,
+        )
         if update.message:
             await update.message.reply_text(
                 "⚠️ Janavani is temporarily unable to complete this step. "
