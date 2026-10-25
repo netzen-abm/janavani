@@ -975,3 +975,64 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 
 1. Investigate why the canonical suite was cancelled and obtain a completed result.
 2. Implement and execute the PostgreSQL-backed Telegram post-commit crash/redelivery test through the real handler and canonical capability path.
+
+---
+
+# 36. CURRENT ENGINEERING PROOF CYCLE — 25 OCTOBER 2026
+
+**Status:** IN PROGRESS — current rebaseline; this section supersedes older statements about the current branch target and release status. Historic entries remain for audit history.
+
+## Verified repository baseline
+
+- [x] Current audit recorded in `docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md`.
+- [x] Current source tree and responsibility boundaries reviewed; no bulk file moves or architecture-generation branch created.
+- [x] Current public review line retained as `chore/ecosystem-shared-capability-infrastructure`; no new branch created.
+- [x] Issues #217, #218, and #219 created and linked to PR #204.
+- [ ] **Branch target: exactly eight physical refs.** Last live query returned nine refs, including `feat/canonical-capability-execution-envelope` as the temporary retirement-only transition branch.
+- [ ] Correct the active GitHub `main` ruleset: it currently requires zero approving reviews while the written policy requires an independent approval.
+- [ ] Merge PR #213 only after independent review and the actual ruleset/policy mismatch is resolved; then allow the guarded archive/delete workflow to finish and re-query GitHub for exactly eight physical refs.
+- [ ] Eventual single-branch state: `main` only, after full product-readiness acceptance and archive-before-delete review.
+
+## P0 — Security, privacy, and correctness proofs
+
+- [ ] **Issue #219 — Telegram inbox privacy:** the current PostgreSQL inbox stores the full Telegram update JSON during pending/processing/retry states. Decide approved fields, retention, deletion, encryption, access and logs. Add PostgreSQL-backed tests proving the selected policy. Do not claim raw narrative is process-local only until evidence supports it.
+- [ ] **Issue #217 — Telegram post-commit replay:** execute real handler/shared capability against PostgreSQL; inject failure after committed business mutation but before inbox completion; replay with a fresh worker; assert one durable mutation/event, safe side-effect deduplication, conflicting idempotency-key rejection and eventual inbox completion.
+- [ ] **WebApp identity:** verify real OIDC issuer/client/session configuration, PKCE/state/nonce/JWKS validation, cookie behavior, API assertion checks, logout semantics and copied-cookie revocation/risk decision.
+- [ ] **Independent runtime:** deploy and verify WebApp, canonical Web/API, and Telegram webhook separately. Record each service ID, commit SHA, URL, liveness and failure/restart result. Current Render inventory previously showed only the canonical API service.
+- [ ] **Cross-surface acceptance:** prove authenticated Case create/retrieve in both directions, identity pairing, ownership isolation, document review, explicit consent, restart recovery and failure isolation.
+
+## P1 — Toolchain and reproducibility
+
+- [ ] **Issue #218:** choose one authoritative Python lock strategy compatible with current deployment.
+- [ ] Decide and commit Rust `Cargo.lock` if appropriate for the workspace/application, and run checks/tests with locked dependency resolution.
+- [ ] Add Rust workspace unit tests to required CI where crates contain executable/testable behavior.
+- [ ] Establish a Ruff baseline and make the approved source-scope gate blocking; avoid a blind full-tree lint rewrite.
+- [ ] Add static type checking selectively around identity, domain/application contracts and repository interfaces; preserve runtime validation for untrusted API input.
+- [ ] Re-run current-head checks; prior green runs do not certify later commits.
+
+## Architecture and file-organization guardrails
+
+- [x] Keep canonical Case/lifecycle rules in shared capability/domain code.
+- [x] Keep WebApp, Web/API, and Telegram transport adapters independent.
+- [x] Keep provider-specific persistence behind storage/repository contracts.
+- [x] Keep Case/Submission transaction ownership cohesive.
+- [x] Keep citizen-authored content retention separate from Case metadata persistence.
+- [x] Use normal Python/Rust/JavaScript language and runtime mechanisms; do not build custom constants/collections/type system/compiler/JIT/event loop/package runtime.
+- [x] Use docs/README source-of-truth hierarchy and archive/historical folders; do not bulk-move source files without import/runtime proof.
+- [ ] Record current-SHA CI plus deployed acceptance evidence before promoting PR #204.
+
+## Webstudio / static-site / dynamic application decision
+
+- [x] Preserve the existing static public website as the source-controlled design/content boundary unless a concrete redesign requirement justifies a migration.
+- [x] Treat Webstudio as a visual authoring/export option, not as the owner of authentication, Case lifecycle or private citizen state.
+- [x] Evaluate Cloudflare Pages for static public content and preview builds; evaluate Workers only when a specific dynamic edge/runtime need exists. Do not rewrite the Python API to match a host.
+- [ ] Test any static export's generated paths, SEO metadata, CSP/security headers, forms, accessible interactions, mobile/reduced-motion behavior and API-link correctness before publishing.
+- [ ] Keep authenticated WebApp state behind the trusted WebApp/API boundary; static export alone is not the completed application.
+
+## Next two engineering actions
+
+1. Resolve Issue #219's durable Telegram payload privacy/retention contract and add live-PostgreSQL coverage.
+2. Close Issue #217's handler-level post-commit replay test, then run the deployed Web–API–Telegram acceptance runbook.
+
+**Completion rule:** Do not mark a task complete because a doc exists, a PR is mergeable, CI passed on an older SHA, or a deployment file declares a service. Require current-SHA verification, failure-path evidence, privacy/security review, and applicable deployed-runtime acceptance.
+
