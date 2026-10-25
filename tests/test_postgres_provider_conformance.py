@@ -81,3 +81,15 @@ def test_render_declares_independent_api_webapp_and_telegram_services():
     assert webapp_start in render
     assert telegram_start in render
     assert "subprocess" not in render
+
+def test_new_telegram_webhook_uses_content_free_receipt_path():
+    webhook = (ROOT / "src/web/telegram_webhook_app.py").read_text(encoding="utf-8")
+    inbox = (ROOT / "src/storage/repositories/postgres_telegram_inbox.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "durable_inbox.claim_update" in webhook
+    assert "durable_inbox.accept_legacy_payload" not in webhook
+    assert "durable_inbox.mark_processed" in webhook
+    assert "WHERE payload IS NOT NULL AND (" in inbox
+
