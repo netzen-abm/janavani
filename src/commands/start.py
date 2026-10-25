@@ -63,7 +63,10 @@ Example:
 
 Janavani will guide you step by step.
 
-Before describing an issue, review /privacy. On webhook deployments, pending Telegram updates\nare temporarily stored in Janavani's PostgreSQL inbox; a strict wall-clock deletion deadline\nis not yet enforced when the worker is offline. Until that gap is closed, share only minimum\nnecessary, non-sensitive details.
+Before describing an issue, review /privacy. On webhook deployments, pending Telegram updates
+are temporarily stored in Janavani's PostgreSQL inbox; a strict wall-clock deletion deadline
+is not yet enforced when the worker is offline. Until that gap is closed, share only minimum
+necessary, non-sensitive details.
 A pairing code is not a completed link. Confirm only in an authenticated account-linking screen that reports success; this screen is not yet part of every deployment.
 A command being accepted does not mean a complaint was submitted to an authority.
 """
