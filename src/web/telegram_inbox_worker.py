@@ -1,4 +1,4 @@
-"""Background processor for durably accepted Telegram webhook updates."""
+"""Compatibility worker for payload-bearing Telegram updates accepted by older code."""
 from __future__ import annotations
 
 import asyncio
@@ -35,7 +35,7 @@ async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: i
 async def run_inbox_worker(
     application: Application, inbox: PostgresTelegramInbox, *, poll_seconds: float = 0.5
 ) -> None:
-    """Dispatch accepted updates; stop dispatch when lease ownership is lost."""
+    """Drain legacy payload rows; new content-free receipts are processed inline."""
     failed_updates: set[int] = set()
 
     async def record_handler_error(update: object, context: Any) -> None:
