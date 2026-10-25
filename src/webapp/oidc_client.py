@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urlencode, urlsplit
 import httpx
 import jwt
+from src.webapp.runtime_mode import is_production_runtime
 
 _ALLOWED_ALGORITHMS = frozenset({"RS256", "ES256", "PS256"})
 
@@ -57,7 +58,7 @@ class OIDCSettings:
         if (not redirect.hostname or redirect.path != "/auth/callback" or redirect.username or
                 redirect.password or redirect.query or redirect.fragment):
             raise OIDCConfigurationError("OIDC redirect URI must end exactly in /auth/callback")
-        if redirect.scheme != "https" and not (local and os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() != "production"):
+        if redirect.scheme != "https" and not (local and not is_production_runtime()):
             raise OIDCConfigurationError("OIDC redirect URI must use HTTPS outside local development")
         return cls(issuer, values["JANAVANI_OIDC_CLIENT_ID"], values["JANAVANI_OIDC_CLIENT_SECRET"],
                    values["JANAVANI_OIDC_REDIRECT_URI"], values["JANAVANI_WEB_SESSION_SECRET"],
