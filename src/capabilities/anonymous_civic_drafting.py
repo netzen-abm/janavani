@@ -106,16 +106,16 @@ Information and records requested:
 3. The status and dates of action recorded in the relevant file or register, and the name/designation of the office handling the matter as shown in official records.
 4. The relevant record period is: [Specify dates or period as precisely as possible].
 
-Please provide the records electronically where available. If the requested information, or part of it, is held by another public authority, please consider transfer under section 6(3) where applicable and inform me.
+Please provide the records electronically where available. If the requested information,\nor part of it, is held by another public authority, please consider transfer under\nsection 6(3) where applicable and inform me.
 
-I understand that disclosure is subject to the RTI Act, applicable exemptions and prescribed fees. This application seeks existing information and records; it is not a request for a grievance decision or for an explanation to be newly created.
+I understand that disclosure is subject to the RTI Act, applicable exemptions and\nprescribed fees. This application seeks existing information and records; it is not\na request for a grievance decision or for an explanation to be newly created.
 
 Yours faithfully,
 [Applicant name]
 [Postal address and contact details needed for delivery]
 [Attach/complete prescribed fee details, where applicable]
 
-DRAFT ONLY — Janavani has not submitted this application. Confirm the correct Public Information Officer, narrow the records and date range, complete required fields, and review the applicable State/Central rules before sending."""
+DRAFT ONLY — Janavani has not submitted this application. Confirm the correct Public\nInformation Officer, narrow the records and date range, complete required fields, and\nreview the applicable State/Central rules before sending."""
     else:
         title = "Draft civic complaint / grievance representation"
         body = f"""To
