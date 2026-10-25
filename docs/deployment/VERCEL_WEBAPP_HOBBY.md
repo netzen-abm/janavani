@@ -8,7 +8,7 @@ Configure the separate Vercel project with:
 
 - Repository: `netzen-abm/janavani`
 - Root Directory: `src/webapp`
-- Framework preset: `FastHTML`
+- Framework preset: `FastAPI` (the entrypoint is an explicit FastAPI ASGI wrapper around the existing FastHTML app).
 - Enable source files outside the root directory, because the entrypoint imports the repository's `src/` package tree.
 - Keep Preview deployments and Production environments separate. Do not copy Telegram credentials into this project.
 - Use `requirements.txt` only for the WebApp runtime; use root `requirements-api.txt` for the canonical API project.
