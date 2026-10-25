@@ -28,11 +28,11 @@ def test_privacy_command_discloses_durable_webhook_inbox_boundary():
     asyncio.run(privacy(update, SimpleNamespace()))
 
     text = message.reply_text.await_args.args[0]
-    assert "PostgreSQL stores only the Telegram update ID plus processing/attempt/lease metadata" in text
-    assert "A previous webhook implementation persisted full Telegram JSON" in text
-    assert "No independent cleanup job runs while that worker is offline" in text
+    assert "the full update payload is encrypted before it is stored" in text
+    assert "maximum 24-hour processing window" in text
+    assert "ciphertext can remain in the database until maintenance resumes" in text
     assert "up to 15 minutes" in text
-    assert "business-effect idempotency is still required" in text
+    assert "business-effect idempotency is still required" not in text
 
 
 def test_start_warns_about_current_webhook_retention_limit():
@@ -46,4 +46,4 @@ def test_start_warns_about_current_webhook_retention_limit():
     text = message.reply_text.await_args.args[0]
     assert "review /privacy" in text
     assert "PostgreSQL inbox" in text
-    assert "There is no independent cleanup job for those legacy rows" in text
+    assert "Webhook updates are encrypted" in text
