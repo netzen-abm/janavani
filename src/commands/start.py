@@ -63,10 +63,11 @@ Example:
 
 Janavani will guide you step by step.
 
-Before describing an issue, review /privacy. On webhook deployments, pending Telegram updates
-are temporarily stored in Janavani's PostgreSQL inbox; a strict wall-clock deletion deadline
-is not yet enforced when the worker is offline. Until that gap is closed, share only minimum
-necessary, non-sensitive details.
+Before describing an issue, review /privacy. The current webhook path stores only the
+Telegram update ID and processing status in PostgreSQL, not the message body.
+Older payload-bearing queue rows, if any, may remain until the compatibility worker resumes.
+There is no independent cleanup job for those legacy rows while that worker is offline.
+Until legacy cleanup is verified, share only minimum necessary, non-sensitive details.
 A pairing code is not a completed link. Confirm only in an authenticated account-linking screen that reports success; this screen is not yet part of every deployment.
 A command being accepted does not mean a complaint was submitted to an authority.
 """
