@@ -280,3 +280,58 @@ Repeated Markdown basenames were observed, including README files, CONTRIBUTING 
 - Root `index.html` is a public static landing page with an en-IN language declaration, canonical/OG/Twitter metadata, WebSite JSON-LD, the required “WE, THE PEOPLE OF INDIA” wording, a skip link, visible keyboard focus, responsive layout and reduced-motion handling. Keep this static source under Git control and test published routes/metadata before a hosting migration.
 - `src/web/static/citizen-workspace.html` with `citizen-workspace.js` is deliberately local-only drafting: its CSP disables network connections (`connect-src 'none'`) and its text explains that drafts are not transmitted. The canonical API serves it at `/app`; it is not the authenticated server-backed Case workspace.
 - `src/webapp/main.py` is the separate interactive WebApp with OIDC login/session, API client, Case/authority routes and Telegram pairing UI. It requires a separate service deployment and a trusted OIDC configuration. Do not blur the local-only draft page, public marketing site, and authenticated WebApp into one runtime.
+
+
+## Vercel production deployment audit — live metadata check
+
+**Audit checkpoint:** 25 October 2026. Read-only inspection using the connected Vercel deployment metadata, GitHub source at the identified production commit, and official Vercel runtime documentation. Detailed project settings, environment metadata, protected live content and runtime diagnostics remain blocked until the owning Vercel team authorizes this connection. Do not confuse a successful deployment state with a completed production acceptance test.
+
+### Confirmed live metadata
+
+- Project: `janavani`, Vercel project ID `prj_bN8y2S50yEJvbUrxMelPdLhg5gln`.
+- Production aliases include `janavani.vercel.app`.
+- Production deployment state: `READY`.
+- Production git source: `main`, SHA `7bb10a881601c24e99f2deb1b98ce84266259ee8`.
+- Development candidate PR #204 remains draft and unmerged; its head is a different commit. Candidate-ready metadata does not mean its OIDC or WebApp changes are in production.
+- Vercel reports deployment type `LAMBDAS` and project framework metadata `flask`. This is a metadata observation, not proof of an application failure.
+
+### Framework reconciliation — do not remove Flask blindly
+
+At production SHA `7bb10a881601c24e99f2deb1b98ce84266259ee8`:
+
+- `pyproject.toml` lists Flask before FastAPI in `[project].dependencies` and sets `[tool.vercel].entrypoint = "src.web.canonical_app:app"`.
+- `requirements.txt` also lists Flask and FastAPI.
+- `src/web/canonical_app.py` exports a FastAPI app and invokes `validate_runtime_configuration()` during application creation.
+- `src/bot_whatsapp.py:12-14` and `src/bot_messenger.py:11-14` import Flask and create their own Flask apps for independent webhook surfaces. Flask is therefore not an unreferenced dependency that can safely be deleted from the ecosystem without a dependency/build redesign.
+- No `vercel.json`, `vercel.ts`, or `.vercel/project.json` was present in the reviewed source tree.
+
+Vercel's current documentation says FastAPI is supported, and custom application modules can be selected using `tool.vercel.entrypoint`. See [FastAPI on Vercel](https://vercel.com/docs/frameworks/backend/fastapi), [Python Runtime](https://vercel.com/docs/functions/runtimes/python), and [Project Configuration](https://vercel.com/docs/project-configuration).
+
+**Decision:** do not delete Flask from common dependency manifests just to make Vercel auto-detection prefer FastAPI. That could break the independently intended WhatsApp/Messenger Flask entry points. After team access is granted, inspect the actual project framework/root/build/install settings, production env-variable names/targets (without disclosing values), exact deployment build events, and runtime errors. Then test the custom FastAPI entrypoint on a preview deployment. If the project has an explicit Flask preset, change that setting only after the preview proves the canonical FastAPI app starts and its required routes work; retain Flask in the dependency set until the messaging surfaces have a proper independently deployable dependency contract.
+
+### Production runtime and configuration constraints
+
+The canonical application invokes the production validator in `src/config/runtime.py`. In production the validator requires PostgreSQL providers for Case/artifact metadata/evidence/external identity links, S3 artifact blob storage, `JANAVANI_POSTGRES_DSN`, `JANAVANI_IDENTITY_LINKS_DSN`, and `JANAVANI_ARTIFACT_S3_BUCKET`. The source only proves these checks exist. The actual Vercel environment values/targets and whether the deployed runtime starts with `JANAVANI_RUNTIME_MODE=production` have not been verified due missing team authorization. Never retrieve, commit, or echo secret values for this audit; keys, targets and presence status are sufficient to start.
+
+The canonical API is built around ASGI/FastAPI. The separate Telegram bot is a long-running process and should not be assumed to run as a normal request-scoped Vercel function without an explicitly designed webhook/worker adapter. Keep WebApp, API and Telegram as independently tested runtimes. Preserve truthful SOS delivery states: `not_submitted` and `police_delivery=not_implemented` must not be turned into a successful authority-delivery claim by a proxy HTTP success.
+
+### Release/protection evidence
+
+- Vercel deployment metadata establishes that production is on `main` at `7bb10a881601c24e99f2deb1b98ce84266259ee8`; it does not establish that the complete interactive WebApp/OIDC candidate has been promoted.
+- The production SHA has check-run records, but check-run history is not equivalent to live runtime validation. A branch-budget check at that SHA failed on 11 October 2026 because it observed **10 physical refs** while the then-current gate expected nine; the extra `audit/2026-10-11-live-rebaseline` ref has since been retired. The current physical GitHub inventory is nine refs against the new target of eight.
+- The current `main` ruleset (ID `25706799`) requires zero approving reviews, does not require Code Owner review, and does not require review-thread resolution, while the canonical repository policy specifies an independent approval. The active settings must be corrected by an authorized repository administrator; source documentation alone does not enforce it.
+- The guarded PR #213 transition changes CI to an eight-ref policy and deletes its own temporary transition ref only after exact archive-head and tree checks. PR #213 CI at `d036839730968771e0db6d043eb2c85ad9531a88` passed its observed workflow groups, but the physical inventory remains nine and the ruleset mismatch blocks merge.
+
+### Vercel inspection acceptance checklist
+
+- [ ] Owner-team authorization completed; then re-fetch actual project settings.
+- [ ] Verify framework preset, root directory, build/install commands, supported Python version, custom `tool.vercel.entrypoint`, and actual build output.
+- [ ] Inspect production and preview environment-variable names, targets and presence without disclosing values; confirm production mode and all required durable providers.
+- [ ] Inspect current production build events and runtime-error clusters.
+- [ ] Exercise the public production alias, health/liveness and version routes if access permits; record HTTP statuses and returned service/version metadata.
+- [ ] Build a preview from the selected FastAPI candidate and verify root, /liveness, /version, expected route registration, authentication/authorization boundaries, database readiness and failure behaviour.
+- [ ] Test cookie expiry/revocation, CSRF/origin controls, cross-user ownership, restart/replay safety and truthful external-delivery statuses.
+- [ ] Record exact source SHA, deployment ID, settings snapshot (no secret values), checks, smoke-test outputs and rollback target before any promotion.
+
+**Interim verdict:** production metadata reports `READY`, but the Vercel deployment audit is still incomplete. No framework, routing, environment-variable, protection or production promotion change is authorized by this inspection note.
+\n
