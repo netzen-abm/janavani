@@ -993,6 +993,8 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 - [ ] Merge PR #213 only after independent review and the actual ruleset/policy mismatch is resolved; then allow the guarded archive/delete workflow to finish and re-query GitHub for exactly eight physical refs.
 - [ ] Eventual single-branch state: `main` only, after full product-readiness acceptance and archive-before-delete review.
 
+- [ ] **Issue #221 — Vercel production configuration audit:** production is reported READY at main SHA `7bb10a881601c24e99f2deb1b98ce84266259ee8`; project metadata reports `flask`, while the repository's canonical entry point is FastAPI. Verify actual project settings/build logs and production env presence after owning-team authorization; test a FastAPI preview before changing preset. Do not remove Flask blindly because WhatsApp/Messenger modules import it, and do not promote PR #204 based on preview metadata.
+
 ## P0 — Security, privacy, and correctness proofs
 
 - [ ] **Issue #219 — Telegram inbox privacy:** the current PostgreSQL inbox stores the full Telegram update JSON during pending/processing/retry states. Decide approved fields, retention, deletion, encryption, access and logs. Add PostgreSQL-backed tests proving the selected policy. Do not claim raw narrative is process-local only until evidence supports it.
