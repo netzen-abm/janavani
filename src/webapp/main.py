@@ -1,9 +1,10 @@
 import os
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Input, Label, P, Style, Textarea, Titled,
+    A, Button, Div, Form, H1, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
+from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
 from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware, validate_web_identity_configuration
 from src.webapp.case_list import register_case_list_routes
@@ -78,45 +79,56 @@ def get(request: Request):
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
-    """Displays targeted bill details alongside dynamic print and email action controls."""
-    return Div(
-        Div(
-            H2(f"Constitutional Audit Report: {bill_code}"),
-            P("This evaluation screens statutory structures against Article 14 (Equality), Article 19 (Freedom), and Article 21 (Liberty)."),
-            Hr(),
-            Form(action="/dispatch-objection", method="post")(
-                Hidden(name="bill_code", value=bill_code),
-                H4("Add Your Personal Observations or Local Context (Optional):"),
-                Textarea(name="comments", placeholder="Enter your comments here to append them to the formal petition...", rows=3),
-                H4("Select Your Official Action Channel:"),
-                Label(Input(type="radio", name="format_choice", value="PDF", checked=True), " Download Print-Ready PDF for Official Physical Mail"),
-                Label(Input(type="radio", name="format_choice", value="DOCX"), " Download Editable Word Document (.docx) for Local Adjustments"),
-                Br(),
-                Button("Generate Official Objection Paperwork", type="submit")
-            ),
-            A("Cancel and Return", href="/"),
-            cls="card"
-        )
+    """Fail closed until legislative profiles and authority provenance are verified."""
+    del bill_code
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Constitutional review unavailable — Janavani</title></head><body><main>"
+        "<h1>Constitutional bill review is temporarily unavailable</h1>"
+        "<p>Janavani has not yet verified the source provenance for the legislative "
+        "profiles required by this workflow. To avoid presenting unverified legal "
+        "analysis as authoritative, this document-generation route is disabled.</p>"
+        "<p>You can still use the authenticated citizen workspace to create and "
+        "continue a regular civic Case.</p>"
+        "<p>No constitutional assessment or document has been generated or sent.</p>"
+        "<p><a href='/'>Return to the citizen workspace</a></p>"
+        "</main></body></html>",
+        status_code=503,
+        headers={
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+            "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "X-Frame-Options": "DENY",
+        },
     )
 
-@rt("/dispatch-objection")
-def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, request: Request):
-    """Triggers document streaming back to the browser based on format preferences."""
-    client = client_for_request(request)
-    file_bytes = client.download_constitutional_objection(bill_code, comments, format_choice)
-    
-    if not file_bytes:
-        return P("Error generating document stream artifact from backend pools.")
-        
-    ext = format_choice.lower()
-    media = "application/pdf" if format_choice == "PDF" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    
-    from fastapi.responses import Response
-    return Response(
-        content=file_bytes,
-        media_type=media,
-        headers={"Content-Disposition": f"attachment; filename=objection_{bill_code}.{ext}"}
+
+@rt("/dispatch-objection", methods=["POST"])
+def post_dispatch_objection():
+    """Reject the retired document path explicitly; never imply generation."""
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Document route retired — Janavani</title></head><body><main>"
+        "<h1>This document route is not available</h1>"
+        "<p>No file was generated and nothing was transmitted. Return to the "
+        "citizen workspace to continue a supported civic Case workflow.</p>"
+        "<p><a href='/'>Return to Janavani</a></p>"
+        "</main></body></html>",
+        status_code=410,
+        headers={
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+            "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "X-Frame-Options": "DENY",
+        },
     )
+
 
 from src.webapp.case_workspace import register_case_workspace_routes
 from src.webapp.identity_pairing_workspace import register_identity_pairing_routes
