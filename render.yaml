@@ -3,7 +3,7 @@ services:
     name: janavani-web-api
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-api.txt
     # Canonical Web/API runtime. Keep this service independent of Telegram.
     startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /liveness
@@ -21,7 +21,7 @@ services:
     name: janavani-webapp
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r src/webapp/requirements.txt
     # Browser UI only; OIDC client credentials are unique to this service.
     startCommand: uvicorn src.webapp.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /liveness

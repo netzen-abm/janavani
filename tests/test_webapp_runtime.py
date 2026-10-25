@@ -278,3 +278,9 @@ def test_retired_constitutional_dispatch_returns_gone_without_generating():
     assert "no file was generated" in response.text.lower()
     assert "nothing was transmitted" in response.text.lower()
 
+def test_vercel_webapp_entrypoint_reuses_the_canonical_webapp():
+    from src.webapp.main import app as canonical_webapp
+    from src.webapp.vercel_entrypoint import app as vercel_webapp
+
+    assert vercel_webapp is canonical_webapp
+

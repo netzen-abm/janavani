@@ -1,0 +1,16 @@
+[project]
+name = "janavani-webapp"
+version = "0.1.0"
+description = "Janavani authenticated citizen WebApp adapter"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-fasthtml>=0.12.0",
+    "httpx>=0.28.1",
+    "PyJWT[crypto]>=2.10.1",
+    "cryptography>=42.0.0",
+]
+
+[tool.vercel]
+entrypoint = "vercel_entrypoint:app"

@@ -1,0 +1,17 @@
+# Minimal runtime dependencies reachable from src.web.canonical_app:app.
+# Keep Telegram, FastHTML UI, data-science, Web3 and IPFS dependencies out of the API bundle.
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-dotenv>=1.0.1
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+httpx>=0.28.1
+PyJWT[crypto]>=2.10.1
+cryptography>=42.0.0
+requests>=2.32.0
+redis>=5.0.0
+weasyprint>=65.0
+reportlab>=4.2.0
+python-docx>=1.1.0
+psycopg[binary]>=3.2.0
+boto3>=1.35.0
