@@ -1,3 +1,4 @@
+import base64
 import os
 import time
 from pathlib import Path
@@ -8,7 +9,7 @@ from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInb
 
 ROOT = Path(__file__).parents[1]
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
-TEST_FERNET_KEY = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+TEST_FERNET_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
 MIGRATIONS = (
     ROOT / "db/migrations/20261012120000_telegram_update_inbox.sql",
     ROOT / "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql",
