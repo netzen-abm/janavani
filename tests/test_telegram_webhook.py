@@ -13,6 +13,7 @@ def _application():
     application.bot.defaults = Defaults()
     application.update_queue = MagicMock()
     application.update_queue.put = AsyncMock()
+    application.process_update = AsyncMock()
     return application
 
 
