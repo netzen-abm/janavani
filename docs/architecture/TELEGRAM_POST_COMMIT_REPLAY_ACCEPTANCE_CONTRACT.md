@@ -6,7 +6,9 @@ Status: required acceptance gate; not yet proven end-to-end.
 
 Telegram webhook delivery is at-least-once, but provider retry windows are not a durable application queue. The webhook now encrypts each parsed update using the configured Fernet key ring before inserting it into PostgreSQL, then returns HTTP 202 only after the encrypted payload is durably accepted. A separate worker decrypts the payload in memory, dispatches it through the real handler, and clears ciphertext on success or terminal dead-letter. Transient processing failures retain ciphertext for bounded worker retries, subject to the 24-hour processing deadline.
 
-A process may still crash after a business transaction commits but before the inbox row is marked processed. The worker can reclaim the encrypted payload after the lease expires; redelivery must not duplicate consequential business effects. Queue encryption protects payload confidentiality at rest, but inbox receipt deduplication is not business-effect idempotency.
+A process may still crash after a business transaction commits but before the inbox row is marked processed. The worker can reclaim the encrypted payload after the lease expires; redelivery must not duplicate consequential business effects. Queue encryption protects payload confidentiality at rest, but inbox deduplication is not business-effect idempotency.
+
+**Conversation-state limitation:** `src/conversation/session.py` and `src/conversation/state.py` currently keep workflow metadata and the 15-minute issue buffer only in process memory. The encrypted queue can recover an update body after a worker restart, but does not by itself restore the conversation step or `case_id`. Therefore a retry must not be described as a resumed citizen journey. The real-handler acceptance must simulate a restart with empty local state and prove either that an approved minimal, non-narrative session can be restored or that the handler fails closed with clear restart/recovery guidance without duplicating/orphaning a Case or claiming success.
 
 ## Required test scenario
 
