@@ -68,7 +68,7 @@ def test_webhook_returns_retryable_status_if_queue_rejects_update():
 
     assert response.status_code == 503
     assert response.json()["detail"] == (
-        "Telegram update could not be durably accepted; retry delivery"
+        "Telegram update could not be accepted; retry delivery"
     )
 
 
@@ -151,6 +151,8 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
         start=AsyncMock(),
         stop=AsyncMock(),
         shutdown=AsyncMock(),
+        add_error_handler=MagicMock(),
+        remove_error_handler=MagicMock(),
     )
 
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
