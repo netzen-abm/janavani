@@ -40,9 +40,10 @@ def decrypt_payload(
 ) -> dict[str, Any]:
     """Decrypt in memory and verify the authenticated envelope matches its row key."""
     try:
-        payload = json.loads(fernet.decrypt(bytes(encrypted_payload)).decode("utf-8"))
-    except (InvalidToken, ValueError, TypeError, UnicodeDecodeError):
-        raise
+        plaintext = fernet.decrypt(bytes(encrypted_payload))
+    except InvalidToken as exc:
+        raise ValueError("Telegram payload ciphertext cannot be decrypted") from exc
+    payload = json.loads(plaintext.decode("utf-8"))
     if not isinstance(payload, dict) or payload.get("update_id") != update_id:
         raise ValueError("decrypted Telegram payload does not match its inbox key")
     return payload
