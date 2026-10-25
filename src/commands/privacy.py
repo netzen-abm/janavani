@@ -13,7 +13,7 @@ async def privacy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• Telegram receives messages you send to this bot and may retain them under "
         "Telegram's own policies. Janavani cannot erase Telegram's server-side history.\n"
         "• The current webhook path processes each parsed Telegram update in request "
-        "memory. PostgreSQL stores only the Telegram update ID and processing status, "
+        "memory. PostgreSQL stores only the Telegram update ID plus processing/attempt/lease metadata, "
         "not the message body. Failed processing returns a retryable error; durable "
         "business-effect idempotency is still required for commit-before-ack crashes.\n"
         "• A previous webhook implementation persisted full Telegram JSON in a "
