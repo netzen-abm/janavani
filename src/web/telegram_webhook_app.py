@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import logging
 import os
 import re
 from contextlib import asynccontextmanager
@@ -23,6 +24,8 @@ from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
 
+logger = logging.getLogger(__name__)
+
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
 
 
@@ -36,23 +39,40 @@ def _required_setting(name: str) -> str:
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
     """Build the webhook; production accepts updates only after durable inbox commit."""
     injected_application, injected_inbox = application is not None, inbox is not None
+    inline_failed_updates: set[int] = set()
+
+    async def record_inline_handler_error(update: object, context: Any) -> None:
+        update_id = getattr(update, "update_id", None)
+        if isinstance(update_id, int):
+            inline_failed_updates.add(update_id)
+        # Deliberately log only the Telegram update ID and exception, never the payload.
+        logger.error(
+            "Telegram inline webhook handler failed for update_id=%s",
+            update_id,
+            exc_info=context.error,
+        )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if injected_application:
             app.state.telegram_application = application
             app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+            app.state.inline_failed_updates = inline_failed_updates
+            application.add_error_handler(record_inline_handler_error)
             if injected_inbox:
                 app.state.telegram_inbox = inbox
                 app.state.inbox_worker = asyncio.create_task(run_inbox_worker(application, inbox))
-            yield
-            worker = getattr(app.state, "inbox_worker", None)
-            if worker:
-                worker.cancel()
-                try:
-                    await worker
-                except asyncio.CancelledError:
-                    pass
+            try:
+                yield
+            finally:
+                worker = getattr(app.state, "inbox_worker", None)
+                if worker:
+                    worker.cancel()
+                    try:
+                        await worker
+                    except asyncio.CancelledError:
+                        pass
+                application.remove_error_handler(record_inline_handler_error)
             return
 
         token, webhook_url = _required_setting("TELEGRAM_BOT_TOKEN"), _required_setting("TELEGRAM_WEBHOOK_URL")
@@ -65,6 +85,8 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             raise RuntimeError("TELEGRAM_WEBHOOK_URL must be HTTPS and end in /telegram/webhook")
 
         bot_app, durable_inbox = build_application(token=token), PostgresTelegramInbox(dsn=dsn)
+        app.state.inline_failed_updates = inline_failed_updates
+        bot_app.add_error_handler(record_inline_handler_error)
         await bot_app.initialize()
         await bot_app.start()
         await bot_app.bot.set_my_commands(telegram_bot_commands())
@@ -86,8 +108,10 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             await _stop_ephemeral_issue_cleanup(bot_app)
             await bot_app.stop()
             await bot_app.shutdown()
+            bot_app.remove_error_handler(record_inline_handler_error)
 
     app = FastAPI(title="Janavani Telegram Webhook", version="1.1.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.inline_failed_updates = inline_failed_updates
     if injected_application:
         app.state.telegram_application = application
         app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
@@ -137,14 +161,68 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         if update is None or update.update_id != update_id:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
         durable_inbox = getattr(request.app.state, "telegram_inbox", None)
-        try:
-            if durable_inbox is not None:
-                await asyncio.to_thread(durable_inbox.accept, update_id, payload)
-            else:
-                # Test-only compatibility: production startup always requires a DSN.
+        if durable_inbox is None:
+            # Test-only compatibility: production startup always requires a durable inbox.
+            # This branch only feeds an injected in-memory test application.
+            try:
                 await bot_app.update_queue.put(update)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Telegram update could not be accepted; retry delivery",
+                ) from exc
+            return {"status": "accepted"}
+
+        try:
+            receipt = await asyncio.to_thread(durable_inbox.claim_update, update_id)
         except Exception as exc:
-            raise HTTPException(status_code=503, detail="Telegram update could not be durably accepted; retry delivery") from exc
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram update could not be claimed; retry delivery",
+            ) from exc
+
+        receipt_status = receipt["status"]
+        if receipt_status in {"processed", "dead_letter"}:
+            # Telegram may redeliver after the response is lost. A terminal receipt
+            # prevents repeating the handler after successful completion.
+            return {"status": "accepted"}
+        if receipt_status != "claimed":
+            # Busy receipts or the legacy payload queue must not be acknowledged:
+            # Telegram should retry until the active/legacy worker finishes.
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram update is not yet ready for processing; retry delivery",
+            )
+
+        attempts = int(receipt["attempts"])
+        failed_updates = request.app.state.inline_failed_updates
+        failed_updates.discard(update_id)
+        try:
+            await bot_app.process_update(update)
+            if update_id in failed_updates:
+                raise RuntimeError("telegram_handler_failed")
+            await asyncio.to_thread(
+                durable_inbox.mark_processed,
+                update_id,
+                attempts=attempts,
+            )
+        except Exception as exc:
+            try:
+                await asyncio.to_thread(
+                    durable_inbox.retry_or_dead_letter,
+                    update_id,
+                    attempts=attempts,
+                    error_code=type(exc).__name__,
+                )
+            except Exception:
+                logger.exception(
+                    "Could not update retry state for Telegram update_id=%s",
+                    update_id,
+                )
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram update could not be completed; retry delivery",
+            ) from exc
         return {"status": "accepted"}
 
     return app
