@@ -33,7 +33,7 @@ def test_postgres_telegram_inbox_accept_claim_complete_and_deduplicate():
     inbox = PostgresTelegramInbox(dsn=DSN)
     try:
         assert inbox.accept_legacy_payload(update_id, payload) is True
-        assert inbox.accept(update_id, payload) is False
+        assert inbox.accept_legacy_payload(update_id, payload) is False
         first = inbox.claim_next()
         assert first is not None and first["update_id"] == update_id
         assert first["payload"]["test_marker"] == "inbox-contract"
@@ -59,8 +59,7 @@ def test_postgres_telegram_inbox_fences_a_reclaimed_worker():
     import psycopg
 
     update_id = time.time_ns() % 9_000_000_000_000_000
-    with psycopg.connect(DSN) as conn:
-        conn.execute(MIGRATION)
+    _apply_migrations(DSN)
     inbox = PostgresTelegramInbox(dsn=DSN)
     try:
         assert inbox.accept_legacy_payload(update_id, {"update_id": update_id})
