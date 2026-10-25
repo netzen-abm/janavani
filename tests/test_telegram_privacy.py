@@ -32,7 +32,7 @@ def test_privacy_command_discloses_durable_webhook_inbox_boundary():
     assert "maximum 24-hour processing window" in text
     assert "ciphertext can remain in the database until maintenance resumes" in text
     assert "up to 15 minutes" in text
-    assert "business-effect idempotency is still required" not in text
+    assert "The encryption key is configured separately from the database" in text
 
 
 def test_start_warns_about_current_webhook_retention_limit():
