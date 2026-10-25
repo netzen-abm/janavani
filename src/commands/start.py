@@ -63,11 +63,11 @@ Example:
 
 Janavani will guide you step by step.
 
-Before describing an issue, review /privacy. The current webhook path stores only the
-Telegram update ID plus processing/attempt/lease metadata in PostgreSQL, not the message body.
-Older payload-bearing queue rows, if any, may remain until the compatibility worker resumes.
-There is no independent cleanup job for those legacy rows while that worker is offline.
-Until legacy cleanup is verified, share only minimum necessary, non-sensitive details.
+Before describing an issue, review /privacy. Webhook updates are encrypted before
+they enter Janavani's PostgreSQL inbox and have a maximum 24-hour processing window.
+The running worker clears payloads on success, terminal failure or expiry; ciphertext
+may remain in the database until the worker resumes after an outage. Share only
+minimum necessary details and avoid highly sensitive information.
 A pairing code is not a completed link. Confirm only in an authenticated account-linking screen that reports success; this screen is not yet part of every deployment.
 A command being accepted does not mean a complaint was submitted to an authority.
 """
