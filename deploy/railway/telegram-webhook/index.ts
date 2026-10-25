@@ -86,10 +86,20 @@ function replyFor(text: string): string {
     return "Janavani commands:\n/start — welcome and guidance\n/complaint — complaint preparation\n/rti — RTI guidance\n/help — this menu\n\nThis demo does not submit requests to public authorities.";
   }
   if (command === "/complaint") {
-    return "To prepare a useful complaint, note the public service or issue, the general area, when it began, and the remedy requested. Do not include sensitive identifiers.\n\nThis MVP can provide guidance only; it does not yet save or submit a complaint.";
+    return [
+      "To prepare a useful complaint, note the public service or issue, the general area,",
+      "when it began, and the remedy requested. Do not include sensitive identifiers.",
+      "",
+      "This MVP can provide guidance only; it does not yet save or submit a complaint.",
+    ].join("\n");
   }
   if (command === "/rti") {
-    return "An RTI request should identify the public authority, the records or information sought, and a clear time period where relevant. Ask for existing records rather than opinions.\n\nThis MVP provides guidance only; it does not file an RTI application.";
+    return [
+      "An RTI request should identify the public authority, the records or information sought,",
+      "and a clear time period where relevant. Ask for existing records rather than opinions.",
+      "",
+      "This MVP provides guidance only; it does not file an RTI application.",
+    ].join("\n");
   }
   if (!text.trim()) return "";
   return "I received your message, but this early MVP does not yet create or submit a civic case. Use /complaint or /rti for guidance. Please avoid sending sensitive personal information.";
