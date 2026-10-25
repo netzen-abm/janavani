@@ -335,3 +335,7 @@ The canonical API is built around ASGI/FastAPI. The separate Telegram bot is a l
 
 **Interim verdict:** production metadata reports `READY`, but the Vercel deployment audit is still incomplete. No framework, routing, environment-variable, protection or production promotion change is authorized by this inspection note.
 \n
+
+## Vercel production risk audit reference
+
+The focused companion audit is [2026-10-25-vercel-production-risk-audit.md](2026-10-25-vercel-production-risk-audit.md). It records the production deployment ID/SHA, the Flask/FastAPI configuration discrepancy, active Flask use by the WhatsApp/Messenger adapters, authorization errors, production-configuration validation requirements, and the safe read-only → preview-test → reconcile → verify sequence. Follow Issue #221 for closure.
