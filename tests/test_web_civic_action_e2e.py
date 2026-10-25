@@ -81,6 +81,7 @@ def web_state(monkeypatch):
     monkeypatch.setattr(civic_case_dependencies, "_COMPOSITION", composition)
     monkeypatch.setattr(civic_case_dependencies, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_dependencies, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_dependencies, "AUTHORITY", composition.authority_capability)
     monkeypatch.setattr(civic_case_lifecycle_router, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_lifecycle_router, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "CAPABILITY", composition.case_capability)
@@ -212,3 +213,27 @@ def test_web_ready_fails_closed_without_submission_consent(web_state):
     assert ready.status_code == 409
     assert "approval" in ready.json()["detail"].lower() or "consent" in ready.json()["detail"].lower()
     assert cases.get(case_id).status.value == "review"
+
+
+def test_authority_search_api_returns_only_canonical_verified_destinations(web_state):
+    response = client.get(
+        "/civic/authorities/search",
+        params={"authority_type": "district", "city": "Bengaluru"},
+        headers=_auth_header(),
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["count"] == 1
+    authority = payload["items"][0]
+    assert authority["authority_id"] == "office-e2e"
+    assert authority["verified"] is True
+    assert authority["destination_name"] == "District Officer"
+    assert authority["destination_email"] == "office@example.test"
+
+
+def test_authority_search_api_requires_authenticated_identity():
+    response = client.get(
+        "/civic/authorities/search",
+        params={"authority_type": "district", "city": "Bengaluru"},
+    )
+    assert response.status_code == 401

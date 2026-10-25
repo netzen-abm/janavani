@@ -5,8 +5,8 @@ from fasthtml.common import (
 from starlette.requests import Request
 from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
-from src.webapp.api_errors import PlatformAPIContractError, safe_api_errors
 from src.webapp.services.api_client import client_for_request
+from src.webapp.authority_intake import register_authority_intake_routes
 
 # Initialize the stateless web interface client
 app, rt = fast_app(
@@ -37,6 +37,8 @@ def get():
                 H3("📝 Create a Civic Case"),
                 P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
                 Form(action="/submit-issue", method="post")(
+                    Label("City", Input(name="city", placeholder="e.g. Kochi", required=True)),
+                    Label("Authority type", Input(name="authority_type", placeholder="e.g. district, municipal", required=True)),
                     Textarea(
                         name="citizen_input",
                         placeholder="Describe the civic issue...",
@@ -49,41 +51,6 @@ def get():
                 cls="card",
             ),
         ),
-    )
-
-@rt("/submit-issue")
-@safe_api_errors("create a civic Case")
-def post(citizen_input: str, request: Request):
-    """Create a Case through the canonical API without echoing upstream failures."""
-    client = client_for_request(request)
-    if not client.identity_assertion:
-        return Div(
-            Div(
-                H3("Sign-in required"),
-                P("Authenticate through the Janavani identity gateway before creating a case."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
-        )
-
-    result = client.submit_complaint_draft(citizen_input)
-    case_id = result.get("case_id")
-    status = result.get("status")
-    if not isinstance(case_id, str) or not case_id.strip() or not isinstance(status, str) or not status.strip():
-        raise PlatformAPIContractError("Platform API returned an incomplete Case result")
-
-    return Div(
-        Div(
-            H2("📁 Civic Case Created"),
-            P(f"Case ID: {case_id}"),
-            P(f"Status: {status}"),
-            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
-            Form(action=f"/cases/{case_id}/prepare", method="get")(
-                Button("Open Case Workspace", type="submit"),
-            ),
-            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
-            cls="card",
-        )
     )
 
 @rt("/bill-review/{bill_code}")
@@ -134,6 +101,7 @@ from src.webapp.identity_pairing_workspace import register_identity_pairing_rout
 register_case_workspace_routes(rt)
 register_identity_pairing_routes(rt)
 register_case_list_routes(rt)
+register_authority_intake_routes(rt)
 
 if __name__ == "__main__":
     import uvicorn

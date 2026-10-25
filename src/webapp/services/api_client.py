@@ -39,10 +39,10 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json().get("items", [])
 
-    def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
+    def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint", related_office_id: str | None = None, jurisdiction: dict[str, Any] | None = None) -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases",
-            json={"case_type": case_type, "subject": subject, "narrative": narrative},
+            json={"case_type": case_type, "subject": subject, "narrative": narrative, "related_office_id": related_office_id, "jurisdiction": jurisdiction or {}},
             headers=self._headers(),
             timeout=20.0,
         )
