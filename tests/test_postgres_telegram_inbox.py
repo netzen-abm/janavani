@@ -249,3 +249,21 @@ def test_postgres_expired_encrypted_payload_is_dead_lettered_and_cleared():
             conn.execute(
                 "DELETE FROM public.telegram_update_inbox WHERE update_id = %s", (update_id,)
             )
+
+def test_encrypted_enqueue_fails_closed_without_an_encryption_key():
+    inbox = PostgresTelegramInbox(
+        connection_factory=lambda: pytest.fail("database must not be reached without a key"),
+        encryption_keys=[],
+    )
+
+    with pytest.raises(RuntimeError, match="ENCRYPTION_KEYS is required"):
+        inbox.accept_encrypted(123, {"update_id": 123, "message": {"text": "synthetic"}})
+
+
+def test_encrypted_enqueue_rejects_invalid_encryption_key():
+    with pytest.raises(ValueError, match="valid Fernet keys"):
+        PostgresTelegramInbox(
+            connection_factory=lambda: pytest.fail("database must not be reached with an invalid key"),
+            encryption_keys=["not-a-fernet-key"],
+        )
+
