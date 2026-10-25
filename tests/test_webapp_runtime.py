@@ -171,3 +171,80 @@ def test_artifact_download_rejects_unknown_format_and_sanitizes_filename(monkeyp
         ("generate", "case@unsafe", "doc-test", "pdf"),
     ]
 
+def test_case_review_rejects_mismatched_document_confirmation(monkeypatch):
+    import src.webapp.case_workspace as workspace
+    from src.webapp.main import app
+
+    class Client:
+        identity_assertion = "synthetic-test-assertion"
+
+        def prepare_document_draft(self, case_id):
+            return {"document_id": "doc-expected", "case_id": case_id}
+
+        def review_document(self, case_id, **kwargs):
+            return {"document_id": "doc-different", "status": "reviewed"}
+
+        def start_review(self, case_id, **kwargs):
+            raise AssertionError("Case review must not advance after a mismatched document result")
+
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/cases/case-test/review",
+        data={"subject": "Streetlight outage", "body": "A synthetic issue.", "reason": ""},
+    )
+
+    assert response.status_code == 503
+    assert "could not confirm the result" in response.text
+    assert "Draft saved for review" not in response.text
+    assert response.headers["cache-control"] == "no-store, private"
+
+
+def test_case_consent_rejects_wrong_scope_confirmation(monkeypatch):
+    import src.webapp.case_workspace as workspace
+    from src.webapp.main import app
+
+    class Client:
+        identity_assertion = "synthetic-test-assertion"
+
+        def record_explicit_consent(self, case_id):
+            return {
+                "status": "ready",
+                "consent_recorded": True,
+                "scope": "all_future_transmissions",
+            }
+
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/cases/case-test/consent",
+        data={"explicit_confirmation": "yes"},
+    )
+
+    assert response.status_code == 503
+    assert "Explicit consent recorded" not in response.text
+    assert "consent" in response.text.lower()
+    assert response.headers["cache-control"] == "no-store, private"
+
+
+def test_case_artifact_rejects_empty_payload(monkeypatch):
+    import src.webapp.case_workspace as workspace
+    from src.webapp.main import app
+
+    class Client:
+        identity_assertion = "synthetic-test-assertion"
+
+        def prepare_document_draft(self, case_id):
+            return {"document_id": "doc-expected", "case_id": case_id}
+
+        def generate_artifact(self, case_id, **kwargs):
+            return b""
+
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/cases/case-test/artifact",
+        data={"document_format": "pdf"},
+    )
+
+    assert response.status_code == 503
+    assert "could not confirm the result" in response.text
+    assert "attachment;" not in response.headers.get("content-disposition", "")
+    assert response.headers["cache-control"] == "no-store, private"
