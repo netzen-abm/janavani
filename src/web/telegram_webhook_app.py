@@ -37,7 +37,7 @@ def _required_setting(name: str) -> str:
 
 
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
-    """Build the webhook; production accepts updates only after durable inbox commit."""
+    """Build the webhook; new deliveries persist a receipt and process content inline."""
     injected_application, injected_inbox = application is not None, inbox is not None
     inline_failed_updates: set[int] = set()
 
