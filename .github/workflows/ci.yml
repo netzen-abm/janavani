@@ -450,7 +450,10 @@ jobs:
           from src.webapp.vercel_entrypoint import app as vercel_app
 
           assert vercel_app is app
-          assert app.routes[-1].app is webapp
+          assert app is webapp
+          paths = {getattr(route, "path", "") for route in app.routes}
+          assert "/" in paths
+          assert "/liveness" in paths
           client = TestClient(app)
           response = client.get("/liveness")
           assert response.status_code == 200, response.text
