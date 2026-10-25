@@ -257,9 +257,13 @@ The documentation describes Git-backed deploys and preview deployments for branc
 - **Dynamic edge logic:** consider Pages Functions or Workers only for a concrete, bounded use case. Do not rewrite the existing Python FastAPI API just to match a hosting provider.
 - **Deployment control:** verify output URLs, CSP/security headers, cache policy, form behavior, accessibility, mobile/reduced-motion behavior, preview isolation and API links before publishing. A successful static build is not a successful authenticated user journey.
 
-## Additional functional finding — unreachable legacy bill-review journey
+## Additional functional finding — constitutional route now fails closed
 
-The WebApp still registers /bill-review/{bill_code} and /dispatch-objection in src/webapp/main.py. The downstream JanavaniWebAPIClient.download_constitutional_objection method currently returns None, so the route always shows an error instead of generating an artifact. This is tracked in [Issue #220](https://github.com/netzen-abm/janavani/issues/220). Decide whether to retire the route after reference/dependency checks or replace it with the canonical authenticated document capability. Do not revive the legacy transport or delete the route without preserving required substance and verifying links/tests.
+At the initial inspection, the WebApp's /bill-review/{bill_code} page advertised document generation, while /dispatch-objection called JanavaniWebAPIClient.download_constitutional_objection(), which intentionally returned None. The form was therefore a user-visible dead end.
+
+The current review branch now returns a no-store HTTP 503 from GET /bill-review/{bill_code}, explaining that source-verified legislative profiles are not yet available; POST /dispatch-objection returns HTTP 410 and explicitly states that no file was generated or transmitted. The prior user-facing intent and reactivation checklist are preserved in archive/documentation/legacy/2026-10-25-webapp-constitutional-bill-review-route.md. Regression tests were added to tests/test_webapp_runtime.py. The existing canonical API route is not enough to safely reactivate the workflow: the bill profile registry currently has no source-reference/provenance fields, and generation requires an owner-scoped objection Case plus a verified authority.
+
+Issue #220 remains open until current-head CI verifies these fail-closed routes and future reactivation meets the archive note's source-provenance, authority, privacy, safe-header and end-to-end acceptance requirements. Do not re-enable the form merely because the API endpoint exists.
 
 ## Repository organization findings
 
@@ -269,3 +273,10 @@ Repeated Markdown basenames were observed, including README files, CONTRIBUTING 
 
 **Current source of truth for this proof cycle:** this dated audit plus the superseding section in docs/MASTER_TASK_CHECKLIST.md. docs/README.md is the documentation entry point; root README.md points to this audit. Older dated audit/checklist statements remain historical evidence where they differ from the current rebaseline.
 
+
+
+## Static public site and local-draft runtime distinction
+
+- Root `index.html` is a public static landing page with an en-IN language declaration, canonical/OG/Twitter metadata, WebSite JSON-LD, the required “WE, THE PEOPLE OF INDIA” wording, a skip link, visible keyboard focus, responsive layout and reduced-motion handling. Keep this static source under Git control and test published routes/metadata before a hosting migration.
+- `src/web/static/citizen-workspace.html` with `citizen-workspace.js` is deliberately local-only drafting: its CSP disables network connections (`connect-src 'none'`) and its text explains that drafts are not transmitted. The canonical API serves it at `/app`; it is not the authenticated server-backed Case workspace.
+- `src/webapp/main.py` is the separate interactive WebApp with OIDC login/session, API client, Case/authority routes and Telegram pairing UI. It requires a separate service deployment and a trusted OIDC configuration. Do not blur the local-only draft page, public marketing site, and authenticated WebApp into one runtime.
