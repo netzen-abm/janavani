@@ -35,7 +35,7 @@ async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: i
 async def run_inbox_worker(
     application: Application, inbox: PostgresTelegramInbox, *, poll_seconds: float = 0.5
 ) -> None:
-    """Drain legacy payload rows; new content-free receipts are processed inline."""
+    """Process encrypted Telegram updates from the durable inbox with bounded retries."""
     failed_updates: set[int] = set()
 
     async def record_handler_error(update: object, context: Any) -> None:
