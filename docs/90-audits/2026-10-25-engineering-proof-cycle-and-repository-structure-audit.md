@@ -202,3 +202,66 @@ After those, correct branch ruleset and complete the archive-first transition to
 ## Evidence standard
 
 Do not mark a workstream COMPLETE because a file exists, a PR is mergeable, a workflow was green on an earlier SHA, or YAML describes a service. Every product-readiness claim must record implementation commit, applicable tests, security/privacy/failure results, actual service IDs and deployed commit SHAs, and a completed acceptance record.
+
+## Code-level findings from the continued line inspection
+
+### Finding A — OIDC callback exception handling
+
+- **File:** src/webapp/identity_gateway.py
+- **Finding:** The callback's exception tuple referenced InvalidToken, but the module imported only Fernet from cryptography.fernet. When an invalid/expired encrypted transaction cookie caused the callback to enter the exception handler, resolving that tuple could raise NameError instead of returning the intended safe sign-in error.
+- **Correction committed on the existing review branch:** import InvalidToken from cryptography.fernet in commit 7bdf0c5b5ee076b087ae49d07ed64da7dc7d5a2e.
+- **Verification:** existing OIDC state-mismatch regression exercises the exception path; new CI for the current head must complete before marking the fix verified.
+
+### Finding B — Architecture guard failure
+
+- **File:** src/webapp/main.py
+- **Evidence:** Architecture Guard run 40169156119 on the pre-fix review head reported src/webapp/main.py:28: line length 237 > 200 and src/webapp/main.py:35: line length 227 > 200.
+- **Correction committed on the existing review branch:** wrapped SessionMiddleware configuration and the signed-out landing response without moving responsibilities or changing behavior in commit d37f19c7e8d9a021f21eed49c9e5d2852e7b2092.
+- **Verification:** current-head Architecture Guard must pass before this is marked complete.
+
+### WebApp trust flow inspected
+
+The current route assembly in src/webapp/main.py installs Starlette SessionMiddleware, registers the identity-gateway routes, and routes API access through client_for_request. The latter calls api_assertion_for_session, which mints a five-minute HMAC assertion from a verified session identity and a fixed citizen capability set. Keep this trust flow request-scoped: do not restore a process-wide identity assertion or accept a user-supplied principal. The session cookie is stateless and has a bounded lifetime; local logout cannot revoke a copied cookie server-side, so the documented revocation/residual-risk release gate remains open.
+
+### Code review boundaries
+
+The most important reviewed source paths are now cross-referenced in the responsibility table above. The high-risk review was targeted at API/WebApp identity, Telegram durable ingress/worker, Case capability/content separation, provider composition, durable Case/Submission repositories, tests and runtime manifests. A complete file-by-file release audit still requires execution of the whole test suite and current-head checks; this document does not imply every source line has been dynamically exercised.
+
+## Supplied Web publishing projects — source-derived findings and recommendation
+
+### Webstudio
+
+Source reviewed: [webstudio-is/webstudio README](https://github.com/webstudio-is/webstudio/blob/main/README.md) and the [Webstudio documentation](https://docs.webstudio.is/).
+
+The project describes itself as an open-source visual development platform with hosted and self-hosting options. Its README states that the core is licensed under **AGPL-3.0-or-later**, while the optional sdk-components-animation package is proprietary and governed by a separate EULA. This is a material licensing consideration before adopting, redistributing, modifying, or self-hosting components.
+
+**Recommendation:** use Webstudio as an optional design/authoring/export tool for public, mostly static pages. Keep Janavani's canonical source-controlled content, SEO metadata, accessibility, routing and deployment configuration reviewable in Git. Do not make Webstudio the owner of citizen identity, consent, Case lifecycle, or private state. Review the license implications before adopting any code/package rather than treating “open source” as meaning every package has the same license.
+
+### webstudio-is/ssg-vercel-test
+
+Source reviewed: [repository README](https://github.com/webstudio-is/ssg-vercel-test/blob/main/README.md), [generated root HTML](https://github.com/webstudio-is/ssg-vercel-test/blob/main/index.html), [second route](https://github.com/webstudio-is/ssg-vercel-test/blob/main/another-page/index.html), and [Vercel configuration](https://github.com/webstudio-is/ssg-vercel-test/blob/main/vercel.json).
+
+The README contains only the repository title. The inspected tree is primarily generated HTML and bundled assets; it has no package.json in the reviewed root and no build pipeline exposed by the inspected files. The generated output demonstrates a root page, a second path, generated CSS/JS assets and Vercel image optimization URLs. It also contains a placeholder Open Graph origin (https://url/) and a third-party placeholder image URL, so it should not be copied into a public production site without output validation.
+
+**Recommendation:** treat this repository as a **static-export output/compatibility fixture**, not a maintained application starter or a replacement architecture. If using it for validation, inspect the generated route map, canonical/OG URLs, asset paths, image optimization dependencies and runtime assumptions.
+
+### Cloudflare Pages / Workers
+
+Sources reviewed: [Cloudflare Pages overview](https://developers.cloudflare.com/pages/), [Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/) and [Pages Functions](https://developers.cloudflare.com/pages/functions/get-started/). These official pages were current/recently updated in October 2026 when checked.
+
+The documentation describes Git-backed deploys and preview deployments for branches/pull requests, with Pages Functions available for server-side functionality. The Pages overview also says Workers supports most Pages use cases and is Cloudflare's primary platform for new full-stack applications.
+
+**Recommendation:**
+- **Public Janavani website:** Cloudflare Pages is a reasonable candidate if branch previews, static asset delivery and automatic deployment are useful. Existing GitHub Pages can remain until a concrete migration requirement is satisfied.
+- **Authenticated WebApp:** keep its session/identity/API trust boundary explicit. A static export may serve presentation assets, but it is not a replacement for the authenticated server-side WebApp or canonical API.
+- **Dynamic edge logic:** consider Pages Functions or Workers only for a concrete, bounded use case. Do not rewrite the existing Python FastAPI API just to match a hosting provider.
+- **Deployment control:** verify output URLs, CSP/security headers, cache policy, form behavior, accessibility, mobile/reduced-motion behavior, preview isolation and API links before publishing. A successful static build is not a successful authenticated user journey.
+
+## Repository organization findings
+
+The reviewed tree snapshot at commit 9d532b32ee23c68d68a7abe5857dfea21691be60 contained 1,121 tree entries (982 blobs): 582 .py, 52 .rs, 260 .md, and 9 .sql files across the full tree. Under src/, 298 Python/Rust source files were present. This is an inventory count, not an assertion that all those files are active runtime code; archive and legacy trees are deliberately included in the repository.
+
+Repeated Markdown basenames were observed, including README files, CONTRIBUTING files, archived/current Privacy Architecture documents, and archived/current Developer Guides. Same basenames under different directories are not by themselves duplicates. Before consolidation, compare substance, links, import/deployment references and archival purpose. Preserve prior material under archive/ and update canonical links rather than deleting based on filename similarity.
+
+**Current source of truth for this proof cycle:** this dated audit plus the superseding section in docs/MASTER_TASK_CHECKLIST.md. docs/README.md is the documentation entry point; root README.md points to this audit. Older dated audit/checklist statements remain historical evidence where they differ from the current rebaseline.
+
