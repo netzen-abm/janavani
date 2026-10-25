@@ -149,7 +149,8 @@ Start with:
 8. `docs/MASTER_TASK_CHECKLIST.md` — master tasks and subtasks
 9. `docs/CAPABILITY_REGISTRY.md` — capability status and ownership
 10. `planning/` — active engineering contracts and detailed specifications
-11. `docs/` — audits, architecture decisions, deployment and engineering records
+11. `docs/architecture/`, `docs/operations/`, and `docs/90-audits/` — architecture boundaries, acceptance runbooks, and dated verification evidence
+12. `archive/` — retained historical/superseded material; never current implementation guidance
 
 Historical or superseded material belongs under `archive/` and must not be treated as current direction.
 
@@ -183,7 +184,9 @@ Do not repeat an audit that has already been completed. Use dated audit records 
 
 ## Current engineering phase
 
-The present phase is **ecosystem foundation convergence + Dynamic Web active build**: establish capability/data/permission/transport/security contracts, verify runtime boundaries, build the Dynamic Web as the first active product surface, and progressively implement independent capabilities and interfaces without reducing the full ecosystem scope.
+The current phase is **proof-cycle convergence for the Dynamic Web and Telegram**: resolve the Telegram inbox privacy/retention decision, prove post-commit replay safety against PostgreSQL, verify the deployed OIDC/session trust path, deploy and test WebApp/API/Telegram independently, and align the physical branch inventory to exactly eight refs. Do not broaden architecture or promote the product based on earlier green CI runs or deployment YAML alone.
+
+Current audit and execution baseline: [`docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md`](docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md). Issues: [#217 replay safety](https://github.com/netzen-abm/janavani/issues/217), [#218 reproducible toolchain](https://github.com/netzen-abm/janavani/issues/218), and [#219 Telegram payload privacy](https://github.com/netzen-abm/janavani/issues/219).
 
 ## Repository principle
 
