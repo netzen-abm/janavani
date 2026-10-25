@@ -207,7 +207,12 @@ def test_invalid_oidc_transaction_cookie_returns_safe_unauthorized(monkeypatch):
     assert started.status_code == 303
 
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
-    client.cookies.set("janavani_oidc_transaction", "malformed-ciphertext")
+    client.cookies.set(
+        "janavani_oidc_transaction",
+        "malformed-ciphertext",
+        domain="webapp.example",
+        path="/auth/callback",
+    )
 
     response = client.get(
         "/auth/callback?" + urlencode({"code": "one-time-code", "state": state}),
