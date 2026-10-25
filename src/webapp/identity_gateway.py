@@ -4,7 +4,7 @@ import base64, hashlib, hmac, json, os, secrets, time
 from html import escape
 from uuid import uuid4
 from urllib.parse import urlsplit
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from src.webapp.oidc_client import (
