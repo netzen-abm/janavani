@@ -64,7 +64,7 @@ Example:
 Janavani will guide you step by step.
 
 Before describing an issue, review /privacy. The current webhook path stores only the
-Telegram update ID and processing status in PostgreSQL, not the message body.
+Telegram update ID plus processing/attempt/lease metadata in PostgreSQL, not the message body.
 Older payload-bearing queue rows, if any, may remain until the compatibility worker resumes.
 There is no independent cleanup job for those legacy rows while that worker is offline.
 Until legacy cleanup is verified, share only minimum necessary, non-sensitive details.
