@@ -35,9 +35,9 @@ At review time:
 
 ### P0.2 — Telegram inbox privacy/retention
 
-The current `PostgresTelegramInbox.accept` stores the full Telegram update JSON in the durable inbox. A text update may contain raw citizen narrative and identifiers. The inbox payload is cleared after successful processing or terminal dead-lettering, but can remain during pending, processing, and retry states.
+The earlier `PostgresTelegramInbox.accept` implementation stored the full Telegram update JSON in the durable inbox. The candidate now uses `claim_update(update_id)` for new deliveries: raw update data remains in request memory, while PostgreSQL stores only update ID, status, attempts and lease timestamps. The old payload-bearing path has been renamed `accept_legacy_payload`, and the worker now claims only non-NULL payload rows to drain any compatibility backlog.
 
-This means the Case table's metadata-only persistence rule does not by itself establish that citizen narrative never enters durable Janavani storage. Issue #219 tracks the decision.
+The Case table's metadata-only rule did not, by itself, establish that citizen narrative never entered durable Janavani storage. The current code removes that write for new webhook deliveries, but previously accepted raw-payload rows may remain until the compatibility worker processes them. Issue #219 remains open for migration rollout, legacy-row cleanup evidence, privacy disclosure and replay verification.
 
 Required response:
 - define precisely which fields may be durably retained;
@@ -194,7 +194,7 @@ This is a responsibility map, not an instruction to rename established Python pa
 
 ## Ordered next two engineering actions
 
-1. **Privacy decision and tests:** resolve full Telegram update payload persistence (Issue #219), then add a PostgreSQL-backed negative test for prohibited fields and retention/deletion behavior.
+1. **Privacy decision and tests:** deploy the content-free receipt migration, verify no legacy `payload IS NOT NULL` rows remain, and prove that new webhook deliveries never persist raw Telegram JSON (Issue #219).
 2. **Replay proof:** close Issue #217 using failure injection through the actual Telegram handler and shared Case/Submission transaction, followed by independent WebApp/API/Telegram runtime acceptance.
 
 After those, correct branch ruleset and complete the archive-first transition to exactly eight branches, then resolve reproducible-lock/type-check gates, deploy independent services and complete the end-to-end runbook.
@@ -343,13 +343,14 @@ The focused companion audit is [2026-10-25-vercel-production-risk-audit.md](2026
 
 ## Telegram privacy disclosure correction — 25 October 2026
 
-A targeted source review confirmed that the PostgreSQL inbox stores the full Telegram update JSON while work is pending, processing or retrying. The privacy command previously described issue text as process-local without explaining that the original webhook payload may also remain in the durable inbox. That disclosure was incomplete.
+A targeted source review confirmed that the previous webhook implementation persisted full Telegram update JSON in PostgreSQL. The candidate now records content-free receipts for new deliveries and dispatches parsed updates inline; the compatibility worker is restricted to payload-bearing rows created by the earlier implementation. The privacy command and `/start` now describe both the new flow and the residual legacy backlog honestly.
 
-The current review branch now updates src/commands/privacy.py and src/commands/start.py to explain:
-- webhook mode can retain the full update payload in the PostgreSQL inbox while pending/processing/retrying;
-- payload is cleared on successful processing or terminal dead-lettering;
-- the implementation does not enforce a wall-clock deletion deadline while the worker is offline;
-- the 15-minute process-local workflow text buffer is separate from the durable webhook inbox;
-- until retention is enforced, users should share only minimum necessary, non-sensitive details.
+Added or updated evidence on the existing review branch:
+- `src/storage/repositories/postgres_telegram_inbox.py`: content-free `claim_update(update_id)` plus an explicitly named `accept_legacy_payload` method for compatibility tests; the worker claims only rows with payload data.
+- `db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql`: allows receipt rows with a NULL payload.
+- `src/web/telegram_webhook_app.py`: dispatches a newly claimed update in request memory, marks the receipt processed only after handlers succeed, and returns a retryable non-2xx response on processing failures.
+- `tests/test_postgres_telegram_inbox.py`: PostgreSQL tests assert `payload IS NULL` for new receipts and test duplicate/stale claims.
+- `tests/test_telegram_webhook.py`: tests inline success, exception retry and handler-reported failure.
+- `src/commands/privacy.py`, `src/commands/start.py`, and `tests/test_telegram_privacy.py`: disclose the content-free receipt behavior and legacy queue limitation.
 
-Regression tests were added to tests/test_telegram_privacy.py. This is a disclosure correction, **not closure of Issue #219**. The architectural decision and live-PostgreSQL test remain outstanding. Do not describe the current webhook path as local-only or fully privacy-verified.
+This is not closure of Issue #219 or #217. The migration must be applied before deploying the new webhook handler, any legacy payload-bearing backlog must drain, and exact-head PostgreSQL integration plus post-commit handler replay tests must pass. Until then, do not claim production privacy verification or effectively-once consequential behavior.
