@@ -22,7 +22,7 @@ from src.bot_telegram import (
 )
 from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
-from src.web.telegram_inbox_worker import run_inbox_worker
+from src.web.telegram_inbox_worker import _renew_lease, run_inbox_worker
 
 logger = logging.getLogger(__name__)
 
@@ -197,8 +197,17 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         attempts = int(receipt["attempts"])
         failed_updates = request.app.state.inline_failed_updates
         failed_updates.discard(update_id)
+        dispatch = asyncio.create_task(bot_app.process_update(update))
+        lease = asyncio.create_task(_renew_lease(durable_inbox, update_id, attempts))
         try:
-            await bot_app.process_update(update)
+            done, _ = await asyncio.wait(
+                {dispatch, lease}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if lease in done:
+                dispatch.cancel()
+                await asyncio.gather(dispatch, return_exceptions=True)
+                raise RuntimeError("telegram_inbox_lease_lost")
+            await dispatch
             if update_id in failed_updates:
                 raise RuntimeError("telegram_handler_failed")
             await asyncio.to_thread(
@@ -207,6 +216,8 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                 attempts=attempts,
             )
         except Exception as exc:
+            if not dispatch.done():
+                dispatch.cancel()
             try:
                 await asyncio.to_thread(
                     durable_inbox.retry_or_dead_letter,
@@ -223,6 +234,9 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                 status_code=503,
                 detail="Telegram update could not be completed; retry delivery",
             ) from exc
+        finally:
+            lease.cancel()
+            await asyncio.gather(lease, dispatch, return_exceptions=True)
         return {"status": "accepted"}
 
     return app
