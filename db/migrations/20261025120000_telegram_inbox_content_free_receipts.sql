@@ -8,6 +8,28 @@ ALTER TABLE public.telegram_update_inbox
     ADD COLUMN IF NOT EXISTS payload_expires_at timestamptz
     DEFAULT (now() + interval '24 hours');
 
+-- Do not reset the retention clock of rows that were accepted long ago.
+UPDATE public.telegram_update_inbox
+SET payload_expires_at = LEAST(
+    COALESCE(payload_expires_at, now() + interval '24 hours'),
+    received_at + interval '24 hours'
+)
+WHERE status IN ('pending', 'processing')
+  AND (payload IS NOT NULL OR encrypted_payload IS NOT NULL);
+
+-- Expired legacy content is deleted during migration, before startup can re-encrypt it.
+UPDATE public.telegram_update_inbox
+SET status = 'dead_letter',
+    payload = NULL,
+    encrypted_payload = NULL,
+    payload_expires_at = NULL,
+    locked_at = NULL,
+    processed_at = now(),
+    last_error_code = 'payload_expired_during_migration'
+WHERE status IN ('pending', 'processing')
+  AND (payload IS NOT NULL OR encrypted_payload IS NOT NULL)
+  AND payload_expires_at <= now();
+
 -- A content-free receipt produced by the interim inline implementation cannot be replayed.
 -- Preserve the update ID for audit/deduplication but move it to a terminal state instead of
 -- allowing a pending row with no recoverable payload to block the same update forever.
