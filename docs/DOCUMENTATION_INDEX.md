@@ -1,8 +1,8 @@
 # JANAVANI — DOCUMENTATION INDEX & AUTHORITY MAP
 
 **Status:** LOCKED — DOCUMENTATION ORGANISATION STANDARD
-**Version:** 2.1
-**Date:** 11 September 2026
+**Version:** 2.2
+**Date:** 25 October 2026
 
 This index prevents contradictory documents, duplicate audits, stale implementation instructions and accidental use of historical material.
 
