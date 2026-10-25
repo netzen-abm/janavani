@@ -62,19 +62,22 @@ def test_active_deployment_manifests_select_canonical_runtime():
     assert "src/web.py" not in render
 
 
-def test_render_declares_independent_web_and_telegram_services():
+def test_render_declares_independent_api_webapp_and_telegram_services():
     render = (ROOT / "render.yaml").read_text(encoding="utf-8")
 
     assert "name: janavani-web-api" in render
+    assert "name: janavani-webapp" in render
     assert "name: janavani-telegram-webhook" in render
-    assert render.count("type: web") == 2
+    assert render.count("type: web") == 3
     assert "type: worker" not in render
     assert "plan: free" in render
     assert "src.web.canonical_app:app" in render
     assert "src.web.telegram_webhook_app:app" in render
 
     web_start = "uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT"
+    webapp_start = "uvicorn src.webapp.main:app --host 0.0.0.0 --port $PORT"
     telegram_start = "uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT"
     assert web_start in render
+    assert webapp_start in render
     assert telegram_start in render
     assert "subprocess" not in render
