@@ -1,8 +1,8 @@
 # JANAVANI — PROJECT MAP
 
 **Status:** ACTIVE — REPOSITORY NAVIGATION AND OWNERSHIP MAP
-**Version:** 2.0
-**Date:** 11 September 2026
+**Version:** 2.1
+**Date:** 25 October 2026
 
 ## 1. Purpose
 
