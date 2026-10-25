@@ -37,7 +37,7 @@ At review time:
 
 The earlier `PostgresTelegramInbox.accept` implementation stored the full Telegram update JSON in the durable inbox. The candidate now uses `claim_update(update_id)` for new deliveries: raw update data remains in request memory, while PostgreSQL stores only update ID, status, attempts and lease timestamps. The old payload-bearing path has been renamed `accept_legacy_payload`, and the worker now claims only non-NULL payload rows to drain any compatibility backlog.
 
-The Case table's metadata-only rule did not, by itself, establish that citizen narrative never entered durable Janavani storage. The current code removes that write for new webhook deliveries, but previously accepted raw-payload rows may remain until the compatibility worker processes them. Issue #219 remains open for migration rollout, legacy-row cleanup evidence, privacy disclosure and replay verification.
+The Case table's metadata-only rule did not, by itself, establish that citizen narrative never entered durable Janavani storage. The current candidate now encrypts Telegram webhook payloads at the existing persistence boundary and sets an explicit 24-hour processing deadline. The expiry sweeper runs through the worker; if the worker is offline at the deadline, ciphertext may physically remain until it resumes. Issue #219 remains open for migration rollout, plaintext-row conversion, key rotation/backup review, worker-offline expiry evidence and replay verification.
 
 Required response:
 - define precisely which fields may be durably retained;
@@ -194,7 +194,7 @@ This is a responsibility map, not an instruction to rename established Python pa
 
 ## Ordered next two engineering actions
 
-1. **Privacy decision and tests:** deploy the content-free receipt migration, verify no legacy `payload IS NOT NULL` rows remain, and prove that new webhook deliveries never persist raw Telegram JSON (Issue #219).
+1. **Privacy decision and tests:** deploy `20261025120000_telegram_inbox_encrypted_payloads.sql`, configure the external Fernet key ring, verify no plaintext `payload IS NOT NULL` rows remain, and prove expiry/cleanup behavior with PostgreSQL (Issue #219).
 2. **Replay proof:** close Issue #217 using failure injection through the actual Telegram handler and shared Case/Submission transaction, followed by independent WebApp/API/Telegram runtime acceptance.
 
 After those, correct branch ruleset and complete the archive-first transition to exactly eight branches, then resolve reproducible-lock/type-check gates, deploy independent services and complete the end-to-end runbook.
