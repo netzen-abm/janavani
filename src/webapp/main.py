@@ -11,7 +11,7 @@ for _candidate in (*Path(__file__).resolve().parents, Path.cwd(), Path.cwd().par
         break
 
 from fasthtml.common import (
-    A, Button, Div, Form, H1, H3, Input, Label, P, Style, Textarea, Titled,
+    A, Button, Div, Form, H1, H2, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
@@ -55,7 +55,7 @@ def get(request: Request):
         return Titled(
             "Janavani — Citizen Action Hub",
             Div(
-                H1("JANAVANI"),
+                H2("JANAVANI"),
                 P("Sign in to create a Case, select a verified authority, and continue securely across Janavani surfaces."),
                 A("Sign in securely", href="/auth/login"),
             ),
@@ -64,7 +64,7 @@ def get(request: Request):
         "🇮🇳 Janavani — Citizen Action Hub",
         Div(
             Div(
-                H1("JANAVANI"),
+                H2("JANAVANI"),
                 P("Create and review a civic Case through the shared Janavani platform."),
                 style="text-align: center; margin-bottom: 3rem;",
             ),
