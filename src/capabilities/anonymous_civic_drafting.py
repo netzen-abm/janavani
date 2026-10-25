@@ -107,9 +107,11 @@ Information and records requested:
 4. The relevant record period is: [Specify dates or period as precisely as possible].
 
 Please provide the records electronically where available. If the requested information,
-or part of it, is held by another public authority, please consider transfer under\nsection 6(3) where applicable and inform me.
+or part of it, is held by another public authority, please consider transfer under
+section 6(3) where applicable and inform me.
 
-I understand that disclosure is subject to the RTI Act, applicable exemptions and\nprescribed fees. This application seeks existing information and records; it is not
+I understand that disclosure is subject to the RTI Act, applicable exemptions and
+prescribed fees. This application seeks existing information and records; it is not
 a request for a grievance decision or for an explanation to be newly created.
 
 Yours faithfully,
