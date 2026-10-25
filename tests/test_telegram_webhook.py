@@ -159,9 +159,11 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
     monkeypatch.setenv("TELEGRAM_WEBHOOK_URL", "https://bot.example/telegram/webhook")
     monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "janavani-webhook-test-secret-123456789")
     monkeypatch.setenv("JANAVANI_TELEGRAM_INBOX_DSN", "postgresql://test-only")
+    import base64
+
     monkeypatch.setenv(
         "JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS",
-        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        base64.urlsafe_b64encode(b"0" * 32).decode("ascii"),
     )
     monkeypatch.setattr(webhook, "build_application", lambda *, token: application)
     inbox = SimpleNamespace(
