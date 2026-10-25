@@ -11,7 +11,7 @@ class FakeInbox:
         self.ids = set()
         self.fail = fail
 
-    def accept(self, update_id, payload):
+    def accept_encrypted(self, update_id, payload):
         if self.fail:
             raise OSError("database unavailable")
         if update_id in self.ids:
@@ -46,7 +46,7 @@ def test_webhook_persists_update_before_acknowledging(monkeypatch):
     assert response.status_code == 202
     assert inbox.accepted[0][0] == 9001
     client.app.state.telegram_application.update_queue.put.assert_not_called()
-    # Durable inbox owns acceptance; the process-local PTB queue is not used.
+    # Encrypted durable inbox owns acceptance; the process-local PTB queue is not used.
 
 
 def test_webhook_returns_retryable_failure_if_durable_acceptance_fails(monkeypatch):
