@@ -1,4 +1,15 @@
 import os
+import sys
+from pathlib import Path
+
+# The WebApp is deployed as a subdirectory on some hosts. Resolve the monorepo
+# root before importing shared capabilities; never duplicate those modules.
+for _candidate in (*Path(__file__).resolve().parents, Path.cwd(), Path.cwd().parent):
+    if (_candidate / "src" / "webapp" / "main.py").is_file():
+        if str(_candidate) not in sys.path:
+            sys.path.insert(0, str(_candidate))
+        break
+
 from fasthtml.common import (
     A, Button, Div, Form, H1, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
