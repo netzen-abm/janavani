@@ -11,7 +11,7 @@ DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 TEST_FERNET_KEY = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 MIGRATIONS = (
     ROOT / "db/migrations/20261012120000_telegram_update_inbox.sql",
-    ROOT / "db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql",
+    ROOT / "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql",
 )
 
 
