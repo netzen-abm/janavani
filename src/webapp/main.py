@@ -17,7 +17,7 @@ from fasthtml.common import (
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
-from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware, validate_web_identity_configuration
+from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware
 from src.webapp.runtime_mode import is_production_runtime
 from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
@@ -37,7 +37,6 @@ webapp, rt = fast_app(
         """)
     )
 )
-validate_web_identity_configuration()
 webapp.add_middleware(SameOriginCookieMutationMiddleware)
 webapp.add_middleware(
     SessionMiddleware,
