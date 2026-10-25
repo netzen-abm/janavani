@@ -22,7 +22,7 @@ def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
         "/submit-issue",
         data={"citizen_input": "The public streetlight has been out for three nights."},
     )
-    assert response.status_code == 200
+    assert response.status_code == 401
     assert "Sign-in required" in response.text
 
 
