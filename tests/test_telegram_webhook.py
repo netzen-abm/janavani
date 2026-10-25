@@ -159,11 +159,19 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
     monkeypatch.setenv("TELEGRAM_WEBHOOK_URL", "https://bot.example/telegram/webhook")
     monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "janavani-webhook-test-secret-123456789")
     monkeypatch.setenv("JANAVANI_TELEGRAM_INBOX_DSN", "postgresql://test-only")
+    monkeypatch.setenv(
+        "JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS",
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+    )
     monkeypatch.setattr(webhook, "build_application", lambda *, token: application)
+    inbox = SimpleNamespace(
+        dsn="postgresql://test-only",
+        secure_legacy_payloads=MagicMock(return_value=0),
+    )
     monkeypatch.setattr(
         webhook,
         "PostgresTelegramInbox",
-        lambda *, dsn: SimpleNamespace(dsn=dsn),
+        lambda *, dsn, encryption_keys: inbox,
     )
 
     async def idle_worker(_application, _inbox):
@@ -185,45 +193,33 @@ def test_webhook_registers_the_shared_command_catalogue(monkeypatch):
     assert application.bot_data.get("janavani_ephemeral_issue_cleanup") is None
     application.stop.assert_awaited_once()
     application.shutdown.assert_awaited_once()
+    inbox.secure_legacy_payloads.assert_called_once_with()
 
-class _ReceiptOnlyInbox:
-    """Test receipt state without an API that accepts or persists raw payloads."""
+class _EncryptedQueueInbox:
+    """Test double for the durable encrypted-inbox API."""
 
-    def __init__(self):
-        self.status = "claimed"
-        self.claimed_ids = []
-        self.processed = []
-        self.retried = []
-        self.legacy_payload_accepts = 0
+    def __init__(self, *, fail=False):
+        self.enqueued = {}
+        self.fail = fail
+        self.claim_next_calls = 0
 
-    def claim_update(self, update_id):
-        self.claimed_ids.append(update_id)
-        return {"status": self.status, "attempts": 1}
-
-    def heartbeat(self, update_id, *, attempts):
-        return None
-
-    def mark_processed(self, update_id, *, attempts):
-        self.processed.append((update_id, attempts))
-        self.status = "processed"
-
-    def retry_or_dead_letter(self, update_id, *, attempts, error_code):
-        self.retried.append((update_id, attempts, error_code))
-        self.status = "pending"
+    def accept_encrypted(self, update_id, payload):
+        if self.fail:
+            raise RuntimeError("synthetic secret narrative must not be logged")
+        if update_id in self.enqueued:
+            return False
+        self.enqueued[update_id] = payload
+        return True
 
     def claim_next(self):
-        # The compatibility worker must have no new payload-bearing rows to claim.
+        self.claim_next_calls += 1
         return None
 
-    def accept_legacy_payload(self, update_id, payload):
-        self.legacy_payload_accepts += 1
-        raise AssertionError("New webhook updates must not enqueue raw payloads")
 
-
-def test_durable_webhook_processes_inline_and_stores_only_receipt_state():
+def test_durable_webhook_encrypts_update_before_acknowledging():
     application = _application()
     application.process_update = AsyncMock()
-    inbox = _ReceiptOnlyInbox()
+    inbox = _EncryptedQueueInbox()
     client_app = create_webhook_app(application=application, inbox=inbox)
 
     with TestClient(client_app) as client:
@@ -231,18 +227,30 @@ def test_durable_webhook_processes_inline_and_stores_only_receipt_state():
 
     assert response.status_code == 202
     assert response.json() == {"status": "accepted"}
-    assert inbox.claimed_ids == [123]
-    assert inbox.processed == [(123, 1)]
-    assert inbox.retried == []
-    assert inbox.legacy_payload_accepts == 0
-    application.process_update.assert_awaited_once()
+    assert inbox.enqueued == {123: _payload()}
+    assert inbox.claim_next_calls >= 1
+    application.process_update.assert_not_awaited()
     application.update_queue.put.assert_not_awaited()
 
 
-def test_durable_webhook_returns_retryable_failure_when_handler_raises():
+def test_durable_webhook_acknowledges_duplicate_after_durable_insert():
     application = _application()
-    application.process_update = AsyncMock(side_effect=RuntimeError("synthetic failure"))
-    inbox = _ReceiptOnlyInbox()
+    inbox = _EncryptedQueueInbox()
+    client_app = create_webhook_app(application=application, inbox=inbox)
+
+    with TestClient(client_app) as client:
+        first = _post(client, json=_payload())
+        duplicate = _post(client, json=_payload())
+
+    assert first.status_code == 202
+    assert duplicate.status_code == 202
+    assert inbox.enqueued == {123: _payload()}
+    application.process_update.assert_not_awaited()
+
+
+def test_durable_webhook_returns_retryable_status_when_encrypted_insert_fails():
+    application = _application()
+    inbox = _EncryptedQueueInbox(fail=True)
     client_app = create_webhook_app(application=application, inbox=inbox)
 
     with TestClient(client_app) as client:
@@ -250,32 +258,7 @@ def test_durable_webhook_returns_retryable_failure_when_handler_raises():
 
     assert response.status_code == 503
     assert response.json()["detail"] == (
-        "Telegram update could not be completed; retry delivery"
+        "Telegram update could not be durably accepted; retry delivery"
     )
-    assert inbox.claimed_ids == [123]
-    assert inbox.processed == []
-    assert inbox.retried == [(123, 1, "RuntimeError")]
-    assert inbox.legacy_payload_accepts == 0
-
-
-def test_durable_webhook_returns_retryable_failure_when_ptb_reports_handler_error():
-    from types import SimpleNamespace
-
-    application = _application()
-    inbox = _ReceiptOnlyInbox()
-    client_app = create_webhook_app(application=application, inbox=inbox)
-
-    async def report_error(update):
-        registered = application.add_error_handler.call_args_list
-        inline_handler = registered[0].args[0]
-        await inline_handler(update, SimpleNamespace(error=RuntimeError("handler failed")))
-
-    application.process_update = AsyncMock(side_effect=report_error)
-
-    with TestClient(client_app) as client:
-        response = _post(client, json=_payload())
-
-    assert response.status_code == 503
-    assert inbox.processed == []
-    assert inbox.retried == [(123, 1, "RuntimeError")]
-
+    assert "secret narrative" not in response.text
+    application.process_update.assert_not_awaited()
