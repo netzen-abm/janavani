@@ -347,7 +347,7 @@ A targeted source review confirmed that the previous webhook implementation pers
 
 Added or updated evidence on the existing review branch:
 - `src/storage/repositories/postgres_telegram_inbox.py`: content-free `claim_update(update_id)` plus an explicitly named `accept_legacy_payload` method for compatibility tests; the worker claims only rows with payload data.
-- `db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql`: allows receipt rows with a NULL payload.
+- `db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql`: allows receipt rows with a NULL payload.
 - `src/web/telegram_webhook_app.py`: dispatches a newly claimed update in request memory, marks the receipt processed only after handlers succeed, and returns a retryable non-2xx response on processing failures.
 - `tests/test_postgres_telegram_inbox.py`: PostgreSQL tests assert `payload IS NULL` for new receipts and test duplicate/stale claims.
 - `tests/test_telegram_webhook.py`: tests inline success, exception retry and handler-reported failure.
