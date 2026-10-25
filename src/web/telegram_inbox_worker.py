@@ -23,8 +23,12 @@ async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: i
                 raise RuntimeError("Telegram inbox processing lease was lost")
         except asyncio.CancelledError:
             raise
-        except Exception:
-            logger.exception("Telegram inbox lease renewal failed for update_id=%s", update_id)
+        except Exception as exc:
+            logger.error(
+                "Telegram inbox lease renewal failed for update_id=%s error_type=%s",
+                update_id,
+                type(exc).__name__,
+            )
             return
 
 
@@ -38,8 +42,11 @@ async def run_inbox_worker(
         update_id = getattr(update, "update_id", None)
         if isinstance(update_id, int):
             failed_updates.add(update_id)
-        logger.error("Telegram handler raised an error for update_id=%s", update_id,
-                     exc_info=context.error)
+        logger.error(
+            "Telegram handler failed for update_id=%s error_type=%s",
+            update_id,
+            type(context.error).__name__,
+        )
 
     application.add_error_handler(record_handler_error)
     try:
@@ -66,7 +73,11 @@ async def run_inbox_worker(
                 dispatch.cancel()
                 raise
             except Exception as exc:
-                logger.exception("Telegram inbox processing failed for update_id=%s", update_id)
+                logger.error(
+                    "Telegram inbox processing failed for update_id=%s error_type=%s",
+                    update_id,
+                    type(exc).__name__,
+                )
                 try:
                     await asyncio.to_thread(
                         inbox.retry_or_dead_letter, update_id,
@@ -74,7 +85,11 @@ async def run_inbox_worker(
                     )
                 except Exception:
                     # A reclaimed claim must not mutate the newer worker's state.
-                    logger.exception("Telegram inbox retry state update failed for update_id=%s", update_id)
+                    logger.error(
+                        "Telegram inbox retry state update failed for update_id=%s error_type=%s",
+                        update_id,
+                        type(exc).__name__,
+                    )
             finally:
                 lease.cancel()
                 if not dispatch.done():
