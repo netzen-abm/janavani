@@ -15,8 +15,8 @@
 - [ ] Production provider configuration passes `validate_runtime_configuration()`; no process-local fallback is used for durable Case, artifact, evidence, consent, submission, authority-directory or identity-link state.
 - [ ] `JANAVANI_AUTHORITY_REPOSITORY_PROVIDER=postgres` is configured in production. The shared directory is seeded with source-backed records, and only records explicitly marked verified with a usable destination are offered to citizens.
 - [ ] Artifact storage, citizen-content retention/deletion policy, migration state, backup/restore and operational alerting are approved.
-- [ ] Apply `db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql` before deploying the content-free webhook code. Do not roll back to the old raw-payload webhook implementation after new content-free receipts exist; use a forward-compatible recovery build.
-- [ ] Inspect `SELECT count(*) FROM public.telegram_update_inbox WHERE payload IS NOT NULL`; if non-zero, verify the compatibility worker can process the legacy backlog and do not mark privacy acceptance complete until zero.
+- [ ] Apply `db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql` before deploying the encrypted queue implementation. Configure `JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS` as a secret (active Fernet key first, previous keys retained for decryption/rollback); the webhook must fail closed if it is missing or invalid. The production runtime must not reuse the deterministic CI key. Do not roll back to old raw-payload code; use a forward-compatible recovery build.
+- [ ] After startup migration, inspect `SELECT count(*) FROM public.telegram_update_inbox WHERE payload IS NOT NULL`; it must be zero. Confirm pending work has `encrypted_payload IS NOT NULL`, a future `payload_expires_at`, and no plaintext marker in the ciphertext. Do not close privacy acceptance until legacy plaintext conversion and expired-row cleanup are verified.
 - [ ] The WebApp uses a trusted OIDC issuer/client and HTTPS callback; authorization-code PKCE (S256), state, nonce, JWKS signature, issuer, audience and expiry validation pass. Client/session secrets exist only in server-side deployment secrets.
 - [ ] Web sessions use HttpOnly, SameSite=Lax cookies and Secure cookies in production; the encrypted OIDC transaction cookie is short-lived. API assertions are freshly minted for five minutes and independently verified; the browser cannot choose a principal or capability list.
 - [ ] Telegram webhook secret is configured in the provider and service; webhook URL is HTTPS and points to the actual deployed Telegram service.
@@ -67,17 +67,18 @@ Create two synthetic citizens, **A** and **B**, and one non-sensitive test Case 
 **Pass:** Both directions use canonical persistence and consistent domain rules.
 
 ### 5. Delivery, idempotency and worker recovery
-- [ ] Submit the same synthetic Telegram `update_id` twice; a content-free receipt suppresses completed duplicates without duplicate business effects.
-- [ ] Inspect the database row during processing and after completion; the new webhook receipt has `payload IS NULL` throughout.
-- [ ] Simulate a transient database outage in staging; receipt claim fails retryably (HTTP 503) rather than acknowledging an unprocessed update.
-- [ ] Simulate handler failure; the route returns HTTP 503, records retry state without persisting the raw payload, and permits Telegram redelivery.
-- [ ] Inject a process crash after the business transaction commits but before receipt completion/HTTP acknowledgement; redelivery must not duplicate the Case/Submission mutation or lifecycle event.
-- [ ] If legacy payload rows exist, stop/restart the compatibility worker and verify legacy rows drain, terminal payload clearing occurs, and the payload row count reaches zero.
+- [ ] Submit the same synthetic Telegram `update_id` twice; encrypted enqueue deduplicates it without double-accepting work.
+- [ ] Inspect the database row during processing: `payload IS NULL`, `encrypted_payload IS NOT NULL`, and plaintext narrative markers do not appear in ciphertext bytes.
+- [ ] Simulate a transient database outage in staging; encrypted enqueue fails retryably (HTTP 503) rather than acknowledging unpersisted work.
+- [ ] Simulate handler failure; the webhook has already acknowledged durable queue acceptance, so the worker retains ciphertext, records the error class only, and retries with bounded backoff.
+- [ ] Inject a process crash after the business transaction commits but before `mark_processed`; reclaim the same encrypted update and prove no duplicate Case/Submission mutation or lifecycle event.
+- [ ] Verify expiry: after the 24-hour deadline, the worker dead-letters and clears expired payloads; document that physical cleanup runs when the worker is active and can be delayed by worker outage.
+- [ ] If legacy payload rows exist, verify startup encrypts them before webhook registration and that `payload IS NOT NULL` reaches zero.
 - [ ] Run concurrent workers and verify stale lease holders cannot commit after their claim has been fenced.
 - [ ] Replay an update that would trigger a consequential action; prove the domain operation has its own idempotency guard. Inbox deduplication alone is not enough.
 - [ ] Verify retry limits, dead-letter visibility, payload cleanup/retention and alerting.
 
-**Pass:** New webhook requests store no raw payload, non-2xx responses permit retries, stale receipt claims are fenced, any legacy payload queue is drained, and replay cannot duplicate consequential business effects. Do not call the replay gate passed until the injected post-commit failure test succeeds against PostgreSQL.
+**Pass:** New requests store no plaintext payload, durable acceptance succeeds only after ciphertext commit, worker retries/dead-letters within a bounded expiry, stale leases are fenced, and real-handler replay cannot duplicate consequential business effects. Do not call the replay gate passed until the injected post-commit failure test succeeds against PostgreSQL.
 
 ### 6. Persistence and restart
 - [ ] Restart the Web/API process and retrieve A's Case from a new session.
