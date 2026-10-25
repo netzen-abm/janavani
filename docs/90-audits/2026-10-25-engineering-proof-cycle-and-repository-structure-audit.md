@@ -257,6 +257,10 @@ The documentation describes Git-backed deploys and preview deployments for branc
 - **Dynamic edge logic:** consider Pages Functions or Workers only for a concrete, bounded use case. Do not rewrite the existing Python FastAPI API just to match a hosting provider.
 - **Deployment control:** verify output URLs, CSP/security headers, cache policy, form behavior, accessibility, mobile/reduced-motion behavior, preview isolation and API links before publishing. A successful static build is not a successful authenticated user journey.
 
+## Additional functional finding — unreachable legacy bill-review journey
+
+The WebApp still registers /bill-review/{bill_code} and /dispatch-objection in src/webapp/main.py. The downstream JanavaniWebAPIClient.download_constitutional_objection method currently returns None, so the route always shows an error instead of generating an artifact. This is tracked in [Issue #220](https://github.com/netzen-abm/janavani/issues/220). Decide whether to retire the route after reference/dependency checks or replace it with the canonical authenticated document capability. Do not revive the legacy transport or delete the route without preserving required substance and verifying links/tests.
+
 ## Repository organization findings
 
 The reviewed tree snapshot at commit 9d532b32ee23c68d68a7abe5857dfea21691be60 contained 1,121 tree entries (982 blobs): 582 .py, 52 .rs, 260 .md, and 9 .sql files across the full tree. Under src/, 298 Python/Rust source files were present. This is an inventory count, not an assertion that all those files are active runtime code; archive and legacy trees are deliberately included in the repository.
