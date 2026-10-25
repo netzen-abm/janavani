@@ -87,6 +87,9 @@ def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
     inbox = (ROOT / "src/storage/repositories/postgres_telegram_inbox.py").read_text(
         encoding="utf-8"
     )
+    worker_store = (
+        ROOT / "src/storage/repositories/postgres_telegram_inbox_worker.py"
+    ).read_text(encoding="utf-8")
     migration = (
         ROOT / "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql"
     ).read_text(encoding="utf-8")
@@ -96,7 +99,7 @@ def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
     assert "durable_inbox.secure_legacy_payloads" in webhook
     assert "accept_legacy_payload" not in inbox
     assert "MultiFernet" in inbox
-    assert "payload IS NOT NULL OR encrypted_payload IS NOT NULL" in inbox
+    assert "payload IS NOT NULL OR encrypted_payload IS NOT NULL" in worker_store
     assert "payload_expires_at" in migration
     assert "JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS" in render
 
