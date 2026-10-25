@@ -25,6 +25,12 @@ def test_bundle_staging_is_repeatable_and_excludes_previous_bundle(tmp_path: Pat
     repository_root = tmp_path / "repo"
     project_root = repository_root / "src" / "webapp"
     project_root.mkdir(parents=True)
+    canonical_capability = repository_root / "src" / "capabilities" / "anonymous_civic_drafting.py"
+    canonical_renderer = repository_root / "src" / "documents" / "anonymous_draft_renderer.py"
+    canonical_capability.parent.mkdir(parents=True)
+    canonical_renderer.parent.mkdir(parents=True)
+    canonical_capability.write_text("CANONICAL_DRAFT_CAPABILITY = True\n", encoding="utf-8")
+    canonical_renderer.write_text("CANONICAL_DRAFT_RENDERER = True\n", encoding="utf-8")
     (project_root / "main.py").write_text("app = object()\n", encoding="utf-8")
     (project_root / "case_workspace.py").write_text(
         "CANONICAL_CASE_MODULE = True\n", encoding="utf-8"
@@ -58,3 +64,5 @@ def test_bundle_staging_is_repeatable_and_excludes_previous_bundle(tmp_path: Pat
     assert not (staged_package / "stale_bundle.py").exists()
     assert not (staged_package / "prepare_vercel_bundle.py").exists()
     assert not (staged_package / "src" / "webapp").exists()
+    assert (project_root / "src" / "capabilities" / "anonymous_civic_drafting.py").read_text(encoding="utf-8") == "CANONICAL_DRAFT_CAPABILITY = True\n"
+    assert (project_root / "src" / "documents" / "anonymous_draft_renderer.py").read_text(encoding="utf-8") == "CANONICAL_DRAFT_RENDERER = True\n"
