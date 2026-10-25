@@ -198,6 +198,9 @@ class _ReceiptOnlyInbox:
         self.claimed_ids.append(update_id)
         return {"status": self.status, "attempts": 1}
 
+    def heartbeat(self, update_id, *, attempts):
+        return None
+
     def mark_processed(self, update_id, *, attempts):
         self.processed.append((update_id, attempts))
         self.status = "processed"
