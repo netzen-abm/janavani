@@ -1,8 +1,9 @@
 -- Defense-in-depth hardening for exposed public tables.
--- This deliberately does NOT enable RLS: the identity/policy and live-schema
--- reconciliation gate remains open. It removes privileges clients do not need.
+-- This deliberately does NOT enable RLS: identity/policy and live-schema
+-- reconciliation remain separate production gates.
+-- Direct Case-data access stays on the trusted API/repository boundary.
 -- Keep anonymous SELECT on the public offices directory intact.
-REVOKE TRUNCATE, REFERENCES, TRIGGER
+REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
 ON TABLE
     public.civic_cases,
     public.civic_case_events,
