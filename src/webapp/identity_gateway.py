@@ -11,6 +11,7 @@ from src.webapp.oidc_client import (
     OIDCAuthenticationError, OIDCConfigurationError, OIDCError, OIDCSettings,
     authorization_url, exchange_authorization_code, new_login_transaction,
 )
+from src.webapp.runtime_mode import is_production_runtime
 
 _TRANSACTION_COOKIE = "janavani_oidc_transaction"
 _SESSION_IDENTITY = "janavani_identity"
@@ -22,7 +23,7 @@ _CITIZEN_CAPABILITIES = (
 
 def session_secret_for_middleware() -> str:
     secret = os.getenv("JANAVANI_WEB_SESSION_SECRET", "").strip()
-    if os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() == "production":
+    if is_production_runtime():
         if len(secret) < 32:
             raise OIDCConfigurationError("Production WebApp requires JANAVANI_WEB_SESSION_SECRET")
         return secret
@@ -31,7 +32,7 @@ def session_secret_for_middleware() -> str:
 
 def validate_web_identity_configuration() -> None:
     """Keep OIDC client credentials scoped to the WebApp, not API or Telegram."""
-    if os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower() == "production":
+    if is_production_runtime():
         OIDCSettings.from_environment()
         api_url = urlsplit(os.getenv("JANAVANI_WEB_API_URL", "").strip())
         if api_url.scheme != "https" or not api_url.hostname or api_url.username or api_url.password or api_url.query or api_url.fragment:
@@ -59,7 +60,7 @@ def _page(title: str, message: str, *, status: int = 200) -> HTMLResponse:
 
 
 def _secure_cookie() -> bool:
-    return os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower() == "production"
+    return is_production_runtime()
 
 
 def _clear_transaction(response: HTMLResponse | RedirectResponse) -> None:
