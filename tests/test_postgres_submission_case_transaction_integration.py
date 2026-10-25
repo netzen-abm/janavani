@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import os
 import subprocess
 import sys
@@ -22,6 +23,8 @@ ROOT = Path(__file__).parents[1]
 CANONICAL_MIGRATION = ROOT / "db" / "migrations" / "20260912100000_canonical_case_policy_schema.sql"
 IDEMPOTENCY_MIGRATION = ROOT / "db" / "migrations" / "20260913100000_submission_idempotency_key.sql"
 TELEGRAM_INBOX_MIGRATION = ROOT / "db" / "migrations" / "20261012120000_telegram_update_inbox.sql"
+TELEGRAM_ENCRYPTED_INBOX_MIGRATION = ROOT / "db" / "migrations" / "20261025120000_telegram_inbox_encrypted_payloads.sql"
+TEST_FERNET_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
 
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
@@ -30,6 +33,7 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
     canonical_sql = CANONICAL_MIGRATION.read_text(encoding="utf-8")
     idempotency_sql = IDEMPOTENCY_MIGRATION.read_text(encoding="utf-8")
     inbox_sql = TELEGRAM_INBOX_MIGRATION.read_text(encoding="utf-8")
+    encrypted_inbox_sql = TELEGRAM_ENCRYPTED_INBOX_MIGRATION.read_text(encoding="utf-8")
     update_id = time.time_ns() % 9_000_000_000_000_000
 
     case_id = "pg-atomic-case"
@@ -40,6 +44,7 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
                 cursor.execute(canonical_sql)
                 cursor.execute(idempotency_sql)
                 cursor.execute(inbox_sql)
+                cursor.execute(encrypted_inbox_sql)
                 cursor.execute("DELETE FROM civic_case_events WHERE case_id = %s", (case_id,))
                 cursor.execute("DELETE FROM civic_case_submissions WHERE case_id = %s", (case_id,))
                 cursor.execute("DELETE FROM civic_cases WHERE case_id = %s", (case_id,))
@@ -79,10 +84,24 @@ def test_atomic_submission_case_mutation_stale_writers_rollback_and_restart_repl
 
     # Simulate a durably accepted Telegram update; the inbox remains incomplete
     # after the business commit to represent a worker crash in that exact window.
-    inbox = PostgresTelegramInbox(dsn=DSN)
-    assert inbox.accept(update_id, {"update_id": update_id, "case_id": case_id}) is True
+    inbox = PostgresTelegramInbox(dsn=DSN, encryption_keys=[TEST_FERNET_KEY])
+    update_payload = {"update_id": update_id, "case_id": case_id}
+    assert inbox.accept_encrypted(update_id, update_payload) is True
+    with psycopg.connect(DSN) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """SELECT status, payload, encrypted_payload, payload_expires_at
+                   FROM public.telegram_update_inbox WHERE update_id = %s""",
+                (update_id,),
+            )
+            encrypted_row = cursor.fetchone()
+    assert encrypted_row[0] == "pending"
+    assert encrypted_row[1] is None
+    assert encrypted_row[2] is not None
+    assert encrypted_row[3] is not None
     first_claim = inbox.claim_next()
     assert first_claim is not None and first_claim["update_id"] == update_id
+    assert first_claim["payload"] == update_payload
 
     # Run the first business mutation in a separate interpreter and terminate
     # it abruptly immediately after the PostgreSQL transaction commits. The
@@ -164,10 +183,10 @@ os._exit(73)  # deliberate simulated worker crash after commit, before inbox ack
     with psycopg.connect(DSN) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT status, payload FROM public.telegram_update_inbox WHERE update_id = %s",
+                "SELECT status, payload, encrypted_payload, payload_expires_at FROM public.telegram_update_inbox WHERE update_id = %s",
                 (update_id,),
             )
-            assert cursor.fetchone() == ("processed", None)
+            assert cursor.fetchone() == ("processed", None, None, None)
             cursor.execute("SELECT count(*) FROM civic_case_events WHERE event_id = %s", (event.event_id,))
             assert cursor.fetchone()[0] == 1
 
