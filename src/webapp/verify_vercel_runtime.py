@@ -27,7 +27,7 @@ def main() -> None:
         preview = client.post("/draft", data={"narrative": narrative, "selection": "auto"})
         if preview.status_code != 200 or "Download PDF" not in preview.text or "RTI" not in preview.text:
             raise RuntimeError("Anonymous complaint/RTI draft smoke test failed")
-        if "No account is needed" not in home.text or "No Case was created" not in preview.text:
+        if "No account is needed" not in home.text or "does not create a tracked Case" not in preview.text:
             raise RuntimeError("Anonymous workflow privacy/Case-boundary copy is missing")
 
         download = client.post(
