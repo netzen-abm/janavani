@@ -393,3 +393,66 @@ jobs:
           END
           $$;
           SQL
+
+  # Prove the two deployed ASGI surfaces work with their own minimal runtime
+  # dependencies, not only with the monolithic developer/test dependency set.
+  surface-runtime-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        surface: [api, webapp]
+    env:
+      JANAVANI_RUNTIME_MODE: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements-api.txt
+            src/webapp/requirements.txt
+
+      - name: Install the selected surface runtime
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.surface }}" = "api" ]; then
+            python -m pip install -r requirements-api.txt
+          else
+            python -m pip install -r src/webapp/requirements.txt
+          fi
+
+      - name: Smoke-test canonical API runtime
+        if: matrix.surface == 'api'
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from src.web.canonical_app import app
+
+          client = TestClient(app)
+          response = client.get("/liveness")
+          assert response.status_code == 200, response.text
+          assert response.json() == {"status": "alive"}, response.text
+          print("Canonical API slim runtime passed")
+          PY
+
+      - name: Smoke-test citizen WebApp runtime and Vercel entrypoint
+        if: matrix.surface == 'webapp'
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from src.webapp.main import app, webapp
+          from src.webapp.vercel_entrypoint import app as vercel_app
+
+          assert vercel_app is app
+          assert app.routes[-1].app is webapp
+          client = TestClient(app)
+          response = client.get("/liveness")
+          assert response.status_code == 200, response.text
+          print("Citizen WebApp slim runtime passed")
+          PY
