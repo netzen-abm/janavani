@@ -154,7 +154,7 @@ class PostgresTelegramInbox:
                          AND (
                              (status = 'pending' AND available_at <= now())
                              OR (status = 'processing'
-                                 AND locked_at < now() - (%s * interval '1 second'))
+                                 AND (locked_at IS NULL OR locked_at < now() - (%s * interval '1 second')))
                          )
                        ORDER BY received_at
                        LIMIT 1
