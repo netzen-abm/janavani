@@ -18,6 +18,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
 from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware, validate_web_identity_configuration
+from src.webapp.runtime_mode import is_production_runtime
 from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
@@ -43,7 +44,7 @@ webapp.add_middleware(
     session_cookie="janavani_web_session",
     max_age=1800,
     same_site="lax",
-    https_only=os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() == "production",
+    https_only=is_production_runtime(),
 )
 
 @rt("/")
