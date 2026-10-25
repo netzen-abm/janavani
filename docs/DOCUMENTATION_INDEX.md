@@ -23,9 +23,10 @@ When documents conflict, use this order:
 11. `docs/CAPABILITY_REGISTRY.md` + active `planning/` contracts — capability/data specifications
 12. `docs/MASTER_TASK_CHECKLIST.md` — canonical task inventory
 13. `docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md` — current dated execution rebaseline, source/runtime findings, and open release gates
-14. Latest dated status register — current execution status/evidence
-15. Implementation, tests, CI and deployment evidence — what is actually verified
-16. `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` — concise orientation across all of the above; it does not override them
+14. `docs/90-audits/2026-10-25-vercel-production-risk-audit.md` — production deployment SHA, framework discrepancy, authorization blocker, runtime/configuration release gates
+15. Latest dated status register — current execution status/evidence
+16. Implementation, tests, CI and deployment evidence — what is actually verified
+17. `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` — concise orientation across all of the above; it does not override them
 
 Dated audits preserve historical evidence. They do not override current canonical documents unless explicitly adopted.
 
