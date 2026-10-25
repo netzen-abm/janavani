@@ -88,23 +88,6 @@ class PostgresTelegramInbox:
             )
             return cur.fetchone() is not None
 
-    def accept_legacy_payload(self, update_id: int, payload: dict[str, Any]) -> bool:
-        """Compatibility/test seam for rows written by the earlier plaintext implementation.
-
-        Production webhook ingress must call accept_encrypted(). Existing plaintext rows
-        are encrypted by secure_legacy_payloads() before the worker starts.
-        """
-        with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            cur.execute(
-                """INSERT INTO public.telegram_update_inbox
-                       (update_id, payload, encrypted_payload)
-                   VALUES (%s, %s::jsonb, NULL)
-                   ON CONFLICT (update_id) DO NOTHING
-                   RETURNING update_id""",
-                (update_id, json.dumps(payload, separators=(",", ":"))),
-            )
-            return cur.fetchone() is not None
-
     def secure_legacy_payloads(self, *, batch_size: int = 100) -> int:
         """Encrypt legacy plaintext rows before the webhook runtime begins accepting work."""
         fernet = self._require_fernet()
