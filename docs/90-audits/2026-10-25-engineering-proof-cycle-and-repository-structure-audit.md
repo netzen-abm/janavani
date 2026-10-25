@@ -339,3 +339,17 @@ The canonical API is built around ASGI/FastAPI. The separate Telegram bot is a l
 ## Vercel production risk audit reference
 
 The focused companion audit is [2026-10-25-vercel-production-risk-audit.md](2026-10-25-vercel-production-risk-audit.md). It records the production deployment ID/SHA, the Flask/FastAPI configuration discrepancy, active Flask use by the WhatsApp/Messenger adapters, authorization errors, production-configuration validation requirements, and the safe read-only → preview-test → reconcile → verify sequence. Follow Issue #221 for closure.
+
+
+## Telegram privacy disclosure correction — 25 October 2026
+
+A targeted source review confirmed that the PostgreSQL inbox stores the full Telegram update JSON while work is pending, processing or retrying. The privacy command previously described issue text as process-local without explaining that the original webhook payload may also remain in the durable inbox. That disclosure was incomplete.
+
+The current review branch now updates src/commands/privacy.py and src/commands/start.py to explain:
+- webhook mode can retain the full update payload in the PostgreSQL inbox while pending/processing/retrying;
+- payload is cleared on successful processing or terminal dead-lettering;
+- the implementation does not enforce a wall-clock deletion deadline while the worker is offline;
+- the 15-minute process-local workflow text buffer is separate from the durable webhook inbox;
+- until retention is enforced, users should share only minimum necessary, non-sensitive details.
+
+Regression tests were added to tests/test_telegram_privacy.py. This is a disclosure correction, **not closure of Issue #219**. The architectural decision and live-PostgreSQL test remain outstanding. Do not describe the current webhook path as local-only or fully privacy-verified.
