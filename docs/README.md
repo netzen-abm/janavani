@@ -1,7 +1,7 @@
 # JANAVANI — DOCUMENTATION HOME
 
 **Status:** ACTIVE
-**Date:** 11 September 2026
+**Date:** 25 October 2026
 
 Start here when entering the Janavani documentation system.
 
