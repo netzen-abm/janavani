@@ -914,6 +914,7 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 - [x] Bound Telegram webhook request bodies to 1 MiB and validate declared plus streamed size.
 - [x] Preserve pending updates in the polling startup path with `drop_pending_updates=False`.
 - [x] Add a PostgreSQL durable inbox migration keyed by Telegram `update_id`, with bounded retry/dead-letter state and terminal payload clearing.
+- [x] Add a follow-up migration allowing content-free receipt rows (`payload IS NULL`) and restricting the legacy worker to payload-bearing compatibility rows.
 - [x] Add a PostgreSQL inbox adapter using `FOR UPDATE SKIP LOCKED`, plus processing-lease renewal and worker dispatch.
 - [x] Wire production webhook startup to require `JANAVANI_TELEGRAM_INBOX_DSN`; acknowledge only after the durable insert/duplicate check returns.
 - [x] Add route tests for durable acceptance and retryable failure; document the delivery contract and deployment prerequisites.
@@ -946,7 +947,8 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 ## P0 — prove Telegram business-effect replay safety
 
 - [x] Acceptance contract exists: `docs/architecture/TELEGRAM_POST_COMMIT_REPLAY_ACCEPTANCE_CONTRACT.md`.
-- [x] Existing PostgreSQL inbox tests cover durable acceptance, duplicate Telegram update ID, claim completion, and stale-worker fencing.
+- [x] Existing PostgreSQL inbox tests cover legacy acceptance, duplicate Telegram update ID, claim completion, stale-worker fencing, and content-free inline receipt storage.
+- [ ] Apply the content-free receipt migration in staging, confirm the old payload-bearing queue drains, and verify `SELECT count(*) FROM public.telegram_update_inbox WHERE payload IS NOT NULL` is zero before treating legacy raw-content retention as closed.
 - [x] Existing PostgreSQL submission/Case transaction test covers atomic projection/event mutation and repository-level idempotent replay.
 - [ ] Add a PostgreSQL-backed failure-injection test through the actual Telegram handler/capability and durable transaction path: commit business mutation, inject failure before inbox completion, reclaim/redeliver, then assert one durable Case/Submission mutation, one lifecycle event, safe/deduplicated consequential effects, and eventual inbox completion.
 - [ ] Re-run with fresh worker/repository instances and reject conflicting reuse of the business idempotency key.
@@ -997,7 +999,7 @@ No extra abstractions or arbitrary file-size refactors during the proof cycle. K
 
 ## P0 — Security, privacy, and correctness proofs
 
-- [ ] **Issue #219 — Telegram inbox privacy:** full update JSON remains in PostgreSQL during pending/processing/retry states. The `/start` and `/privacy` disclosures are now corrected in this review branch, including the worker-offline retention gap. This is disclosure-only; decide the approved data/retention policy and add live-PostgreSQL positive/negative tests before calling the privacy issue closed.
+- [ ] **Issue #219 — Telegram inbox privacy:** new webhook deliveries now use a content-free PostgreSQL receipt and dispatch the parsed update from request memory; only `update_id`, status, attempts and lease timestamps are persisted. The old payload-bearing queue path is now explicitly compatibility-only and its worker claims only rows with non-NULL payloads. The `/start` and `/privacy` notices distinguish current receipts from any legacy raw-payload backlog. Still required: apply migration `20261025120000_telegram_inbox_content_free_receipts.sql` before deploying this code, verify the legacy payload row count reaches zero, execute the PostgreSQL integration tests and exact-head replay test, and keep Issue #219 open until there is evidence of no prohibited payload persistence.
 - [x] **Issue #220 — WebApp legacy constitutional bill-review flow: fail-closed interim decision recorded.** The GET route now explains the source-provenance blocker (HTTP 503), and the retired POST route returns HTTP 410; prior workflow intent and reactivation criteria are preserved in `archive/documentation/legacy/2026-10-25-webapp-constitutional-bill-review-route.md`. Regression tests are added; keep the issue open until current-head CI passes. Do not reactivate until source-backed bill profiles, owned objection Case, verified authority, safe download headers, privacy and end-to-end acceptance are proven.
 - [ ] **Issue #217 — Telegram post-commit replay:** execute real handler/shared capability against PostgreSQL; inject failure after committed business mutation but before inbox completion; replay with a fresh worker; assert one durable mutation/event, safe side-effect deduplication, conflicting idempotency-key rejection and eventual inbox completion.
 - [ ] **WebApp identity:** verify real OIDC issuer/client/session configuration, PKCE/state/nonce/JWKS validation, cookie behavior, API assertion checks, logout semantics and copied-cookie revocation/risk decision.
