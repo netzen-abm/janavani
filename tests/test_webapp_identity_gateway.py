@@ -188,3 +188,34 @@ def test_production_web_identity_rejects_insecure_issuer(monkeypatch):
     monkeypatch.setenv("JANAVANI_OIDC_ISSUER_URL", "http://untrusted.example")
     with pytest.raises(web_identity.OIDCConfigurationError, match="HTTPS"):
         web_identity.validate_web_identity_configuration()
+
+
+def test_invalid_oidc_transaction_cookie_returns_safe_unauthorized(monkeypatch):
+    _settings(monkeypatch)
+    from src.webapp.main import app
+
+    monkeypatch.setattr(
+        gateway,
+        "authorization_url",
+        lambda settings, transaction: (
+            "https://issuer.example/authorize?"
+            + urlencode({"state": transaction["state"]})
+        ),
+    )
+    client = TestClient(app, base_url="https://webapp.example")
+    started = client.get("/auth/login", follow_redirects=False)
+    assert started.status_code == 303
+
+    state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
+    client.cookies.set("janavani_oidc_transaction", "malformed-ciphertext")
+
+    response = client.get(
+        "/auth/callback?" + urlencode({"code": "one-time-code", "state": state}),
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 401
+    assert "could not be completed" in response.text.lower()
+    assert "malformed-ciphertext" not in response.text
+    assert "Max-Age=0" in response.headers["set-cookie"]
+
