@@ -105,7 +105,7 @@ Historical branches and superseded implementations must be archived before delet
 3. open-PR dependencies are resolved;
 4. deletion does not remove the only recoverable copy.
 
-The sanctioned active branch set is exactly nine and is defined in `.github/workflows/branch-retirement.yml`.
+The target is exactly eight active development roles. Until the controlled transition in PR #213 finishes, the physical inventory may include one temporary retirement-only branch. The target is not achieved until a fresh GitHub query confirms exactly eight physical refs. The eventual product-ready target is one canonical `main` branch, after useful work has been preserved and release evidence passes. See `docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md`.
 
 ## Current convergence decision
 
@@ -126,7 +126,7 @@ VISION -> DESIGNED -> IMPLEMENTED -> FUNCTIONAL -> TESTED -> SECURITY-VERIFIED -
 
 ## Repository hygiene enforcement
 
-The nine sanctioned branches are the only active development lanes. Legacy branches are archived by immutable tag before deletion; this preserves recoverability without retaining parallel active development lines.
+The eight sanctioned branch roles are the only intended active development lanes; PR #213 defines the controlled transition ref used to retire itself. Legacy branches are archived by immutable tag before deletion, with exact-head verification and a fresh physical inventory afterward. Do not treat the transition ref as a ninth approved development role, and do not claim eight-ref compliance before the deletion has been verified.
 
 
 ## Deployment-provider neutrality
