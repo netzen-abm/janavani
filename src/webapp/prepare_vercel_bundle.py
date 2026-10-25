@@ -35,7 +35,7 @@ def prepare_bundle() -> None:
             ignore=shutil.ignore_patterns(
                 "__pycache__", ".pytest_cache", "*.pyc", "tests",
                 "test_*.py", "*_test.py", ".git", "src",
-                "prepare_vercel_bundle.py",
+                "prepare_vercel_bundle.py", "verify_vercel_runtime.py",
             ),
         )
         if BUNDLE_PACKAGE_ROOT.exists():
