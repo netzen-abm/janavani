@@ -23,6 +23,7 @@ from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
 from src.webapp.authority_intake import register_authority_intake_routes
+from src.webapp.anonymous_intake import register_anonymous_intake_routes
 
 # Initialize the stateless web interface client
 webapp, rt = fast_app(
@@ -49,41 +50,37 @@ webapp.add_middleware(
 
 @rt("/")
 def get(request: Request):
-    """Render a truthful workspace with a provider-backed sign-in entry."""
+    """Make anonymous document drafting the primary path; identity is optional."""
     authenticated = bool(client_for_request(request).identity_assertion)
-    if not authenticated:
-        return Titled(
-            "Janavani — Citizen Action Hub",
-            Div(
-                H2("JANAVANI"),
-                P("Sign in to create a Case, select a verified authority, and continue securely across Janavani surfaces."),
-                A("Sign in securely", href="/auth/login"),
-            ),
-        )
+    account_link = (
+        Form(action="/auth/logout", method="post")(Button("Sign out"))
+        if authenticated else A("Optional sign-in for tracking", href="/auth/login")
+    )
     return Titled(
-        "🇮🇳 Janavani — Citizen Action Hub",
+        "Janavani — The Infrastructure of Citizen Voice",
         Div(
             Div(
-                H2("JANAVANI"),
-                P("Create and review a civic Case through the shared Janavani platform."),
-                style="text-align: center; margin-bottom: 3rem;",
+                H1("JANAVANI"),
+                H2("Your voice. Your rights. Your next step."),
+                P("Narrate what happened in your own words. Janavani can prepare a complaint, an RTI application seeking existing records, or both."),
+                style="text-align:center;margin-bottom:2rem;",
             ),
             Div(
-                Form(action="/auth/logout", method="post")(Button("Sign out")),
-                H3("📝 Create a Civic Case"),
-                P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
-                Form(action="/submit-issue", method="post")(
-                    Label("City", Input(name="city", placeholder="e.g. Kochi", required=True)),
-                    Label("Authority type", Input(name="authority_type", placeholder="e.g. district, municipal", required=True)),
+                H3("Describe the incident"),
+                P("No account is needed to generate a draft. Avoid sharing unnecessary personal or highly sensitive information."),
+                Form(action="/draft", method="post")(
                     Textarea(
-                        name="citizen_input",
-                        placeholder="Describe the civic issue...",
-                        rows=6,
+                        name="narrative",
+                        placeholder="Example: The streetlights in our lane have not worked for two weeks. I want the municipality to repair them and I would also like copies of the complaint and action-taken records.",
+                        rows=8,
                         required=True,
+                        maxlength=5000,
                     ),
-                    Button("Create Case", type="submit", cls="button-primary"),
+                    Button("Generate my draft", type="submit", cls="button-primary"),
                 ),
-                A("View my Cases", href="/cases"),
+                P("Your narrative is processed transiently for this draft and is not saved as a Janavani Case in this no-login flow. Review every fact and placeholder before sending."),
+                account_link,
+                (A("View my tracked Cases", href="/cases") if authenticated else P("Want follow-up and cross-device tracking later? Sign in is optional where account services are configured.")),
                 cls="card",
             ),
         ),
@@ -150,6 +147,7 @@ register_identity_pairing_routes(rt)
 register_identity_gateway_routes(rt)
 register_case_list_routes(rt)
 register_authority_intake_routes(rt)
+register_anonymous_intake_routes(rt)
 
 @rt("/liveness")
 def webapp_liveness():
