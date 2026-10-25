@@ -248,3 +248,33 @@ def test_case_artifact_rejects_empty_payload(monkeypatch):
     assert "could not confirm the result" in response.text
     assert "attachment;" not in response.headers.get("content-disposition", "")
     assert response.headers["cache-control"] == "no-store, private"
+
+
+def test_legacy_constitutional_review_route_fails_closed_until_provenance_exists():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/bill-review/BILL-2026-KL-04")
+
+    assert response.status_code == 503
+    assert "source provenance" in response.text.lower()
+    assert "no constitutional assessment or document" in response.text.lower()
+    assert response.headers["cache-control"] == "no-store, private"
+    assert "Generate Official Objection Paperwork" not in response.text
+
+
+def test_retired_constitutional_dispatch_returns_gone_without_generating():
+    from src.webapp.main import app
+
+    response = TestClient(app).post(
+        "/dispatch-objection",
+        data={
+            "bill_code": "BILL-2026-KL-04",
+            "comments": "Synthetic test only.",
+            "format_choice": "PDF",
+        },
+    )
+
+    assert response.status_code == 410
+    assert "no file was generated" in response.text.lower()
+    assert "nothing was transmitted" in response.text.lower()
+
