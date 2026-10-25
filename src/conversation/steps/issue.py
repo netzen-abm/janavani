@@ -38,11 +38,11 @@ async def _send_anonymous_drafts(update: Update, user_id: int, narrative: str) -
                     payload, _media_type, extension = render_anonymous_draft(
                         draft, document_format
                     )
-                except Exception as exc:
+                except Exception:
                     # A renderer outage must not leak user content or suppress another format.
                     await message.reply_text(
-                        f"The {extension if 'extension' in locals() else document_format.upper()} "
-                        "file could not be generated. You can still review the draft in the next message."
+                        f"The {document_format.upper()} file could not be generated. "
+                        "You can still review the draft in the next message."
                     )
                     continue
                 await message.reply_document(
