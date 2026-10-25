@@ -3,7 +3,6 @@ from fasthtml.common import (
     A, Button, Div, Form, H1, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
-from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -145,16 +144,9 @@ def webapp_liveness():
     return P("alive")
 
 
-# Vercel and ASGI hosts need a conventional top-level application instance.
-# Keep FastHTML route registration and its middleware cohesive in `webapp`;
-# the ASGI wrapper owns only the deployment boundary.
-app = FastAPI(
-    title="Janavani Citizen WebApp",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
-app.mount("/", webapp)
+# Vercel discovers a conventional top-level assignment. Keep one canonical
+# FastHTML ASGI application so route and middleware introspection stays coherent.
+app = webapp
 
 if __name__ == "__main__":
     import uvicorn
