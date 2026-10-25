@@ -72,13 +72,14 @@ Create two synthetic citizens, **A** and **B**, and one non-sensitive test Case 
 - [ ] Simulate a transient database outage in staging; encrypted enqueue fails retryably (HTTP 503) rather than acknowledging unpersisted work.
 - [ ] Simulate handler failure; the webhook has already acknowledged durable queue acceptance, so the worker retains ciphertext, records the error class only, and retries with bounded backoff.
 - [ ] Inject a process crash after the business transaction commits but before `mark_processed`; reclaim the same encrypted update and prove no duplicate Case/Submission mutation or lifecycle event.
+- [ ] Repeat at a later conversation state with a fresh Telegram application process: session metadata and narrative are currently process-local, so verify the replay either restores only approved minimal metadata or fails closed with explicit restart/recovery guidance. It must not treat an old office/consent/format response as new issue text, create an orphan/duplicate Case, or claim a workflow completed.
 - [ ] Verify expiry: after the 24-hour deadline, the worker dead-letters and clears expired payloads; document that physical cleanup runs when the worker is active and can be delayed by worker outage.
 - [ ] If legacy payload rows exist, verify startup encrypts them before webhook registration and that `payload IS NOT NULL` reaches zero.
 - [ ] Run concurrent workers and verify stale lease holders cannot commit after their claim has been fenced.
 - [ ] Replay an update that would trigger a consequential action; prove the domain operation has its own idempotency guard. Inbox deduplication alone is not enough.
 - [ ] Verify retry limits, dead-letter visibility, payload cleanup/retention and alerting.
 
-**Pass:** New requests store no plaintext payload, durable acceptance succeeds only after ciphertext commit, worker retries/dead-letters within a bounded expiry, stale leases are fenced, and real-handler replay cannot duplicate consequential business effects. Do not call the replay gate passed until the injected post-commit failure test succeeds against PostgreSQL.
+**Pass:** New requests store no plaintext payload, durable acceptance succeeds only after ciphertext commit, worker retries/dead-letters within a bounded expiry, stale leases are fenced, and real-handler replay cannot duplicate consequential business effects. Workflow-state restart recovery or its explicit fail-closed alternative must also pass. Do not call the replay gate passed until the injected post-commit failure test succeeds against PostgreSQL.
 
 ### 6. Persistence and restart
 - [ ] Restart the Web/API process and retrieve A's Case from a new session.
