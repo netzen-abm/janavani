@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-_IDENTITY_COOKIE = "janavani_identity_assertion"
+_IDENTITY_COOKIES = ("janavani_identity_assertion", "janavani_web_session")
 
 
 def _same_origin(source: str | None, host: str | None, request_scheme: str | None) -> bool:
@@ -41,7 +41,7 @@ class SameOriginCookieMutationMiddleware:
     server-side and forwarded as an Authorization header.
     """
 
-    def __init__(self, app, cookie_name: str = _IDENTITY_COOKIE) -> None:
+    def __init__(self, app, cookie_name: str = _IDENTITY_COOKIES[0]) -> None:
         self.app = app
         self.cookie_name = cookie_name
 
@@ -51,7 +51,7 @@ class SameOriginCookieMutationMiddleware:
             return
 
         request = Request(scope)
-        if not request.cookies.get(self.cookie_name):
+        if not any(request.cookies.get(name) for name in (*_IDENTITY_COOKIES, self.cookie_name)):
             await self.app(scope, receive, send)
             return
 

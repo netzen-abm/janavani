@@ -1,8 +1,11 @@
+import os
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
+from starlette.middleware.sessions import SessionMiddleware
+from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware, validate_web_identity_configuration
 from src.webapp.case_list import register_case_list_routes
 from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
@@ -20,11 +23,16 @@ app, rt = fast_app(
         """)
     )
 )
+validate_web_identity_configuration()
 app.add_middleware(SameOriginCookieMutationMiddleware)
+app.add_middleware(SessionMiddleware, secret_key=session_secret_for_middleware(), session_cookie="janavani_web_session", max_age=1800, same_site="lax", https_only=os.getenv("JANAVANI_RUNTIME_MODE", "development").lower() == "production")
 
 @rt("/")
-def get():
-    """Render the first-class Janavani WebApp civic Case workspace."""
+def get(request: Request):
+    """Render a truthful workspace with a provider-backed sign-in entry."""
+    authenticated = bool(client_for_request(request).identity_assertion)
+    if not authenticated:
+        return Titled("Janavani — Citizen Action Hub", Div(H1("JANAVANI"), P("Sign in to create a Case, select a verified authority, and continue securely across Janavani surfaces."), A("Sign in securely", href="/auth/login")))
     return Titled(
         "🇮🇳 Janavani — Citizen Action Hub",
         Div(
@@ -34,6 +42,7 @@ def get():
                 style="text-align: center; margin-bottom: 3rem;",
             ),
             Div(
+                Form(action="/auth/logout", method="post")(Button("Sign out")),
                 H3("📝 Create a Civic Case"),
                 P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
                 Form(action="/submit-issue", method="post")(
@@ -100,8 +109,13 @@ from src.webapp.identity_pairing_workspace import register_identity_pairing_rout
 
 register_case_workspace_routes(rt)
 register_identity_pairing_routes(rt)
+register_identity_gateway_routes(rt)
 register_case_list_routes(rt)
 register_authority_intake_routes(rt)
+
+@rt("/liveness")
+def webapp_liveness():
+    return P("alive")
 
 if __name__ == "__main__":
     import uvicorn

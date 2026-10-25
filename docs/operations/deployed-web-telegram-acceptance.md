@@ -11,11 +11,15 @@
 - [ ] Candidate commit and all required CI/security/architecture/Docker/dependency checks are green.
 - [ ] Web/API and Telegram webhook are independently deployed and their actual service IDs, commit SHAs, URLs and health state are recorded.
 - [ ] Both processes use the same approved PostgreSQL schema for canonical Cases and verified external identity links. Use separate least-privilege runtime roles where tables/capabilities differ.
+- [ ] `JANAVANI_WEB_API_URL` is configured as HTTPS to the actual canonical API service.
 - [ ] Production provider configuration passes `validate_runtime_configuration()`; no process-local fallback is used for durable Case, artifact, evidence, consent, submission, authority-directory or identity-link state.
 - [ ] `JANAVANI_AUTHORITY_REPOSITORY_PROVIDER=postgres` is configured in production. The shared directory is seeded with source-backed records, and only records explicitly marked verified with a usable destination are offered to citizens.
 - [ ] Artifact storage, citizen-content retention/deletion policy, migration state, backup/restore and operational alerting are approved.
-- [ ] The trusted identity gateway is the only issuer of short-lived signed identity assertions; issuer/audience/signature/expiry are validated server-side. Browser-provided principal IDs are never trusted.
+- [ ] The WebApp uses a trusted OIDC issuer/client and HTTPS callback; authorization-code PKCE (S256), state, nonce, JWKS signature, issuer, audience and expiry validation pass. Client/session secrets exist only in server-side deployment secrets.
+- [ ] Web sessions use HttpOnly, SameSite=Lax cookies and Secure cookies in production; the encrypted OIDC transaction cookie is short-lived. API assertions are freshly minted for five minutes and independently verified; the browser cannot choose a principal or capability list.
 - [ ] Telegram webhook secret is configured in the provider and service; webhook URL is HTTPS and points to the actual deployed Telegram service.
+
+- [ ] **Session revocation risk is explicitly accepted or closed.** The current Web session is a signed, stateless cookie with a 30-minute maximum age. Logout clears this browser cookie but cannot revoke a copied cookie server-side. Before product-ready release for sensitive citizen records, implement and test shared server-side revocation or record an explicit security decision accepting this bounded residual-validity risk.
 
 ## Test identities and data
 

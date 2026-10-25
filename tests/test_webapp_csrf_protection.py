@@ -78,3 +78,13 @@ def test_cookie_authenticated_mutation_rejects_scheme_mismatch():
     )
     assert response.status_code == 403
 
+
+
+def test_new_signed_session_cookie_is_also_protected_from_cross_origin_mutation():
+    client = _client()
+    client.cookies.clear()
+    client.cookies.set("janavani_web_session", "signed-session-cookie")
+    response = client.post("/mutate")
+    assert response.status_code == 403
+    accepted = client.post("/mutate", headers={"Origin": "https://janavani.test"})
+    assert accepted.status_code == 200

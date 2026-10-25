@@ -170,8 +170,10 @@ class JanavaniWebAPIClient:
         return None
 
 def client_for_request(request: object) -> JanavaniWebAPIClient:
-    """Use request-scoped identity; the API independently verifies each assertion."""
+    """Mint from the verified session first; retain the legacy cookie only for transition."""
+    from src.webapp.identity_gateway import api_assertion_for_session
+    assertion = api_assertion_for_session(getattr(request, "session", {}))
     cookies = getattr(request, "cookies", {})
-    return JanavaniWebAPIClient(
-        identity_assertion=cookies.get("janavani_identity_assertion") if cookies else None
-    )
+    if not assertion:
+        assertion = cookies.get("janavani_identity_assertion") if cookies else None
+    return JanavaniWebAPIClient(identity_assertion=assertion)
