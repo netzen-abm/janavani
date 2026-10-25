@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import time
 from pathlib import Path
@@ -187,7 +188,12 @@ def test_postgres_legacy_payloads_are_encrypted_before_worker_dispatch():
     _apply_migrations(DSN)
     inbox = _inbox()
     try:
-        assert inbox.accept_legacy_payload(update_id, payload)
+        with psycopg.connect(DSN) as conn:
+            conn.execute(
+                """INSERT INTO public.telegram_update_inbox (update_id, payload)
+                   VALUES (%s, %s::jsonb)""",
+                (update_id, json.dumps(payload, separators=(",", ":"), ensure_ascii=False)),
+            )
         assert inbox.secure_legacy_payloads() == 1
         with psycopg.connect(DSN) as conn:
             row = conn.execute(
