@@ -88,7 +88,7 @@ def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
         encoding="utf-8"
     )
     migration = (
-        ROOT / "db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql"
+        ROOT / "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql"
     ).read_text(encoding="utf-8")
     render = (ROOT / "render.yaml").read_text(encoding="utf-8")
 
