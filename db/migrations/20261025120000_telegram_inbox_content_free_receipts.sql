@@ -11,5 +11,6 @@ ALTER TABLE public.telegram_update_inbox
     CHECK (payload IS NULL OR status IN ('pending', 'processing'));
 
 COMMENT ON COLUMN public.telegram_update_inbox.payload IS
-    'NULL for content-free webhook receipts; non-NULL only for compatibility backlog accepted by the earlier durable-payload implementation. '
-    'New webhook delivery must never persist raw Telegram JSON.';
+    'NULL for content-free webhook receipts; non-NULL only for compatibility backlog '
+    'accepted by the earlier durable-payload implementation. New webhook delivery '
+    'must never persist raw Telegram JSON.';
