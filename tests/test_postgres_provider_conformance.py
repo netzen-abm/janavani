@@ -82,14 +82,21 @@ def test_render_declares_independent_api_webapp_and_telegram_services():
     assert telegram_start in render
     assert "subprocess" not in render
 
-def test_new_telegram_webhook_uses_content_free_receipt_path():
+def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
     webhook = (ROOT / "src/web/telegram_webhook_app.py").read_text(encoding="utf-8")
     inbox = (ROOT / "src/storage/repositories/postgres_telegram_inbox.py").read_text(
         encoding="utf-8"
     )
+    migration = (
+        ROOT / "db/migrations/20261025120000_telegram_inbox_content_free_receipts.sql"
+    ).read_text(encoding="utf-8")
+    render = (ROOT / "render.yaml").read_text(encoding="utf-8")
 
-    assert "durable_inbox.claim_update" in webhook
+    assert "durable_inbox.accept_encrypted" in webhook
+    assert "durable_inbox.secure_legacy_payloads" in webhook
     assert "durable_inbox.accept_legacy_payload" not in webhook
-    assert "durable_inbox.mark_processed" in webhook
-    assert "WHERE payload IS NOT NULL AND (" in inbox
+    assert "MultiFernet" in inbox
+    assert "payload IS NOT NULL OR encrypted_payload IS NOT NULL" in inbox
+    assert "payload_expires_at" in migration
+    assert "JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS" in render
 
