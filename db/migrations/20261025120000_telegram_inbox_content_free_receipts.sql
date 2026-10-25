@@ -6,7 +6,7 @@ ALTER TABLE public.telegram_update_inbox
 
 ALTER TABLE public.telegram_update_inbox
     ADD COLUMN IF NOT EXISTS payload_expires_at timestamptz
-    NOT NULL DEFAULT (now() + interval '24 hours');
+    DEFAULT (now() + interval '24 hours');
 
 -- A content-free receipt produced by the interim inline implementation cannot be replayed.
 -- Preserve the update ID for audit/deduplication but move it to a terminal state instead of
