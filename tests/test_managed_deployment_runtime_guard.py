@@ -57,3 +57,26 @@ def test_telegram_factory_fails_closed_on_managed_production(
         match="Production requires durable persistence providers",
     ):
         build_application(token="test-only-token")
+
+
+
+def test_production_rejects_identity_dsn_for_a_different_login_role():
+    settings = {
+        "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient",
+        "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_AUTHORITY_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_POSTGRES_DSN": "postgresql://janavani_case_runtime:secret@db.example/janavani",
+        "JANAVANI_IDENTITY_LINKS_DSN": "postgresql://janavani_case_runtime:secret@db.example/janavani_identity",
+        "JANAVANI_ARTIFACT_S3_BUCKET": "janavani-artifacts",
+        "JANAVANI_IDENTITY_ASSERTION_SECRET": "test-secret",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER": "janavani-identity",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE": "janavani-api",
+    }
+    with pytest.raises(RuntimeConfigurationError, match="janavani_identity_service role"):
+        validate_runtime_configuration(environment="production", environ=settings)
