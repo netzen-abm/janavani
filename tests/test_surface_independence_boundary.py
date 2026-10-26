@@ -34,7 +34,8 @@ def test_legacy_entrypoint_is_not_a_surface_composition_authority() -> None:
 
     assert "from bot_telegram import" not in source
     assert "src.web.canonical_app" in source
-    assert "src.bot_telegram" in source
+    assert "src.web.telegram_webhook_app:app" in source
+    assert "python -m src.bot_telegram" not in source
 
 
 def test_telegram_entrypoint_does_not_compose_web_runtime() -> None:
