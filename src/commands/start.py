@@ -22,7 +22,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• /cancel — clear the current temporary workflow.\n\n"
         "Drafts are for you to review; Janavani does not submit anything automatically.\n"
         "Webhook updates are encrypted before entering the PostgreSQL inbox, with a maximum 24-hour processing window. "
-        "Review /privacy for details.\n"
+        "For details, review /privacy.\n"
         "Generated files are currently in English; Malayalam translation is not enabled yet.\n\n"
         "Volunteer in coding, tests, accessibility, language support, or documentation:\n"
         f"{VOLUNTEER_URL}\n"
