@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.storage.repositories.postgres_authority import PostgresAuthorityRepository
@@ -93,3 +97,49 @@ def test_search_rejects_non_positive_limit_without_query() -> None:
 
     assert repo.search(authority_type="district", city="Bengaluru", limit=0) == []
     cursor.execute.assert_not_called()
+
+
+def test_repository_construction_does_not_open_database_or_run_ddl() -> None:
+    connection_factory = MagicMock()
+
+    PostgresAuthorityRepository(connection_factory=connection_factory)
+
+    connection_factory.assert_not_called()
+
+
+ROOT = Path(__file__).resolve().parents[1]
+DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
+AUTHORITY_MIGRATION = ROOT / "db/migrations/20261026140000_create_civic_authorities.sql"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
+def test_versioned_authority_migration_creates_table_and_index_idempotently():
+    import psycopg
+
+    runtime_dsns = {
+        os.getenv(name, "").strip()
+        for name in ("JANAVANI_POSTGRES_DSN", "JANAVANI_IDENTITY_LINKS_DSN", "JANAVANI_CASE_DATABASE_URL")
+    } - {""}
+    assert DSN not in runtime_dsns, "test DSN must not be a runtime database"
+    assert any(value in DSN.lower() for value in ("test", "localhost", "127.0.0.1"))
+    assert os.getenv("JANAVANI_RUNTIME_MODE", "test").lower() != "production"
+
+    migration_sql = AUTHORITY_MIGRATION.read_text(encoding="utf-8")
+    with psycopg.connect(DSN) as connection:
+        connection.execute(migration_sql)
+        connection.execute(migration_sql)
+        columns = connection.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'civic_authorities'
+            ORDER BY ordinal_position
+        """).fetchall()
+        index = connection.execute("""
+            SELECT to_regclass('public.civic_authorities_type_city_idx')
+        """).fetchone()[0]
+    assert [row[0] for row in columns] == [
+        "authority_id", "name", "authority_type", "jurisdiction",
+        "primary_contact", "cc_contacts", "source_refs",
+        "verification_status", "last_verified_at",
+    ]
+    assert index == "civic_authorities_type_city_idx"
