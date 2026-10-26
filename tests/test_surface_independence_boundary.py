@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_ENTRYPOINT = ROOT / "src" / "web.py"
@@ -50,3 +52,18 @@ def test_web_procfile_is_web_only() -> None:
 
     assert "src.web.canonical_app:app" in source
     assert "src.bot_telegram" not in source
+
+
+
+def test_telegram_polling_entrypoint_fails_closed_and_manifest_uses_webhook() -> None:
+    source = TELEGRAM_ENTRYPOINT.read_text(encoding="utf-8")
+    render = (ROOT / "render.yaml").read_text(encoding="utf-8")
+
+    from src.bot_telegram import main
+
+    with pytest.raises(RuntimeError, match="Telegram polling is disabled"):
+        main()
+
+    assert "application.run_polling(" not in source
+    assert "src.web.telegram_webhook_app:app" in render
+    assert "startCommand: python src/bot_telegram.py" not in render
