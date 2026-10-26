@@ -40,6 +40,7 @@ def test_issue_description_gate_accepts_a_short_sentence_for_next_step(monkeypat
     message = SimpleNamespace(
         text="My road is damaged",
         reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
     )
     update = SimpleNamespace(
         effective_user=SimpleNamespace(id=7002),
@@ -50,8 +51,10 @@ def test_issue_description_gate_accepts_a_short_sentence_for_next_step(monkeypat
     asyncio.run(issue.handle_issue(update, context))
 
     identity_lookup.assert_called_once()
-    message.reply_text.assert_awaited_once()
-    assert "explicitly linked" in message.reply_text.await_args.args[0]
+    assert message.reply_document.await_count == 2
+    replies = [call.args[0] for call in message.reply_text.await_args_list]
+    assert any("No account is needed" in reply for reply in replies)
+    assert any("has not registered a Case" in reply for reply in replies)
 
 
 def test_issue_classification_dataclass_is_consumed_without_type_error(monkeypatch):
