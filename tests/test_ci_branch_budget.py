@@ -107,12 +107,17 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
 
     assert "feat/canonical-capability-execution-envelope|vercel/install-vercel-web-analytics-6417ji)" in ci
     assert "Retirement-only branch; policy files only" in ci
-    assert "github.event.pull_request.head.ref == 'vercel/install-vercel-web-analytics-6417ji'" in retirement
+    assert "github.event_name == 'push'" in retirement
+    assert "github.ref == 'refs/heads/main'" in retirement
     assert "retire-rejected-vercel-analytics:" in retirement
     assert "697ef531d9a02ab9a03b9986efa6b0a633766985" in retirement
     assert "archive/rejected-analytics/" in retirement
     assert "archive/branches/" in retirement
     assert "RETIREMENT VERIFIED" in retirement
+    assert "permissions:
+  contents: write
+  pull-requests: read" in retirement
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in retirement
 
 
 
