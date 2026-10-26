@@ -21,7 +21,6 @@ class PostgresAuthorityRepository:
             raise ValueError("PostgreSQL provider requires a DSN or connection factory")
         self._connection_factory = connection_factory
         self._dsn = dsn or os.getenv("JANAVANI_POSTGRES_DSN")
-        self._initialize()
 
     def _connect(self) -> Any:
         if self._connection_factory is not None:
@@ -29,31 +28,6 @@ class PostgresAuthorityRepository:
         import psycopg
 
         return psycopg.connect(self._dsn)
-
-    def _initialize(self) -> None:
-        with self._connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS civic_authorities (
-                        authority_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        authority_type TEXT NOT NULL,
-                        jurisdiction JSONB NOT NULL DEFAULT '{}'::jsonb,
-                        primary_contact JSONB,
-                        cc_contacts JSONB NOT NULL DEFAULT '[]'::jsonb,
-                        source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
-                        verification_status TEXT NOT NULL,
-                        last_verified_at TEXT
-                    )
-                    """
-                )
-                cursor.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS civic_authorities_type_city_idx
-                    ON civic_authorities (authority_type)
-                    """
-                )
 
     def save(self, record: AuthorityRecord) -> None:
         primary_contact = (
