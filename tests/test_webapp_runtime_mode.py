@@ -5,9 +5,26 @@ import pytest
 from src.webapp.runtime_mode import is_production_runtime, runtime_mode
 
 
-def test_vercel_production_is_authoritative_over_development_override(monkeypatch):
+def test_vercel_production_rejects_conflicting_development_override(monkeypatch):
     monkeypatch.setenv("VERCEL_ENV", "production")
     monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "development")
+
+    with pytest.raises(RuntimeError, match="conflicts with JANAVANI_RUNTIME_MODE"):
+        runtime_mode()
+
+
+def test_vercel_production_without_override_is_production(monkeypatch):
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    monkeypatch.delenv("JANAVANI_RUNTIME_MODE", raising=False)
+
+    assert runtime_mode() == "production"
+    assert is_production_runtime() is True
+
+
+def test_railway_production_without_override_is_production(monkeypatch):
+    monkeypatch.delenv("VERCEL_ENV", raising=False)
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_NAME", "production")
+    monkeypatch.delenv("JANAVANI_RUNTIME_MODE", raising=False)
 
     assert runtime_mode() == "production"
     assert is_production_runtime() is True

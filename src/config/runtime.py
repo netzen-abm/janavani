@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from urllib.parse import urlsplit
 
 
@@ -9,12 +10,12 @@ class RuntimeConfigurationError(RuntimeError):
     """Raised when runtime configuration violates a deployment contract."""
 
 
-def validate_runtime_configuration(
+def resolve_runtime_mode(
     *,
     environment: str | None = None,
-    environ: dict[str, str] | None = None,
-) -> None:
-    """Fail closed when production would use process-local persistence."""
+    environ: Mapping[str, str] | None = None,
+) -> str:
+    """Resolve one platform-aware runtime mode for every Python surface."""
     values = os.environ if environ is None else environ
     # An explicit test override keeps unit tests deterministic. Otherwise,
     # deployment-platform context outranks a permissive local-development default.
@@ -49,6 +50,45 @@ def validate_runtime_configuration(
         raise RuntimeConfigurationError(
             f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
         )
+    return mode
+
+def validate_identity_dsn_contract(values: Mapping[str, str]) -> str:
+    """Require a distinct DSN authenticated as the dedicated identity role."""
+    identity_dsn = values.get("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
+    if not identity_dsn:
+        raise RuntimeConfigurationError(
+            "Production identity mapping requires dedicated JANAVANI_IDENTITY_LINKS_DSN"
+        )
+    postgres_dsn = values.get("JANAVANI_POSTGRES_DSN", "").strip()
+    if not postgres_dsn:
+        raise RuntimeConfigurationError(
+            "Production PostgreSQL providers require JANAVANI_POSTGRES_DSN"
+        )
+    if identity_dsn == postgres_dsn:
+        raise RuntimeConfigurationError(
+            "Production identity mapping requires a separate identity DSN; "
+            "JANAVANI_IDENTITY_LINKS_DSN must be distinct from JANAVANI_POSTGRES_DSN"
+        )
+    try:
+        identity_login_role = urlsplit(identity_dsn).username
+    except ValueError:
+        identity_login_role = None
+    if identity_login_role != "janavani_identity_service":
+        raise RuntimeConfigurationError(
+            "Production identity mapping DSN must authenticate as "
+            "the dedicated janavani_identity_service role"
+        )
+    return identity_dsn
+
+
+def validate_runtime_configuration(
+    *,
+    environment: str | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> None:
+    """Fail closed when production would use process-local persistence."""
+    values = os.environ if environ is None else environ
+    mode = resolve_runtime_mode(environment=environment, environ=values)
     if mode != "production":
         return
 
@@ -99,26 +139,7 @@ def validate_runtime_configuration(
         raise RuntimeConfigurationError(
             "Production PostgreSQL providers require JANAVANI_POSTGRES_DSN"
         )
-    identity_dsn = values.get("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
-    if not identity_dsn:
-        raise RuntimeConfigurationError(
-            "Production identity mapping requires dedicated JANAVANI_IDENTITY_LINKS_DSN"
-        )
-    postgres_dsn = values.get("JANAVANI_POSTGRES_DSN", "").strip()
-    if identity_dsn == postgres_dsn:
-        raise RuntimeConfigurationError(
-            "Production identity mapping requires a separate identity DSN; "
-            "JANAVANI_IDENTITY_LINKS_DSN must be distinct from JANAVANI_POSTGRES_DSN"
-        )
-    try:
-        identity_login_role = urlsplit(identity_dsn).username
-    except ValueError:
-        identity_login_role = None
-    if identity_login_role != "janavani_identity_service":
-        raise RuntimeConfigurationError(
-            "Production identity mapping DSN must authenticate as "
-            "the dedicated janavani_identity_service role"
-        )
+    validate_identity_dsn_contract(values)
     if not values.get("JANAVANI_ARTIFACT_S3_BUCKET"):
         raise RuntimeConfigurationError(
             "Production artifact storage requires JANAVANI_ARTIFACT_S3_BUCKET"

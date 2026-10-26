@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+
+from src.config.runtime import resolve_runtime_mode, validate_identity_dsn_contract
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.core.submission import SubmissionRepository
@@ -79,13 +81,15 @@ def create_identity_link_repository(*, provider_composition: ProviderComposition
     """Select the shared identity-link provider at the composition boundary."""
     composition = provider_composition or create_provider_composition()
     if composition.provider_for("external_identity_links") == "postgres":
-        runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+        runtime_mode = resolve_runtime_mode()
         identity_dsn = os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
         if runtime_mode == "production" and not identity_dsn:
             raise ValueError(
                 "JANAVANI_IDENTITY_LINKS_DSN is required in production; "
                 "identity mappings must use a dedicated least-privilege database role"
             )
+        if runtime_mode == "production":
+            identity_dsn = validate_identity_dsn_contract(os.environ)
         dsn = identity_dsn or os.getenv("JANAVANI_POSTGRES_DSN")
         if not dsn:
             raise ValueError(
@@ -130,10 +134,12 @@ def create_identity_pairing_repository(
     """Choose pairing persistence consistently with external identity persistence."""
     composition = provider_composition or create_provider_composition()
     if composition.provider_for("external_identity_links") == "postgres":
-        runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+        runtime_mode = resolve_runtime_mode()
         identity_dsn = os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
         if runtime_mode == "production" and not identity_dsn:
             raise ValueError("JANAVANI_IDENTITY_LINKS_DSN is required for production pairing")
+        if runtime_mode == "production":
+            identity_dsn = validate_identity_dsn_contract(os.environ)
         dsn = identity_dsn or os.getenv("JANAVANI_POSTGRES_DSN")
         if not dsn:
             raise ValueError("Identity PostgreSQL DSN is required for pairing")

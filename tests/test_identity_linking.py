@@ -65,7 +65,7 @@ def test_production_postgres_identity_provider_accepts_dedicated_dsn(monkeypatch
     from src.storage.provider_composition import ProviderComposition
 
     monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
-    monkeypatch.setenv("JANAVANI_IDENTITY_LINKS_DSN", "postgresql://identity-role.invalid/db")
+    monkeypatch.setenv("JANAVANI_IDENTITY_LINKS_DSN", "postgresql://janavani_identity_service:secret@identity-role.invalid/db")
     monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://shared-role.invalid/db")
 
     repository = create_identity_link_repository(
@@ -74,3 +74,22 @@ def test_production_postgres_identity_provider_accepts_dedicated_dsn(monkeypatch
         )
     )
     assert isinstance(repository, PostgresExternalIdentityLinkRepository)
+
+
+
+def test_production_identity_repository_rejects_general_login_role(monkeypatch):
+    from src.config.runtime import RuntimeConfigurationError
+    from src.platform.composition_repositories import create_identity_link_repository
+    from src.storage.provider_composition import ProviderComposition
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.setenv("JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER", "postgres")
+    monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://janavani_case_runtime:secret@db.invalid/janavani")
+    monkeypatch.setenv("JANAVANI_IDENTITY_LINKS_DSN", "postgresql://janavani_case_runtime:secret@db.invalid/identity")
+
+    with pytest.raises(RuntimeConfigurationError, match="janavani_identity_service role"):
+        create_identity_link_repository(
+            provider_composition=ProviderComposition.memory_first().with_provider(
+                "external_identity_links", "postgres"
+            )
+        )

@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 
+from src.config.runtime import resolve_runtime_mode
+
 from src.capabilities.authority import AuthorityCapability
 from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
@@ -29,13 +31,11 @@ from src.platform.composition_capabilities import (
 from src.storage.repositories.case_content import InMemoryCaseContentRepository, TransientCaseContentRepository
 from src.storage.repositories.document_review_provider import require_transient_document_review
 
-
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
 
     def send(self, *, case, document_id: str, destination_ref: str):
         raise RuntimeError("Submission transport is not configured; no external delivery was attempted")
-
 
 @dataclass(frozen=True)
 class SurfaceCaseComposition:
@@ -56,7 +56,6 @@ class SurfaceCaseComposition:
     provider_composition: object
     document_review_capability: DocumentReviewCapability
     civic_action_vertical_slice: object
-
 
 def create_surface_case_composition(
     *,
@@ -101,7 +100,7 @@ def create_surface_case_composition(
 
     # Citizen-authored content has its own privacy and persistence contract.
     # Never let a production process silently accept process-local-only content.
-    runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+    runtime_mode = resolve_runtime_mode()
     content_policy = os.getenv("JANAVANI_CASE_CONTENT_POLICY", "").strip().lower()
     if case_content_repository is None:
         if content_policy == "transient":

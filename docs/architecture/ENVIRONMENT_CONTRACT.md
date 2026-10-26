@@ -11,6 +11,8 @@ Janavani uses independent runtime surfaces. A credential is configured only on t
 
 **Do not copy every secret into every Render service.** Apply least privilege.
 
+Python surfaces and provider composition use `src.config.runtime.resolve_runtime_mode()` as the single source of truth. Do not reimplement Vercel/Railway/Render mode detection in individual adapters; conflicting managed-production settings fail closed.
+
 In particular:
 
 - The canonical Web/API service does **not** need `TELEGRAM_BOT_TOKEN` merely because Janavani supports Telegram.
