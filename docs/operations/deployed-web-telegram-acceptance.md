@@ -109,3 +109,38 @@ Release status must be one of:
 - **FAIL:** an expected security, durability, consistency, or recovery invariant is violated.
 
 Do not describe a CI-only result as a deployed acceptance pass. Keep the release PR draft until the mandatory gates pass and the evidence record is reviewed.
+
+## Evidence update — 26 October 2026
+
+**Current disposition: BLOCKED for production acceptance.** This update records CI and read-only environment evidence; it does not claim that the candidate was promoted to production.
+
+### Verified code/test evidence
+
+- Candidate test commit: `914980490acc9ab5b68f067d71b1f4462d872425`.
+- CI run: `40332487893` completed successfully.
+- Canonical Python suite: **754 passed, 2 warnings**.
+- `tests/test_postgres_telegram_handler_replay.py::test_telegram_case_handler_post_commit_crash_replay_is_safe` — passed. This uses synthetic Telegram input, a disposable PostgreSQL database, the real conversation dispatcher/office-selection handler, an injected crash after Case commit and before inbox acknowledgement, then replay through a fresh worker after in-process state is cleared. It verifies one Case, one lifecycle event, safe restart guidance, and eventual encrypted-inbox payload cleanup.
+- `tests/test_postgres_privilege_hardening.py::test_pairing_privilege_migration_revokes_structural_grants` — passed. It seeds excess privileges in a test database, applies `db/migrations/20261026130000_revoke_excess_external_identity_pairing_privileges.sql` twice, and verifies `TRUNCATE`, `REFERENCES`, and `TRIGGER` are removed from `PUBLIC`, `anon`, `authenticated`, and `service_role`.
+- The focused test job, branch-budget gate, API runtime smoke, WebApp runtime smoke, PostgreSQL RLS/identity/inbox/continuity, backup/restore and restart-durability gates also passed in this CI run.
+
+### Supabase/read-only findings that remain release gates
+
+- The new pairing privilege migration is **not applied to production**. A read-only query still observed `TRUNCATE`, `REFERENCES`, and `TRIGGER` privileges on `public.external_identity_pairings` for `anon`, `authenticated`, and `service_role`. Apply only through the reviewed migration/promotion process, then re-query the live catalog to establish the resulting state.
+- RLS is disabled on the inspected project's `civic_cases`, `civic_case_events`, `civic_case_consents`, `civic_case_submissions`, `external_identity_links`, `external_identity_pairings`, `telegram_update_inbox`, `janavani_delegation_grants`, and `janavani_service_identity_policies`. Previous grants review did not establish anonymous direct DML on these tables, so this observation is a hardening gate, not proof of an anonymous data-exfiltration path. Do not enable RLS without testing the intended dedicated runtime-role model and both positive/negative owner-isolation cases.
+- The inspected Supabase project reports `public.offices` has zero rows and `to_regclass('public.civic_authorities')` is null. The source has a canonical `PostgresAuthorityRepository` for `civic_authorities`, while the existing public `offices` table is a different schema. Confirm which DSN is actually used by the production runtime before planning a migration or importing data. Do not invent or auto-seed authority records; import only source-backed records and mark verification status explicitly.
+- `PostgresAuthorityRepository` currently calls `_initialize()` during construction and creates its table/index if missing. Before product-ready use, move schema ownership to a reviewed versioned migration or otherwise establish an explicit migration policy; service startup must not silently create/modify production schema.
+- Railway's production `janavani-telegram-webhook` service still runs the previously verified commit `649d3f36e61ab0db7b9b368737c7ca1d8aa39694` from `chore/ecosystem-shared-capability-infrastructure`. The latest candidate commits and privilege migration have **not** been deployed to that service. The last `/liveness` result is process liveness only; deployed citizen-action acceptance remains outstanding.
+
+### Branch/PR gate
+
+The product repository still has nine physical branch refs. PR #204 remains draft and unmergeable. PR #225 requires the repository secret `JANAVANI_BRANCH_RETIRE_TOKEN` to be configured manually before the guarded archive-first retirement flow can finish; do not paste the token into a PR, source file, or chat. Do not call the physical branch count eight until a fresh GitHub branch query confirms it.
+
+### Decision
+
+Keep the release status **BLOCKED** until:
+1. The guarded retirement process archives and deletes only the approved retirement-only ref and the repository confirms exactly eight physical refs.
+2. The new SQL privilege migration is promoted under a reviewed migration procedure and live grants are verified.
+3. The canonical authority provider/schema/data source is reconciled, and verified authority records are imported from primary sources.
+4. The deployed-acceptance sequence above is performed against the intended running Web/API and Telegram webhook commit, including actual webhook registration, pairing, cross-surface ownership isolation, retry/dead-letter, restart recovery, and restored-backup verification.
+
+CI success demonstrates code/test evidence only; it is not production promotion or end-to-end deployed acceptance.
