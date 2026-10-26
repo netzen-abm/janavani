@@ -1,6 +1,6 @@
 """PostgreSQL proof that replay after a Telegram handler commit is safe."""
 from __future__ import annotations
-import asyncio, os, threading, time
+import asyncio, base64, os, threading, time
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -20,7 +20,7 @@ from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInb
 from src.web.telegram_inbox_worker import run_inbox_worker
 ROOT = Path(__file__).resolve().parents[1]
 DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN")
-FERNET_KEY = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+FERNET_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
 MIGRATIONS = (
     "db/migrations/20260912100000_canonical_case_policy_schema.sql",
     "db/migrations/20260920100000_external_identity_links.sql",
