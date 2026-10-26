@@ -33,7 +33,7 @@ jobs:
             audit/postgres-provider-production-gates|chore/ecosystem-shared-capability-infrastructure)
               echo "Allowed active branch role: $branch"
               ;;
-            feat/canonical-capability-execution-envelope)
+            feat/canonical-capability-execution-envelope|vercel/install-vercel-web-analytics-6417ji)
               echo "Retirement-only branch; policy files only, then archive/delete after merge."
               git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
               mapfile -t changed < <(git diff --name-only refs/remotes/origin/main HEAD | sed '/^$/d' | sort -u)
