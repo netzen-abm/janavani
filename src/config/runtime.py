@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit
 
 
 class RuntimeConfigurationError(RuntimeError):
@@ -108,6 +109,15 @@ def validate_runtime_configuration(
         raise RuntimeConfigurationError(
             "Production identity mapping requires a separate identity DSN; "
             "JANAVANI_IDENTITY_LINKS_DSN must be distinct from JANAVANI_POSTGRES_DSN"
+        )
+    try:
+        identity_login_role = urlsplit(identity_dsn).username
+    except ValueError:
+        identity_login_role = None
+    if identity_login_role != "janavani_identity_service":
+        raise RuntimeConfigurationError(
+            "Production identity mapping DSN must authenticate as "
+            "the dedicated janavani_identity_service role"
         )
     if not values.get("JANAVANI_ARTIFACT_S3_BUCKET"):
         raise RuntimeConfigurationError(
