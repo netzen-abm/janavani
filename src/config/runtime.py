@@ -98,9 +98,16 @@ def validate_runtime_configuration(
         raise RuntimeConfigurationError(
             "Production PostgreSQL providers require JANAVANI_POSTGRES_DSN"
         )
-    if not values.get("JANAVANI_IDENTITY_LINKS_DSN"):
+    identity_dsn = values.get("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
+    if not identity_dsn:
         raise RuntimeConfigurationError(
             "Production identity mapping requires dedicated JANAVANI_IDENTITY_LINKS_DSN"
+        )
+    postgres_dsn = values.get("JANAVANI_POSTGRES_DSN", "").strip()
+    if identity_dsn == postgres_dsn:
+        raise RuntimeConfigurationError(
+            "Production identity mapping requires a separate identity DSN; "
+            "JANAVANI_IDENTITY_LINKS_DSN must be distinct from JANAVANI_POSTGRES_DSN"
         )
     if not values.get("JANAVANI_ARTIFACT_S3_BUCKET"):
         raise RuntimeConfigurationError(
