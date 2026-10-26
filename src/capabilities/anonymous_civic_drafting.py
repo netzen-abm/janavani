@@ -29,11 +29,13 @@ def recommend_document_types(narrative: str) -> tuple[tuple[str, ...], str]:
         "documents", "details of", "provide data", "how much was spent",
     )
     remedy_markers = (
-        "broken", "damaged", "not working", "not received", "not delivered",
-        "delay", "delayed", "leak", "garbage", "waste", "pothole", "streetlight",
-        "sewage", "unsafe", "repair", "fix", "remove", "blocked", "denied",
-        "pending", "no action", "no response", "harassment", "bribe",
-        "corruption", "problem", "complaint", "grievance", "please help",
+        "broken", "damaged", "not working", "has not worked", "not received",
+        "not delivered", "delay", "delayed", "is leaking", "water leakage",
+        "garbage is", "waste is", "pothole", "unsafe", "please repair",
+        "repair it", "needs repair", "needs to be repaired", "please fix",
+        "fix it", "remove it", "blocked", "denied", "pending", "no action",
+        "no response", "harassment", "bribe", "corruption", "complaint",
+        "grievance", "please help",
     )
     seeks_information = any(marker in text for marker in information_markers)
     seeks_remedy = any(marker in text for marker in remedy_markers)
