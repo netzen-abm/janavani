@@ -109,3 +109,16 @@ def test_web_and_telegram_share_durable_identity_and_case_state(monkeypatch):
 
     stranger = _identity("janavani:e2e-stranger", "webapp")
     assert fresh_web.case_capability.get_owned(case_id, identity=stranger) is None
+    owned_summaries = fresh_web.case_capability.list_owned(
+        identity=_identity(principal_id, "webapp")
+    )
+    assert any(summary.case_id == case_id for summary in owned_summaries)
+    summary = next(summary for summary in owned_summaries if summary.case_id == case_id)
+    assert summary.case_type == CaseType.COMPLAINT.value
+    assert summary.evidence_count == 0
+    assert summary.document_count == 0
+    assert not hasattr(summary, "narrative")
+    assert all(
+        summary.case_id != case_id
+        for summary in fresh_web.case_capability.list_owned(identity=stranger)
+    )

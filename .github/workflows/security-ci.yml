@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
 
+# CodeQL scanning is managed by GitHub's repository default setup. Do not add a
+# competing advanced-setup upload here while default setup remains enabled.
 permissions:
   contents: read
   security-events: write
@@ -41,29 +43,6 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           comment-summary-in-pr: always
-
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [python]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Initialize CodeQL
-        if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-      - name: Analyze
-        if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
-        uses: github/codeql-action/analyze@v4
 
   scorecard:
     name: OpenSSF Scorecard

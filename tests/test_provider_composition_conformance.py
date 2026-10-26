@@ -46,3 +46,36 @@ def test_decision_only_capabilities_are_not_persistence_domains() -> None:
     decision_only = {"follow_up", "escalation"}
 
     assert decision_only.isdisjoint(PERSISTED_DOMAINS)
+
+
+
+def test_environment_composition_uses_canonical_production_provider_names() -> None:
+    environ = {
+        "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
+    }
+    composition = ProviderComposition.from_environment(environ)
+
+    assert composition.provider_for("civic_case") == "postgres"
+    assert composition.provider_for("document_artifact") == "postgres"
+    assert composition.provider_for("evidence") == "postgres"
+    assert composition.provider_for("external_identity_links") == "postgres"
+
+
+def test_canonical_provider_name_takes_precedence_over_legacy_alias() -> None:
+    composition = ProviderComposition.from_environment({
+        "JANAVANI_CASE_REPOSITORY_PROVIDER": "memory",
+        "JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER": "postgres",
+    })
+
+    assert composition.provider_for("civic_case") == "memory"
+
+
+
+def test_document_review_can_be_explicitly_transient_for_privacy():
+    composition = ProviderComposition.from_environment({
+        "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER": "transient"
+    })
+    assert composition.provider_for("document_review") == "transient"

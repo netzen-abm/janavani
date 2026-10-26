@@ -23,8 +23,8 @@ printf 'JANAVANI CANONICAL VALIDATION SUITE\n'
 printf '======================================================================\n'
 printf 'Repository: %s\n\n' "$ROOT_DIR"
 
-printf '%s\n' "[1/4] Running complete Python test suite..."
-python -m pytest tests -v
+printf '%s\n' "[1/4] Running complete Python test suite with 300-second stall diagnostics..."
+python -m pytest tests -v -o faulthandler_timeout=300
 
 printf '%s\n' "[2/4] Running canonical Rust domain-kernel tests..."
 cargo test -p janavani-core -- --nocapture

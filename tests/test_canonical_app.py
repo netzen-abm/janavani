@@ -19,6 +19,7 @@ def test_canonical_platform_endpoints() -> None:
         "service": "janavani-platform-api",
         "version": "canonical-m3",
         "status": "available",
+        "citizen_workspace": "/app",
         "health": "/liveness",
         "version_endpoint": "/version",
         "openapi": "/openapi.json",
@@ -51,6 +52,7 @@ def test_canonical_domain_route_prefixes() -> None:
     assert "/api/v1/constitutional/generate-objection" in paths
     assert "/api/v1/land/compile-kml" in paths
     assert "/civic/cases" in paths
+    assert "/civic/authorities/search" in paths
 
 
 def test_legacy_app_is_not_imported_by_canonical_assembly() -> None:

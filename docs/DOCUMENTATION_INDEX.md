@@ -1,8 +1,8 @@
 # JANAVANI — DOCUMENTATION INDEX & AUTHORITY MAP
 
 **Status:** LOCKED — DOCUMENTATION ORGANISATION STANDARD
-**Version:** 2.1
-**Date:** 11 September 2026
+**Version:** 2.2
+**Date:** 25 October 2026
 
 This index prevents contradictory documents, duplicate audits, stale implementation instructions and accidental use of historical material.
 
@@ -22,9 +22,11 @@ When documents conflict, use this order:
 10. `ROADMAP.md` — construction sequence
 11. `docs/CAPABILITY_REGISTRY.md` + active `planning/` contracts — capability/data specifications
 12. `docs/MASTER_TASK_CHECKLIST.md` — canonical task inventory
-13. Latest dated status register — current execution status/evidence
-14. Implementation, tests, CI and deployment evidence — what is actually verified
-15. `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` — concise orientation across all of the above; it does not override them
+13. `docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md` — current dated execution rebaseline, source/runtime findings, and open release gates
+14. `docs/90-audits/2026-10-25-vercel-production-risk-audit.md` — production deployment SHA, framework discrepancy, authorization blocker, runtime/configuration release gates
+15. Latest dated status register — current execution status/evidence
+16. Implementation, tests, CI and deployment evidence — what is actually verified
+17. `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` — concise orientation across all of the above; it does not override them
 
 Dated audits preserve historical evidence. They do not override current canonical documents unless explicitly adopted.
 
@@ -113,7 +115,7 @@ Remaining planning documents must be reviewed individually before any further mo
 
 ## 9. Current active orientation
 
-For AI agents and developers, start with `docs/AI_HUMAN_DEVELOPER_CONTEXT.md`, then follow the authority hierarchy above.
+For AI agents and developers, start with `docs/AI_HUMAN_DEVELOPER_CONTEXT.md`, then follow the authority hierarchy above. For the 25 October 2026 proof cycle, use the linked dated audit for execution status, branch-count evidence, current code findings, privacy/replay blockers, and the Webstudio/static-export/Cloudflare assessment. Older dated audits remain historical evidence unless a current canonical decision explicitly adopts their conclusion.
 
 The core invariant is:
 

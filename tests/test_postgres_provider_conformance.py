@@ -62,18 +62,44 @@ def test_active_deployment_manifests_select_canonical_runtime():
     assert "src/web.py" not in render
 
 
-def test_render_declares_independent_web_and_telegram_services():
+def test_render_declares_independent_api_webapp_and_telegram_services():
     render = (ROOT / "render.yaml").read_text(encoding="utf-8")
 
     assert "name: janavani-web-api" in render
-    assert "name: janavani-telegram" in render
-    assert "type: web" in render
-    assert "type: worker" in render
+    assert "name: janavani-webapp" in render
+    assert "name: janavani-telegram-webhook" in render
+    assert render.count("type: web") == 3
+    assert "type: worker" not in render
+    assert "plan: free" in render
     assert "src.web.canonical_app:app" in render
-    assert "python src/bot_telegram.py" in render
+    assert "src.web.telegram_webhook_app:app" in render
 
     web_start = "uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT"
-    telegram_start = "python src/bot_telegram.py"
+    webapp_start = "uvicorn src.webapp.main:app --host 0.0.0.0 --port $PORT"
+    telegram_start = "uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT"
     assert web_start in render
+    assert webapp_start in render
     assert telegram_start in render
     assert "subprocess" not in render
+
+def test_telegram_webhook_encrypts_payloads_and_preserves_worker_retries():
+    webhook = (ROOT / "src/web/telegram_webhook_app.py").read_text(encoding="utf-8")
+    inbox = (ROOT / "src/storage/repositories/postgres_telegram_inbox.py").read_text(
+        encoding="utf-8"
+    )
+    worker_store = (
+        ROOT / "src/storage/repositories/postgres_telegram_inbox_worker.py"
+    ).read_text(encoding="utf-8")
+    migration = (
+        ROOT / "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql"
+    ).read_text(encoding="utf-8")
+    render = (ROOT / "render.yaml").read_text(encoding="utf-8")
+
+    assert "durable_inbox.accept_encrypted" in webhook
+    assert "durable_inbox.secure_legacy_payloads" in webhook
+    assert "accept_legacy_payload" not in inbox
+    assert "MultiFernet" in inbox
+    assert "payload IS NOT NULL OR encrypted_payload IS NOT NULL" in worker_store
+    assert "payload_expires_at" in migration
+    assert "JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS" in render
+

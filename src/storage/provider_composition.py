@@ -72,14 +72,32 @@ class ProviderComposition:
         return cls({domain: DEFAULT_PROVIDER for domain in PERSISTED_DOMAINS})
 
     @classmethod
-    def from_environment(cls) -> "ProviderComposition":
-        """Resolve the shared provider plan without importing any adapter."""
-        providers = {
-            domain: os.getenv(
-                f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER", DEFAULT_PROVIDER
-            )
-            for domain in PERSISTED_DOMAINS
+    def from_environment(
+        cls, environ: Mapping[str, str] | None = None
+    ) -> "ProviderComposition":
+        """Resolve canonical provider names; accept older domain-derived aliases."""
+        values = os.environ if environ is None else environ
+        aliases = {
+            "civic_case": (
+                "JANAVANI_CASE_REPOSITORY_PROVIDER",
+                "JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER",
+            ),
+            "document_artifact": (
+                "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER",
+                "JANAVANI_DOCUMENT_ARTIFACT_REPOSITORY_PROVIDER",
+            ),
         }
+        providers: dict[str, str] = {}
+        for domain in PERSISTED_DOMAINS:
+            names = aliases.get(
+                domain, (f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER",)
+            )
+            # The first name is the documented canonical setting. A legacy alias
+            # is consulted only when the canonical name is genuinely absent.
+            providers[domain] = next(
+                (values[name] for name in names if name in values),
+                DEFAULT_PROVIDER,
+            )
         return cls(providers)
 
     def provider_for(self, domain: str) -> str:

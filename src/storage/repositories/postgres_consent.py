@@ -10,44 +10,23 @@ from src.storage.postgres_unit_of_work import bind_postgres_principal
 
 
 class PostgresConsentRepository:
-    """Durable consent provider independent of identity or transport."""
+    """Durable consent adapter over the migration-owned schema.
+
+    Runtime credentials need DML permissions only; schema changes belong to
+    reviewed migrations, not service startup.
+    """
 
     def __init__(self, *, connection_factory: Callable[[], Any] | None = None, dsn: str | None = None) -> None:
         if connection_factory is None and not (dsn or os.getenv("JANAVANI_POSTGRES_DSN")):
             raise ValueError("PostgreSQL provider requires a DSN or connection factory")
         self._connection_factory = connection_factory
         self._dsn = dsn or os.getenv("JANAVANI_POSTGRES_DSN")
-        self._initialize()
 
     def _connect(self) -> Any:
         if self._connection_factory is not None:
             return self._connection_factory()
         import psycopg
         return psycopg.connect(self._dsn)
-
-    def _initialize(self) -> None:
-        with self._connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS civic_case_consents (
-                        consent_id TEXT PRIMARY KEY,
-                        case_id TEXT REFERENCES civic_cases(case_id),
-                        subject_id TEXT NOT NULL,
-                        purpose TEXT NOT NULL,
-                        scope JSONB NOT NULL,
-                        grant_type TEXT NOT NULL,
-                        status TEXT NOT NULL,
-                        granted_by TEXT,
-                        created_at TIMESTAMPTZ NOT NULL,
-                        expires_at TIMESTAMPTZ,
-                        revoked_at TIMESTAMPTZ,
-                        proof_ref TEXT
-                    )
-                """)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS civic_case_consents_subject_idx "
-                    "ON civic_case_consents(subject_id, created_at)"
-                )
 
     def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         with self._connect() as connection:

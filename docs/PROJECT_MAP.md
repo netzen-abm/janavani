@@ -1,8 +1,8 @@
 # JANAVANI — PROJECT MAP
 
 **Status:** ACTIVE — REPOSITORY NAVIGATION AND OWNERSHIP MAP
-**Version:** 2.0
-**Date:** 11 September 2026
+**Version:** 2.1
+**Date:** 25 October 2026
 
 ## 1. Purpose
 
@@ -13,12 +13,13 @@ This document explains where production code, interfaces, shared capabilities, s
 ```text
 janavani/
 ├── src/                 # primary application source
-├── api/                 # API-related compatibility/integration code
+├── crates/              # Rust core/application workspace
 ├── tests/               # automated verification
 ├── docs/                # active documentation
 ├── planning/            # active detailed contracts/specifications
 ├── archive/             # historical/superseded material
-├── database/            # datasets/seeds/reference data
+├── database/            # repository data/seeds/reference assets
+├── db/                  # SQL migrations and persistence schema
 ├── scripts/             # development/operations utilities
 ├── .github/             # CI and repository automation
 ├── Dockerfile
@@ -32,25 +33,51 @@ janavani/
 └── ROADMAP.md
 ```
 
-## 2A. Current canonical source layout (2026-09-21)
+## 2A. Current source layout (verified 25 October 2026)
+
+The current tree is organized around these existing directories. Names below describe observed repository responsibilities; they do not claim every module is production-ready.
 
 ```text
 src/
-├── platform/       # shared ecosystem composition/runtime
-├── identity/       # canonical identity and external linking
-├── access/         # authorization, consent and consequential-operation gates
-├── capabilities/   # canonical capability contracts and orchestration
-├── core/           # stable domain primitives and execution context
-├── storage/        # provider composition, repositories and UoW
-├── documents/      # document lifecycle and artifacts
-├── delivery/       # external delivery contracts
-├── adapters/       # surface/provider adapters
-├── web/            # canonical Web application adapter
-├── conversation/   # conversation runtime
-└── app/             # application bootstrap
+├── platform/       # shared provider/capability composition
+├── capabilities/   # reusable capability contracts and behavior
+├── core/           # domain primitives, lifecycle and execution context
+├── identity/       # verified identities, external links and pairing
+├── access/         # authorization, consent and capability gates
+├── security/       # cross-cutting security utilities/policies
+├── storage/        # provider selection, repositories and transactions
+├── documents/      # document drafting/rendering and artifact contracts
+├── delivery/       # explicit delivery/submission contracts
+├── ai/             # AI providers, routing and shared AI gateway
+├── adapters/       # surface and provider adapters, including Telegram identity
+├── commands/       # Telegram command handlers delegating to shared capabilities
+├── conversation/   # cohesive Telegram conversation state machine
+├── web/            # FastAPI API assembly, HTTP routers, Telegram webhook/worker
+├── webapp/         # interactive citizen UI, OIDC/session gateway and API client
+├── config/         # runtime configuration/validation
+├── services/       # compatibility/transitional services; migrate selectively
+├── app/, utils/    # bootstrap and supporting utilities; inspect before moving
+├── migration/      # migration-related helpers; distinguish from db/migrations
+├── database/       # in-source data/compatibility modules where present
+├── web_dioxus/     # excluded from Cargo workspace; not the deployed API
+├── web_mvp/        # compatibility surface retained pending import/runtime proof
+└── whatsapp/       # additional messaging-surface work; verify before claiming deployed
 ```
 
-Historical generations are retained under `archive/generations/`. Quarantined obsolete placeholders are retained under `archive/legacy/quarantined/`. `src/services/` remains a compatibility/transitional area and is being migrated capability-by-capability rather than moved wholesale.
+Rust workspace:
+- `crates/janavani-core/` — Rust core crate.
+- `crates/janavani-application/` — Rust application crate.
+- `Cargo.toml` defines the current workspace. No Cargo.lock was present in the reviewed branch at the time of this audit.
+
+Repository-level persistence and verification:
+- `db/migrations/` — SQL schema/migration evolution.
+- `database/` — root data/reference assets; do not conflate this with SQL migrations.
+- `tests/` — Python unit, contract and integration verification.
+- `.github/workflows/` — CI, architecture, security, container and branch retirement automation.
+- `render.yaml` — proposed service definitions; not proof of deployed service inventory.
+- `archive/` — preserved historical generations, assets, branch heads, documentation and retired dependencies.
+
+Historical generations are retained under `archive/generations/`; quarantined obsolete placeholders are retained under `archive/legacy/quarantined/`. Do not re-create the absent `src/domain/`, `src/workflow/`, `src/engine/`, or `src/models/` namespaces just to match old documentation. The canonical domain/capability ownership currently resides primarily in `src/core/` and `src/capabilities/`, while workflow/session mechanics are separated by actual use case and adapter boundary.
 
 ## 3. Architectural flow
 
@@ -72,49 +99,41 @@ Interfaces consume shared capabilities. They do not own shared business logic.
 
 ## 4. `src/` ownership
 
-### `src/domain/`
+### `src/platform/`
+Shared composition roots and dependency graphs. Resolve provider choice once and share a consistent capability/repository graph across independent surfaces.
 
-Canonical business concepts and domain rules. Domain code must remain independent of Telegram, Web, WhatsApp and other interfaces.
-
-### `src/workflow/`
-
-Reusable citizen and platform workflows. Workflow definitions/steps must not be tied to one access surface.
-
-### `src/engine/`
-
-Workflow/state orchestration and execution infrastructure. It orchestrates; it must not become a generic business-logic dumping ground.
-
-### `src/services/`
-
-Application/business services and integrations that coordinate reusable capabilities.
-
-### `src/documents/`
-
-Document composition, standards and output. Generation is separate from electronic submission.
-
-### `src/storage/`
-
-Repository contracts, persistence implementations, storage adapters, cache and provider selection.
-
-### `src/adapters/`
-
-Thin translation boundaries for external interfaces, protocols and providers.
-
-### `src/conversation/`
-
-Interaction/session/routing infrastructure. It may orchestrate conversations but must delegate shared business rules.
-
-### `src/web/`
-
-Web/API assembly and HTTP-facing adapters. `src/web/canonical_app.py` is the current canonical API assembly boundary; production runtime ownership still requires runtime/deployment evidence.
+### `src/capabilities/`
+Canonical, reusable capability contracts and behavior (Case, Evidence, Authority, Consent, Document, Civic Action and related lifecycle operations). Surface adapters should call these owners instead of implementing alternate business rules.
 
 ### `src/core/`
+Stable domain objects, lifecycle invariants, transaction/idempotency contracts and execution-context primitives. Keep rules cohesive when they protect the same invariant.
 
-Configuration and platform-level foundational components. It must not become a second business-logic layer.
+### `src/identity/`, `src/access/`, and `src/security/`
+Identity verification/linking, authorization, consent and cross-cutting security policy. A Telegram transport ID or browser-supplied value is not automatically a trusted citizen principal.
 
-### `src/models/`
+### `src/storage/`
+Provider-neutral repository contracts, PostgreSQL implementations, provider composition and Unit-of-Work/transaction semantics. Database/provider mechanics must not leak into the UI.
 
-Application/data models where a distinct responsibility remains justified. Duplicate representations of canonical domain concepts must be reconciled.
+### `src/documents/` and `src/delivery/`
+Document composition and artifact handling are separate from external delivery. Janavani must not claim that a document was submitted or received without the appropriate confirmed acknowledgement.
+
+### `src/ai/`
+Replaceable AI providers and shared execution/routing. AI is optional assistance, not the source of truth for identity, facts, consent or consequential decisions.
+
+### `src/web/`
+Canonical FastAPI composition and HTTP adapters. The same directory currently also contains the Telegram webhook and inbox worker entry points; these are separate runtime/trust responsibilities despite sharing a package namespace. Preserve the existing entry paths until deployments/imports/tests are deliberately migrated.
+
+### `src/webapp/`
+Interactive WebApp presentation, OIDC authorization-code/PKCE flow, session handling, request-scoped API client, authority intake and Case workspace. Keep browser identity separate from API identity assertions; verify production issuer/session/revocation settings before release.
+
+### `src/adapters/`, `src/commands/`, and `src/conversation/`
+Telegram identity/provider adapters, command handlers and the cohesive conversation state machine. Do not split the conversation engine by arbitrary file size; extract only independent transport, trust, persistence or lifecycle boundaries.
+
+### `src/services/`, `src/app/`, `src/utils/`, and `src/migration/`
+Compatibility, application bootstrap and supporting modules. Their ownership must be confirmed file-by-file before migration; do not move the mixed service directory wholesale.
+
+### `src/web_dioxus/`, `src/web_mvp/`, and `src/whatsapp/`
+Non-primary/compatibility or developing surfaces. Their presence in the tree does not make them the deployed canonical API or a production-ready channel. Preserve until imports, test references and runtime status are verified.
 
 ## 5. Access surfaces
 
@@ -158,7 +177,7 @@ A test file existing is not evidence that its tests passed.
 
 ## 10. Documentation
 
-Use `docs/DOCUMENTATION_INDEX.md` as the documentation authority map. Use `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` for concise orientation. Use the latest Master Task Checklist status register for execution state.
+Use `docs/DOCUMENTATION_INDEX.md` as the documentation authority map. Use `docs/AI_HUMAN_DEVELOPER_CONTEXT.md` for concise orientation. Use `docs/MASTER_TASK_CHECKLIST.md` plus the current dated rebaseline `docs/90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md` for execution state. Older date-stamped findings remain historical where the current rebaseline explicitly supersedes them.
 
 ## 11. Archive
 

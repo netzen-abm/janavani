@@ -28,6 +28,9 @@ def validate_runtime_configuration(
         "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_AUTHORITY_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_SUBMISSION_REPOSITORY_PROVIDER": "postgres",
         "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
         "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
     }
@@ -40,6 +43,28 @@ def validate_runtime_configuration(
         detail = "; ".join(mismatches)
         raise RuntimeConfigurationError(
             "Production requires durable persistence providers: " + detail
+        )
+
+    if values.get("JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER", "").strip().lower() != "transient":
+        raise RuntimeConfigurationError(
+            "Production document review requires "
+            "JANAVANI_DOCUMENT_REVIEW_REPOSITORY_PROVIDER=transient "
+            "until a durable citizen-content adapter is explicitly approved"
+        )
+
+    identity_assertion_settings = (
+        "JANAVANI_IDENTITY_ASSERTION_SECRET",
+        "JANAVANI_IDENTITY_ASSERTION_ISSUER",
+        "JANAVANI_IDENTITY_ASSERTION_AUDIENCE",
+    )
+    missing_identity_settings = [
+        name for name in identity_assertion_settings
+        if not values.get(name, "").strip()
+    ]
+    if missing_identity_settings:
+        raise RuntimeConfigurationError(
+            "Production authenticated identity requires explicit assertion configuration: "
+            + ", ".join(missing_identity_settings)
         )
 
     if not values.get("JANAVANI_POSTGRES_DSN"):

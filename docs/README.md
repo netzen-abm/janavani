@@ -1,7 +1,7 @@
 # JANAVANI — DOCUMENTATION HOME
 
 **Status:** ACTIVE
-**Date:** 11 September 2026
+**Date:** 25 October 2026
 
 Start here when entering the Janavani documentation system.
 
@@ -18,7 +18,8 @@ Start here when entering the Janavani documentation system.
 9. `PROJECT_MAP.md` — repository navigation and ownership
 10. `CAPABILITY_REGISTRY.md` — capability inventory
 11. `MASTER_TASK_CHECKLIST.md` — master task inventory
-12. Latest dated status register — current execution/evidence state
+12. [2026-10-25 engineering proof-cycle and repository-structure audit](90-audits/2026-10-25-engineering-proof-cycle-and-repository-structure-audit.md) — current code/runtime findings, branch governance, privacy/replay blockers, toolchain, and Webstudio/SSG/Cloudflare evaluation
+13. Latest dated status register — current execution/evidence state
 
 ## Directory map
 
@@ -55,6 +56,10 @@ docs/
 - Archive superseded material; do not erase history.
 - Update links when documents are renamed or moved.
 - Never treat documentation presence as implementation evidence.
+
+## Current proof-cycle status — 25 October 2026
+
+The current observed physical branch count is nine against the target of eight. PR #213 remains open pending independent review and ruleset reconciliation. PR #204 remains draft. The newest audit is the authoritative dated engineering rebaseline for this proof cycle; older records are historical evidence unless explicitly superseded there.
 
 ## One-sentence orientation
 

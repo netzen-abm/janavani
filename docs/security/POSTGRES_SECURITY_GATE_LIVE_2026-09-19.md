@@ -21,8 +21,6 @@ The canonical Civic Case tables exist in `public`, including:
 
 All eight currently have **RLS disabled**.
 
-This is a **critical security finding**. With the Supabase Data API role model, these tables must not remain exposed without a deliberately approved authorization boundary.
-
 **Do not enable RLS by itself.** Enabling RLS without policies would block ordinary access, while enabling incomplete policies could create false security.
 
 ## Schema reconciliation findings
@@ -79,5 +77,16 @@ The next implementation unit is the identity/database authorization mapping and 
 
 ## Supabase platform note
 
-Supabase currently recommends RLS for tables in exposed schemas and separates table grants from row-level policy. New public tables are also moving toward explicit Data API grants rather than automatic exposure. The Janavani design therefore needs both layers deliberately defined.
+Supabase recommends RLS for tables in exposed schemas and separates table grants from row-level policy. Janavani must deliberately define both layers.
 
+## Live privilege-hardening addendum — 2026-10-25
+
+A narrow defense-in-depth migration was applied to the connected live project:
+
+- Supabase migration name/version: `revoke_excess_public_table_privileges` / `20261025100248`.
+- Revoked `TRUNCATE`, `REFERENCES`, `TRIGGER`, and PostgreSQL 17 `MAINTAIN` from `anon`, `authenticated`, and `service_role` on the eight Civic Case tables and `public.offices`.
+- Rechecked live privileges after application. The three roles have no `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`, or `MAINTAIN` privilege on the eight Civic Case tables.
+- `public.offices` retains `anon SELECT` for the public read-only directory; those roles do not have write or truncate privileges there.
+- The Supabase security advisor returned no lints on the post-change check.
+
+**This does not activate RLS and does not close the production authorization gate.** RLS remains disabled for the eight Civic Case tables. The candidate RLS policy is still not approved for live activation: identity-to-principal binding, live schema reconciliation, delegation/consent policy coverage, real-PostgreSQL negative tests, and rollback verification remain required. Treat this addendum as verified grant-hardening evidence—not proof of full production isolation.

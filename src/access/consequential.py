@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src.access.authorization import AuthorizationDecision, AuthorizationPolicy, AuthorizationRequest
+from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, CapabilityScopeDecision
 from src.access.consent import ConsentRepositoryReader, ConsentRequiredError, ConsentRequirement, require_consent
 from src.access.scoped_execution_policy import ScopedExecutionPolicy, ScopedExecutionRequest
 from src.core.execution import CapabilityExecutionContext, SideEffectClass
-from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, CapabilityScopeDecision
 
 
 class ConsequentialDecision(str, Enum):

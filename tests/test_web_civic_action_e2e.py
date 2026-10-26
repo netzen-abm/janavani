@@ -81,6 +81,7 @@ def web_state(monkeypatch):
     monkeypatch.setattr(civic_case_dependencies, "_COMPOSITION", composition)
     monkeypatch.setattr(civic_case_dependencies, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_dependencies, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_dependencies, "AUTHORITY", composition.authority_capability)
     monkeypatch.setattr(civic_case_lifecycle_router, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_lifecycle_router, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "CAPABILITY", composition.case_capability)
@@ -174,6 +175,18 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert body["status"] == "ready"
     assert "evidence-e2e" in body["evidence_refs"]
     assert document_id in body["document_refs"]
+    listed = client.get("/civic/cases", headers=headers)
+    assert listed.status_code == 200
+    listed_item = next(
+        item for item in listed.json()["items"] if item["case_id"] == case_id
+    )
+    assert listed_item["evidence_count"] == 1
+    assert listed_item["document_count"] == 1
+    assert listed_item["last_activity_at"]
+    assert all("narrative" not in item and "subject" not in item for item in listed.json()["items"])
+    stranger_list = client.get("/civic/cases", headers=_auth_header("principal-stranger"))
+    assert stranger_list.status_code == 200
+    assert all(item["case_id"] != case_id for item in stranger_list.json()["items"])
 
     direct_submit = client.post(f"/civic/cases/{case_id}/submit", headers=headers, json={})
     assert direct_submit.status_code == 409
@@ -200,3 +213,27 @@ def test_web_ready_fails_closed_without_submission_consent(web_state):
     assert ready.status_code == 409
     assert "approval" in ready.json()["detail"].lower() or "consent" in ready.json()["detail"].lower()
     assert cases.get(case_id).status.value == "review"
+
+
+def test_authority_search_api_returns_only_canonical_verified_destinations(web_state):
+    response = client.get(
+        "/civic/authorities/search",
+        params={"authority_type": "district", "city": "Bengaluru"},
+        headers=_auth_header(),
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["count"] == 1
+    authority = payload["items"][0]
+    assert authority["authority_id"] == "office-e2e"
+    assert authority["verified"] is True
+    assert authority["destination_name"] == "District Officer"
+    assert authority["destination_email"] == "office@example.test"
+
+
+def test_authority_search_api_requires_authenticated_identity():
+    response = client.get(
+        "/civic/authorities/search",
+        params={"authority_type": "district", "city": "Bengaluru"},
+    )
+    assert response.status_code == 401

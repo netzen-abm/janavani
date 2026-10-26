@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pip install -r requirements-api.txt",
+  "functions": {
+    "src/web/canonical_app.py": {
+      "excludeFiles": "{archive/**,docs/**,tests/**,**/test_*.py,**/*_test.py,**/__pycache__/**,**/.pytest_cache/**}"
+    }
+  }
+}

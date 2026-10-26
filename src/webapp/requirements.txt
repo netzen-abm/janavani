@@ -1,6 +1,9 @@
-python-fasthtml==0.5.2
-requests==2.32.3
-httpx==0.28.1
-uvicorn==0.30.6
-python-docx==1.1.2
-reportlab==4.2.2
+# WebApp-only runtime. The canonical API owns database persistence and document rendering.
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-fasthtml>=0.12.0
+httpx>=0.28.1
+PyJWT[crypto]>=2.10.1
+cryptography>=42.0.0
+reportlab>=4.2.0
+python-docx>=1.1.0

@@ -21,6 +21,8 @@ from src.storage.repositories.obligation import AuthorityBackedObligationResolve
 from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.identity.linking import ExternalIdentityLinkRepository, InMemoryExternalIdentityLinkRepository, PostgresExternalIdentityLinkRepository
+from src.identity.pairing import InMemoryPairingRepository
+from src.storage.repositories.postgres_identity_pairing import PostgresPairingRepository
 from src.storage.repositories.submission_provider import create_submission_repository as create_submission_repository_for_provider
 
 def create_provider_composition() -> ProviderComposition:
@@ -36,6 +38,28 @@ def create_case_repository(*, provider_composition: ProviderComposition | None =
 def create_consent_repository(*, provider_composition: ProviderComposition | None = None) -> ConsentRepository:
     composition = provider_composition or create_provider_composition()
     return create_consent_repository_for_provider(provider=composition.provider_for("consent"))
+
+
+def create_consent_case_atomic_repository(
+    *, provider_composition: ProviderComposition | None = None,
+    case_repository=None, consent_repository=None,
+):
+    """Select atomic writes only for a coherent PostgreSQL repository pair."""
+    composition = provider_composition or create_provider_composition()
+    if (composition.provider_for("civic_case") != "postgres"
+            or composition.provider_for("consent") != "postgres"):
+        return None
+    from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
+    from src.storage.repositories.postgres_consent import PostgresConsentRepository
+    if not isinstance(case_repository, PostgresCivicCaseRepository):
+        raise ValueError("Atomic consent requires a PostgreSQL Case repository")
+    if not isinstance(consent_repository, PostgresConsentRepository):
+        raise ValueError("Atomic consent requires a PostgreSQL consent repository")
+    dsn = os.getenv("JANAVANI_POSTGRES_DSN", "").strip()
+    if not dsn:
+        raise ValueError("JANAVANI_POSTGRES_DSN is required for atomic PostgreSQL consent")
+    from src.storage.repositories.postgres_consent_case_atomic import PostgresConsentCaseAtomicRepository
+    return PostgresConsentCaseAtomicRepository(dsn=dsn)
 
 def create_submission_repository(*, provider_composition: ProviderComposition | None = None) -> SubmissionRepository:
     composition = provider_composition or create_provider_composition()
@@ -98,3 +122,23 @@ def create_responsibility_resolver(authority_repository: AuthorityRepository):
 
 def create_obligation_resolver(authority_repository: AuthorityRepository, records: dict[str, list[dict[str, object]]] | None = None):
     return AuthorityBackedObligationResolver(records or {})
+
+def create_identity_pairing_repository(
+    *, provider_composition: ProviderComposition | None = None,
+    identity_link_repository: ExternalIdentityLinkRepository | None = None,
+):
+    """Choose pairing persistence consistently with external identity persistence."""
+    composition = provider_composition or create_provider_composition()
+    if composition.provider_for("external_identity_links") == "postgres":
+        runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+        identity_dsn = os.getenv("JANAVANI_IDENTITY_LINKS_DSN", "").strip()
+        if runtime_mode == "production" and not identity_dsn:
+            raise ValueError("JANAVANI_IDENTITY_LINKS_DSN is required for production pairing")
+        dsn = identity_dsn or os.getenv("JANAVANI_POSTGRES_DSN")
+        if not dsn:
+            raise ValueError("Identity PostgreSQL DSN is required for pairing")
+        return PostgresPairingRepository(dsn=dsn)
+    links = identity_link_repository or create_identity_link_repository(
+        provider_composition=composition
+    )
+    return InMemoryPairingRepository(identity_link_repository=links)

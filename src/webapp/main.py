@@ -1,13 +1,32 @@
+import sys
+from pathlib import Path
+
+# The WebApp is deployed as a subdirectory on some hosts. Resolve the monorepo
+# root before importing shared capabilities; never duplicate those modules.
+for _candidate in (*Path(__file__).resolve().parents, Path.cwd(), Path.cwd().parent):
+    if (_candidate / "src" / "webapp" / "main.py").is_file():
+        if str(_candidate) not in sys.path:
+            sys.path.insert(0, str(_candidate))
+        break
+
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
+    A, Button, Div, Form, H1, H2, H3, Input, Label, P, Style, Textarea, Titled,
     fast_app,
 )
 from starlette.requests import Request
+from starlette.responses import HTMLResponse
+from starlette.middleware.sessions import SessionMiddleware
+from src.webapp.identity_gateway import register_identity_gateway_routes, session_secret_for_middleware
+from src.webapp.auth_options import register_auth_options_route
+from src.webapp.runtime_mode import is_production_runtime
+from src.webapp.case_list import register_case_list_routes
+from src.webapp.csrf_protection import SameOriginCookieMutationMiddleware
 from src.webapp.services.api_client import client_for_request
+from src.webapp.authority_intake import register_authority_intake_routes
+from src.webapp.anonymous_intake import register_anonymous_intake_routes
 
 # Initialize the stateless web interface client
-app, rt = fast_app(
+webapp, rt = fast_app(
     hdrs=(
         Style("""
             body { padding: 2rem 0; background-color: #f8f9fa; }
@@ -18,118 +37,137 @@ app, rt = fast_app(
         """)
     )
 )
+webapp.add_middleware(SameOriginCookieMutationMiddleware)
+webapp.add_middleware(
+    SessionMiddleware,
+    secret_key=session_secret_for_middleware(),
+    session_cookie="janavani_web_session",
+    max_age=1800,
+    same_site="lax",
+    https_only=is_production_runtime(),
+)
 
 @rt("/")
-def get():
-    """Render the first-class Janavani WebApp civic Case workspace."""
+def get(request: Request):
+    """Make anonymous document drafting the primary path; identity is optional."""
+    authenticated = bool(client_for_request(request).identity_assertion)
+    account_link = (
+        Form(action="/auth/logout", method="post")(Button("Sign out"))
+        if authenticated else A("Optional sign-in for tracking", href="/auth/options")
+    )
     return Titled(
-        "🇮🇳 Janavani — Citizen Action Hub",
+        "Janavani — The Infrastructure of Citizen Voice",
         Div(
             Div(
                 H1("JANAVANI"),
-                P("Create and review a civic Case through the shared Janavani platform."),
-                style="text-align: center; margin-bottom: 3rem;",
+                H2("Your voice. Your rights. Your next step."),
+                P("Narrate what happened in your own words. Janavani can prepare a complaint, an RTI application seeking existing records, or both."),
+                style="text-align:center;margin-bottom:2rem;",
             ),
             Div(
-                H3("📝 Create a Civic Case"),
-                P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
-                Form(action="/submit-issue", method="post")(
+                H3("Describe the incident"),
+                P("No account is needed to generate a draft. Avoid sharing unnecessary personal or highly sensitive information."),
+                Form(action="/draft", method="post")(
                     Textarea(
-                        name="citizen_input",
-                        placeholder="Describe the civic issue...",
-                        rows=6,
+                        name="narrative",
+                        placeholder=(
+                            "Example: The streetlights in our lane have not worked for two weeks. "
+                            "I want the municipality to repair them and provide copies of complaint and action-taken records."
+                        ),
+                        rows=8,
                         required=True,
+                        maxlength=5000,
                     ),
-                    Button("Create Case", type="submit", cls="button-primary"),
+                    Button("Generate my draft", type="submit", cls="button-primary"),
+                ),
+                P("Your narrative is processed transiently for this draft and is not saved as a Janavani Case in this no-login flow. Review every fact and placeholder before sending."),
+                account_link,
+                (
+                    A("View my tracked Cases", href="/cases")
+                    if authenticated else P(
+                        "Want follow-up and cross-device tracking later? "
+                        "Review the sign-in options; anonymous drafting remains available."
+                    ),
                 ),
                 cls="card",
             ),
         ),
     )
 
-@rt("/submit-issue")
-def post(citizen_input: str, request: Request):
-    """Sends user text to the backend microservice and displays the structured draft fields."""
-    try:
-        client = client_for_request(request)
-        result = client.submit_complaint_draft(citizen_input)
-    except (RuntimeError, ValueError):
-        return Div(
-            Div(
-                H3("Sign-in required"),
-                P("Authenticate through the Janavani identity gateway before creating a case."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
-        )
-    
-    if "error" in result:
-        return Div(
-            Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
-        )
-        
-    return Div(
-        Div(
-            H2("📁 Civic Case Created"),
-            P(f"Case ID: {result.get('case_id')}"),
-            P(f"Status: {result.get('status')}"),
-            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
-            Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
-                Button("Open Case Workspace", type="submit"),
-            ),
-            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
-            cls="card",
-        )
-    )
-
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
-    """Displays targeted bill details alongside dynamic print and email action controls."""
-    return Div(
-        Div(
-            H2(f"Constitutional Audit Report: {bill_code}"),
-            P("This evaluation screens statutory structures against Article 14 (Equality), Article 19 (Freedom), and Article 21 (Liberty)."),
-            Hr(),
-            Form(action="/dispatch-objection", method="post")(
-                Hidden(name="bill_code", value=bill_code),
-                H4("Add Your Personal Observations or Local Context (Optional):"),
-                Textarea(name="comments", placeholder="Enter your comments here to append them to the formal petition...", rows=3),
-                H4("Select Your Official Action Channel:"),
-                Label(Input(type="radio", name="format_choice", value="PDF", checked=True), " Download Print-Ready PDF for Official Physical Mail"),
-                Label(Input(type="radio", name="format_choice", value="DOCX"), " Download Editable Word Document (.docx) for Local Adjustments"),
-                Br(),
-                Button("Generate Official Objection Paperwork", type="submit")
-            ),
-            A("Cancel and Return", href="/"),
-            cls="card"
-        )
+    """Fail closed until legislative profiles and authority provenance are verified."""
+    del bill_code
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Constitutional review unavailable — Janavani</title></head><body><main>"
+        "<h1>Constitutional bill review is temporarily unavailable</h1>"
+        "<p>Janavani has not yet verified the source provenance for the legislative "
+        "profiles required by this workflow. To avoid presenting unverified legal "
+        "analysis as authoritative, this document-generation route is disabled.</p>"
+        "<p>You can still use the authenticated citizen workspace to create and "
+        "continue a regular civic Case.</p>"
+        "<p>No constitutional assessment or document has been generated or sent.</p>"
+        "<p><a href='/'>Return to the citizen workspace</a></p>"
+        "</main></body></html>",
+        status_code=503,
+        headers={
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+            "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "X-Frame-Options": "DENY",
+        },
     )
 
-@rt("/dispatch-objection")
-def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, request: Request):
-    """Triggers document streaming back to the browser based on format preferences."""
-    client = client_for_request(request)
-    file_bytes = client.download_constitutional_objection(bill_code, comments, format_choice)
-    
-    if not file_bytes:
-        return P("Error generating document stream artifact from backend pools.")
-        
-    ext = format_choice.lower()
-    media = "application/pdf" if format_choice == "PDF" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    
-    from fastapi.responses import Response
-    return Response(
-        content=file_bytes,
-        media_type=media,
-        headers={"Content-Disposition": f"attachment; filename=objection_{bill_code}.{ext}"}
+
+@rt("/dispatch-objection", methods=["POST"])
+def post_dispatch_objection():
+    """Reject the retired document path explicitly; never imply generation."""
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Document route retired — Janavani</title></head><body><main>"
+        "<h1>This document route is not available</h1>"
+        "<p>No file was generated and nothing was transmitted. Return to the "
+        "citizen workspace to continue a supported civic Case workflow.</p>"
+        "<p><a href='/'>Return to Janavani</a></p>"
+        "</main></body></html>",
+        status_code=410,
+        headers={
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+            "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "X-Frame-Options": "DENY",
+        },
     )
+
 
 from src.webapp.case_workspace import register_case_workspace_routes
+from src.webapp.identity_pairing_workspace import register_identity_pairing_routes
 
 register_case_workspace_routes(rt)
+register_identity_pairing_routes(rt)
+register_identity_gateway_routes(rt)
+register_auth_options_route(rt)
+register_case_list_routes(rt)
+register_authority_intake_routes(rt)
+register_anonymous_intake_routes(rt)
+
+@rt("/liveness")
+def webapp_liveness():
+    return P("alive")
+
+
+# Vercel discovers a conventional top-level assignment. Keep one canonical
+# FastHTML ASGI application so route and middleware introspection stays coherent.
+app = webapp
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.webapp.main:app", host="0.0.0.0", port=8080, reload=True)
-
 

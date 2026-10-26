@@ -1,13 +1,12 @@
 """Citizen case-workspace routes; canonical API owns lifecycle and authorization."""
 from __future__ import annotations
-
+import re
+from fastapi import HTTPException
 from fastapi.responses import Response
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Li, Option, P, Select, Textarea, Titled, Ul
 from starlette.requests import Request
-
+from src.webapp.api_errors import PlatformAPIContractError, safe_api_errors
 from src.webapp.services.api_client import client_for_request
-
-
 def _sign_in_required():
     """Render a safe, user-facing response when no request identity is present."""
     return Titled(
@@ -18,24 +17,31 @@ def _sign_in_required():
             A("Return to dashboard", href="/"),
         ),
     )
-
-
 def register_case_workspace_routes(rt) -> None:
     """Register UI routes that forward each request's verified identity assertion."""
 
     @rt("/cases/{case_id}/prepare")
+    @safe_api_errors("open the Case workspace")
     def get_case_workspace(case_id: str, request: Request):
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
         case = client.get_case(case_id)
         draft = client.prepare_document_draft(case_id)
+        events = case.get("events", [])
+        event_items = [
+            Li(f"{event.get('occurred_at', 'Time unavailable')} — {event.get('event_type', 'Case update')}")
+            for event in events
+        ]
         return Titled(
             f"Janavani Case {case_id}",
             Div(
                 H2("Janavani Citizen Case Workspace"),
                 P(f"Case ID: {case['case_id']}"),
                 P(f"Lifecycle status: {case['status']}"),
+                H3("Case activity"),
+                Ul(*event_items) if event_items else P("No lifecycle events recorded yet."),
+                P(f"Evidence references: {len(case.get('evidence_refs', []))}; document references: {len(case.get('document_refs', []))}."),
                 H3("Review your document"),
                 P(draft.get("subject", "Document draft")),
                 P(draft.get("body", "")),
@@ -51,8 +57,8 @@ def register_case_workspace_routes(rt) -> None:
                 A("Return to dashboard", href="/"),
             ),
         )
-
     @rt("/cases/{case_id}/review")
+    @safe_api_errors("save the reviewed document")
     def post_case_review(case_id: str, request: Request, subject: str, body: str, reason: str = ""):
         client = client_for_request(request)
         if not client.identity_assertion:
@@ -65,6 +71,8 @@ def register_case_workspace_routes(rt) -> None:
             body=body,
             reason=reason or None,
         )
+        if reviewed.get("document_id") != draft.get("document_id"):
+            raise PlatformAPIContractError("Platform API did not confirm the reviewed document")
         result = client.start_review(case_id, subject=subject, narrative=body)
         return Titled(
             "Draft review saved",
@@ -82,8 +90,8 @@ def register_case_workspace_routes(rt) -> None:
                 A("Continue case review", href=f"/cases/{case_id}/prepare"),
             ),
         )
-
     @rt("/cases/{case_id}/consent")
+    @safe_api_errors("record explicit consent")
     def post_case_consent(case_id: str, request: Request, explicit_confirmation: str = ""):
         if explicit_confirmation != "yes":
             return Titled(
@@ -98,6 +106,8 @@ def register_case_workspace_routes(rt) -> None:
         if not client.identity_assertion:
             return _sign_in_required()
         result = client.record_explicit_consent(case_id)
+        if result.get("consent_recorded") is not True or result.get("scope") != "citizen_download_and_self_send":
+            raise PlatformAPIContractError("Platform API did not confirm the requested consent scope")
         return Titled(
             "Consent recorded",
             Div(
@@ -114,30 +124,42 @@ def register_case_workspace_routes(rt) -> None:
                 A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
             ),
         )
-
     @rt("/cases/{case_id}/artifact")
+    @safe_api_errors("download the reviewed document")
     def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf"):
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
+        # Form fields and route parameters are untrusted; the API still owns Case authorization.
+        formats = {
+            "pdf": "application/pdf",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        normalized_format = document_format.strip().lower()
+        media_type = formats.get(normalized_format)
+        if media_type is None:
+            raise HTTPException(status_code=422, detail="Unsupported document format")
+        safe_case_id = re.sub(r"[^A-Za-z0-9_-]", "_", case_id)[:80] or "case"
         draft = client.prepare_document_draft(case_id)
         payload = client.generate_artifact(
-            case_id, document_id=draft["document_id"], document_format=document_format
+            case_id, document_id=draft["document_id"], document_format=normalized_format
         )
-        media_type = (
-            "application/pdf" if document_format == "pdf"
-            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        if not payload:
+            raise PlatformAPIContractError("Platform API returned an empty document artifact")
         return Response(
             content=payload,
             media_type=media_type,
             headers={
-                "Content-Disposition": f'attachment; filename="janavani-{case_id}.{document_format}"',
+                "Content-Disposition": (
+                    f'attachment; filename="janavani-{safe_case_id}.{normalized_format}"'
+                ),
                 "Cache-Control": "no-store, private",
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "no-referrer",
             },
         )
-
     @rt("/cases/{case_id}/ready")
+    @safe_api_errors("mark the Case ready")
     def post_case_ready(case_id: str, request: Request):
         client = client_for_request(request)
         if not client.identity_assertion:

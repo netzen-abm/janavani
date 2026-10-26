@@ -7,6 +7,7 @@ surface-specific behavior and does not make one surface depend on another.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 
 from src.capabilities.authority import AuthorityCapability
 from src.identity.linking import ExternalIdentityLinkRepository
@@ -17,39 +18,17 @@ from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
 from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
-from src.platform.composition_capabilities import create_civic_action_vertical_slice
-from src.storage.artifact_blob_factory import create_artifact_blob_store
-from src.storage.repositories.case_content import InMemoryCaseContentRepository
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
-from src.platform.composition import (
-    create_authority_repository,
-    create_case_repository,
-    create_consent_repository,
-    create_evidence_repository,
-    create_identity_link_repository,
-    create_provider_composition,
-)
 from src.platform.composition_capabilities import (
+    create_civic_action_vertical_slice,
     create_authority_capability,
     create_case_capability,
     create_civic_action_capability,
     create_letter_drafting_capability,
     create_consent_capability,
-    create_document_review_repository_for_platform,
 )
+from src.storage.repositories.case_content import InMemoryCaseContentRepository, TransientCaseContentRepository
+from src.storage.repositories.document_review_provider import require_transient_document_review
 
-_PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
-
-
-def _provider_runtime_graph(provider_composition: object) -> dict[str, object]:
-    """Return one repository graph per provider composition identity."""
-    key = id(provider_composition)
-    cached = _PROVIDER_RUNTIME_GRAPHS.get(key)
-    if cached is not None and cached[0] is provider_composition:
-        return cached[1]
-    graph: dict[str, object] = {}
-    _PROVIDER_RUNTIME_GRAPHS[key] = (provider_composition, graph)
-    return graph
 
 class FailClosedSubmissionTransport(SubmissionTransport):
     """Shared default transport that prevents unconfigured external delivery."""
@@ -98,48 +77,68 @@ def create_surface_case_composition(
     are derived from that same provider graph. Explicit repository injection is
     retained for deterministic tests and deployments with pre-built providers.
     """
-    provider_composition = provider_composition or create_provider_composition()
-    runtime_graph = _provider_runtime_graph(provider_composition)
-    case_repository = case_repository or runtime_graph.setdefault(
-        "civic_case", create_case_repository(provider_composition=provider_composition)
-    )
-    authority_repository = authority_repository or runtime_graph.setdefault(
-        "authority", create_authority_repository(provider_composition=provider_composition)
-    )
-    evidence_repository = evidence_repository or runtime_graph.setdefault(
-        "evidence", create_evidence_repository(provider_composition=provider_composition)
-    )
-    consent_repository = consent_repository or runtime_graph.setdefault(
-        "consent", create_consent_repository(provider_composition=provider_composition)
-    )
-    artifact_repository = artifact_repository or runtime_graph.setdefault(
-        "document_artifacts", create_document_artifact_repository()
-    )
-    blob_store = blob_store or runtime_graph.setdefault(
-        "artifact_blob", create_artifact_blob_store()
-    )
-    identity_link_repository = identity_link_repository or runtime_graph.setdefault(
-        "external_identity_links",
-        create_identity_link_repository(provider_composition=provider_composition),
-    )
+    from src.platform.surface_repository_graph import create_surface_repository_graph
 
-    # Citizen-authored content is surface-local by design; durable Case state is shared,
-    # but sensitive narrative/claims never become shared provider state.
+    repositories = create_surface_repository_graph(
+        provider_composition=provider_composition,
+        case_repository=case_repository,
+        authority_repository=authority_repository,
+        evidence_repository=evidence_repository,
+        consent_repository=consent_repository,
+        identity_link_repository=identity_link_repository,
+        artifact_repository=artifact_repository,
+        blob_store=blob_store,
+        document_review_repository=document_review_repository,
+    )
+    provider_composition = repositories.provider_composition
+    case_repository = repositories.case_repository
+    authority_repository = repositories.authority_repository
+    evidence_repository = repositories.evidence_repository
+    consent_repository = repositories.consent_repository
+    identity_link_repository = repositories.identity_link_repository
+    artifact_repository = repositories.artifact_repository
+    blob_store = repositories.blob_store
+
+    # Citizen-authored content has its own privacy and persistence contract.
+    # Never let a production process silently accept process-local-only content.
+    runtime_mode = os.getenv("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+    content_policy = os.getenv("JANAVANI_CASE_CONTENT_POLICY", "").strip().lower()
     if case_content_repository is None:
-        # Content remains an explicit privacy/persistence boundary. Do not silently
-        # promote citizen-authored narrative into the shared provider graph until a
-        # durable content provider with its own retention/RLS contract is deliberately
-        # selected by the runtime.
-        case_content_repository = InMemoryCaseContentRepository()
+        if content_policy == "transient":
+            case_content_repository = TransientCaseContentRepository()
+        elif runtime_mode == "production":
+            raise ValueError(
+                "Production requires an explicitly configured CaseContentRepository or "
+                "JANAVANI_CASE_CONTENT_POLICY=transient; citizen content is not "
+                "durable Case metadata and must not be persisted by default"
+            )
+        else:
+            case_content_repository = InMemoryCaseContentRepository()
+    elif runtime_mode == "production" and isinstance(
+        case_content_repository, InMemoryCaseContentRepository
+    ):
+        raise ValueError(
+            "InMemoryCaseContentRepository is not permitted in production; use an explicitly "
+            "configured transient policy or a separately approved durable adapter"
+        )
+    elif isinstance(case_content_repository, TransientCaseContentRepository) and (
+        runtime_mode == "production" and content_policy != "transient"
+    ):
+        raise ValueError(
+            "TransientCaseContentRepository requires JANAVANI_CASE_CONTENT_POLICY=transient"
+        )
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
     consent_capability = create_consent_capability(
         consent_repository=consent_repository,
         case_capability=case_capability,
+        case_repository=case_repository,
+        provider_composition=provider_composition,
     )
-    review_repository = document_review_repository or runtime_graph.setdefault(
-        "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
+    review_repository = repositories.document_review_repository
+    require_transient_document_review(
+        provider_composition.provider_for("document_review"), review_repository, runtime_mode
     )
     document_review_capability = DocumentReviewCapability(review_repository, case_capability=case_capability)
     civic_action_capability = create_civic_action_capability(

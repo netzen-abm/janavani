@@ -245,6 +245,20 @@ def is_boundary_receiver(node: ast.AST) -> bool:
     )
 
 
+def is_case_aggregate_receiver(node: ast.AST) -> bool:
+    """Recognize direct Case aggregate receivers, not unrelated adapter methods.
+
+    Generic names such as "resolve" are also used by identity resolvers and
+    adapters. The guard only treats resolve as a lifecycle mutation when
+    the receiver is statically the Case aggregate (for example "case.resolve"
+    or "result.case.resolve").
+    """
+    if isinstance(node, ast.Name):
+        return node.id in {"case", "civic_case", "current_case", "owned_case", "aggregate"}
+    if isinstance(node, ast.Attribute):
+        return node.attr in {"case", "civic_case", "current_case", "owned_case"}
+    return False
+
 def check_surface_separation() -> list[str]:
     failures = []
     for path in changed_files():
@@ -258,7 +272,13 @@ def check_surface_separation() -> list[str]:
             function = node.func
             if not isinstance(function, ast.Attribute):
                 continue
-            if function.attr in LIFECYCLE_MUTATORS and not is_boundary_receiver(function.value):
+            if function.attr not in LIFECYCLE_MUTATORS:
+                continue
+            if function.attr == "resolve" and not is_case_aggregate_receiver(function.value):
+                # IdentityLinkResolver.resolve and DefaultIdentityAdapter.resolve
+                # are trust-boundary lookups, not CivicCase lifecycle mutations.
+                continue
+            if not is_boundary_receiver(function.value):
                 failures.append(
                     f"surface directly mutates CivicCase lifecycle: "
                     f"{path.relative_to(ROOT)}:{node.lineno}"

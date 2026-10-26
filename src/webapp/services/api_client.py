@@ -8,9 +8,15 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
+def authorization_headers(identity_assertion: str | None) -> dict[str, str]:
+    """Format a request-scoped verified assertion; never use process-wide identity."""
+    if not identity_assertion:
+        raise RuntimeError("Authenticated Web identity is not configured")
+    return {"Authorization": f"Bearer {identity_assertion}"}
 
 class JanavaniWebAPIClient:
     """Call canonical civic-case endpoints without duplicating domain logic."""
@@ -21,14 +27,22 @@ class JanavaniWebAPIClient:
         self.identity_assertion = identity_assertion
 
     def _headers(self) -> dict[str, str]:
-        if not self.identity_assertion:
-            raise RuntimeError("Authenticated Web identity is not configured")
-        return {"Authorization": f"Bearer {self.identity_assertion}"}
+        return authorization_headers(self.identity_assertion)
 
-    def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
+    def _case_url(self, case_id: str, endpoint: str = "") -> str:
+        if not isinstance(case_id, str) or not case_id or case_id in {".", ".."} or "/" in case_id or "\\" in case_id:
+            raise ValueError("Invalid Case ID")
+        return f"{self.base_url}/civic/cases/{quote(case_id, safe='')}{endpoint}"
+
+    def list_cases(self, limit: int = 20) -> list[dict[str, Any]]:
+        response = httpx.get(f"{self.base_url}/civic/cases", params={"limit": max(1, min(limit, 50))}, headers=self._headers(), timeout=20.0)
+        response.raise_for_status()
+        return response.json().get("items", [])
+
+    def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint", related_office_id: str | None = None, jurisdiction: dict[str, Any] | None = None) -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases",
-            json={"case_type": case_type, "subject": subject, "narrative": narrative},
+            json={"case_type": case_type, "subject": subject, "narrative": narrative, "related_office_id": related_office_id, "jurisdiction": jurisdiction or {}},
             headers=self._headers(),
             timeout=20.0,
         )
@@ -37,7 +51,7 @@ class JanavaniWebAPIClient:
 
     def get_case(self, case_id: str) -> dict[str, Any]:
         response = httpx.get(
-            f"{self.base_url}/civic/cases/{case_id}",
+            self._case_url(case_id),
             headers=self._headers(),
             timeout=20.0,
         )
@@ -46,7 +60,7 @@ class JanavaniWebAPIClient:
 
     def prepare_document_draft(self, case_id: str) -> dict[str, Any]:
         response = httpx.get(
-            f"{self.base_url}/civic/cases/{case_id}/document/draft",
+            self._case_url(case_id, "/document/draft"),
             headers=self._headers(),
             timeout=20.0,
         )
@@ -57,7 +71,7 @@ class JanavaniWebAPIClient:
         self, case_id: str, *, subject: str | None = None, narrative: str | None = None
     ) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/review",
+            self._case_url(case_id, "/review"),
             json={"subject": subject, "narrative": narrative},
             headers=self._headers(),
             timeout=20.0,
@@ -69,7 +83,7 @@ class JanavaniWebAPIClient:
         self, case_id: str, *, scope: str = "citizen_download_and_self_send"
     ) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/explicit-consent",
+            self._case_url(case_id, "/explicit-consent"),
             json={"scope": scope, "explicit_confirmation": True},
             headers=self._headers(),
             timeout=20.0,
@@ -79,7 +93,7 @@ class JanavaniWebAPIClient:
 
     def add_consent(self, case_id: str, consent_id: str) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/consent",
+            self._case_url(case_id, "/consent"),
             json={"consent_id": consent_id},
             headers=self._headers(),
             timeout=20.0,
@@ -87,10 +101,9 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
-
     def add_evidence(self, case_id: str, evidence_id: str, *, source_channel: str = "webapp") -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/evidence",
+            self._case_url(case_id, "/evidence"),
             json={"evidence_id": evidence_id, "source_channel": source_channel},
             headers=self._headers(), timeout=20.0,
         )
@@ -99,7 +112,7 @@ class JanavaniWebAPIClient:
 
     def review_document(self, case_id: str, *, document_id: str, subject: str | None = None, body: str | None = None, reason: str | None = None) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/document/review",
+            self._case_url(case_id, "/document/review"),
             json={"document_id": document_id, "subject": subject, "body": body, "reason": reason},
             headers=self._headers(), timeout=20.0,
         )
@@ -109,7 +122,7 @@ class JanavaniWebAPIClient:
     def generate_artifact(self, case_id: str, *, document_id: str, document_format: str = "pdf") -> bytes:
         """Generate and immediately download an ephemeral document artifact."""
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/document/artifact",
+            self._case_url(case_id, "/document/artifact"),
             json={"document_id": document_id, "document_format": document_format},
             headers=self._headers(), timeout=30.0,
         )
@@ -120,7 +133,7 @@ class JanavaniWebAPIClient:
         self, case_id: str, *, subject: str | None = None, narrative: str | None = None
     ) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/ready",
+            self._case_url(case_id, "/ready"),
             json={"subject": subject, "narrative": narrative},
             headers=self._headers(),
             timeout=20.0,
@@ -136,7 +149,7 @@ class JanavaniWebAPIClient:
 
     def acknowledge_case(self, case_id: str, *, source_ref: str | None = None) -> dict[str, Any]:
         response = httpx.post(
-            f"{self.base_url}/civic/cases/{case_id}/acknowledge",
+            self._case_url(case_id, "/acknowledge"),
             json={"source_channel": "webapp", "source_ref": source_ref},
             headers=self._headers(), timeout=20.0,
         )
@@ -152,21 +165,15 @@ class JanavaniWebAPIClient:
         result = self.create_case(subject=subject, narrative=narrative)
         return {"case_id": result["case_id"], "status": result["status"], "delivery": "citizen_download_and_self_send"}
 
-    def download_constitutional_objection(
-        self, bill_code: str, comments: str, format_choice: str
-    ) -> bytes | None:
-        """Legacy UI hook retained without reviving the retired dispatch path."""
-        del bill_code, comments, format_choice
+    def download_constitutional_objection(self, bill_code: str, comments: str, format_choice: str) -> bytes | None:
+        """Retain the legacy UI contract without reviving retired dispatch."""
         return None
 
-
-
 def client_for_request(request: object) -> JanavaniWebAPIClient:
-    """Build a citizen-scoped API client from a trusted gateway assertion cookie.
-
-    The API independently verifies the signature, issuer, audience and expiry.
-    This adapter never treats a cookie value as identity without that verification.
-    """
+    """Mint from the verified session first; retain the legacy cookie only for transition."""
+    from src.webapp.identity_gateway import api_assertion_for_session
+    assertion = api_assertion_for_session(getattr(request, "session", {}))
     cookies = getattr(request, "cookies", {})
-    assertion = cookies.get("janavani_identity_assertion") if cookies else None
+    if not assertion:
+        assertion = cookies.get("janavani_identity_assertion") if cookies else None
     return JanavaniWebAPIClient(identity_assertion=assertion)
