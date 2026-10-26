@@ -46,7 +46,9 @@ def test_production_postgres_identity_provider_requires_dedicated_dsn(monkeypatc
     from src.platform.composition_repositories import create_identity_link_repository
     from src.storage.provider_composition import ProviderComposition
 
-    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    monkeypatch.delenv("VERCEL_ENV", raising=False)
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_NAME", "production")
+    monkeypatch.delenv("JANAVANI_RUNTIME_MODE", raising=False)
     monkeypatch.setenv("JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER", "postgres")
     monkeypatch.setenv("JANAVANI_POSTGRES_DSN", "postgresql://shared-role.invalid/db")
     monkeypatch.delenv("JANAVANI_IDENTITY_LINKS_DSN", raising=False)
