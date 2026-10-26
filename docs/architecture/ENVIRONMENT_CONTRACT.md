@@ -37,6 +37,10 @@ Do not introduce `HUGGINGFACE_API_KEY` as an alternate name.
 
 ## Canonical runtime configuration
 
+Production-mode detection is fail-closed on managed platforms. If `VERCEL_ENV=production` or `RAILWAY_ENVIRONMENT_NAME=production`, the runtime treats the process as production even when `JANAVANI_RUNTIME_MODE` is absent. An explicitly conflicting mode (for example `development`) causes startup to fail. Railway non-production environments and Vercel previews are treated as test unless an explicit mode is configured. Render deployments must set `JANAVANI_RUNTIME_MODE` explicitly; the runtime does not assume development on a managed Render service.
+
+Do not add production variables only to make startup green. Configure the actual approved PostgreSQL providers, identity assertion trust settings, transient content policy and artifact storage first. A production startup failure is preferable to silently using process-local persistence.
+
 Production persistence is fail-closed and requires:
 
 - `JANAVANI_RUNTIME_MODE=production`
