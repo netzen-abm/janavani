@@ -12,6 +12,7 @@ from core.config import Config
 from src.config.runtime import validate_runtime_configuration
 from conversation.session import purge_expired_ephemeral_issues
 from src.commands.catalogue import telegram_bot_commands
+from src.commands.account import account
 from commands.check import cases, check
 from commands.cancel import cancel
 from commands.pair import pair
@@ -121,6 +122,7 @@ def build_application(*, token: str | None = None) -> Application:
 
     application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("account", account))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(CommandHandler("privacy", privacy))
