@@ -11,8 +11,10 @@ surface to start, supervise, or remain healthy.
 | Surface | Canonical bootstrap | Ownership |
 |---|---|---|
 | Web/API | `src.web.canonical_app:app` | Web/API deployment |
-| Telegram | `src/bot_telegram.py` → `main()` | Telegram deployment |
+| Citizen WebApp | `src.webapp.main:app` (Vercel package entrypoint re-exports this app) | WebApp deployment |
+| Telegram webhook | `src.web.telegram_webhook_app:app` | Independent HTTPS webhook deployment |
 
+`src.bot_telegram.build_application()` composes Telegram handlers and shared capabilities. Its `main()` deliberately fails closed: it is not a runtime entrypoint and must never start polling. The webhook adapter initializes the same application, registers the bot webhook, durably accepts encrypted updates into PostgreSQL, and dispatches them through the bounded-retry inbox worker.
 ## Shared infrastructure boundary
 
 Both surfaces may consume the shared `SurfaceCaseComposition` and canonical
@@ -32,14 +34,17 @@ consent, Case-ownership, protected-data, or provider-selection implementation.
 
 ## Current deployment evidence
 
-The Web/API deployment path is explicit in `Dockerfile`, `Procfile`,
-`entrypoint.sh`, `render.yaml`, and `pyproject.toml`.
+The Web/API, citizen WebApp, and Telegram webhook entrypoints are explicit in
+the active deployment configuration and tests. `render.yaml` describes three
+independent services, but deliberately labels them `JANAVANI_RUNTIME_MODE=test`;
+it is a non-production blueprint, not proof of a production-ready deployment.
 
-Telegram has a canonical bootstrap and shared composition boundary, but this
-repository does not yet contain an equivalent dedicated production deployment
-manifest for Telegram. That is an explicit remaining deployment-conformance
-gap, not a reason to couple Telegram to the Web runtime.
-
+The canonical Python webhook's production readiness still depends on actual
+secret configuration, shared durable providers, least-privilege database roles,
+the encrypted inbox migration, webhook-registration evidence, and cross-surface
+acceptance. A deployment declaration or `/liveness` response alone is not
+production evidence. The legacy polling entrypoint is retired and must remain
+fail-closed.
 ## Refactoring rule
 
 Do not split shared composition merely to satisfy file-size targets. Split only
