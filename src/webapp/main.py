@@ -84,7 +84,13 @@ def get(request: Request):
                 ),
                 P("Your narrative is processed transiently for this draft and is not saved as a Janavani Case in this no-login flow. Review every fact and placeholder before sending."),
                 account_link,
-                (A("View my tracked Cases", href="/cases") if authenticated else P("Want follow-up and cross-device tracking later? Review the sign-in options; anonymous drafting remains available.")),
+                (
+                    A("View my tracked Cases", href="/cases")
+                    if authenticated else P(
+                        "Want follow-up and cross-device tracking later? "
+                        "Review the sign-in options; anonymous drafting remains available."
+                    ),
+                ),
                 cls="card",
             ),
         ),
