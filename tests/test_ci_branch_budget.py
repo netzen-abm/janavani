@@ -9,7 +9,7 @@ def test_physical_branch_budget_uses_canonical_repository_api():
 
     assert 'repos/${GITHUB_REPOSITORY}/branches?per_page=100' in source
     assert "gh api --paginate" in source
-    assert 'if [ "$count" -ne 9 ]' in source
+    assert 'if [ "$count" -ne 8 ]' in source
 
 
 def test_branch_allowlist_contains_exactly_nine_roles():
@@ -20,13 +20,12 @@ def test_branch_allowlist_contains_exactly_nine_roles():
         "integration/canonical-platform",
         "feat/canonical-case-kernel",
         "feat/canonical-civic-action-vertical-slice",
-        "feat/canonical-capability-execution-envelope",
         "feat/canonical-sos-contract",
         "feat/capability-scoped-consent-agent-enforcement",
         "audit/postgres-provider-production-gates",
         "chore/ecosystem-shared-capability-infrastructure",
     }
 
-    assert len(allowed) == 9
+    assert len(allowed) == 8
     for branch in allowed:
         assert branch in source
