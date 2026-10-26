@@ -21,6 +21,7 @@ def test_startup_publishes_unique_discoverable_bot_commands():
     assert len(names) == len(set(names))
     assert {
         "start",
+        "account",
         "help",
         "complaint",
         "search",
