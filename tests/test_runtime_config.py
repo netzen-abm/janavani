@@ -198,3 +198,20 @@ def test_production_rejects_process_local_authority_directory():
     }
     with pytest.raises(RuntimeConfigurationError, match="JANAVANI_AUTHORITY_REPOSITORY_PROVIDER"):
         validate_runtime_configuration(environment="production", environ=environ)
+
+def test_vercel_production_cannot_fall_back_to_development_defaults():
+    with pytest.raises(RuntimeConfigurationError, match="Production requires durable persistence providers"):
+        validate_runtime_configuration(environ={"VERCEL_ENV": "production"})
+
+
+def test_managed_production_rejects_conflicting_development_mode():
+    with pytest.raises(RuntimeConfigurationError, match="conflicts with JANAVANI_RUNTIME_MODE"):
+        validate_runtime_configuration(
+            environ={"VERCEL_ENV": "production", "JANAVANI_RUNTIME_MODE": "development"}
+        )
+
+
+def test_render_requires_explicit_runtime_mode():
+    with pytest.raises(RuntimeConfigurationError, match="Render deployments must set JANAVANI_RUNTIME_MODE"):
+        validate_runtime_configuration(environ={"RENDER_SERVICE_ID": "render-service-test"})
+
