@@ -46,9 +46,9 @@ def get():
             ),
             Div(
                 H3("Help build Janavani"),
-                P("Volunteer in coding, automated tests, accessibility, Malayalam and other Indian languages, documentation, or user experience."),
+                P("Volunteer through coding, testing, accessibility, content creation, letter drafting, proofreading, translation, or documentation."),
                 A(
-                    "Volunteer in coding",
+                    "Explore volunteer opportunities",
                     href="https://github.com/netzen-abm/janavani/blob/main/CONTRIBUTING.md",
                     target="_blank",
                     rel="noopener noreferrer",
