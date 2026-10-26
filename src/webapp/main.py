@@ -1,6 +1,6 @@
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
+    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li, Script,
     fast_app,
 )
 from starlette.requests import Request
@@ -15,7 +15,8 @@ app, rt = fast_app(
             .header-banner { text-align: center; margin-bottom: 3rem; }
             .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
-        """)
+        """),
+        Script(defer=True, src="https://cdn.vercel-insights.com/v1/script.js"),
     )
 )
 
