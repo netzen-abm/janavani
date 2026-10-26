@@ -6,6 +6,7 @@ def telegram_bot_commands() -> list[BotCommand]:
     """Return the canonical menu for polling and webhook runtimes."""
     return [
         BotCommand("start", "Start Janavani"),
+        BotCommand("account", "Opt in to persistent Case tracking"),
         BotCommand("help", "View help and available commands"),
         BotCommand("complaint", "Start a complaint or grievance workflow"),
         BotCommand("search", "Find public-service information"),
