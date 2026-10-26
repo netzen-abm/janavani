@@ -129,6 +129,14 @@ VISION -> DESIGNED -> IMPLEMENTED -> FUNCTIONAL -> TESTED -> SECURITY-VERIFIED -
 The eight sanctioned branch roles are the only intended active development lanes; PR #213 defines the controlled transition ref used to retire itself. Legacy branches are archived by immutable tag before deletion, with exact-head verification and a fresh physical inventory afterward. Do not treat the transition ref as a ninth approved development role, and do not claim eight-ref compliance before the deletion has been verified.
 
 
+## Public website and dynamic workspace boundary
+
+The `netzen-abm/janavani-website` repository is the static brochure/showcase and editorial layer, published through GitHub Pages. Its `JANAVANI-MASTER-WEBSITE-CONTENT-MAP.md` and six page content masters govern the public site's messaging, including citizen agency, clear current/building/future status, privacy and substantiated capability claims. Do not duplicate dynamic Case workflows, identity state, authority lookup or backend behavior into this static repository.
+
+The dynamic citizen workspace belongs in the platform repository. WebApp, API and Telegram must remain independently deployable adapters over the same canonical capabilities and persistence contracts. Do not describe a workspace route as publicly available until its intended production deployment, public reachability, OIDC trust boundary, API endpoint, durable providers and citizen-journey acceptance have been verified.
+
+Shared website assets should be reused only where a genuine presentation contract exists. The public brochure site and authenticated citizen WebApp may share approved brand tokens and content principles; they must not share session state, citizen content, authorization logic or deployment assumptions.
+
 ## Deployment-provider neutrality
 
 Render and Vercel are currently used only as temporary testing/validation environments. They are deployment adapters, not architectural dependencies. Do not introduce code paths, domain abstractions, persistence assumptions, identity flows, authorization rules, consent semantics, or capability contracts specifically to accommodate either provider.
