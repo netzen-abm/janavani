@@ -15,14 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Enforce nine-branch policy
+      - name: Enforce eight-branch policy
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
           REF_BRANCH: ${{ github.ref_name }}
         run: |
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
-            main|integration/canonical-platform|feat/canonical-case-kernel|feat/canonical-capability-execution-envelope) 
+            main|integration/canonical-platform|feat/canonical-case-kernel) 
               echo "Allowed branch role: $branch"
               ;;
             feat/canonical-civic-action-vertical-slice|feat/canonical-sos-contract|feat/capability-scoped-consent-agent-enforcement)
@@ -32,7 +32,7 @@ jobs:
               echo "Allowed branch role: $branch"
               ;;
             *)
-              echo "::error::Janavani branch budget violation: '$branch' is outside the nine approved branch roles."
+              echo "::error::Janavani branch budget violation: '$branch' is outside the eight approved branch roles."
               exit 1
               ;;
           esac
@@ -45,8 +45,8 @@ jobs:
           count="${#branches[@]}"
           echo "Observed physical branch refs in ${GITHUB_REPOSITORY}: $count"
           printf '%s\n' "${branches[@]}"
-          if [ "$count" -ne 9 ]; then
-            echo "::error::Janavani requires exactly nine physical branch refs; observed $count."
+          if [ "$count" -ne 8 ]; then
+            echo "::error::Janavani requires exactly eight physical branch refs; observed $count."
             echo "::error::Archive and retire only non-sanctioned branches, then re-run this gate."
             exit 1
           fi
