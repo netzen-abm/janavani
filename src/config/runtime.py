@@ -43,7 +43,8 @@ def validate_runtime_configuration(
             )
         else:
             mode = "development"
-    mode = mode.strip().lower()    if mode not in {"development", "test", "production"}:
+    mode = mode.strip().lower()
+    if mode not in {"development", "test", "production"}:
         raise RuntimeConfigurationError(
             f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
         )
