@@ -124,14 +124,16 @@ def test_web_login_uses_encrypted_transaction_and_creates_opaque_session(monkeyp
     assert "private-provider-subject" not in client.cookies.get("janavani_web_session", "")
     assert "id_token" not in client.cookies.get("janavani_web_session", "")
     home = client.get("/")
-    assert "Create a Civic Case" in home.text
+    assert "Describe the incident" in home.text
+    assert "No account is needed" in home.text
     assert "Sign out" in home.text
 
     refused = client.post("/auth/logout", follow_redirects=False)
     assert refused.status_code == 403
     logged_out = client.post("/auth/logout", headers={"Origin": "https://webapp.example"}, follow_redirects=False)
     assert logged_out.status_code == 303
-    assert "Sign in securely" in client.get("/").text
+    assert "Describe the incident" in client.get("/").text
+    assert "No account is needed" in client.get("/").text
 
 
 def test_internal_assertion_is_short_lived_and_has_only_citizen_capabilities(monkeypatch):
