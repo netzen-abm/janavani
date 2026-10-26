@@ -15,9 +15,35 @@ def validate_runtime_configuration(
 ) -> None:
     """Fail closed when production would use process-local persistence."""
     values = os.environ if environ is None else environ
-    mode = (environment or values.get("JANAVANI_RUNTIME_MODE", "development"))
-    mode = mode.strip().lower()
-    if mode not in {"development", "test", "production"}:
+    # An explicit test override keeps unit tests deterministic. Otherwise,
+    # deployment-platform context outranks a permissive local-development default.
+    if environment is not None:
+        mode = environment
+    else:
+        explicit_mode = values.get("JANAVANI_RUNTIME_MODE", "").strip().lower()
+        vercel_environment = values.get("VERCEL_ENV", "").strip().lower()
+        railway_environment = values.get("RAILWAY_ENVIRONMENT_NAME", "").strip().lower()
+        is_vercel_production = vercel_environment == "production"
+        is_railway_production = railway_environment == "production"
+        if is_vercel_production or is_railway_production:
+            if explicit_mode and explicit_mode != "production":
+                raise RuntimeConfigurationError(
+                    "Managed production deployment conflicts with JANAVANI_RUNTIME_MODE; use production"
+                )
+            mode = "production"
+        elif explicit_mode:
+            mode = explicit_mode
+        elif vercel_environment == "preview" or railway_environment:
+            mode = "test"
+        elif vercel_environment == "development":
+            mode = "development"
+        elif values.get("RENDER_SERVICE_ID") or values.get("RENDER", "").strip().lower() in {"true", "1"}:
+            raise RuntimeConfigurationError(
+                "Render deployments must set JANAVANI_RUNTIME_MODE explicitly"
+            )
+        else:
+            mode = "development"
+    mode = mode.strip().lower()    if mode not in {"development", "test", "production"}:
         raise RuntimeConfigurationError(
             f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
         )
