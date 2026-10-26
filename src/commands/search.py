@@ -7,7 +7,12 @@ from src.capabilities.authority import AuthorityCapability, AuthorityLookupReque
 
 def _render(results) -> str:
     if not results:
-        return "No matching authority was found."
+        return (
+            "No verified authority match is currently listed for that department and location.\n\n"
+            "The directory may be incomplete; this does not prove that no such office exists. "
+            "Try a broader term (for example, /search municipality Kochi) or another city/district, "
+            "then verify official contact details. This search does not file or submit a request."
+        )
     lines = ["🏛 Authorities"]
     for item in results:
         lines.append(f"• {item.name} — {item.city} — {item.authority_id}")

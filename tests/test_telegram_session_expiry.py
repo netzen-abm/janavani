@@ -192,3 +192,31 @@ def test_complaint_command_in_group_does_not_reset_or_start_workflow():
     assert "private chat" in message.reply_text.await_args.args[0]
     clear_session(user_id)
     user_states.pop(user_id, None)
+
+
+def test_explicit_translation_request_is_not_treated_as_a_new_complaint():
+    user_id = 882207
+    clear_session(user_id)
+    user_states.pop(user_id, None)
+    message = SimpleNamespace(
+        text="Can you translate it in Malayalam",
+        reply_text=AsyncMock(),
+    )
+    update = SimpleNamespace(
+        callback_query=None,
+        effective_chat=SimpleNamespace(type="private"),
+        effective_user=SimpleNamespace(id=user_id),
+        message=message,
+        effective_message=message,
+    )
+
+    asyncio.run(run_step(update, SimpleNamespace(bot_data={})))
+
+    message.reply_text.assert_awaited_once()
+    reply = message.reply_text.await_args.args[0]
+    assert "translation" in reply.lower()
+    assert "Malayalam" in reply
+    assert "not enabled yet" in reply
+    assert get_ephemeral_issue(user_id) is None
+    assert user_id not in user_sessions
+    assert user_id not in user_states

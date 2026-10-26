@@ -17,7 +17,7 @@ from commands.check import cases, check
 from commands.cancel import cancel
 from commands.pair import pair
 from commands.privacy import privacy
-from commands.start import start
+from commands.start import help_command, start
 from commands.search import search
 from commands.rate import rate
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
@@ -123,7 +123,7 @@ def build_application(*, token: str | None = None) -> Application:
     application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("account", account))
-    application.add_handler(CommandHandler("help", start))
+    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(CommandHandler("privacy", privacy))
     application.add_handler(CommandHandler("search", search))
@@ -137,18 +137,11 @@ def build_application(*, token: str | None = None) -> Application:
 
 
 def main() -> None:
-    """Run the Telegram polling process after composition succeeds."""
-    if not Config.TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
-
-    print("=" * 60)
-    print("🇮🇳 JANAVANI TELEGRAM BOT")
-    print("=" * 60)
-    print("Starting Bot...")
-
-    application = build_application(token=Config.TELEGRAM_BOT_TOKEN)
-    print("✅ Bot application composed; starting polling.")
-    application.run_polling(drop_pending_updates=False)
+    """Fail closed so the retired polling runtime cannot start accidentally."""
+    raise RuntimeError(
+        "Telegram polling is disabled. Run the HTTPS webhook runtime with "
+        "uvicorn src.web.telegram_webhook_app:app; do not call run_polling()."
+    )
 
 
 if __name__ == "__main__":

@@ -91,6 +91,28 @@ def get(request: Request):
                 ),
                 cls="card",
             ),
+            Div(
+                H3("Help build Janavani"),
+                P(
+                    "Volunteer contributions are welcome in code, automated tests, accessibility, "
+                    "Malayalam and other Indian-language support, documentation, and user experience."
+                ),
+                P(
+                    "Generated documents are currently in English; Malayalam and other Indian-language "
+                    "document translation are not enabled yet."
+                ),
+                A(
+                    "Volunteer in coding",
+                    href="https://github.com/netzen-abm/janavani",
+                    target="_blank",
+                    rel="noopener noreferrer",
+                ),
+                P(
+                    "Please never post citizen narratives, personal data, credentials, or API keys "
+                    "in public issues."
+                ),
+                cls="card",
+            ),
         ),
     )
 

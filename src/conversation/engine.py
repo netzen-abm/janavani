@@ -7,6 +7,7 @@ without leaking internal exception details.
 from __future__ import annotations
 
 import logging
+import re
 
 from conversation.constants import COMPLETED, WAITING_FOR_ISSUE
 from conversation.session import clear_session, get_ephemeral_issue
@@ -14,6 +15,22 @@ from conversation.state import get_state, user_states
 from conversation.state_registry import get_handler
 
 logger = logging.getLogger(__name__)
+_TRANSLATION_REQUEST = re.compile(
+    r"^\s*(?:(?:can|could|would)\s+you\s+|please\s+|kindly\s+)?"
+    r"(?:translate|translation|convert)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_explicit_translation_request(text: str | None) -> bool:
+    """Recognize translation intent without interpreting it as a new civic complaint."""
+    if not text:
+        return False
+    normalized = text.strip()
+    if _TRANSLATION_REQUEST.match(normalized):
+        return True
+    lowered = normalized.casefold()
+    return lowered.startswith(("മലയാളത്തിലേക്ക് മാറ്റുക", "മലയാളത്തിൽ വിവർത്തനം ചെയ്യുക"))
 
 
 async def run_step(update, context):
@@ -35,6 +52,15 @@ async def run_step(update, context):
     elif update.effective_user:
         user_id = update.effective_user.id
     else:
+        return
+
+    if update.message and _is_explicit_translation_request(getattr(update.message, "text", None)):
+        await update.message.reply_text(
+            "Translation of an existing PDF/Word draft is not enabled in this bot release. "
+            "Your previous draft remains in the chat; I have not treated this as a new complaint.\n\n"
+            "Generated files are currently in English. Malayalam and other Indian-language "
+            "document translation are not enabled yet."
+        )
         return
 
     state = get_state(user_id)
