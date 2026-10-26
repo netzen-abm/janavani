@@ -118,8 +118,8 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
 
 def test_backup_restore_uses_postgres16_matched_client_binaries() -> None:
     source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    section = source.split("name: Prove PostgreSQL backup and restore integrity:", 1)[1].split(
-        "name: Prove PostgreSQL service restart durability:", 1
+    section = source.split("name: Prove PostgreSQL backup and restore integrity", 1)[1].split(
+        "name: Prove PostgreSQL service restart durability", 1
     )[0]
 
     assert "ancestor=postgres:16" in section
