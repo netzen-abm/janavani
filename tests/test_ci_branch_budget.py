@@ -114,9 +114,9 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
     assert "archive/rejected-analytics/" in retirement
     assert "archive/branches/" in retirement
     assert "RETIREMENT VERIFIED" in retirement
-    assert "permissions:
-  contents: write
-  pull-requests: read" in retirement
+    assert "permissions:" in retirement
+    assert "  contents: write" in retirement
+    assert "  pull-requests: read" in retirement
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in retirement
 
 
