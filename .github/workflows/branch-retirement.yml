@@ -265,10 +265,14 @@ jobs:
 
       - name: Archive exact rejected head and governance head, then verify eight refs
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.JANAVANI_BRANCH_RETIRE_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Configure repository Actions secret JANAVANI_BRANCH_RETIRE_TOKEN with Contents read/write and Pull requests read, then rerun this workflow."
+            exit 2
+          fi
           branch="vercel/install-vercel-web-analytics-6417ji"
           original_head="697ef531d9a02ab9a03b9986efa6b0a633766985"
           original_tag="archive/rejected-analytics/$branch"

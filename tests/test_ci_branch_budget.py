@@ -114,6 +114,8 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
     assert "archive/rejected-analytics/" in retirement
     assert "archive/branches/" in retirement
     assert "RETIREMENT VERIFIED" in retirement
+    assert "secrets.JANAVANI_BRANCH_RETIRE_TOKEN" in retirement
+    assert "Configure repository Actions secret JANAVANI_BRANCH_RETIRE_TOKEN" in retirement
     assert "permissions:" in retirement
     assert "  contents: write" in retirement
     assert "  pull-requests: read" in retirement
