@@ -19,7 +19,7 @@ permissions:
   contents: write
   pull-requests: read
 
-# Serialize the manual legacy-retirement path and the automatic transition-ref retirement.
+# Serialize manual retirement and both narrowly scoped post-merge transition retirements.
 concurrency:
   group: janavani-branch-retirement
   cancel-in-progress: false
@@ -249,3 +249,103 @@ jobs:
             exit 2
           fi
           echo "RETIREMENT VERIFIED: exact archive exists, ref is deleted, and eight physical branches remain."
+
+  retire-rejected-vercel-analytics:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'vercel/install-vercel-web-analytics-6417ji' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Archive exact rejected head and governance head, then verify eight refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="vercel/install-vercel-web-analytics-6417ji"
+          original_head="697ef531d9a02ab9a03b9986efa6b0a633766985"
+          original_tag="archive/rejected-analytics/$branch"
+          tag="archive/branches/$branch"
+          git_ref="refs/remotes/origin/retirement-candidate"
+
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+              --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          }
+          prs="$(count_open_prs_for_branch "$branch")"
+          if [ "$prs" != "0" ]; then
+            echo "::error::Retirement held: open PRs still reference $branch."
+            exit 2
+          fi
+
+          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          git fetch --no-tags origin "+refs/heads/$branch:$git_ref" "+refs/heads/main:refs/remotes/origin/main"
+          if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
+            echo "::error::Retirement held: fetched head differs from GitHub ref."
+            exit 2
+          fi
+          if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
+            echo "::error::Retirement held: governance branch tree is not identical to merged main."
+            exit 2
+          fi
+          if ! git merge-base --is-ancestor "$original_head" "$git_ref"; then
+            echo "::error::Original rejected analytics head is not in the archived branch history."
+            exit 2
+          fi
+
+          ensure_tag() {
+            local tag_name="$1"
+            local expected_sha="$2"
+            local actual_sha
+            if gh api "repos/$REPO/git/ref/tags/$tag_name" >/dev/null 2>&1; then
+              actual_sha="$(gh api "repos/$REPO/git/ref/tags/$tag_name" --jq '.object.sha')"
+              if [ "$actual_sha" != "$expected_sha" ]; then
+                echo "::error::Archive tag $tag_name already points to $actual_sha, expected $expected_sha."
+                exit 2
+              fi
+            else
+              gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag_name" -f "sha=$expected_sha"
+            fi
+            actual_sha="$(gh api "repos/$REPO/git/ref/tags/$tag_name" --jq '.object.sha')"
+            if [ "$actual_sha" != "$expected_sha" ]; then
+              echo "::error::Archive verification failed for $tag_name."
+              exit 2
+            fi
+            echo "ARCHIVE VERIFIED: $tag_name @ $actual_sha"
+          }
+
+          # Preserve the rejected analytics proposal's exact pre-transition commit explicitly.
+          ensure_tag "$original_tag" "$original_head"
+          # Then archive the exact final ref head that this workflow is about to delete.
+          ensure_tag "$tag" "$head_sha"
+
+          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$current_sha" != "$head_sha" ]; then
+            echo "::error::Branch head changed after archive verification."
+            exit 2
+          fi
+          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            echo "::error::Branch still exists after deletion: $branch"
+            exit 2
+          fi
+
+          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
+          echo "Remaining physical branch refs: $remaining"
+          if [ "$remaining" -ne 8 ]; then
+            echo "::error::Expected eight physical refs after retirement; found $remaining."
+            exit 2
+          fi
+          echo "RETIREMENT VERIFIED: rejected head and transition head archived, branch deleted, eight refs remain."

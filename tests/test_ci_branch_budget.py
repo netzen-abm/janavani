@@ -34,7 +34,7 @@ def test_branch_allowlist_contains_exactly_eight_active_roles():
 def test_retirement_branch_is_not_an_active_role_and_is_path_limited() -> None:
     source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "feat/canonical-capability-execution-envelope)" in source
+    assert "feat/canonical-capability-execution-envelope|vercel/install-vercel-web-analytics-6417ji)" in source
     assert "Retirement-only branch" in source
     assert ".github/workflows/security-ci.yml" in source
     assert "docs/BRANCH_GOVERNANCE.md" in source
@@ -96,3 +96,34 @@ def test_retirement_workflow_archives_and_verifies_before_deleting() -> None:
     assert "git rev-list --count" in source.split(
         "retire-canonical-capability-envelope:", 1
     )[0]
+
+
+
+def test_rejected_analytics_branch_is_path_limited_and_archived_before_retirement() -> None:
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    retirement = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "feat/canonical-capability-execution-envelope|vercel/install-vercel-web-analytics-6417ji)" in ci
+    assert "Retirement-only branch; policy files only" in ci
+    assert "github.event.pull_request.head.ref == 'vercel/install-vercel-web-analytics-6417ji'" in retirement
+    assert "retire-rejected-vercel-analytics:" in retirement
+    assert "697ef531d9a02ab9a03b9986efa6b0a633766985" in retirement
+    assert "archive/rejected-analytics/" in retirement
+    assert "archive/branches/" in retirement
+    assert "RETIREMENT VERIFIED" in retirement
+
+
+
+def test_backup_restore_uses_postgres16_matched_client_binaries() -> None:
+    source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    section = source.split("name: Prove PostgreSQL backup and restore integrity", 1)[1].split(
+        "name: Prove PostgreSQL service restart durability", 1
+    )[0]
+
+    assert "ancestor=postgres:16" in section
+    assert 'docker exec -e PGPASSWORD="$PGPASSWORD" "$container_id"' in section
+    assert "pg_dump --username=\"$PGUSER\"" in section
+    assert "pg_restore --username=\"$PGUSER\"" in section
+    assert "pg_restore --exit-on-error --no-owner --no-privileges --dbname=janavani_restore_test \"$backup_file\"" not in section

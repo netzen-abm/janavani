@@ -13,7 +13,7 @@ Janavani maintains exactly eight intentional long-lived development branch roles
 7. `audit/postgres-provider-production-gates` — durable-provider readiness verification
 8. `chore/ecosystem-shared-capability-infrastructure` — ecosystem infrastructure convergence
 
-The branch `feat/canonical-capability-execution-envelope` is a **temporary retirement-only transition ref**, not an active development role. It may carry only the narrow branch-policy and archive-first retirement changes needed to retire itself. The physical inventory remains nine until the post-merge retirement workflow verifies its archive, deletes the ref, and confirms eight physical branches.
+The branch `feat/canonical-capability-execution-envelope` is a **temporary retirement-only transition ref**, not an active development role. It may carry only the narrow branch-policy and archive-first retirement changes needed to retire itself.\n\nThe closed, non-merged `vercel/install-vercel-web-analytics-6417ji` ref is being reused for a one-time, path-limited governance transition; it is not an active feature role and must not ship analytics code. The proposed tree is reconstructed from `main` plus only the governance files permitted by CI. After that governance PR merges, the guarded workflow tags both the original rejected analytics commit `697ef531d9a02ab9a03b9986efa6b0a633766985` and the exact final branch head, verifies both tags, deletes the branch and fails unless the live inventory is exactly eight refs. Until post-merge verification succeeds, report the observed count rather than claiming compliance.
 
 ## Rules
 
