@@ -1,5 +1,6 @@
 import asyncio
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from conversation.session import clear_session, get_ephemeral_issue, get_session
 from conversation.steps.issue import handle_issue
@@ -19,6 +20,7 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
         message=SimpleNamespace(
             text="Sensitive issue details that must not be retained",
             reply_text=reply_text,
+            reply_document=AsyncMock(),
         ),
     )
     context = SimpleNamespace(
@@ -30,7 +32,9 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
 
     asyncio.run(run())
     session = get_session(user_id)
-    assert replies and "no Case was created" in replies[0]
+    assert replies and any("No account is needed" in reply for reply in replies)
+    assert any("has not registered a Case" in reply for reply in replies)
+    assert update.message.reply_document.await_count == 2
     assert get_ephemeral_issue(user_id) is None
     assert "_ephemeral_issue" not in session
     assert session.get("case_id", "") == ""
