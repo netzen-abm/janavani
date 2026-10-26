@@ -53,3 +53,19 @@ In the same test environment, prove:
 ## Current limitation
 
 The PostgreSQL inbox tests now cover ciphertext-at-rest, plaintext absence, duplicate update-ID detection, encrypted worker claim/decryption, bounded expiry, retry ciphertext retention, terminal payload clearing, legacy-payload migration and stale-claim fencing. These tests do not, separately or together, prove the real-handler crash between business commit and `mark_processed`. This contract must remain open until the handler-level PostgreSQL replay test above passes in CI without being skipped.
+
+## Verification record — 2026-10-26
+
+**Result: integration test passed in the canonical CI suite.**
+
+- Test: `tests/test_postgres_telegram_handler_replay.py::test_telegram_case_handler_post_commit_crash_replay_is_safe`.
+- Verified commit: `41b54e8e04227c2d7ce1f14a20dfbfa006909aa6`.
+- GitHub Actions run: `40331365801` (`CI`); canonical suite and focused test job succeeded.
+- The test uses a real PostgreSQL Case repository, encrypted Telegram inbox, linked synthetic Telegram identity, and the existing Telegram conversation state dispatcher/office-selection handler.
+- It accepts a synthetic update into the encrypted inbox, lets the real Case handler commit its metadata-only Case and one lifecycle event, and injects a crash at the boundary before inbox acknowledgement.
+- It verifies the inbox row remains encrypted and incomplete, clears process-local session/state, expires the lease, and replays through a fresh worker and a new inbox repository instance.
+- After replay, the same update safely enters the new-conversation path and asks for the issue description again; PostgreSQL still contains exactly one Case and one lifecycle event, and the inbox reaches `processed` with payload, ciphertext, and expiry fields cleared.
+- The test's first CI attempt failed closed because the fixture contained an invalid Fernet key. The fixture was changed to the same deterministic valid-key construction used by `tests/test_postgres_telegram_inbox.py`; no production encryption logic or validator was weakened.
+
+**Scope limitation:** this is an integration test using synthetic updates and a simulated crash boundary; it is not a live Telegram-network test and does not claim exactly-once transport delivery. Production readiness still requires the deployed-acceptance checklist, exact runtime/config verification, and separate evidence for the remaining identity/session and security gates.
+
