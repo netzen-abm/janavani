@@ -107,6 +107,6 @@ def test_homepage_offers_safe_volunteer_contribution_path() -> None:
     assert response.status_code == 200
     assert "Help build Janavani" in response.text
     assert "Volunteer in coding" in response.text
-    assert "https://github.com/netzen-abm/janavani" in response.text
+    assert "https://github.com/netzen-abm/janavani/blob/main/CONTRIBUTING.md" in response.text
     assert "Malayalam and other Indian languages" in response.text
     assert "do not post citizen narratives" in response.text

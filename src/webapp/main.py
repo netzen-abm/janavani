@@ -49,7 +49,7 @@ def get():
                 P("Volunteer in coding, automated tests, accessibility, Malayalam and other Indian languages, documentation, or user experience."),
                 A(
                     "Volunteer in coding",
-                    href="https://github.com/netzen-abm/janavani",
+                    href="https://github.com/netzen-abm/janavani/blob/main/CONTRIBUTING.md",
                     target="_blank",
                     rel="noopener noreferrer",
                 ),
