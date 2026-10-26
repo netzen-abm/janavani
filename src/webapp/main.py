@@ -9,10 +9,7 @@ for _candidate in (*Path(__file__).resolve().parents, Path.cwd(), Path.cwd().par
             sys.path.insert(0, str(_candidate))
         break
 
-from fasthtml.common import (
-    A, Button, Div, Form, H1, H2, H3, Input, Label, P, Style, Textarea, Titled,
-    fast_app,
-)
+from fasthtml.common import A, Button, Div, Form, H1, H2, H3, Input, Label, P, Style, Textarea, Titled, fast_app
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -93,24 +90,10 @@ def get(request: Request):
             ),
             Div(
                 H3("Help build Janavani"),
-                P(
-                    "Volunteer contributions are welcome in code, automated tests, accessibility, "
-                    "Malayalam and other Indian-language support, documentation, and user experience."
-                ),
-                P(
-                    "Generated documents are currently in English; Malayalam and other Indian-language "
-                    "document translation are not enabled yet."
-                ),
-                A(
-                    "Volunteer in coding",
-                    href="https://github.com/netzen-abm/janavani",
-                    target="_blank",
-                    rel="noopener noreferrer",
-                ),
-                P(
-                    "Please never post citizen narratives, personal data, credentials, or API keys "
-                    "in public issues."
-                ),
+                P("Volunteer in code, tests, accessibility, Malayalam/Indian languages, documentation, or UX."),
+                P("Generated documents are currently in English; Malayalam translation is not enabled yet."),
+                A("Volunteer in coding", href="https://github.com/netzen-abm/janavani", target="_blank", rel="noopener noreferrer"),
+                P("Never post citizen narratives, personal data, credentials, or API keys in public issues."),
                 cls="card",
             ),
         ),

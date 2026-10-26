@@ -139,8 +139,8 @@ def build_application(*, token: str | None = None) -> Application:
 def main() -> None:
     """Fail closed so the retired polling runtime cannot start accidentally."""
     raise RuntimeError(
-        "Telegram polling is disabled. Run the HTTPS webhook runtime with "
-        "uvicorn src.web.telegram_webhook_app:app; do not call run_polling()."
+        "Telegram polling is disabled. Use the HTTPS webhook service configured for "
+        "src.web.telegram_webhook_app:app; do not call run_polling()."
     )
 
 

@@ -7,7 +7,7 @@ VOLUNTEER_URL = "https://github.com/netzen-abm/janavani"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show the citizen-first welcome and primary actions."""
     del context
-    message = update.effective_message
+    message = getattr(update, "effective_message", None) or getattr(update, "message", None)
     if message is None:
         return
     await message.reply_text(
@@ -21,6 +21,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• /privacy — how your information is handled.\n"
         "• /cancel — clear the current temporary workflow.\n\n"
         "Drafts are for you to review; Janavani does not submit anything automatically.\n"
+        "Webhook updates are encrypted before entering the PostgreSQL inbox, with a maximum 24-hour processing window. "
+        "Review /privacy for details.\n"
         "Generated files are currently in English; Malayalam translation is not enabled yet.\n\n"
         "Volunteer in coding, tests, accessibility, language support, or documentation:\n"
         f"{VOLUNTEER_URL}\n"
@@ -31,7 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show concise command guidance instead of repeating the welcome message."""
     del context
-    message = update.effective_message
+    message = getattr(update, "effective_message", None) or getattr(update, "message", None)
     if message is None:
         return
     await message.reply_text(
