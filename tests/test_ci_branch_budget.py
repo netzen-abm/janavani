@@ -113,3 +113,17 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
     assert "archive/rejected-analytics/" in retirement
     assert "archive/branches/" in retirement
     assert "RETIREMENT VERIFIED" in retirement
+
+
+
+def test_backup_restore_uses_postgres16_matched_client_binaries() -> None:
+    source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    section = source.split("name: Prove PostgreSQL backup and restore integrity:", 1)[1].split(
+        "name: Prove PostgreSQL service restart durability:", 1
+    )[0]
+
+    assert "ancestor=postgres:16" in section
+    assert 'docker exec -e PGPASSWORD="$PGPASSWORD" "$container_id"' in section
+    assert "pg_dump --username=\"$PGUSER\"" in section
+    assert "pg_restore --username=\"$PGUSER\"" in section
+    assert "pg_restore --exit-on-error --no-owner --no-privileges --dbname=janavani_restore_test \"$backup_file\"" not in section
