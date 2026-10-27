@@ -1,76 +1,55 @@
-from io import BytesIO
-
-from telegram import InputFile, Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from conversation.session import clear_session, get_session, set_ephemeral_issue
+from conversation.session import (clear_session, get_session, set_ephemeral_issue, set_ephemeral_anonymous_drafts)
 from conversation.state import set_state, user_states
-from conversation.constants import NEW, WAITING_FOR_DOCUMENT
+from conversation.steps.anonymous_review import present_anonymous_draft
+from conversation.constants import NEW, WAITING_FOR_DOCUMENT, WAITING_FOR_ANONYMOUS_REVIEW
 from src.capabilities.issue_classification import classify_issue
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.capabilities.anonymous_civic_drafting import (
     build_anonymous_drafts,
     recommend_document_types,
 )
-from src.documents.anonymous_draft_renderer import render_anonymous_draft
+
+
+
+async def present_anonymous_draft(message, draft, index: int, total: int) -> None:
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Confirm this draft", callback_data="anon:confirm"),
+         InlineKeyboardButton("Cancel", callback_data="anon:cancel")],
+    ])
+    await message.reply_text(
+        f"Draft {index + 1} of {total} — {draft.document_type.upper()} (DRAFT ONLY)\n\n"
+        f"{draft.title}\n{draft.subject}\n\n{draft.body}\n\n"
+        "Reply with the complete corrected text to replace this draft, or confirm it below. "
+        "Do not include unnecessary sensitive information.",
+        reply_markup=keyboard,
+    )
 
 
 async def _send_anonymous_drafts(update: Update, user_id: int, narrative: str) -> None:
-    """Generate citizen-owned drafts without identity, Case creation, or persistence."""
+    """Start anonymous text review without rendering files or creating a Case."""
     message = update.message
     if message is None:
         return
     try:
         drafts = build_anonymous_drafts(narrative)
         _types, explanation = recommend_document_types(narrative)
+        set_ephemeral_anonymous_drafts(user_id, drafts)
+        session = get_session(user_id)
+        session["anonymous_draft_index"] = 0
         await message.reply_text(
-            "🔎 Janavani's suggestion\n\n"
-            + explanation
-            + "\n\nI'll prepare the suggested draft(s) now. No account is needed."
+            "🔎 Janavani's suggestion\n\n" + explanation
+            + "\n\nI'll show the draft text first. Review and correct it before choosing PDF or DOCX. "
+            "No account is needed, and this does not create or submit a Case."
         )
-        for draft in drafts:
-            await message.reply_text(
-                f"📄 Preparing {draft.document_type.upper()} draft. "
-                "Review the facts and fill every placeholder before sending."
-            )
-            for document_format in ("pdf", "docx"):
-                try:
-                    payload, _media_type, extension = render_anonymous_draft(
-                        draft, document_format
-                    )
-                except Exception:
-                    # A renderer outage must not leak user content or suppress another format.
-                    await message.reply_text(
-                        f"The {document_format.upper()} file could not be generated. "
-                        "You can still review the draft in the next message."
-                    )
-                    continue
-                await message.reply_document(
-                    document=InputFile(
-                        BytesIO(payload),
-                        filename=f"janavani-{draft.document_type}.{extension}",
-                    ),
-                    caption=(
-                        f"Janavani {draft.document_type.upper()} draft ({extension.upper()}). "
-                        "This is an editable citizen draft, not a registered or submitted case."
-                    ),
-                )
-            await message.reply_text(draft.body)
-        await message.reply_text(
-            "✅ Your draft(s) are ready. Janavani has not registered a Case, contacted an "
-            "authority, or submitted anything. Keep your own copy.\n\n"
-            "To track a case or continue across devices, account sign-in/pairing is optional "
-            "where configured. Use /privacy to review data handling. Do not resend sensitive "
-            "details unless they are necessary."
-        )
-    except ValueError as exc:
-        await message.reply_text(
-            "Please provide a little more detail in a complete sentence. "
-            "No case was created."
-        )
-    finally:
+        set_state(user_id, WAITING_FOR_ANONYMOUS_REVIEW)
+        await present_anonymous_draft(message, drafts[0], 0, len(drafts))
+    except ValueError:
         clear_session(user_id)
         user_states[user_id] = NEW
+        await message.reply_text("Please provide a little more detail in a complete sentence. No case was created.")
 
 
 async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
