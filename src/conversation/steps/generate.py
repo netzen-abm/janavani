@@ -77,7 +77,7 @@ def _identity(user_id: int, *, links: ExternalIdentityLinkRepository | None) -> 
         raise PermissionError("Telegram identity linking is required")
     return identity_for_telegram_user(user_id, links=links)
 
-def _document_format(value: str) -> DocumentFormat:
+def _document_format(value: object) -> DocumentFormat:
     """Parse an explicit export choice; never silently coerce unknown input to PDF."""
     if not isinstance(value, str):
         raise ValueError("Unsupported document format; choose PDF or DOCX")
@@ -116,7 +116,7 @@ def build_canonical_complaint_artifact(
     ).draft
     return render_artifact_payload(
         draft,
-        _document_format(str(session.get("format", "pdf"))),
+        _document_format(session.get("format")),
     )
 
 
