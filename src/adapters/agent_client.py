@@ -54,7 +54,7 @@ class JanavaniAgentClient:
             return response.json()
         except (requests.RequestException, ValueError):
             self.logger.warning(
-                "%s draft request failed", self.interface_name, exc_info=True
+                "%s draft request failed", self.interface_name
             )
             return None
 
@@ -75,6 +75,6 @@ class JanavaniAgentClient:
             return response.json()
         except (requests.RequestException, ValueError):
             self.logger.warning(
-                "%s document retrieval failed", self.interface_name, exc_info=True
+                "%s document retrieval failed", self.interface_name
             )
             return None

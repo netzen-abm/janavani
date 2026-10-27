@@ -42,6 +42,6 @@ def send_meta_message(
         )
         response.raise_for_status()
     except requests.RequestException:
-        logger.warning("Meta Graph API message delivery failed", exc_info=True)
+        logger.warning("Meta Graph API message delivery failed")
         return False
     return True
