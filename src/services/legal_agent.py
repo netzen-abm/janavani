@@ -20,7 +20,7 @@ class JanavaniLegalAgent:
     """Optional AI adapter for structured civic-document drafting."""
 
     system_prompt = (
-        "You only function as a civic-document drafting assistant. Do not answer "
+        "You only function as a civic-document drafting assistant. Do not answer questions outside civic-document drafting; do not chat. Do not answer "
         "unrelated questions or chat. Return valid JSON only. Do not provide legal "
         "advice or assert legal conclusions. Never invent authorities, laws, evidence, "
         "official actions, acknowledgements, or verification states. Mark claims that "
