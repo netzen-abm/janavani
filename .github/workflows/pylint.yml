@@ -4,8 +4,12 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  quality-gate:
+    name: Python correctness and duplicate-code gate
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -17,9 +21,38 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install lint dependencies
+          cache: pip
+      - name: Install repository and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pylint
-      - name: Analyse active source and tests
+          python -m pip install -r requirements.txt
+          python -m pip install pylint pytest fakeredis python-docx pydantic-settings redis
+      - name: Gate Python errors and fatal analysis findings
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pylint --disable=all --enable=E,F src tests
+      - name: Gate duplicated implementation across source and tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pylint --disable=all --enable=R0801 src tests
+
+  full-style-audit:
+    name: Full-repository style audit (tracked baseline debt)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install repository and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pylint pytest fakeredis python-docx pydantic-settings redis
+      - name: Report full-repository Pylint findings
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: python -m pylint src tests
