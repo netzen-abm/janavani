@@ -55,6 +55,8 @@ STATE_HANDLERS = {
     WAITING_FOR_FORMAT: handle_format,
     WAITING_FOR_CONSENT: handle_consent,
     WAITING_FOR_GENERATE: handle_generate,
+    WAITING_FOR_ANONYMOUS_REVIEW: handle_anonymous_review,
+    WAITING_FOR_ANONYMOUS_FORMAT: handle_anonymous_review,
 }
 
 def get_handler(state: str):
