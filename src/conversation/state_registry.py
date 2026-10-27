@@ -21,6 +21,8 @@ from conversation.constants import (
     WAITING_FOR_OFFICE_SELECTION,
     WAITING_FOR_PREVIEW,
     WAITING_FOR_DOCUMENT,
+    WAITING_FOR_ANONYMOUS_REVIEW,
+    WAITING_FOR_ANONYMOUS_FORMAT,
 )
 from conversation.steps.address import handle_address
 from conversation.steps.consent import handle_consent
