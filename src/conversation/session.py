@@ -83,3 +83,25 @@ def purge_expired_ephemeral_issues(now: float | None = None) -> int:
 def clear_ephemeral_issue(user_id: int) -> None:
     """Clear only the citizen-content buffer; preserve non-sensitive workflow metadata."""
     _ephemeral_issues.pop(user_id, None)
+
+
+def set_ephemeral_anonymous_drafts(user_id: int, drafts: list) -> None:
+    """Keep anonymous draft bodies outside workflow metadata for the same short TTL."""
+    _ephemeral_anonymous_drafts[user_id] = (drafts, monotonic() + _EPHEMERAL_TTL_SECONDS)
+
+
+def get_ephemeral_anonymous_drafts(user_id: int) -> list | None:
+    """Return anonymous drafts only while their owner-scoped TTL is valid."""
+    entry = _ephemeral_anonymous_drafts.get(user_id)
+    if entry is None:
+        return None
+    drafts, expires_at = entry
+    if monotonic() >= expires_at:
+        _ephemeral_anonymous_drafts.pop(user_id, None)
+        return None
+    return drafts
+
+
+def clear_ephemeral_anonymous_drafts(user_id: int) -> None:
+    """Discard temporary anonymous draft content."""
+    _ephemeral_anonymous_drafts.pop(user_id, None)
