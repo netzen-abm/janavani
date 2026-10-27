@@ -1,10 +1,19 @@
 services:
   - type: web
-    name: janavani-bot
+    name: janavani-web
     env: python
-
     plan: free
-
     buildCommand: pip install -r requirements.txt
-
     startCommand: python3 src/web.py
+
+  - type: web
+    name: janavani-telegram-webhook
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 src/bot_telegram.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
