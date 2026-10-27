@@ -1,59 +1,61 @@
-"""Independent Messenger webhook surface.
-
-Transport-specific behavior stays here; Janavani capabilities should be
-implemented in shared services and invoked through stable interfaces.
-"""
-
+"""Independent Messenger webhook surface."""
 from __future__ import annotations
 
 import os
 
 from flask import Flask, jsonify, request
-import requests
+
+from adapters.meta_graph_client import send_meta_message
+from adapters.meta_webhook_security import (
+    is_valid_meta_signature,
+    verify_meta_webhook_challenge,
+)
 
 app = Flask(__name__)
 TOKEN = os.getenv("MESSENGER_TOKEN")
 PAGE_ID = os.getenv("MESSENGER_PAGE_ID") or os.getenv("MESSENGER_PHONE_ID")
-
-_session = requests.Session()
-_session.mount("https://", requests.adapters.HTTPAdapter(pool_maxsize=10))
+VERIFY_TOKEN = os.getenv("MESSENGER_VERIFY_TOKEN")
+APP_SECRET = os.getenv("MESSENGER_APP_SECRET") or os.getenv("META_APP_SECRET")
 
 
 def send_messenger(recipient_id: str, text: str) -> bool:
-    """Send a text message without depending on another Janavani surface."""
-    if not TOKEN or not PAGE_ID:
-        return False
-
-    url = f"https://graph.facebook.com/v19.0/{PAGE_ID}/messages"
-    headers = {"Authorization": f"Bearer {TOKEN}"}
+    """Send a Messenger text message through the Meta Graph API."""
     payload = {
         "messaging_type": "RESPONSE",
         "recipient": {"id": recipient_id},
         "message": {"text": text},
     }
-
-    try:
-        response = _session.post(url, headers=headers, json=payload, timeout=(2, 5))
-        response.raise_for_status()
-    except requests.RequestException:
-        return False
-    return True
+    return send_meta_message(PAGE_ID or "", TOKEN, payload)
 
 
 @app.get("/webhook")
 def verify_webhook():
-    """Handle provider webhook verification."""
-    challenge = request.args.get("hub.challenge")
-    return challenge or "", 200 if challenge else 400
+    """Verify the configured Meta subscription handshake."""
+    challenge, status = verify_meta_webhook_challenge(
+        request.args.get("hub.mode"),
+        request.args.get("hub.verify_token"),
+        request.args.get("hub.challenge"),
+        VERIFY_TOKEN,
+    )
+    return challenge, status
 
 
 @app.post("/webhook")
 def webhook():
-    """Accept Messenger events without assuming a WhatsApp runtime exists."""
-    payload = request.get_json(silent=True) or {}
-    # Provider-specific event interpretation remains intentionally small here.
-    # Capability dispatch will be added through the shared messaging contract.
-    return jsonify({"status": "accepted", "received": bool(payload)}), 200
+    """Reject unauthenticated deliveries and avoid acknowledging dropped events."""
+    raw_body = request.get_data(cache=True)
+    if not is_valid_meta_signature(
+        raw_body, request.headers.get("X-Hub-Signature-256"), APP_SECRET
+    ):
+        return jsonify({"error": "invalid_signature"}), 401
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid_payload"}), 400
+
+    # A durable event dispatcher is not wired yet. Ask Meta to retry instead
+    # of replying 200 and silently discarding a real citizen message.
+    return jsonify({"error": "event_dispatch_unavailable"}), 503
 
 
 if __name__ == "__main__":
