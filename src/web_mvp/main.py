@@ -36,7 +36,6 @@ from fasthtml.common import (
     Textarea,
     Titled,
     fast_app,
-    rt,
 )
 from fastapi.responses import Response
 from reportlab.lib.styles import getSampleStyleSheet
