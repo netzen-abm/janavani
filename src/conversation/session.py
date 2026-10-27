@@ -71,6 +71,14 @@ def purge_expired_ephemeral_issues(now: float | None = None) -> int:
         user_id for user_id, (_, expires_at) in _ephemeral_issues.items()
         if current >= expires_at
     ]
+    expired_drafts = [
+        user_id for user_id, (_, expires_at) in _ephemeral_anonymous_drafts.items()
+        if current >= expires_at
+    ]
+    for user_id in expired_drafts:
+        _ephemeral_anonymous_drafts.pop(user_id, None)
+        user_sessions.pop(user_id, None)
+        user_states.pop(user_id, None)
     for user_id in expired:
         _ephemeral_issues.pop(user_id, None)
         _ephemeral_anonymous_drafts.pop(user_id, None)
