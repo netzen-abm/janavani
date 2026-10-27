@@ -71,3 +71,19 @@ Use only evidence-backed states: designed, implemented, unit-tested, integration
 - **Done:** live repository/branch/PR/check status rechecked; existing Case/document/letter/template-related code located; no-polling requirement and verification gates recorded.
 - **In progress:** branch-governance failure diagnosis; letter-template model/test audit; webhook support and deployment entrypoint audit.
 - **Next two steps:** resolve the branch-budget/retirement CI failure with archive-first controls; then audit existing letter-template models/tests before any draft-engine changes.
+
+
+## Follow-up evidence: branch governance and archive exception
+
+Additional live evidence checked on 2026-10-27:
+
+- The failed `branch-budget` step in main CI observed nine refs, including `vercel/install-vercel-web-analytics-6417ji`, and failed the exact-eight requirement. The current live inventory later returned to eight sanctioned refs.
+- The Branch Retirement workflow's `retire-rejected-vercel-analytics` job failed with GitHub API `403 Resource not accessible by integration` during archive-ref creation. The deleted branch's original commit remains reachable by SHA `697ef531d9a02ab9a03b9986efa6b0a633766985`, but the archive-tag inventory checked here does **not** show `archive/branches/vercel/install-vercel-web-analytics-6417ji`. This is an **archive verification gap**, not a reason to restore or ship the analytics code. See Issue #230.
+- The appropriate next action is to resolve archive-reference permissions using an authorized repository write mechanism, verify that the resulting archival pointer resolves to the exact rejected SHA, and only then mark the historical retirement compliant. The available connector in this session can inspect commits/refs but does not expose a create-tag/ref action, so I have not simulated an archival tag or changed any existing ref.
+- Issues #228 and #229 record the verified Telegram no-polling/webhook implementation gate and privacy-safe reusable civic-document template requirements.
+
+## Verified existing-code gap
+
+The active `src/adapters/telegram/` directory contains `identity.py` and `__init__.py`, but no production Telegram webhook runtime was found in the initial `main` inventory. Legacy webhook implementations exist in archived generations; do not copy them without current contract, dependency, and security review. The active `src/bot_telegram.py` startup calls `run_polling()`, and the Render declaration starts that script as a worker. Treat the webhook as an implementation task, not a deployed capability.
+
+The current `src/capabilities/letter_drafting.py` and its test file prove that the canonical LetterDrafting/DocumentReview path exists. The empty document-type modules are not a template catalogue. The next template change must reuse the existing drafting and review path; the template catalogue is not yet verified as implemented.
