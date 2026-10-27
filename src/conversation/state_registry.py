@@ -36,6 +36,7 @@ from conversation.steps.office_manual import handle_office_manual
 from conversation.steps.office_selection import handle_office_selection
 from conversation.steps.preview import handle_preview
 from conversation.steps.select_office import handle_select_office
+from conversation.steps.anonymous_review import handle_anonymous_review
 
 STATE_HANDLERS = {
     WAITING_FOR_ISSUE: handle_issue,
