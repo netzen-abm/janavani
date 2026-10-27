@@ -87,3 +87,30 @@ Additional live evidence checked on 2026-10-27:
 The active `src/adapters/telegram/` directory contains `identity.py` and `__init__.py`, but no production Telegram webhook runtime was found in the initial `main` inventory. Legacy webhook implementations exist in archived generations; do not copy them without current contract, dependency, and security review. The active `src/bot_telegram.py` startup calls `run_polling()`, and the Render declaration starts that script as a worker. Treat the webhook as an implementation task, not a deployed capability.
 
 The current `src/capabilities/letter_drafting.py` and its test file prove that the canonical LetterDrafting/DocumentReview path exists. The empty document-type modules are not a template catalogue. The next template change must reuse the existing drafting and review path; the template catalogue is not yet verified as implemented.
+
+
+## Follow-up evidence: deployed webhook exists, but remains unconverged
+
+A subsequent live Railway inspection on 2026-10-27 corrected the initial assessment. There **is** an active Telegram webhook deployment, but its code is not yet on `main`.
+
+- Railway project: `janavani-telegram-bot`; production service: `janavani-telegram-webhook`.
+- The service sources `netzen-abm/janavani` branch `chore/ecosystem-shared-capability-infrastructure`, pinned at `649d3f36e61ab0db7b9b368737c7ca1d8aa39694`.
+- Latest deployment status at inspection: `SUCCESS`; live logs show Telegram-origin `POST /telegram/webhook` requests returning `202 Accepted`.
+- Its configured start command runs `uvicorn src.web.telegram_webhook_app:app`, with no polling runtime. On that branch, `src/bot_telegram.py:main()` fails closed rather than invoking `run_polling()`.
+- The webhook runtime and encrypted durable inbox already exist on that branch: `src/web/telegram_webhook_app.py`, `src/web/telegram_webhook_config.py`, `src/web/telegram_inbox_worker.py`, `src/storage/repositories/postgres_telegram_inbox.py`, `src/storage/repositories/postgres_telegram_inbox_worker.py`, and associated tests/migrations. The webhook checks the `X-Telegram-Bot-Api-Secret-Token`, validates/bounds the update, and encrypts the payload in a PostgreSQL inbox before acknowledging delivery. Duplicate `update_id` acceptance is idempotent at the inbox insert boundary.
+- The separate Railway service named `telegram-bot` actually runs `src.web.canonical_app:app` and was `SLEEPING` at inspection; its name/health signal is not proof of Telegram update processing. Meanwhile `render.yaml` on `main` still declares a polling startup path. Main and the deployed Railway configuration therefore differ materially.
+
+### Runtime reliability concerns observed
+
+- The webhook has `sleepApplication: true`. A Telegram POST on 2026-10-27 around 03:32 UTC triggered upstream `connection refused` retries and took approximately 12.2 seconds to reach a `202`; later requests were around 2.5 seconds. This creates a latency/retry-risk that must be tested against Telegram's delivery behavior.
+- A 2026-10-26 worker log contains `psycopg.errors.ConnectionTimeout: connection timeout expired` during inbox claim processing and shutdown. The worker has bounded retry/backoff, but the connection timeout and shutdown behavior require deterministic integration tests.
+- Do **not** create a second webhook. Selectively converge the already-deployed implementation and migrations into the canonical line, preserving only verified deltas rather than merging the 638-commit divergence of the whole branch.
+- Do not switch either deployment source/start command until code, configuration, migrations, integration tests and a fresh runtime candidate are reconciled. Keep the current service isolated from WebApp failures.
+- Protect citizen privacy explicitly: Telegram Bot API chats are not end-to-end encrypted secret chats. User-facing bot onboarding/workflows must disclose that information sent in bot chat is processed by Telegram and the bot service. Avoid asking citizens to transmit highly sensitive narratives, identity documents, or original evidence through bot chat; direct those flows to the local-first WebApp/Mini App where feasible. Consent to use a bot is not a claim of local-only processing.
+
+### Corrected status
+
+- **Not true:** “No Telegram webhook exists.”
+- **Verified:** a deployed webhook exists on the shared-infrastructure branch and has accepted Telegram updates.
+- **Still open:** canonical convergence to `main`; no-polling guarantee on `main`; replay/idempotency and lease-fencing proof; cold-start and PostgreSQL timeout/recovery testing; Telegram privacy notices; deployment configuration reconciliation.
+- Issue #228 tracks this work. No production service was changed during this audit.
