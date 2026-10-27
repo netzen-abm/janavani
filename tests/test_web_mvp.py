@@ -1,8 +1,8 @@
 """Regression tests for interactive Web MVP document templates."""
 from io import BytesIO
 
-from docx import Document
 import pytest
+from docx import Document
 
 from src.web_mvp.main import build_objection_document
 
