@@ -121,3 +121,64 @@ def test_worker_cancels_dispatch_when_lease_renewal_fails(monkeypatch):
     assert inbox.retried.is_set()
     assert not inbox.processed
     assert not hasattr(application, "error_handler")
+
+
+
+class _RecoveringInbox:
+    """Raise one transient claim error, then return one update and complete it."""
+
+    def __init__(self):
+        self.claims = 0
+        self.processed = threading.Event()
+
+    def claim_next(self):
+        self.claims += 1
+        if self.claims == 1:
+            raise TimeoutError("synthetic database connection timeout")
+        if self.claims == 2:
+            return {"update_id": 45, "payload": {"update_id": 45}, "attempts": 1}
+        return None
+
+    def heartbeat(self, update_id, *, attempts):
+        return None
+
+    def retry_or_dead_letter(self, update_id, *, attempts, error_code):
+        raise AssertionError("successful recovery must not retry a business update")
+
+    def mark_processed(self, update_id, *, attempts):
+        self.processed.set()
+
+
+class _SuccessfulApplication(_Application):
+    async def process_update(self, update):
+        return None
+
+
+def test_worker_survives_transient_database_error_while_claiming(monkeypatch):
+    monkeypatch.setattr(
+        telegram_inbox_worker.Update, "de_json",
+        lambda payload, bot: SimpleNamespace(update_id=payload["update_id"]),
+    )
+    inbox, application = _RecoveringInbox(), _SuccessfulApplication()
+
+    async def run_until_processed():
+        worker = asyncio.create_task(
+            telegram_inbox_worker.run_inbox_worker(application, inbox, poll_seconds=0.01)
+        )
+        try:
+            assert await _wait_for_event(inbox.processed, 3), (
+                "worker terminated instead of retrying after a transient claim failure"
+            )
+        finally:
+            worker.cancel()
+            try:
+                await asyncio.wait_for(worker, timeout=1)
+            except asyncio.CancelledError:
+                pass
+            except asyncio.TimeoutError:
+                pytest.fail("worker did not stop within 1s after cancellation")
+
+    asyncio.run(run_until_processed())
+    assert inbox.claims >= 2
+    assert inbox.processed.is_set()
+    assert not hasattr(application, "error_handler")

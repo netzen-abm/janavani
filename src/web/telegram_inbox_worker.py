@@ -35,8 +35,9 @@ async def _renew_lease(inbox: PostgresTelegramInbox, update_id: int, attempts: i
 async def run_inbox_worker(
     application: Application, inbox: PostgresTelegramInbox, *, poll_seconds: float = 0.5
 ) -> None:
-    """Process encrypted Telegram updates from the durable inbox with bounded retries."""
+    """Process encrypted Telegram updates and survive transient inbox-claim failures."""
     failed_updates: set[int] = set()
+    claim_failures = 0
 
     async def record_handler_error(update: object, context: Any) -> None:
         update_id = getattr(update, "update_id", None)
@@ -51,7 +52,24 @@ async def run_inbox_worker(
     application.add_error_handler(record_handler_error)
     try:
         while True:
-            item = await asyncio.to_thread(inbox.claim_next)
+            try:
+                item = await asyncio.to_thread(inbox.claim_next)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                # A transient database error must not terminate the durable inbox
+                # worker. Retry with capped exponential backoff and never log DSNs,
+                # payloads, or exception messages that could contain secrets.
+                claim_failures = min(claim_failures + 1, 7)
+                retry_delay = min(max(poll_seconds, 0.5) * (2 ** (claim_failures - 1)), 30.0)
+                logger.error(
+                    "Telegram inbox claim failed; retrying in %.1fs error_type=%s",
+                    retry_delay,
+                    type(exc).__name__,
+                )
+                await asyncio.sleep(retry_delay)
+                continue
+            claim_failures = 0
             if item is None:
                 await asyncio.sleep(poll_seconds)
                 continue
