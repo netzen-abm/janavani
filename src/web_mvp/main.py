@@ -36,12 +36,14 @@ from fasthtml.common import (
     Titled,
     fast_app,
 )
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from src.adapters.web_client import JanavaniAIWebClient
 
+
+MAX_CITIZEN_INPUT_CHARS = 4000
 
 app, rt = fast_app(
     hdrs=(
@@ -114,6 +116,12 @@ def build_objection_document(
     return output.getvalue(), "application/pdf", f"citizen_review_draft_{safe_code}.pdf"
 
 
+@rt("/health")
+def health():
+    """Expose a minimal health endpoint for deployment probes."""
+    return JSONResponse({"status": "healthy"})
+
+
 @rt("/")
 def home_page():
     """Render the citizen action hub and draft form."""
@@ -178,9 +186,38 @@ def home_page():
 
 @rt("/submit-issue")
 def submit_issue(citizen_input: str):
-    """Request a draft from the configured AI service and show honest status."""
+    """Request a bounded draft from the configured AI service and show honest status."""
+    normalized_input = (citizen_input or "").strip()
+    if not normalized_input:
+        return Titled(
+            "Issue required",
+            Div(
+                Div(
+                    H2("Please describe the civic issue"),
+                    P("Enter a short description before requesting a draft."),
+                    A("Return to JanaVani", href="/"),
+                    cls="card",
+                )
+            ),
+        )
+    if len(normalized_input) > MAX_CITIZEN_INPUT_CHARS:
+        return Titled(
+            "Issue too long",
+            Div(
+                Div(
+                    H2("Please shorten your description"),
+                    P(
+                        f"The maximum input length is {MAX_CITIZEN_INPUT_CHARS} "
+                        "characters. Your text has not been sent to the drafting service."
+                    ),
+                    A("Return to JanaVani", href="/"),
+                    cls="card",
+                )
+            ),
+        )
+
     client = JanavaniAIWebClient()
-    result = client.request_document_draft(citizen_input)
+    result = client.request_document_draft(normalized_input)
     if not isinstance(result, dict):
         return Titled(
             "Draft service unavailable",

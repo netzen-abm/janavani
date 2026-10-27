@@ -17,3 +17,16 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
+
+  - type: web
+    name: janavani-interactive-webapp
+    env: python
+    plan: free
+    buildCommand: python -m pip install --upgrade pip && python -m pip install -r requirements.txt && python -m pip install -r src/web_mvp/requirements.txt
+    startCommand: uvicorn src.web_mvp.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: JANAVANI_AGENT_BASE_URL
+        sync: false
+      - key: JANAVANI_WEB_INTERFACE_TOKEN
+        sync: false
