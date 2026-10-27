@@ -156,3 +156,18 @@ def test_telegram_application_composition_registers_handlers_without_polling(mon
         application.bot_data["surface_case_composition"].identity_link_repository
     )
 
+def test_document_format_requires_an_explicit_supported_choice():
+    assert generate._document_format("pdf") is generate.DocumentFormat.PDF
+    assert generate._document_format(" PDF ") is generate.DocumentFormat.PDF
+    assert generate._document_format("docx") is generate.DocumentFormat.DOCX
+    assert generate._document_format(" DOCX ") is generate.DocumentFormat.DOCX
+
+
+def test_document_format_rejects_unknown_or_missing_values():
+    for value in ("", "word", "html", "pdfx", None, 123):
+        try:
+            generate._document_format(value)
+        except ValueError as exc:
+            assert "PDF or DOCX" in str(exc)
+        else:
+            raise AssertionError(f"Unsupported format was accepted: {value!r}")
