@@ -33,8 +33,8 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
     asyncio.run(run())
     session = get_session(user_id)
     assert replies and any("No account is needed" in reply for reply in replies)
-    assert any("has not registered a Case" in reply for reply in replies)
-    assert update.message.reply_document.await_count == 2
+    assert any("Draft 1 of 2" in reply for reply in replies)
+    assert update.message.reply_document.await_count == 0
     assert get_ephemeral_issue(user_id) is None
     assert "_ephemeral_issue" not in session
     assert session.get("case_id", "") == ""
