@@ -1,7 +1,7 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 
-from conversation.session import (clear_session, get_session, set_ephemeral_issue, set_ephemeral_anonymous_drafts)
+from conversation.session import clear_session, get_session, set_ephemeral_issue, set_ephemeral_anonymous_drafts
 from conversation.state import set_state, user_states
 from conversation.steps.anonymous_review import present_anonymous_draft
 from conversation.constants import NEW, WAITING_FOR_DOCUMENT, WAITING_FOR_ANONYMOUS_REVIEW
@@ -12,20 +12,6 @@ from src.capabilities.anonymous_civic_drafting import (
     recommend_document_types,
 )
 
-
-
-async def present_anonymous_draft(message, draft, index: int, total: int) -> None:
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Confirm this draft", callback_data="anon:confirm"),
-         InlineKeyboardButton("Cancel", callback_data="anon:cancel")],
-    ])
-    await message.reply_text(
-        f"Draft {index + 1} of {total} — {draft.document_type.upper()} (DRAFT ONLY)\n\n"
-        f"{draft.title}\n{draft.subject}\n\n{draft.body}\n\n"
-        "Reply with the complete corrected text to replace this draft, or confirm it below. "
-        "Do not include unnecessary sensitive information.",
-        reply_markup=keyboard,
-    )
 
 
 async def _send_anonymous_drafts(update: Update, user_id: int, narrative: str) -> None:
