@@ -12,6 +12,7 @@ from conversation.state import user_states
 
 user_sessions: dict[int, dict] = {}
 _ephemeral_issues: dict[int, tuple[str, float]] = {}
+_ephemeral_anonymous_drafts: dict[int, tuple[list, float]] = {}
 _EPHEMERAL_TTL_SECONDS = 15 * 60
 
 
