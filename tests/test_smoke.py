@@ -1,10 +1,10 @@
-# tests/test_smoke.py
+# Smoke tests for the canonical source package.
 
 
 def test_search_and_rate():
-    """Basic smoke test for existing service boundaries."""
-    from services.search_directory import search_office
-    from services.rate_office import save_rating
+    """Exercise the existing directory search and rating service entry points."""
+    from src.services.search_directory import search_office
+    from src.services.rate_office import save_rating
 
     out = search_office("ration", "Kochi")
     assert isinstance(out, str)
