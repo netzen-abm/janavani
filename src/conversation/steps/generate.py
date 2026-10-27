@@ -78,7 +78,15 @@ def _identity(user_id: int, *, links: ExternalIdentityLinkRepository | None) -> 
     return identity_for_telegram_user(user_id, links=links)
 
 def _document_format(value: str) -> DocumentFormat:
-    return DocumentFormat.DOCX if value.strip().lower() == "docx" else DocumentFormat.PDF
+    """Parse an explicit export choice; never silently coerce unknown input to PDF."""
+    if not isinstance(value, str):
+        raise ValueError("Unsupported document format; choose PDF or DOCX")
+    normalized = value.strip().lower()
+    if normalized == "pdf":
+        return DocumentFormat.PDF
+    if normalized == "docx":
+        return DocumentFormat.DOCX
+    raise ValueError("Unsupported document format; choose PDF or DOCX")
 
 
 def build_canonical_complaint_artifact(
