@@ -1,61 +1,36 @@
-import requests
+"""Authenticated AI client for the Telegram interface."""
 import logging
-import os
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
+
+from src.adapters.agent_client import JanavaniAgentClient
 
 logger = logging.getLogger("janavani.adapters.telegram_client")
 
 
 class JanavaniAITelegramClient:
-    """Connects the existing Telegram bot interface to the isolated AI microservice."""
+    """Connect Telegram handlers to the shared AI-agent transport."""
 
-    def __init__(self, base_url: Optional[str] = None, interface_token: Optional[str] = None):
-        configured_base_url = base_url or os.getenv(
-            "JANAVANI_AGENT_BASE_URL", "https://janavani.internal"
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        interface_token: Optional[str] = None,
+    ) -> None:
+        self._client = JanavaniAgentClient(
+            interface_name="Telegram",
+            token_env_var="JANAVANI_TELEGRAM_INTERFACE_TOKEN",
+            logger=logger,
+            base_url=base_url,
+            interface_token=interface_token,
         )
-        self.base_url = f"{configured_base_url.rstrip('/')}/api/v1/agent"
-        self.interface_token = interface_token or os.getenv(
-            "JANAVANI_TELEGRAM_INTERFACE_TOKEN"
-        )
-        self.headers = {"Content-Type": "application/json"}
-        if self.interface_token:
-            self.headers["X-Janavani-Interface-Token"] = self.interface_token
 
-    def request_document_draft(self, citizen_text: str) -> Optional[Dict[str, Any]]:
-        """Trigger document drafting for the Telegram bot interface."""
-        if not self.interface_token:
-            logger.error("Telegram interface token is not configured")
-            return None
-        try:
-            response = requests.post(
-                f"{self.base_url}/draft",
-                json={"citizen_raw_input": citizen_text},
-                headers=self.headers,
-                timeout=30,
-            )
-            if response.status_code == 200:
-                return response.json()
-            logger.error(
-                "Telegram client interaction rejected with status code: %s",
-                response.status_code,
-            )
-        except requests.RequestException:
-            logger.exception("Telegram client failed to reach AI Gateway")
-        return None
+    def request_document_draft(self, citizen_text: str) -> Optional[Dict]:
+        """Request a draft through the protected agent endpoint."""
+        return self._client.request_document_draft(citizen_text)
 
-    def poll_cached_document(self, tracking_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve an active document template from temporary storage."""
-        if not self.interface_token:
-            logger.error("Telegram interface token is not configured")
-            return None
-        try:
-            response = requests.get(
-                f"{self.base_url}/retrieve/{tracking_id}",
-                headers=self.headers,
-                timeout=15,
-            )
-            if response.status_code == 200:
-                return response.json()
-        except requests.RequestException:
-            logger.exception("Telegram client tracking extraction failed")
-        return None
+    def poll_cached_document(self, tracking_id: str) -> Optional[Dict]:
+        """Retrieve an unexpired draft from temporary storage.
+
+        This method name means checking cached document availability, not
+        Telegram update polling. Telegram transport stays webhook-based.
+        """
+        return self._client.retrieve_document(tracking_id)
