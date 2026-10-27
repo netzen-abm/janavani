@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 
 from src.services.escalation_rules import get_escalation_targets
-from src.storage.jsonl_store import read_jsonl_records, write_jsonl_records
+from src.storage.jsonl_store import read_jsonl_records, update_jsonl_records
 
 DATA_FILE = "database/ratings.jsonl"
 ESCALATION_DAYS = 3
@@ -32,15 +32,9 @@ def check_overdue_complaints():
 def mark_escalated(complaint_id: str) -> str:
     """Mark the matching complaint acknowledged after an escalation action."""
     try:
-        entries = read_jsonl_records(DATA_FILE)
+        updated = update_jsonl_records(
+            DATA_FILE, "complaint_id", complaint_id, {"status": "acknowledged"}
+        )
     except FileNotFoundError:
         return "Database not found"
-
-    updated = False
-    for entry in entries:
-        if entry["complaint_id"] == complaint_id:
-            entry["status"] = "acknowledged"
-            updated = True
-
-    write_jsonl_records(DATA_FILE, entries)
     return "Escalated" if updated else "Not found"

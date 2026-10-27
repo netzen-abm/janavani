@@ -31,3 +31,33 @@ def test_read_jsonl_raises_on_malformed_record(tmp_path):
     path.write_text("not-json\n", encoding="utf-8")
     with pytest.raises(json.JSONDecodeError):
         read_jsonl_records(path)
+
+ 
+
+def test_update_jsonl_records_updates_all_matching_records(tmp_path):
+    from src.storage.jsonl_store import update_jsonl_records
+
+    path = tmp_path / "records.jsonl"
+    write_jsonl_records(path, [
+        {"complaint_id": "JNV-1", "status": "submitted"},
+        {"complaint_id": "JNV-1", "status": "submitted"},
+        {"complaint_id": "JNV-2", "status": "submitted"},
+    ])
+
+    assert update_jsonl_records(
+        path, "complaint_id", "JNV-1", {"status": "acknowledged"}
+    )
+    assert [r["status"] for r in read_jsonl_records(path)] == [
+        "acknowledged", "acknowledged", "submitted"
+    ]
+
+
+def test_update_jsonl_records_returns_false_when_not_found(tmp_path):
+    from src.storage.jsonl_store import update_jsonl_records
+
+    path = tmp_path / "records.jsonl"
+    write_jsonl_records(path, [{"complaint_id": "JNV-2", "status": "submitted"}])
+
+    assert not update_jsonl_records(
+        path, "complaint_id", "JNV-1", {"status": "acknowledged"}
+    )

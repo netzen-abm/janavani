@@ -46,3 +46,20 @@ def write_jsonl_records(
                 os.unlink(temporary_path)
             except FileNotFoundError:
                 pass
+
+ 
+def update_jsonl_records(
+    path: str | os.PathLike[str],
+    match_field: str,
+    match_value: Any,
+    updates: dict[str, Any],
+) -> bool:
+    """Apply updates to every matching record and atomically persist the result."""
+    records = read_jsonl_records(path)
+    matched = False
+    for record in records:
+        if record.get(match_field) == match_value:
+            record.update(updates)
+            matched = True
+    write_jsonl_records(path, records)
+    return matched

@@ -1,5 +1,5 @@
 """Authorized status lookup and updates for legacy JSONL complaint records."""
-from src.storage.jsonl_store import read_jsonl_records, write_jsonl_records
+from src.storage.jsonl_store import read_jsonl_records, update_jsonl_records
 
 DATA_FILE = "database/ratings.jsonl"
 
@@ -61,13 +61,12 @@ def update_complaint_status(complaint_id: str, new_status: str) -> str:
     except FileNotFoundError:
         return "Database not found"
 
-    updated = False
-    for entry in entries:
-        if entry["complaint_id"] == complaint_id:
-            entry["status"] = new_status
-            updated = True
-
-    write_jsonl_records(DATA_FILE, entries)
+    try:
+        updated = update_jsonl_records(
+            DATA_FILE, "complaint_id", complaint_id, {"status": new_status}
+        )
+    except FileNotFoundError:
+        return "Database not found"
     if updated:
         return f"Status updated to {new_status}"
     return "Complaint not found"
