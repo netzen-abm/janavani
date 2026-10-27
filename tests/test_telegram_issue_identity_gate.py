@@ -12,7 +12,7 @@ def test_unlinked_telegram_user_gets_clear_failure_without_retaining_issue_text(
     clear_session(user_id)
     replies = []
 
-    async def reply_text(text):
+    async def reply_text(text, **kwargs):
         replies.append(text)
 
     update = SimpleNamespace(
