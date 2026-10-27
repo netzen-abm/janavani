@@ -1,71 +1,39 @@
-# conversation/session.py
+"""In-memory state for an active Telegram conversation.
 
-"""
-Stores user conversation data.
-
-Currently stored in memory.
-
-Later this will be stored in Supabase.
+This store is process-local and is not durable across restarts or instances.
+Persistent case tracking belongs in the storage layer, not this session store.
 """
 
 user_sessions = {}
 
-sessions = {}
 
 def get_session(user_id):
-    if user_id not in sessions:
-        sessions[user_id] = {}
-    return sessions[user_id]
-
-
-def get_session(user_id):
-
+    """Return the existing session or initialize the canonical default shape."""
     if user_id not in user_sessions:
-
         user_sessions[user_id] = {
-
-    # Workflow
-    "workflow": "Complaint",
-
-    # Citizen Issue
-    "issue": "",
-
-    # Selected Document
-    "document": "",
-
-    # Location
-    "district": "",
-    "department": "",
-
-    # Office Search Results
-    "offices": [],
-
-    # Selected Office
-    "office": {
-        "office_id": "",
-        "office_name": "",
-        "office_address": "",
-        "department": "",
-        "district": "",
-    },
-
-    # Identity
-    "identity_mode": "anonymous",
-
-    # Citizen Details
-    "name": "",
-    "address": "",
-    "phone": "",
-    "email": "",
-
-    # Attachment
-    "photo": None,
-}
-
+            "workflow": "Complaint",
+            "issue": "",
+            "document": "",
+            "district": "",
+            "department": "",
+            "offices": [],
+            "office": {
+                "office_id": "",
+                "office_name": "",
+                "office_address": "",
+                "department": "",
+                "district": "",
+            },
+            "identity_mode": "anonymous",
+            "name": "",
+            "address": "",
+            "phone": "",
+            "email": "",
+            "photo": None,
+        }
     return user_sessions[user_id]
 
 
 def clear_session(user_id):
-
-    if user_id in user_sessions:
-        del user_sessions[user_id]
+    """Clear transient conversation state for the given user."""
+    user_sessions.pop(user_id, None)
