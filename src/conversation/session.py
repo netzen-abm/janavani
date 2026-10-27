@@ -43,6 +43,7 @@ def clear_session(user_id: int) -> None:
     """Discard workflow metadata and any associated transient citizen content."""
     user_sessions.pop(user_id, None)
     _ephemeral_issues.pop(user_id, None)
+    _ephemeral_anonymous_drafts.pop(user_id, None)
 
 
 def set_ephemeral_issue(user_id: int, value: str) -> None:
