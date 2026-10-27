@@ -1,8 +1,9 @@
-import redis
-import os
 import logging
 import time
 from typing import Dict, Any
+
+import redis
+from src.storage.redis_connection import create_redis_client
 
 logger = logging.getLogger("janavani.services.emergency_sos")
 
@@ -12,12 +13,7 @@ class JanavaniEmergencySOSEngine:
     emergency alerts when active administrative harassment risks occur.
     """
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=0,
-            decode_responses=True
-        )
+        self.redis_client = create_redis_client()
 
     def trigger_crisis_lockdown(self, session_tracking_id: str, client_interface_token: str, emergency_coordinates: str) -> Dict[str, Any]:
         """Executes a defensive cleanup sweep to wipe local traces and alert emergency networks."""

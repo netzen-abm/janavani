@@ -1,9 +1,9 @@
 import json
 import logging
-import os
 from typing import Any, Dict, Optional
 
 import redis
+from src.storage.redis_connection import create_redis_client
 
 logger = logging.getLogger("janavani.storage.cache")
 
@@ -16,12 +16,7 @@ class TransientStorageEngine:
 
     def __init__(self):
         # Default connection settings point to the internal Docker compose link network.
-        self.redis_client = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=0,
-            decode_responses=True,
-        )
+        self.redis_client = create_redis_client()
         # Automated self-destruct threshold (e.g., 1800 seconds = 30 minutes).
         self.expiry_ttl_seconds = 1800
 

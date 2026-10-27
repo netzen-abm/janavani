@@ -1,5 +1,5 @@
 import redis
-import os
+from src.storage.redis_connection import create_redis_client
 from datetime import datetime
 
 class PrivacyPreservingAnalytics:
@@ -8,12 +8,7 @@ class PrivacyPreservingAnalytics:
     storing, or grouping any user-identifiable data patterns.
     """
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=0,
-            decode_responses=True
-        )
+        self.redis_client = create_redis_client()
 
     def increment_generation_counter(self, document_type: str, status: str = "SUCCESS") -> None:
         """
