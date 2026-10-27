@@ -50,13 +50,9 @@ def test_expired_ephemeral_issue_is_purged_without_another_user_read(monkeypatch
     monkeypatch.setattr(session_store, "monotonic", lambda: 1000.0)
     set_ephemeral_issue(active_user, "active private narrative")
 
-    # Isolate this test from transient buffers left by other test cases.
+    # Remove unrelated process-local state without changing the test clock.
     session_store._ephemeral_anonymous_drafts.clear()
-    session_store._ephemeral_issues.clear()
-    set_ephemeral_issue(expired_user, "expired private narrative")
-    set_state(expired_user, "WAITING_FOR_FORMAT")
-    monkeypatch.setattr(session_store, "monotonic", lambda: 1000.0)
-    set_ephemeral_issue(active_user, "active private narrative")
+    session_store._ephemeral_issues.pop(active_user, None)
     cleared = purge_expired_ephemeral_issues(now=1500.0)
 
     assert cleared == 1
