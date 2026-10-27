@@ -42,6 +42,9 @@ def test_expired_ephemeral_issue_is_purged_without_another_user_read(monkeypatch
     import conversation.session as session_store
 
     expired_user, active_user = 987661, 987662
+    # Isolate global process-local stores; other tests may leave expiring entries.
+    session_store._ephemeral_anonymous_drafts.clear()
+    session_store._ephemeral_issues.clear()
     clear_session(expired_user)
     clear_session(active_user)
     monkeypatch.setattr(session_store, "monotonic", lambda: 0.0)
@@ -50,9 +53,6 @@ def test_expired_ephemeral_issue_is_purged_without_another_user_read(monkeypatch
     monkeypatch.setattr(session_store, "monotonic", lambda: 1000.0)
     set_ephemeral_issue(active_user, "active private narrative")
 
-    # Remove unrelated process-local state without changing the test clock.
-    session_store._ephemeral_anonymous_drafts.clear()
-    session_store._ephemeral_issues.pop(active_user, None)
     cleared = purge_expired_ephemeral_issues(now=1500.0)
 
     assert cleared == 1
