@@ -9,8 +9,8 @@ import os
 
 from flask import Flask, jsonify, request
 
-from adapters.meta_graph_client import send_meta_message
-from adapters.meta_webhook_security import (
+from src.adapters.meta_graph_client import send_meta_message
+from src.adapters.meta_webhook_security import (
     is_valid_meta_signature,
     verify_meta_webhook_challenge,
 )
