@@ -73,6 +73,8 @@ async def handle_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # The dispatcher uses this short-lived buffer as the workflow expiry guard.
+    set_ephemeral_issue(user_id, user_input)
     links = context.bot_data.get("identity_link_repository")
     try:
         identity_for_telegram_user(user_id, links=links)
