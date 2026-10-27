@@ -13,12 +13,13 @@ class AISettings(BaseSettings):
     # Provider endpoints are configuration, not capability ownership.
     OPENROUTER_URL: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1")
 
-    # Model mappings are replaceable implementations behind capability contracts.
+    # Direction-specific model: Indic languages to English.
+    IIT_MADRAS_TRANSLATION_MODEL: str = os.getenv(
+        "IIT_MADRAS_TRANSLATION_MODEL", "ai4bharat/indictrans2-indic-en-1B"
+    )
+
     LEGAL_DRAFTING_MODEL: str = os.getenv(
         "LEGAL_DRAFTING_MODEL", "meta-llama/llama-3.1-70b-instruct"
-    )
-    IIT_MADRAS_TRANSLATION_MODEL: str = os.getenv(
-        "IIT_MADRAS_TRANSLATION_MODEL", "ai4bharat/indictrans2-en-indic-1b"
     )
 
 
