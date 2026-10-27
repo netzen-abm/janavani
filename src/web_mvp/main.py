@@ -18,7 +18,6 @@ from fasthtml.common import (
     A,
     Br,
     Button,
-    Container,
     Div,
     Form,
     H1,
@@ -120,7 +119,7 @@ def home_page():
     """Render the citizen action hub and draft form."""
     return Titled(
         "🇮🇳 Janavani — Citizen Action Hub",
-        Container(
+        Div(
             Div(
                 H1("JANAVANI"),
                 P(
@@ -185,7 +184,7 @@ def submit_issue(citizen_input: str):
     if not isinstance(result, dict):
         return Titled(
             "Draft service unavailable",
-            Container(
+            Div(
                 Div(
                     H2("Draft could not be prepared"),
                     P(
@@ -233,7 +232,7 @@ def submit_issue(citizen_input: str):
     )
     return Titled(
         "Civic draft — review before use",
-        Container(Div(*response_items, cls="card")),
+        Div(Div(*response_items, cls="card")),
     )
 
 
@@ -242,7 +241,7 @@ def review_bill(bill_code: str):
     """Render a user-observation form for an illustrative public record."""
     return Titled(
         "Public-record review request",
-        Container(
+        Div(
             Div(
                 H2(f"Review request: {bill_code}"),
                 P(
@@ -288,7 +287,7 @@ def dispatch_objection(
     except ValueError as error:
         return Titled(
             "Invalid review request",
-            Container(
+            Div(
                 Div(
                     P(str(error)),
                     A("Return to the form", href=f"/bill-review/{escape(bill_code)}"),
