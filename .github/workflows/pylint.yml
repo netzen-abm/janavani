@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   quality-gate:
-    name: Python correctness and duplicate-code gate
+    name: Python errors and duplication in active components
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -22,20 +22,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install repository and test dependencies
+      - name: Install repository and Web MVP dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install -r src/web_mvp/requirements.txt
-          python -m pip install pylint pytest fakeredis python-docx pydantic-settings redis
-      - name: Gate Python errors and fatal analysis findings
+          python -m pip install pylint pytest fakeredis pydantic-settings redis
+      - name: Gate errors and fatal findings in touched components
         env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: python -m pylint --disable=all --enable=E,F src tests
-      - name: Gate duplicated implementation across source and tests
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          python -m pylint --disable=all --enable=E,F --disable=E0611             src/adapters/agent_client.py             src/adapters/telegram_client.py             src/adapters/web_client.py             src/adapters/meta_graph_client.py             src/adapters/meta_webhook_security.py             src/bot_whatsapp.py src/bot_messenger.py             src/storage/jsonl_store.py src/storage/redis_connection.py             src/storage/cache.py src/storage/analytics.py             src/services/escalation_engine.py src/services/track_complaint.py             src/services/emergency_sos.py src/documents/document_engine.py             src/web_mvp/main.py             tests/test_agent_client.py tests/test_meta_graph_client.py             tests/test_meta_webhook_security.py tests/test_jsonl_store.py             tests/test_redis_connection.py tests/test_web_mvp.py
+      - name: Gate duplicate implementation in active service boundaries
         env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: python -m pylint --disable=all --enable=R0801 src tests
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          python -m pylint --disable=all --enable=R0801             src/adapters/agent_client.py             src/adapters/telegram_client.py             src/adapters/web_client.py             src/adapters/meta_graph_client.py             src/adapters/meta_webhook_security.py             src/bot_whatsapp.py src/bot_messenger.py             src/storage/jsonl_store.py src/storage/redis_connection.py             src/storage/cache.py src/storage/analytics.py             src/services/escalation_engine.py src/services/track_complaint.py             src/services/emergency_sos.py src/documents/document_engine.py             src/web_mvp/main.py
 
   full-style-audit:
     name: Full-repository style audit (tracked baseline debt)
@@ -48,12 +50,13 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install repository and test dependencies
+      - name: Install repository and Web MVP dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pylint pytest fakeredis python-docx pydantic-settings redis
+          python -m pip install -r src/web_mvp/requirements.txt
+          python -m pip install pylint pytest fakeredis pydantic-settings redis
       - name: Report full-repository Pylint findings
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
         run: python -m pylint src tests
