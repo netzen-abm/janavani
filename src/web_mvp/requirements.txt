@@ -1,5 +1,4 @@
-python-fasthtml==0.5.2
-sqlite-minutils==3.37.0.post3
+python-fasthtml==0.14.11
 requests==2.32.3
 uvicorn==0.30.6
 python-docx==1.1.2
