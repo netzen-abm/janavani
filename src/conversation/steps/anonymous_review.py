@@ -50,7 +50,8 @@ async def handle_anonymous_review(update: Update, context: ContextTypes.DEFAULT_
     if user_id is None:
         return
     state = get_state(user_id)
-    drafts = get_ephemeral_anonymous_drafts(user_id)
+    stored_drafts = get_ephemeral_anonymous_drafts(user_id)
+    drafts = list(stored_drafts) if stored_drafts is not None else None
     if not drafts:
         clear_session(user_id)
         user_states.pop(user_id, None)
