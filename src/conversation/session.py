@@ -73,6 +73,7 @@ def purge_expired_ephemeral_issues(now: float | None = None) -> int:
     ]
     for user_id in expired:
         _ephemeral_issues.pop(user_id, None)
+        _ephemeral_anonymous_drafts.pop(user_id, None)
         # Once the only copy of the citizen narrative expires, its remaining
         # process-local workflow metadata can no longer complete the same flow.
         user_sessions.pop(user_id, None)
