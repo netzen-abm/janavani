@@ -28,19 +28,15 @@ def test_unlinked_telegram_user_gets_complaint_and_rti_drafts_without_case_creat
 
     asyncio.run(issue_step.handle_issue(update, context))
 
-    assert message.reply_document.await_count == 4  # complaint and RTI, PDF and DOCX
-    sent_names = [
-        call.kwargs["document"].filename
-        for call in message.reply_document.await_args_list
-    ]
-    assert "janavani-complaint.pdf" in sent_names
-    assert "janavani-complaint.docx" in sent_names
-    assert "janavani-rti.pdf" in sent_names
-    assert "janavani-rti.docx" in sent_names
+    message.reply_document.assert_not_awaited()
     replies = [call.args[0] for call in message.reply_text.await_args_list]
     assert any("No account is needed" in reply for reply in replies)
-    assert any("has not registered a Case" in reply for reply in replies)
-    assert issue_step.user_states[123456] == issue_step.NEW
+    assert any("Draft 1 of 2" in reply for reply in replies)
+    assert any("road is broken" in reply for reply in replies)
+    assert issue_step.user_states[123456] == "WAITING_FOR_ANONYMOUS_REVIEW"
+    from conversation.session import get_ephemeral_anonymous_drafts
+    drafts = get_ephemeral_anonymous_drafts(123456)
+    assert drafts is not None and [draft.document_type for draft in drafts] == ["complaint", "rti"]
 
 
 def test_unlinked_telegram_user_with_short_narrative_is_prompted_to_add_detail(monkeypatch):
