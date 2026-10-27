@@ -1,80 +1,46 @@
-# src/services/escalation_engine.py
-
-import json
+"""Escalation checks for legacy JSONL-backed complaint records."""
 from datetime import datetime, timedelta
+
 from src.services.escalation_rules import get_escalation_targets
+from src.storage.jsonl_store import read_jsonl_records, write_jsonl_records
 
 DATA_FILE = "database/ratings.jsonl"
 ESCALATION_DAYS = 3
 
 
 def check_overdue_complaints():
-    """
-    Returns complaints that need escalation
-    """
-
-    overdue = []
-
+    """Return submitted complaints older than the escalation threshold."""
     try:
-        with open(DATA_FILE, "r") as f:
-            for line in f:
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                entry = json.loads(line)
-
-                # Only check submitted complaints
-                if entry["status"] != "submitted":
-                    continue
-
-                created_time = datetime.fromisoformat(entry["timestamp"])
-
-                if datetime.now() - created_time > timedelta(days=ESCALATION_DAYS):
-                    # Attach escalation targets
-                    category = entry.get("category", "General")
-                    entry["escalation_targets"] = get_escalation_targets(category)
-
-                    overdue.append(entry)
-
-        return overdue
-
+        entries = read_jsonl_records(DATA_FILE)
     except FileNotFoundError:
         return []
 
+    overdue = []
+    now = datetime.now()
+    for entry in entries:
+        if entry["status"] != "submitted":
+            continue
+        created_time = datetime.fromisoformat(entry["timestamp"])
+        if now - created_time > timedelta(days=ESCALATION_DAYS):
+            entry["escalation_targets"] = get_escalation_targets(
+                entry.get("category", "General")
+            )
+            overdue.append(entry)
+    return overdue
+
 
 def mark_escalated(complaint_id: str) -> str:
-    """
-    Marks complaint as escalated
-    """
-
-    updated = False
-    entries = []
-
+    """Mark the matching complaint acknowledged after an escalation action."""
     try:
-        with open(DATA_FILE, "r") as f:
-            for line in f:
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                entry = json.loads(line)
-
-                if entry["complaint_id"] == complaint_id:
-                    entry["status"] = "acknowledged"
-                    updated = True
-
-                entries.append(entry)
-
-        with open(DATA_FILE, "w") as f:
-            for e in entries:
-                f.write(json.dumps(e) + "\n")
-
-        if updated:
-            return "Escalated"
-        return "Not found"
-
+        entries = read_jsonl_records(DATA_FILE)
     except FileNotFoundError:
         return "Database not found"
+
+    updated = False
+    for entry in entries:
+        if entry["complaint_id"] == complaint_id:
+            entry["status"] = "acknowledged"
+            updated = True
+
+    write_jsonl_records(DATA_FILE, entries)
+    return "Escalated" if updated else "Not found"
