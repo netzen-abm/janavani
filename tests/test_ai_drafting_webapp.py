@@ -164,5 +164,5 @@ def test_webapp_can_preselect_a_template_from_the_pathway_selector():
 
     response = TestClient(app).get("/ai-drafting?template_id=rti.records")
     assert response.status_code == 200
-    selected_options = re.findall(r"<option\\b[^>]*selected[^>]*>", response.text)
+    selected_options = re.findall(r"<option\b[^>]*selected[^>]*>", response.text)
     assert any('value="rti.records"' in option for option in selected_options)
