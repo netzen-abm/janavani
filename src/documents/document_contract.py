@@ -30,6 +30,8 @@ class DocumentDraft:
     cc: tuple[DocumentParty, ...] = field(default_factory=tuple)
     sender: DocumentParty | None = None
     legal_ground: str | None = None
+    template_id: str | None = None
+    template_version: int | None = None
 
     def as_text(self) -> str:
         lines = [
