@@ -22,7 +22,7 @@ def test_preview_is_rejected_without_explicit_server_processing_consent():
     assert "consent" in response.json()["detail"].lower()
 
 
-def test_unauthenticated_local_preview_is_allowed_but_not_persisted():
+def test_unauthenticated_deterministic_preview_is_allowed_but_not_persisted():
     response = TestClient(_app()).post(
         "/civic/drafts/preview",
         json={
@@ -58,7 +58,7 @@ def test_rti_api_requires_jurisdiction_and_existing_record_requests():
     assert "jurisdiction" in response.json()["detail"].lower()
 
 
-def test_remote_ai_without_identity_returns_local_preview_without_ai_call(monkeypatch):
+def test_remote_ai_without_identity_returns_deterministic_preview_without_ai_call(monkeypatch):
     from src.core.settings import ai_settings
 
     monkeypatch.setattr(ai_settings, "OPENROUTER_API_KEY", "test-key")
