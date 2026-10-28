@@ -200,3 +200,31 @@ def test_explicit_opt_in_does_not_grant_ai_capability_to_anonymous_identity():
     assert agent.calls == []
     assert result["ai_status"] == "identity_required"
     assert result["ai_used"] is False
+
+
+def test_administrative_evidence_demand_requires_jurisdiction_and_uses_saved_defaults():
+    workflow = CivicDraftPreviewWorkflow(agent=FakeAgent())
+    with pytest.raises(ValueError, match="Template requires: jurisdiction"):
+        workflow.preview(CivicDraftPreviewRequest(
+            template_id="administrative.evidence-demand",
+            issue="The municipal notice requests a recurring sanitation levy.",
+        ))
+
+    result = workflow.preview(CivicDraftPreviewRequest(
+        template_id="administrative.evidence-demand",
+        issue="The municipal notice requests a recurring sanitation levy.",
+        jurisdiction="Kerala municipal authority",
+        requested_documents=("A copy of the specific demand notice",),
+    ))
+
+    body = result["draft_body"]
+    assert result["template_id"] == "administrative.evidence-demand"
+    assert result["template_version"] == 1
+    assert "Foundational and constitutional questions" in body
+    assert "Documents and records requested" in body
+    assert "A copy of the specific demand notice" in body
+    assert "Kerala municipal authority" in body
+    assert "Non-response alone is not asserted here to constitute agreement" in body
+    assert "self-executing instrument" not in body
+    assert result["persistence"] == "not_persisted"
+    assert result["submission"] == "not_submitted"
