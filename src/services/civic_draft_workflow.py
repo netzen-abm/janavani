@@ -65,6 +65,15 @@ class CivicDraftPreviewWorkflow:
             raise ValueError("Describe the civic issue before drafting")
         if len(issue) > _MAX_ISSUE_CHARS or len(existing) > _MAX_DRAFT_CHARS:
             raise ValueError("Issue or existing draft exceeds the allowed length")
+        for name, count, size in (
+            ("requested_documents", 12, 800), ("part_i_interrogatories", 12, 800),
+            ("requested_conditions", 12, 800), ("remedies_reserved", 8, 500),
+        ):
+            values = getattr(request, name)
+            if len(values) > count or any(
+                not isinstance(v, str) or not v.strip() or len(v) > size for v in values
+            ):
+                raise ValueError(f"{name} exceeds drafting limits")
         template = get_template(request.template_id)
         document_type = _TEMPLATE_TYPES.get(template.template_id)
         if document_type is None:
