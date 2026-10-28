@@ -65,6 +65,8 @@ class DocumentReviewContract:
             cc=self._draft.cc,
             sender=self._draft.sender,
             legal_ground=self._draft.legal_ground,
+            template_id=self._draft.template_id,
+            template_version=self._draft.template_version,
         )
         self._revisions.append(DocumentRevision(
             revision_id=f"rev-{uuid4().hex}",
