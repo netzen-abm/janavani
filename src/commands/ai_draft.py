@@ -43,8 +43,12 @@ async def ai_draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     get_session(user.id).pop("ai_draft_template", None)
     set_state(user.id, WAITING_FOR_CIVIC_DRAFT_TYPE)
     await message.reply_text(
-        "Choose a reusable document format. Your preview is held only in short-lived "
-        "process memory and is not saved or submitted.",
+        "Choose a reusable document format. The draft preview is kept only in short-lived "
+        "process memory; it is not saved to a Janavani Case or submitted. To support reliable "
+        "delivery, pending Telegram updates may be retained in Janavani's encrypted processing "
+        "queue for up to 24 hours; processed or terminal queue records have their message payload "
+        "cleared. Telegram also processes messages sent to this bot. Remote AI is a separate, "
+        "optional step and will only run after you select the AI-improvement action.",
         reply_markup=_type_keyboard(),
     )
 
