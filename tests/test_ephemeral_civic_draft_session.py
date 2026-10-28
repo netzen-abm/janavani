@@ -56,9 +56,11 @@ def test_transient_draft_is_purged_after_ttl_even_without_another_message(monkey
     sessions.set_ephemeral_civic_draft(991105, _draft())
 
     clock[0] += 901.0
-    assert sessions.purge_expired_ephemeral_issues() == 1
+    purged = sessions.purge_expired_ephemeral_issues()
+    assert purged >= 1  # Other expired process-local entries may be purged in the same sweep.
     assert sessions.get_ephemeral_civic_draft(991105) is None
     assert sessions.user_sessions[991105]["_ephemeral_civic_draft"] is None
+    sessions.clear_session(991105)
 
 
 def test_clearing_draft_preserves_unrelated_case_session_fields():
