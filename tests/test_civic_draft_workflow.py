@@ -2,7 +2,7 @@ import pytest
 
 from src.access.capability_scope import CapabilityDataScope
 from src.identity.context import IdentityContext
-from src.identity.principal import Principal
+from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 from src.services.civic_draft_workflow import (
     CivicDraftPreviewRequest,
     CivicDraftPreviewWorkflow,
@@ -44,7 +44,9 @@ def _identity(*capabilities):
     return IdentityContext(
         principal=Principal(
             principal_id="draft-preview-citizen",
+            identity_mode=IdentityMode.AUTHENTICATED,
             interface="test",
+            authentication_method=AuthenticationMethod.PASSKEY,
             capabilities=frozenset(capabilities),
         )
     )
@@ -124,6 +126,8 @@ def test_ai_preview_uses_verified_identity_and_keeps_citizen_supplied_rti_record
     sent_text, kwargs = agent.calls[0]
     assert "Citizen-provided draft to improve" in sent_text
     assert kwargs["identity"].principal.principal_id == "draft-preview-citizen"
+    assert not identity.principal.has_capability("civic:ai-draft")
+    assert kwargs["identity"].principal.has_capability("civic:ai-draft")
     assert result["ai_used"] is True
     assert "Please inspect and provide a written response." in result["draft_body"]
     assert "Existing work orders for April" in result["draft_body"]
@@ -173,3 +177,25 @@ def test_preview_rejects_oversized_or_blank_record_fields():
             issue="Please review the issue.",
             requested_conditions=(" ",),
         ))
+
+
+def test_explicit_opt_in_does_not_grant_ai_capability_to_anonymous_identity():
+    agent = FakeAgent()
+    anonymous = IdentityContext(principal=Principal(
+        principal_id="anonymous-caller",
+        interface="webapp",
+        capabilities=frozenset({"civic:ai-draft"}),
+    ))
+    result = CivicDraftPreviewWorkflow(agent=agent).preview(
+        CivicDraftPreviewRequest(
+            template_id="complaint.general",
+            issue="The road surface is damaged.",
+        ),
+        identity=anonymous,
+        use_ai=True,
+        remote_processing_consent=True,
+    )
+
+    assert agent.calls == []
+    assert result["ai_status"] == "identity_required"
+    assert result["ai_used"] is False
