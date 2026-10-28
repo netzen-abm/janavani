@@ -21,6 +21,8 @@ def _draft_form() -> Div:
     return Div(
         H2("Draft a civic document"),
         P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
+        P("Your text is sent to Janavani's preview API for transient processing; the local-template option does not call the AI provider."),
+
         Form(action="/ai-drafting/preview", method="post")(
             Label("Document format"),
             Select(name="template_id")(
@@ -84,6 +86,12 @@ def register_ai_drafting_routes(rt) -> None:
             "use_ai": use_ai.lower() in {"yes", "true", "1", "on"},
             "remote_processing_consent": remote_processing_consent.lower() in {"yes", "true", "1", "on"},
         }
+        if payload["use_ai"] and payload["remote_processing_consent"]:
+            origin = request.headers.get("origin")
+            host = request.headers.get("host", "").lower()
+            from urllib.parse import urlsplit
+            if not origin or urlsplit(origin).netloc.lower() != host:
+                payload["remote_processing_consent"] = False
         try:
             result = client_for_request(request).preview_civic_draft(payload)
         except httpx.HTTPStatusError as exc:
