@@ -60,8 +60,7 @@ def normalize_provider_draft(payload: dict[str, Any], *, fallback_subject: str) 
         raise InvalidAIDraftOutput("AI provider returned no text draft")
     raw = message["content"].strip()
     if raw.startswith("```"):
-        raw = raw.split("
-", 1)[-1]
+        raw = raw.split("\n", 1)[-1]
         if raw.endswith("```"):
             raw = raw[:-3].strip()
     try:
