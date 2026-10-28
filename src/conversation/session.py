@@ -72,3 +72,16 @@ def clear_ephemeral_issue(user_id: int) -> None:
     session = get_session(user_id)
     session["_ephemeral_issue"] = None
     session["_ephemeral_issue_expires"] = 0.0
+
+def purge_expired_ephemeral_issues() -> int:
+    """Erase expired citizen narratives even when the user sends no later update."""
+    now = monotonic()
+    purged = 0
+    for session in user_sessions.values():
+        if session.get("_ephemeral_issue") is not None and now >= float(
+            session.get("_ephemeral_issue_expires", 0.0)
+        ):
+            session["_ephemeral_issue"] = None
+            session["_ephemeral_issue_expires"] = 0.0
+            purged += 1
+    return purged
