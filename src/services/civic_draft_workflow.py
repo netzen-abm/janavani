@@ -78,16 +78,8 @@ class CivicDraftPreviewWorkflow:
             ):
                 raise ValueError("Specify the existing records requested in the RTI draft")
 
-        required_values = {
-            "subject": subject,
-            "issue": issue,
-            "jurisdiction": request.jurisdiction.strip(),
-            "requested_documents": request.requested_documents,
-        }
-        missing = [
-            name for name in template.required_fields
-            if not required_values.get(name)
-        ]
+        required_values = {"subject": subject, "issue": issue, "jurisdiction": request.jurisdiction.strip(), "requested_documents": request.requested_documents}
+        missing = [name for name in template.required_fields if not required_values.get(name)]
         if missing:
             raise ValueError("Template requires: " + ", ".join(missing))
 
