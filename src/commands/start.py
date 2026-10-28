@@ -10,7 +10,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Citizen Governance Platform
 
 PRIVACY NOTE
-This is a Telegram bot chat, not an end-to-end encrypted Secret Chat or a local-only Janavani session. Messages needed to operate the bot are processed by Telegram and Janavani's bot service. Please do not send identity documents, highly sensitive personal details, or original evidence in this chat. Share only what is necessary, and review Janavani's privacy information before continuing.
+This is a Telegram bot chat, not an end-to-end encrypted Secret Chat or a\nlocal-only Janavani session. Messages needed to operate the bot are processed by\nTelegram and Janavani's bot service. Please do not send identity documents, highly\nsensitive personal details, or original evidence in this chat. Share only what is\nnecessary, and review Janavani's privacy information before continuing.
 
 I can help you:
 
