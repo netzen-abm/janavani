@@ -40,7 +40,7 @@ You can either use commands
 
 /complaint
 
-------------------------------------
+/ai_draft — interactive complaint, grievance, RTI, representation or petition drafting
 
 Or simply type your problem.
 
