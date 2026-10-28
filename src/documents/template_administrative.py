@@ -136,10 +136,10 @@ _ADMINISTRATIVE_EVIDENCE_DEMAND = CivicDocumentTemplate(
             )),
             TemplateSection("references", "Notice references and supporting public references"),
             TemplateSection("response_period", "Requested response period (verify applicable deadlines)", (
-                "Requested response period: [Insert a requested period; verify any binding statutory time limit and the proper channel.]"
+                "Requested response period: [Insert a requested period; verify any binding statutory time limit and the proper channel.]",
             )),
             TemplateSection("deadline_date", "Requested date, if appropriate", (
-                "Requested date: [Insert a date if appropriate; distinguish a requested target from a statutory deadline.]"
+                "Requested date: [Insert a date if appropriate; distinguish a requested target from a statutory deadline.]",
             )),
             TemplateSection("jurisdiction", "Public authority and jurisdiction")
         ),
