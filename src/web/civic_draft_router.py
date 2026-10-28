@@ -1,7 +1,7 @@
 """Authenticated HTTP adapter for shared civic-draft previews."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from src.identity.context import IdentityContext
@@ -33,6 +33,7 @@ class CivicDraftPreviewModel(BaseModel):
 @router.post("/preview")
 def preview_civic_draft(
     request: CivicDraftPreviewModel,
+    response: Response,
     authorization: str | None = Header(default=None),
     request_id: str | None = Header(default=None, alias="X-Request-ID"),
 ) -> dict[str, object]:
@@ -64,4 +65,8 @@ def preview_civic_draft(
         raise HTTPException(status_code=422, detail="Unsupported civic document template") from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
     return result
