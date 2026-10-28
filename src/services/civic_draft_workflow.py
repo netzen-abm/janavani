@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.access.remote_civic_drafting_policy import identity_for_explicit_remote_drafting
 from src.capabilities.letter_body import compose_template_body
 from src.capabilities.letter_drafting import LetterDraftRequest
 from src.documents.template_catalogue import get_template
@@ -94,8 +93,8 @@ class CivicDraftPreviewWorkflow:
         if use_ai and not remote_processing_consent:
             ai_status = "consent_required"
             message = (
-                "No remote AI call was made. Explicit consent is required before the "
-                "issue and any pasted draft are sent to the configured AI provider."
+                "No remote AI call was made. Explicit consent is required before any "
+                "remote AI processing."
             )
         elif use_ai:
             if (
@@ -106,39 +105,16 @@ class CivicDraftPreviewWorkflow:
                 ai_status = "identity_required"
                 message = "A verified identity is required for remote AI drafting."
             else:
-                identity = identity_for_explicit_remote_drafting(
-                    identity, explicit_consent=remote_processing_consent
+                # Fail closed until the platform has a tested local minimization
+                # boundary. Consent alone is not permission to send arbitrary free-text
+                # narratives or pasted drafts to a remote model.
+                ai_status = "privacy_boundary_required"
+                message = (
+                    "Remote AI drafting is temporarily disabled for free-text issue "
+                    "narratives and pasted drafts until a privacy-safe, minimized-input "
+                    "boundary is implemented. No remote AI provider was called. The "
+                    "deterministic template preview remains available."
                 )
-                ai_input = issue
-                if existing:
-                    ai_input += "\n\nCitizen-provided draft to improve (preserve its purpose and facts):\n" + existing
-                scope = self._agent.remote_consent_scope(location_code=location_code)
-                generated = self._agent.draft_legal_document(
-                    ai_input,
-                    location_code=location_code,
-                    consent_scope=scope,
-                    identity=identity,
-                    document_type=template.document_type,
-                )
-                ai_used = bool(generated.get("ai_used"))
-                ai_status = str(generated.get("status", "degraded"))
-                if ai_status == "available" and isinstance(generated.get("structured_draft"), dict):
-                    structured = generated["structured_draft"]
-                    proposal = str(structured.get("proposal_or_notice") or proposal)
-                    interrogatories = tuple(structured.get("part_i_interrogatories") or interrogatories)
-                    conditions = tuple(structured.get("requested_conditions") or conditions)
-                    remedies = tuple(structured.get("remedies_reserved") or remedies)
-                    if not request.subject.strip():
-                        subject = str(structured.get("subject") or subject)[:200]
-                    ai_used = bool(generated.get("ai_used"))
-                    message = (
-                        "AI suggestions were generated for review. Verify every fact and legal "
-                        "reference; Janavani has not saved or submitted this draft."
-                    )
-                else:
-                    message = str(generated.get(
-                        "message", "AI did not produce validated suggestions; the local template remains available."
-                    ))
 
         draft_request = LetterDraftRequest(
             subject=subject,
