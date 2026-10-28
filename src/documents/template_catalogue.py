@@ -4,6 +4,14 @@ from __future__ import annotations
 from src.documents.template_models import CivicDocumentTemplate, TemplateSection
 from src.documents.template_definitions import _TEMPLATES
 
+__all__ = [
+    "CivicDocumentTemplate",
+    "TemplateSection",
+    "TemplateNotFoundError",
+    "list_templates",
+    "get_template",
+]
+
 
 class TemplateNotFoundError(LookupError):
     """Unknown template ID/version."""
