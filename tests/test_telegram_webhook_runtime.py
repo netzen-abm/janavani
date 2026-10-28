@@ -38,6 +38,7 @@ def _payload(update_id: int = 123) -> dict:
 
 
 def _client(monkeypatch, inbox: FakeInbox):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
     application = MagicMock()
     application.bot = MagicMock()
     monkeypatch.setattr(
