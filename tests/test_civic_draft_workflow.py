@@ -222,6 +222,7 @@ def test_administrative_evidence_demand_requires_jurisdiction_and_uses_saved_def
     assert result["template_version"] == 1
     assert "Foundational and constitutional questions" in body
     assert "Documents and records requested" in body
+    assert "Date: [Insert date of writing]" in body
     assert "A copy of the specific demand notice" in body
     assert "Kerala municipal authority" in body
     assert "Non-response alone is not asserted here to constitute agreement" in body
