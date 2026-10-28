@@ -131,6 +131,19 @@ from src.webapp.case_workspace import register_case_workspace_routes
 register_case_workspace_routes(rt)
 register_ai_drafting_routes(rt)
 
+
+@app.middleware("http")
+async def protect_user_generated_responses(request: Request, call_next):
+    """Prevent browsers and intermediaries from caching citizen-submitted POST responses."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if request.method in {"POST", "PUT", "PATCH"}:
+        response.headers["Cache-Control"] = "no-store, private"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.webapp.main:app", host="0.0.0.0", port=8080, reload=True)
