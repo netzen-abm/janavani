@@ -14,8 +14,9 @@ from fasthtml.common import (
 )
 from starlette.responses import JSONResponse
 
+from src.adapters.janavani_platform_client import client_for_request
 from src.documents.template_catalogue import get_template
-from src.webapp.ai_drafting import register_ai_drafting_routes
+from src.ui.civic_drafting import register_civic_drafting_routes
 
 
 _STYLE = r"""
@@ -284,8 +285,8 @@ def get_liveness():
     return JSONResponse({"status": "alive", "surface": "dynamic-web"})
 
 
-# Reuse the existing template-first drafting UX and preview endpoint, not another engine.
-register_ai_drafting_routes(rt)
+# Reuse the shared drafting UI and canonical API client without depending on WebApp runtime.
+register_civic_drafting_routes(rt, client_factory=client_for_request)
 
 
 @app.middleware("http")
