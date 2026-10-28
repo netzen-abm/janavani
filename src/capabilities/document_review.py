@@ -110,6 +110,8 @@ class DocumentReviewCapability:
             cc=draft.cc,
             sender=draft.sender,
             legal_ground=draft.legal_ground,
+            template_id=draft.template_id,
+            template_version=draft.template_version,
         )
         revision = DocumentRevision(
             revision_id=f"rev-{uuid4().hex}",
