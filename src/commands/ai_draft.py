@@ -23,7 +23,6 @@ from conversation.steps.civic_draft import (
 )
 from src.adapters.telegram.identity import identity_for_telegram_user
 from src.documents.template_catalogue import get_template, list_templates
-from src.services.civic_draft_workflow import CivicDraftPreviewWorkflow
 
 
 def _type_keyboard() -> InlineKeyboardMarkup:
@@ -55,8 +54,9 @@ async def ai_draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "expiry window. Expired payloads are cleared when the queue worker is running; if the "
         "worker is unavailable, encrypted payloads may remain until cleanup resumes. Processed "
         "or terminal queue records have their message payload cleared. Telegram also processes "
-        "messages sent to this bot. Remote AI is separate and only runs after you select the "
-        "AI-improvement action.",
+        "messages sent to this bot. Remote AI improvement is temporarily disabled for free-text "
+        "issue narratives and pasted drafts while Janavani implements a privacy-safe minimized-input "
+        "boundary. The bot will not send that raw text to a remote AI provider.",
         reply_markup=_type_keyboard(),
     )
 
@@ -123,33 +123,13 @@ async def handle_civic_draft_callback(
         await query.message.reply_text("This transient draft expired. Use /ai_draft to restart.")
         return
 
-    result = None
-    rejection_message = None
-    links = context.application.bot_data.get("identity_link_repository")
-    try:
-        identity = identity_for_telegram_user(user.id, links=links)
-        result = CivicDraftPreviewWorkflow().preview(
-            request_from_transient_draft(current),
-            identity=identity,
-            use_ai=True,
-            remote_processing_consent=True,
-        )
-    except (LookupError, PermissionError, ValueError):
-        rejection_message = (
-            "Remote AI drafting could not be authorized. The issue and draft were not "
-            "sent to the model."
-        )
-    finally:
-        # Remote-use intent is one-shot: erase submitted text even if the provider or
-        # Telegram delivery path fails. A new AI request must start from a new draft.
-        clear_ephemeral_civic_draft(user.id)
-        session.pop("ai_draft_template", None)
-        set_state(user.id, COMPLETED)
-
-    if rejection_message:
-        await query.message.reply_text(
-            rejection_message + " The transient draft was cleared."
-        )
-        return
-    if result is not None:
-        await send_draft_preview(query.message, result, remote_requested=True)
+    # Handle stale/forged callbacks from older keyboards safely. No identity lookup
+    # or provider call is performed while remote narrative minimization is unavailable.
+    clear_ephemeral_civic_draft(user.id)
+    session.pop("ai_draft_template", None)
+    set_state(user.id, COMPLETED)
+    await query.message.reply_text(
+        "Remote AI drafting is temporarily disabled until privacy-safe input minimization "
+        "is implemented. No issue narrative or pasted draft was sent to a remote AI provider. "
+        "The transient draft was cleared; restart /ai_draft to create a deterministic preview."
+    )
