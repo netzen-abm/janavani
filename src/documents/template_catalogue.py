@@ -148,7 +148,7 @@ _TEMPLATES = (
 )
 
 
-class TemplateNotFoundError(LookupError): pass
+class TemplateNotFoundError(LookupError): """Unknown template ID/version."""
 
 
 def list_templates(*, language: str | None = None) -> tuple[CivicDocumentTemplate, ...]:
