@@ -3,8 +3,10 @@
 ## Current implementation
 
 The template contract/value objects are defined in `src/documents/template_models.py`,
-curated, content-free definitions live in `src/documents/template_definitions.py`,
-and `src/documents/template_catalogue.py` owns lookup and version resolution.
+general curated definitions live in `src/documents/template_definitions.py`, the
+specialized administrative fee/levy definition lives in
+`src/documents/template_administrative.py`, and
+`src/documents/template_catalogue.py` owns lookup and version resolution.
 The catalogue provides complaint, public-service grievance, RTI, representation,
 petition, and administrative evidence-demand structures. The last was curated from
 the citizen-supplied “Official Administrative Reply & Demand for Documentary Evidence”
