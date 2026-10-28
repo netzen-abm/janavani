@@ -9,7 +9,8 @@ def test_ai_drafting_page_is_registered_and_explains_remote_processing():
     assert "Draft a civic document" in response.text
     assert "RTI application — request for existing records" in response.text
     assert "Administrative notice reply — demand for documentary evidence" in response.text
-    assert "configured remote AI provider" in response.text
+    assert "Remote AI improvement is temporarily disabled" in response.text
+    assert "server-side processing, not browser-local processing" in response.text
     assert "Foundational questions or interrogatories" in response.text
     assert "Requested safeguards or administrative conditions" in response.text
     assert "Rights or remedies to reserve" in response.text
@@ -47,6 +48,7 @@ def test_webapp_sends_local_preview_without_identity(monkeypatch):
             "template_id": "complaint.general",
             "issue": "The drain is blocked.",
             "requested_documents": "",
+            "preview_processing_consent": "yes",
         },
     )
 
@@ -58,20 +60,22 @@ def test_webapp_sends_local_preview_without_identity(monkeypatch):
     assert "not saved" in response.text.lower()
 
 
-def test_webapp_remote_ai_requires_explicit_checkbox_and_reports_status(monkeypatch):
+def test_webapp_cannot_enable_remote_ai_from_raw_text_form_fields(monkeypatch):
     import src.webapp.ai_drafting as drafting
     from src.webapp.main import app
 
     class Client:
         def preview_civic_draft(self, payload):
-            assert payload["use_ai"] is True
-            assert payload["remote_processing_consent"] is True
+            assert payload["preview_processing_consent"] is True
+            # Remote-AI fields are intentionally not accepted by the shared form.
+            assert payload["use_ai"] is False
+            assert payload["remote_processing_consent"] is False
             return {
                 "template_id": "representation.general",
                 "template_version": 1,
                 "ai_used": False,
-                "ai_status": "identity_required",
-                "message": "A verified identity is required for remote AI drafting.",
+                "ai_status": "not_requested",
+                "message": "Deterministic preview remains available; remote AI is disabled pending privacy-safe input minimization.",
                 "draft_body": "Deterministic preview remains available.",
                 "persistence": "not_persisted",
                 "submission": "not_submitted",
@@ -84,13 +88,15 @@ def test_webapp_remote_ai_requires_explicit_checkbox_and_reports_status(monkeypa
         data={
             "template_id": "representation.general",
             "issue": "Please consider the attached citizen representation.",
+            "preview_processing_consent": "yes",
+            # Even forged legacy form fields cannot re-enable remote AI.
             "use_ai": "yes",
             "remote_processing_consent": "yes",
         },
     )
     assert response.status_code == 200
-    assert "identity_required" in response.text
-    assert "Deterministic preview remains available." in response.text
+    assert "AI used: No" in response.text
+    assert "remote AI is disabled pending privacy-safe input minimization" in response.text
 
 
 def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatch):
@@ -99,14 +105,14 @@ def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatc
 
     class Client:
         def preview_civic_draft(self, payload):
-            assert payload["use_ai"] is True
+            assert payload["use_ai"] is False
             assert payload["remote_processing_consent"] is False
             return {
                 "template_id": "complaint.general",
                 "template_version": 1,
                 "ai_used": False,
-                "ai_status": "consent_required",
-                "message": "No remote AI call was made.",
+                "ai_status": "not_requested",
+                "message": "Remote AI is disabled pending privacy-safe input minimization.",
                 "draft_body": "Local-only preview.",
                 "persistence": "not_persisted",
                 "submission": "not_submitted",
@@ -119,13 +125,14 @@ def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatc
         data={
             "template_id": "complaint.general",
             "issue": "An ordinary civic issue.",
+            "preview_processing_consent": "yes",
             "use_ai": "yes",
             "remote_processing_consent": "yes",
         },
     )
     assert response.status_code == 200
-    assert "consent_required" in response.text
-    assert "Local-only preview." in response.text
+    assert "AI used: No" in response.text
+    assert "Remote AI is disabled pending privacy-safe input minimization." in response.text
 
 
 def test_webapp_routes_administrative_evidence_demand_through_shared_preview(monkeypatch):
@@ -155,6 +162,7 @@ def test_webapp_routes_administrative_evidence_demand_through_shared_preview(mon
             "template_id": "administrative.evidence-demand",
             "issue": "The municipality has demanded a recurring sanitation levy.",
             "jurisdiction": "Kerala municipal authority",
+            "preview_processing_consent": "yes",
         },
     )
 
