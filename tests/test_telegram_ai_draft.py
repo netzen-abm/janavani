@@ -11,7 +11,7 @@ from conversation.constants import (
     WAITING_FOR_CIVIC_DRAFT_RECORDS,
     WAITING_FOR_CIVIC_DRAFT_TYPE,
 )
-from conversation.session import clear_ephemeral_civic_draft, get_ephemeral_civic_draft, user_sessions
+from conversation.session import get_ephemeral_civic_draft, user_sessions
 from conversation.state import get_state, set_state, user_states
 from src.commands import ai_draft as ai_command
 from src.conversation.steps import civic_draft as draft_step
