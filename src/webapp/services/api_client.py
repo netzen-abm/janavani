@@ -11,7 +11,6 @@ from typing import Any
 
 import httpx
 
-
 class JanavaniWebAPIClient:
     """Call canonical civic-case endpoints without duplicating domain logic."""
 
@@ -53,6 +52,16 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
+    def preview_civic_draft(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Request a transient civic draft; local preview needs no session assertion."""
+        headers = self._headers() if self.identity_assertion else {}
+        response = httpx.post(
+            f"{self.base_url}/civic/drafts/preview", json=payload,
+            headers=headers, timeout=45.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def start_review(
         self, case_id: str, *, subject: str | None = None, narrative: str | None = None
     ) -> dict[str, Any]:
@@ -86,7 +95,6 @@ class JanavaniWebAPIClient:
         )
         response.raise_for_status()
         return response.json()
-
 
     def add_evidence(self, case_id: str, evidence_id: str, *, source_channel: str = "webapp") -> dict[str, Any]:
         response = httpx.post(
@@ -158,8 +166,6 @@ class JanavaniWebAPIClient:
         """Legacy UI hook retained without reviving the retired dispatch path."""
         del bill_code, comments, format_choice
         return None
-
-
 
 def client_for_request(request: object) -> JanavaniWebAPIClient:
     """Build a citizen-scoped API client from a trusted gateway assertion cookie.
