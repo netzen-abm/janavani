@@ -5,6 +5,7 @@ from fasthtml.common import (
 )
 from starlette.requests import Request
 from src.webapp.services.api_client import client_for_request
+from src.webapp.ai_drafting import register_ai_drafting_routes
 
 # Initialize the stateless web interface client
 app, rt = fast_app(
@@ -28,6 +29,7 @@ def get():
             Div(
                 H1("JANAVANI"),
                 P("Create and review a civic Case through the shared Janavani platform."),
+                A("AI-assisted civic document drafting", href="/ai-drafting", style="display: inline-block; margin-top: 1rem;"),
                 style="text-align: center; margin-bottom: 3rem;",
             ),
             Div(
@@ -127,6 +129,7 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, r
 from src.webapp.case_workspace import register_case_workspace_routes
 
 register_case_workspace_routes(rt)
+register_ai_drafting_routes(rt)
 
 if __name__ == "__main__":
     import uvicorn
