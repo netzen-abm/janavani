@@ -107,32 +107,32 @@ def test_ai_is_not_called_without_explicit_remote_processing_consent():
     assert result["persistence"] == "not_persisted"
 
 
-def test_ai_preview_uses_verified_identity_and_keeps_citizen_supplied_rti_records():
+def test_ai_preview_fails_closed_until_raw_narrative_minimization_is_available():
     agent = FakeAgent()
     identity = _identity("case:write")
+    private_issue = "The affected citizen is Asha Example at 12 Example Road."
+    private_draft = "Please contact me at asha@example.test about this matter."
     result = CivicDraftPreviewWorkflow(agent=agent).preview(
         CivicDraftPreviewRequest(
-            template_id="rti.records",
-            issue="Please provide existing road-work records.",
-            existing_draft="Please provide records and a status.",
-            jurisdiction="Kerala State public authority",
-            requested_documents=("Existing work orders for April",),
+            template_id="complaint.general",
+            issue=private_issue,
+            existing_draft=private_draft,
         ),
         identity=identity,
         use_ai=True,
         remote_processing_consent=True,
     )
 
-    assert len(agent.calls) == 1
-    sent_text, kwargs = agent.calls[0]
-    assert "Citizen-provided draft to improve" in sent_text
-    assert kwargs["identity"].principal.principal_id == "draft-preview-citizen"
+    # Explicit consent and identity do not bypass the missing minimization boundary.
+    assert agent.calls == []
+    assert result["ai_status"] == "privacy_boundary_required"
+    assert result["ai_used"] is False
+    assert "No remote AI provider was called" in result["message"]
+    assert private_issue in result["draft_body"]
+    assert private_draft in result["draft_body"]
     assert not identity.principal.has_capability("civic:ai-draft")
-    assert kwargs["identity"].principal.has_capability("civic:ai-draft")
-    assert result["ai_used"] is True
-    assert "Please inspect and provide a written response." in result["draft_body"]
-    assert "Existing work orders for April" in result["draft_body"]
-    assert "legal_framework" not in result["draft_body"]
+    assert result["persistence"] == "not_persisted"
+
 
 
 def test_remote_ai_without_identity_never_calls_provider_and_keeps_local_preview():
