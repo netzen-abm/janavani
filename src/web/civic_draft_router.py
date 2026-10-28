@@ -1,7 +1,7 @@
 """Authenticated HTTP adapter for shared civic-draft previews."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from src.identity.context import IdentityContext
@@ -33,9 +33,13 @@ class CivicDraftPreviewModel(BaseModel):
 @router.post("/preview")
 def preview_civic_draft(
     request: CivicDraftPreviewModel,
-    context: IdentityContext = Depends(require_authenticated_identity),
+    authorization: str | None = Header(default=None),
+    request_id: str | None = Header(default=None, alias="X-Request-ID"),
 ) -> dict[str, object]:
-    """Return a draft preview without persistence, document export or submission."""
+    """Return an ephemeral preview; remote AI still requires verified identity."""
+    context: IdentityContext | None = None
+    if authorization is not None:
+        context = require_authenticated_identity(authorization, request_id)
     workflow = CivicDraftPreviewWorkflow()
     try:
         result = workflow.preview(
