@@ -10,8 +10,10 @@ surfaces. The surfaces must not implement independent letter-composition engines
 
 - `src/capabilities/letter_drafting.py` owns structured citizen inputs and canonical
   document composition over an owned Case and verified Authority.
-- `src/documents/template_catalogue.py` owns the versioned, content-free source
-  models for complaint, grievance, RTI, representation and petition formats.
+- `src/documents/template_models.py` owns template value objects; `src/documents/template_definitions.py`
+  contains curated, content-free definitions; `src/documents/template_catalogue.py`
+  owns lookup and version resolution for complaint, grievance, RTI, representation,
+  petition and administrative evidence-demand formats.
 - `src/services/civic_draft_workflow.py` composes a transient preview through those
   templates and optionally requests a validated AI wording proposal.
 - `src/services/civic_draft_executor.py` is the remote AI trust boundary. It uses
@@ -26,20 +28,25 @@ canonical `LetterDraftingCapability` / `DocumentReviewCapability` flow.
 
 ## Template and privacy rules
 
-The catalogue stores structure, version, purpose, field names, language, jurisdiction
-scope and review metadata—not citizen names, addresses, raw narratives, evidence,
-credentials or completed documents. A user-provided draft may be sent to the remote
-AI provider only after an explicit remote-processing action and a verified authenticated
-identity. For this optional citizen-facing capability, `civic:ai-draft` is derived only
-for the current consented request; it is never persisted to the identity link, account,
-profile, or future session. The Telegram drafting journey is restricted to private chats.
-The model may propose editable wording; legal citations, deadlines, verified authorities,
-evidence, and legal effects are not inferred as facts.
+The catalogue stores generic structure, reviewed starter wording, version, purpose,
+field names, language, jurisdiction scope and review metadata—not citizen names,
+addresses, raw narratives, notice identifiers, evidence, credentials or completed
+documents. The administrative evidence-demand format was curated from the supplied
+template, with the silence-as-consent and self-executing-legal-effect assertions
+reframed as unverified positions rather than default claims.
+
+A user-provided draft may be sent to the remote AI provider only after an explicit
+remote-processing action and a verified authenticated identity. For this optional
+citizen-facing capability, `civic:ai-draft` is derived only for the current consented
+request; it is never persisted to the identity link, account, profile, or future session.
+The Telegram drafting journey is restricted to private chats. The model may propose
+editable wording; legal citations, deadlines, verified authorities, evidence, and legal
+effects are not inferred as facts.
 
 The currently shipped catalogue is a curated source-controlled library. Saving a
 citizen-specific custom structure is **not** implemented yet. Any future saved-format
-feature must store only a separately reviewed, allow-listed structural model, never
-a redacted copy of arbitrary private prose, and must use a durable owner/approval
+feature must store only a separately reviewed, allow-listed structural model, never a
+redacted copy of arbitrary private prose, and must use a durable owner/approval
 boundary before it becomes reusable by others.
 
 ## Canonical flow
