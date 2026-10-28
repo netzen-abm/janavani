@@ -14,6 +14,7 @@ from commands.rate import rate
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
 from src.platform.composition import create_accountability_feedback_repository
 from commands.complaint import complaint
+from src.commands.ai_draft import ai_draft_command, handle_civic_draft_callback
 from conversation.router import route
 from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
@@ -56,12 +57,15 @@ def build_application(*, token: str | None = None) -> Application:
         )
     )
 
+    # Specific feature callbacks must precede the general format callback.
+    application.add_handler(CallbackQueryHandler(handle_civic_draft_callback, pattern=r"^civicdraft:"))
     application.add_handler(CallbackQueryHandler(handle_format))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
     application.add_handler(CommandHandler("check", check))
+    application.add_handler(CommandHandler("ai_draft", ai_draft_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route))
     return application
 
