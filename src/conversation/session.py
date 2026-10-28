@@ -107,20 +107,30 @@ _CIVIC_DRAFT_FIELDS = {
     "template_id", "issue", "subject", "existing_draft", "jurisdiction",
     "requested_documents",
 }
+_CIVIC_DRAFT_TEXT_LIMITS = {
+    "template_id": 80, "issue": 5_000, "subject": 200,
+    "existing_draft": 8_000, "jurisdiction": 300,
+}
 
 
 def set_ephemeral_civic_draft(user_id: int, value: dict) -> None:
     """Store an allow-listed draft workflow in process memory for one short TTL."""
     if not isinstance(value, dict) or set(value) - _CIVIC_DRAFT_FIELDS:
         raise ValueError("Unsupported transient civic-draft fields")
-    if any(not isinstance(value.get(key, ""), str) for key in (
-        "template_id", "issue", "subject", "existing_draft", "jurisdiction"
-    )):
-        raise ValueError("Transient civic-draft text fields must be strings")
+    if not {"template_id", "issue"} <= set(value):
+        raise ValueError("Transient civic draft requires a template and issue field")
+    for key, limit in _CIVIC_DRAFT_TEXT_LIMITS.items():
+        text = value.get(key, "")
+        if not isinstance(text, str):
+            raise ValueError("Transient civic-draft text fields must be strings")
+        if len(text) > limit:
+            raise ValueError(f"Transient civic-draft field {key} exceeds its limit")
+    if not value["template_id"].strip():
+        raise ValueError("Transient civic draft requires a template ID")
     records = value.get("requested_documents", [])
     if not isinstance(records, (list, tuple)) or any(not isinstance(item, str) for item in records):
         raise ValueError("Transient requested records must be a list of strings")
-    if len(records) > 12 or any(len(item) > 800 for item in records):
+    if len(records) > 12 or any(not item.strip() or len(item) > 800 for item in records):
         raise ValueError("Transient requested records exceed limits")
     session = get_session(user_id)
     session["_ephemeral_civic_draft"] = deepcopy({**value, "requested_documents": list(records)})
