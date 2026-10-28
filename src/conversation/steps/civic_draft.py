@@ -37,11 +37,8 @@ def request_from_transient_draft(data: dict) -> CivicDraftPreviewRequest:
 
 
 def _result_keyboard() -> InlineKeyboardMarkup:
+    # Remote AI is intentionally not offered until input minimization is tested.
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            "Improve with remote AI (send issue/draft)",
-            callback_data="civicdraft:ai",
-        ),
         InlineKeyboardButton("Discard", callback_data="civicdraft:cancel"),
     ]])
 
@@ -57,7 +54,7 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         await message.reply_text("Choose a document format using the buttons above.")
         return
     if state == WAITING_FOR_CIVIC_DRAFT_CHOICE:
-        await message.reply_text("Use the buttons on the draft file to request remote AI or discard it.")
+        await message.reply_text("Use the Discard button on the draft file to clear the transient input.")
         return
     current = get_ephemeral_civic_draft(user.id)
     if not current:
