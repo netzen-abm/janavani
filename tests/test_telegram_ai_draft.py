@@ -57,6 +57,7 @@ def test_ai_draft_command_starts_with_template_choice_and_no_remote_call():
     callback_data = {button.callback_data for row in buttons for button in row}
     assert "civicdraft:type:rti.records" in callback_data
     assert "civicdraft:type:complaint.general" in callback_data
+    assert "civicdraft:type:administrative.evidence-demand" in callback_data
 
 
 def test_rti_flow_collects_authority_and_existing_records_before_preview(monkeypatch):
@@ -278,3 +279,55 @@ def test_remote_ai_exception_erases_transient_content(monkeypatch):
 
     assert get_ephemeral_civic_draft(user_id) is None
     assert get_state(user_id) == COMPLETED
+
+
+def test_administrative_evidence_demand_telegram_flow_collects_jurisdiction(monkeypatch):
+    user_id = 88007
+    _reset(user_id)
+    update, _ = _update(user_id)
+    context = SimpleNamespace(args=[], application=SimpleNamespace(bot_data={}))
+    asyncio.run(ai_command.ai_draft_command(update, context))
+
+    callback_message = SimpleNamespace(
+        chat=SimpleNamespace(type="private"),
+        reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
+    )
+    query = SimpleNamespace(
+        data="civicdraft:type:administrative.evidence-demand",
+        from_user=SimpleNamespace(id=user_id),
+        message=callback_message,
+        answer=AsyncMock(),
+    )
+    asyncio.run(ai_command.handle_civic_draft_callback(
+        SimpleNamespace(callback_query=query), context
+    ))
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_ISSUE
+
+    def send(text):
+        update, message = _update(user_id, text)
+        asyncio.run(draft_step.handle_civic_draft_text(update, context))
+        return message
+
+    send("The municipality has demanded a recurring sanitation levy.")
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_JURISDICTION
+    send("Kerala municipal authority")
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_EXISTING
+
+    class FakeWorkflow:
+        def preview(self, request, **kwargs):
+            assert request.template_id == "administrative.evidence-demand"
+            assert request.jurisdiction == "Kerala municipal authority"
+            assert kwargs == {}
+            return {
+                "template_id": request.template_id,
+                "template_version": 1,
+                "draft_body": "Administrative evidence-demand preview",
+                "ai_used": False,
+                "ai_status": "not_requested",
+            }
+
+    monkeypatch.setattr(draft_step, "CivicDraftPreviewWorkflow", FakeWorkflow)
+    message = send("-")
+    message.reply_document.assert_awaited_once()
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_CHOICE
