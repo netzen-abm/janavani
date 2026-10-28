@@ -25,6 +25,10 @@ def test_unauthenticated_local_preview_is_allowed_but_not_persisted():
     assert body["ai_used"] is False
     assert body["persistence"] == "not_persisted"
     assert body["submission"] == "not_submitted"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["pragma"] == "no-cache"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
     assert "The public streetlight has been out for three nights." in body["draft_body"]
 
 
