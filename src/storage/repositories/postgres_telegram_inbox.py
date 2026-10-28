@@ -58,7 +58,9 @@ class PostgresTelegramInbox:
             import psycopg
         except ImportError as exc:
             raise RuntimeError("Psycopg 3 is required for the Telegram inbox") from exc
-        return psycopg.connect(self._dsn)
+        # A stalled database connection must not indefinitely delay worker
+        # recovery or application shutdown; claim failures are retried by the inbox worker.
+        return psycopg.connect(self._dsn, connect_timeout=5)
 
     def accept_encrypted(self, update_id: int, payload: dict[str, Any]) -> bool:
         """Commit an authenticated encrypted payload before acknowledging delivery."""
