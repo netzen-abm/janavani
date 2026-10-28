@@ -25,6 +25,18 @@ services:
         sync: false
 
   - type: web
+    name: janavani-webapp
+    env: python
+    # Same Janavani product; separate UI process, shared canonical API and drafting catalogue.
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.webapp.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: JANAVANI_WEB_API_URL
+        sync: false
+
+  - type: web
     name: janavani-telegram-webhook
     env: python
     # Free instances may cold-start. Use an always-on plan before production launch.
