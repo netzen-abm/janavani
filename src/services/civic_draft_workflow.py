@@ -113,6 +113,7 @@ class CivicDraftPreviewWorkflow:
                     identity=identity,
                     document_type=template.document_type,
                 )
+                ai_used = bool(generated.get("ai_used"))
                 ai_status = str(generated.get("status", "degraded"))
                 if ai_status == "available" and isinstance(generated.get("structured_draft"), dict):
                     structured = generated["structured_draft"]
