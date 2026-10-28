@@ -7,6 +7,7 @@ module boundaries; the canonical API owns identity, drafting policy and data.
 from __future__ import annotations
 
 from fasthtml.common import A, Div, H1, H2, H3, Meta, P, Style, Titled, fast_app
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from src.adapters.janavani_platform_client import client_for_request
@@ -162,7 +163,6 @@ register_pathway_routes(rt)
 register_civic_drafting_routes(rt, client_factory=client_for_request)
 
 
-@app.middleware("http")
 async def protect_responses(request, call_next):
     """Keep citizen-entered POST payloads and outputs out of shared caches."""
     response = await call_next(request)
@@ -172,3 +172,6 @@ async def protect_responses(request, call_next):
         response.headers["Cache-Control"] = "no-store, private"
         response.headers["Pragma"] = "no-cache"
     return response
+
+
+app.add_middleware(BaseHTTPMiddleware, dispatch=protect_responses)
