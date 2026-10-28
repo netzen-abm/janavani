@@ -18,15 +18,6 @@ from src.services.legal_agent import JanavaniLegalAgent
 
 _MAX_ISSUE_CHARS = 5_000
 _MAX_DRAFT_CHARS = 8_000
-_TEMPLATE_TYPES = {
-    "complaint.general": "complaint",
-    "grievance.service": "grievance",
-    "rti.records": "rti",
-    "representation.general": "representation",
-    "petition.general": "petition",
-}
-
-
 @dataclass(frozen=True, slots=True)
 class CivicDraftPreviewRequest:
     """Citizen-controlled inputs for a non-persistent document preview."""
@@ -75,9 +66,6 @@ class CivicDraftPreviewWorkflow:
             ):
                 raise ValueError(f"{name} exceeds drafting limits")
         template = get_template(request.template_id)
-        document_type = _TEMPLATE_TYPES.get(template.template_id)
-        if document_type is None:
-            raise ValueError("Unsupported civic template")
         subject = request.subject.strip() or self._default_subject(issue)
         if len(subject) > 200:
             raise ValueError("Subject must be 200 characters or fewer")
