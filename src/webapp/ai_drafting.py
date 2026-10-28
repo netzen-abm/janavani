@@ -1,0 +1,112 @@
+"""Interactive WebApp surface for transient civic-draft previews."""
+from __future__ import annotations
+
+import httpx
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Textarea, Titled
+from starlette.requests import Request
+
+from src.webapp.services.api_client import client_for_request
+
+
+_TEMPLATES = (
+    ("complaint.general", "Civic complaint"),
+    ("grievance.service", "Public-service grievance"),
+    ("rti.records", "RTI — existing records"),
+    ("representation.general", "Citizen representation"),
+    ("petition.general", "Petition"),
+)
+
+
+def _draft_form() -> Div:
+    return Div(
+        H2("Draft a civic document"),
+        P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
+        Form(action="/ai-drafting/preview", method="post")(
+            Label("Document format"),
+            Select(name="template_id")(
+                *(Option(label, value=value, selected=value == "complaint.general") for value, label in _TEMPLATES)
+            ),
+            Label("Describe the issue or purpose"),
+            Textarea(name="issue", rows=5, required=True, maxlength=5000, placeholder="Describe the issue in your own words."),
+            Label("Existing draft to improve (optional)"),
+            Textarea(name="existing_draft", rows=5, maxlength=8000, placeholder="Paste your draft here, or leave blank."),
+            Label("Subject (optional; generated from your description if blank)"),
+            Input(name="subject", maxlength=200, placeholder="Document subject"),
+            Label("Public authority or jurisdiction (required for RTI)"),
+            Input(name="jurisdiction", maxlength=300, placeholder="e.g. Kerala State public authority"),
+            Label("Existing records requested (RTI; one request per line)"),
+            Textarea(name="requested_documents", rows=4, placeholder="Copies of existing work orders\nCopies of inspection reports, if held"),
+            Div(
+                Label(Input(type="checkbox", name="use_ai", value="yes"), " Improve wording with AI (optional)"),
+                P("AI is optional. Without it, Janavani uses the selected reusable template."),
+            ),
+            Div(
+                Label(
+                    Input(type="checkbox", name="remote_processing_consent", value="yes"),
+                    " I consent to send the issue and any pasted draft to the configured remote AI provider for wording suggestions.",
+                ),
+                P("Only select this when you understand the provider's processing terms. Legal citations, deadlines, authorities, and evidence are not generated as verified facts."),
+            ),
+            Button("Generate preview", type="submit"),
+        ),
+        A("Return to Janavani", href="/"),
+    )
+
+
+def register_ai_drafting_routes(rt) -> None:
+    """Register the interactive template-first, AI-optional drafting journey."""
+
+    @rt("/ai-drafting")
+    def get_ai_drafting():
+        return Titled("Janavani — Civic Document Drafting", _draft_form())
+
+    @rt("/ai-drafting/preview")
+    def post_ai_drafting(
+        request: Request,
+        template_id: str,
+        issue: str,
+        subject: str = "",
+        existing_draft: str = "",
+        jurisdiction: str = "",
+        requested_documents: str = "",
+        use_ai: str = "",
+        remote_processing_consent: str = "",
+    ):
+        if not issue.strip():
+            return Titled("Describe the issue", Div(H2("Issue required"), P("Describe the issue before generating a preview."), _draft_form()))
+        payload = {
+            "template_id": template_id,
+            "issue": issue,
+            "subject": subject,
+            "existing_draft": existing_draft,
+            "jurisdiction": jurisdiction,
+            "requested_documents": [line.strip() for line in requested_documents.splitlines() if line.strip()],
+            "use_ai": use_ai.lower() in {"yes", "true", "1", "on"},
+            "remote_processing_consent": remote_processing_consent.lower() in {"yes", "true", "1", "on"},
+        }
+        try:
+            result = client_for_request(request).preview_civic_draft(payload)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 422:
+                detail = exc.response.json().get("detail", "Check the selected document format and required fields.")
+            else:
+                detail = "The preview service is temporarily unavailable. Your draft was not reported as saved."
+            return Titled("Draft preview unavailable", Div(H2("Could not generate preview"), P(str(detail)), _draft_form()))
+        except httpx.HTTPError:
+            return Titled("Draft preview unavailable", Div(H2("Service unavailable"), P("Could not reach the preview service. Your draft was not reported as saved."), _draft_form()))
+
+        return Titled(
+            "Review civic document draft",
+            Div(
+                H2("Your draft preview"),
+                P(f"Template: {result['template_id']} · version {result['template_version']}"),
+                P(f"AI used: {'Yes' if result['ai_used'] else 'No'} · AI status: {result['ai_status']}"),
+                P(result["message"]),
+                Label("Edit and review your draft (this preview is not saved)"),
+                Textarea(result["draft_body"], name="draft_body", id="draft-preview", rows=20, style="width: 100%;"),
+                Button("Copy draft", onclick="navigator.clipboard.writeText(document.getElementById('draft-preview').value)"),
+                P("Verify facts, recipient, procedure and any legal references before use. Janavani has not submitted or transmitted this document."),
+                A("Draft another document", href="/ai-drafting"),
+                A("Return to Janavani", href="/"),
+            ),
+        )
