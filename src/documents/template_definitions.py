@@ -143,7 +143,8 @@ _TEMPLATES = (
                 "Article 51A(h), if scientific or technical justification is relied upon — Identify available studies, evidence, cost or impact analysis, methodology and alternatives considered."
             )),
             TemplateSection("legal_framework", "Potential constitutional and statutory provisions to verify", (
-                "Potential references for jurisdiction-specific review include Articles 13, 14, 19(1)(g), 19(6), 21, 265, 300A and 51A(h) of the Constitution of India. Include only provisions directly relevant to the facts and governing law; these references do not establish that a levy is invalid."
+                "Potential references for jurisdiction-specific review include Articles 13, 14, 19(1)(g), 19(6), 21, 265, 300A and 51A(h) of the Constitution of India. Include only provisions directly relevant to the facts and governing law; these references do not establish that a levy is invalid.",
+                "For public-document classification and certified-copy requests, verify Bharatiya Sakshya Adhiniyam, 2023 sections 74–76 (in force from 1 July 2024): these concern public/private documents, certified copies of documents a person has a right to inspect, and proof by certified copies. They do not grant unrestricted access to every record; check the applicable RTI/disclosure law, exemptions and any transitional rule before citing."
             )),
             TemplateSection("requested_conditions", "Requested response and disclosure conditions", (
                 "Please provide a point-by-point response and identify the legal instrument and record relied upon for each material conclusion.",
