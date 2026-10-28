@@ -106,6 +106,26 @@ def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(mo
     assert received["remote_processing_consent"] is False
 
 
+def test_dynamic_site_does_not_call_preview_api_without_processing_consent(monkeypatch):
+    from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+
+    def forbidden_preview(self, payload):
+        raise AssertionError("Preview API must not be called without consent")
+
+    monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", forbidden_preview)
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "complaint.general",
+            "issue": "Sensitive test narrative that must not be forwarded.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Processing consent required" in response.text
+    assert "No request was forwarded to the canonical preview API" in response.text
+
+
 def test_dynamic_site_liveness_is_independent_of_api_and_telegram():
     response = TestClient(app).get("/liveness")
     assert response.status_code == 200
