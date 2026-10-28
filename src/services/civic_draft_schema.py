@@ -70,11 +70,16 @@ def normalize_provider_draft(payload: dict[str, Any], *, fallback_subject: str) 
     if not isinstance(decoded, dict):
         raise InvalidAIDraftOutput("AI draft must be a JSON object")
 
-    subject = _bounded_text(decoded.get("subject", fallback_subject), "subject", 200, required=True)
+    subject = _bounded_text(
+        decoded.get("subject", fallback_subject), "subject", _TEXT_FIELDS["subject"],
+        required=True,
+    )
     result: dict[str, Any] = {
         "subject": subject,
         "proposal_or_notice": _bounded_text(
-            decoded.get("proposal_or_notice", ""), "proposal_or_notice", 6_000
+            decoded.get("proposal_or_notice", ""),
+            "proposal_or_notice",
+            _TEXT_FIELDS["proposal_or_notice"],
         ),
     }
     for field, (max_items, max_length) in _LIST_FIELDS.items():
