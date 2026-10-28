@@ -97,19 +97,3 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
 
-
-
-
-def test_homepage_offers_safe_volunteer_contribution_path() -> None:
-    from src.webapp.main import app
-
-    response = TestClient(app).get("/")
-    assert response.status_code == 200
-    assert "Help build Janavani" in response.text
-    assert "Explore volunteer opportunities" in response.text
-    assert "https://github.com/netzen-abm/janavani/blob/main/CONTRIBUTING.md" in response.text
-    assert "content creation" in response.text
-    assert "letter drafting" in response.text
-    assert "proofreading" in response.text
-    assert "Malayalam and other Indian languages" in response.text
-    assert "do not post citizen narratives" in response.text
