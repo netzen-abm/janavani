@@ -109,6 +109,7 @@ def test_ai_is_not_called_without_explicit_remote_processing_consent():
 
 def test_ai_preview_uses_verified_identity_and_keeps_citizen_supplied_rti_records():
     agent = FakeAgent()
+    identity = _identity("case:write")
     result = CivicDraftPreviewWorkflow(agent=agent).preview(
         CivicDraftPreviewRequest(
             template_id="rti.records",
@@ -117,7 +118,7 @@ def test_ai_preview_uses_verified_identity_and_keeps_citizen_supplied_rti_record
             jurisdiction="Kerala State public authority",
             requested_documents=("Existing work orders for April",),
         ),
-        identity=_identity("civic:ai-draft"),
+        identity=identity,
         use_ai=True,
         remote_processing_consent=True,
     )
