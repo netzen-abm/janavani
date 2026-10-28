@@ -77,6 +77,7 @@ def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(mo
         data={
             "template_id": "administrative.evidence-demand",
             "issue": "The local authority has imposed a recurring fee.",
+            "preview_processing_consent": "yes",
             "jurisdiction": "Relevant municipal authority",
             "requested_documents": "Copy of the enabling order\nCopy of the calculation record",
             "part_i_interrogatories": "Identify the enabling law\nExplain the calculation method",
@@ -100,6 +101,7 @@ def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(mo
     assert received["remedies_reserved"] == ["Any lawful remedy available on the facts"]
     assert received["response_period"] == "14 days requested; verify applicable law"
     assert received["deadline_date"] == "15 November 2026"
+    assert received["preview_processing_consent"] is True
     assert received["use_ai"] is False
     assert received["remote_processing_consent"] is False
 
