@@ -132,7 +132,7 @@ _ADMINISTRATIVE_EVIDENCE_DEMAND = CivicDocumentTemplate(
                 (
                     "If no adequate response is received, I reserve any lawful administrative, statutory or judicial remedies available on the "
                     "facts and under applicable law. Non-response alone is not asserted here to constitute agreement, admission or waiver."
-                )
+                ),
             )),
             TemplateSection("references", "Notice references and supporting public references"),
             TemplateSection("response_period", "Requested response period (verify applicable deadlines)", (
