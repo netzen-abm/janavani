@@ -37,7 +37,7 @@ def _payload(update_id: int = 123) -> dict:
     }
 
 
-def _client(monkeypatch, inbox: FakeInbox):
+def _client(monkeypatch, inbox: FakeInbox | None):
     monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
     application = MagicMock()
     application.bot = MagicMock()
@@ -84,6 +84,14 @@ def test_inbox_failure_returns_retryable_503(monkeypatch):
         "/telegram/webhook", json=_payload(), headers=_headers()
     )
     assert response.status_code == 503
+
+
+def test_missing_durable_inbox_returns_retryable_503(monkeypatch):
+    response = _client(monkeypatch, None).post(
+        "/telegram/webhook", json=_payload(), headers=_headers()
+    )
+    assert response.status_code == 503
+    assert "durable inbox is unavailable" in response.json()["detail"]
 
 
 def test_webhook_rejects_malformed_and_non_object_json(monkeypatch):
