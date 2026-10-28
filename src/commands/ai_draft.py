@@ -45,10 +45,12 @@ async def ai_draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await message.reply_text(
         "Choose a reusable document format. The draft preview is kept only in short-lived "
         "process memory; it is not saved to a Janavani Case or submitted. To support reliable "
-        "delivery, pending Telegram updates may be retained in Janavani's encrypted processing "
-        "queue for up to 24 hours; processed or terminal queue records have their message payload "
-        "cleared. Telegram also processes messages sent to this bot. Remote AI is a separate, "
-        "optional step and will only run after you select the AI-improvement action.",
+        "delivery, pending Telegram updates are encrypted in a processing queue with a 24-hour "
+        "expiry window. Expired payloads are cleared when the queue worker is running; if the "
+        "worker is unavailable, encrypted payloads may remain until cleanup resumes. Processed "
+        "or terminal queue records have their message payload cleared. Telegram also processes "
+        "messages sent to this bot. Remote AI is separate and only runs after you select the "
+        "AI-improvement action.",
         reply_markup=_type_keyboard(),
     )
 
