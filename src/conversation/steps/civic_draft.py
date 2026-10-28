@@ -70,9 +70,9 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
             await message.reply_text("Describe the issue in 1 to 5,000 characters.")
             return
         current["issue"] = text
-        if current["template_id"] == "rti.records":
+        if current["template_id"] in {"rti.records", "administrative.evidence-demand"}:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_JURISDICTION)
-            await message.reply_text("Which public authority or jurisdiction is the RTI request for?")
+            await message.reply_text("Which public authority or jurisdiction is this document for?")
         else:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
             await message.reply_text(
@@ -87,11 +87,17 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
             return
         current["jurisdiction"] = text
         set_ephemeral_civic_draft(user.id, current)
-        set_state(user.id, WAITING_FOR_CIVIC_DRAFT_RECORDS)
-        await message.reply_text(
-            "List the existing records you are requesting, one per line. "
-            "RTI drafts request records; they do not ask the authority to create a new explanation."
-        )
+        if current["template_id"] == "rti.records":
+            set_state(user.id, WAITING_FOR_CIVIC_DRAFT_RECORDS)
+            await message.reply_text(
+                "List the existing records you are requesting, one per line. "
+                "RTI drafts request records; they do not ask the authority to create a new explanation."
+            )
+        else:
+            set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
+            await message.reply_text(
+                "Paste the notice or your existing reply to improve, or send a single dash (-) to use the reusable starter format."
+            )
         return
 
     if state == WAITING_FOR_CIVIC_DRAFT_RECORDS:
