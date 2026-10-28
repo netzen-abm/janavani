@@ -135,7 +135,7 @@ def test_ai_preview_fails_closed_until_raw_narrative_minimization_is_available()
 
 
 
-def test_remote_ai_without_identity_never_calls_provider_and_keeps_local_preview():
+def test_remote_ai_without_identity_never_calls_provider_and_keeps_deterministic_preview():
     agent = FakeAgent()
     result = CivicDraftPreviewWorkflow(agent=agent).preview(
         CivicDraftPreviewRequest(
