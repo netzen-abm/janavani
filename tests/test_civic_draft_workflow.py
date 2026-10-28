@@ -222,6 +222,10 @@ def test_administrative_evidence_demand_requires_jurisdiction_and_uses_saved_def
     assert result["template_version"] == 1
     assert "Foundational and constitutional questions" in body
     assert "Documents and records requested" in body
+    assert "Requested response period: [Insert a requested period" in body
+    assert "Requested date: [Insert a date if appropriate" in body
+    assert "certified copies in the form prescribed" in body
+    assert "An affidavit is requested only where lawful and appropriate" in body
     assert "Date: [Insert date of writing]" in body
     assert "A copy of the specific demand notice" in body
     assert "Kerala municipal authority" in body
