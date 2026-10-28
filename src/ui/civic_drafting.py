@@ -50,8 +50,38 @@ def _draft_form(selected_template_id: str = "complaint.general") -> Div:
             Input(name="subject", maxlength=200, placeholder="Document subject"),
             Label("Public authority or jurisdiction (required for RTI and administrative evidence-demand drafts)"),
             Input(name="jurisdiction", maxlength=300, placeholder="e.g. the issuing municipal authority / department"),
-            Label("Existing records requested (RTI; one request per line)"),
-            Textarea(name="requested_documents", rows=4, placeholder="Copies of existing work orders\nCopies of inspection reports, if held"),
+            Label("Existing records requested (RTI; one request per line; maximum 12)"),
+            Textarea(
+                name="requested_documents",
+                rows=4,
+                maxlength=10000,
+                placeholder="Copies of existing work orders\\nCopies of inspection reports, if held",
+            ),
+            Label("Foundational questions or interrogatories (optional; one per line; maximum 12)"),
+            Textarea(
+                name="part_i_interrogatories",
+                rows=4,
+                maxlength=10000,
+                placeholder="Identify the enabling legal provision\\nExplain how the amount was calculated",
+            ),
+            Label("Requested safeguards or administrative conditions (optional; one per line; maximum 12)"),
+            Textarea(
+                name="requested_conditions",
+                rows=4,
+                maxlength=10000,
+                placeholder="Please provide a point-by-point response\\nIdentify any applicable appeal process",
+            ),
+            Label("Rights or remedies to reserve (optional; one per line; maximum 8; include only if relevant)"),
+            Textarea(
+                name="remedies_reserved",
+                rows=3,
+                maxlength=5000,
+                placeholder="I reserve any lawful administrative or statutory remedies available on the facts",
+            ),
+            Label("Requested response period (optional; verify any binding statutory deadline)"),
+            Input(name="response_period", maxlength=120, placeholder="e.g. 14 days requested, subject to applicable law"),
+            Label("Requested date (optional; do not treat as a statutory deadline without verification)"),
+            Input(name="deadline_date", maxlength=40, placeholder="e.g. 15 November 2026"),
             Div(
                 Label(Input(type="checkbox", name="use_ai", value="yes"), " Improve wording with AI (optional)"),
                 P("AI is optional. Without it, Janavani uses the selected reusable template."),
@@ -91,6 +121,11 @@ def register_civic_drafting_routes(
         existing_draft: str = "",
         jurisdiction: str = "",
         requested_documents: str = "",
+        part_i_interrogatories: str = "",
+        requested_conditions: str = "",
+        remedies_reserved: str = "",
+        response_period: str = "",
+        deadline_date: str = "",
         use_ai: str = "",
         remote_processing_consent: str = "",
     ):
@@ -103,6 +138,17 @@ def register_civic_drafting_routes(
             "existing_draft": existing_draft,
             "jurisdiction": jurisdiction,
             "requested_documents": [line.strip() for line in requested_documents.splitlines() if line.strip()],
+            "part_i_interrogatories": [
+                line.strip() for line in part_i_interrogatories.splitlines() if line.strip()
+            ],
+            "requested_conditions": [
+                line.strip() for line in requested_conditions.splitlines() if line.strip()
+            ],
+            "remedies_reserved": [
+                line.strip() for line in remedies_reserved.splitlines() if line.strip()
+            ],
+            "response_period": response_period.strip() or None,
+            "deadline_date": deadline_date.strip() or None,
             "use_ai": use_ai.lower() in {"yes", "true", "1", "on"},
             "remote_processing_consent": remote_processing_consent.lower() in {"yes", "true", "1", "on"},
         }
