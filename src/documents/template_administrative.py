@@ -103,7 +103,15 @@ _ADMINISTRATIVE_EVIDENCE_DEMAND = CivicDocumentTemplate(
                     "For a record not supplied, please identify any applicable exemption or other legal basis for withholding it and the available "
                     "review or appeal mechanism, to the extent required by law."
                 ),
-                "Please state the applicable statutory response period and objection or appeal process. A requested period in this letter is not automatically a statutory deadline."
+                "Please state the applicable statutory response period and objection or appeal process. A requested period in this letter is not automatically a statutory deadline.",
+                (
+                    "For records that the requester is legally entitled to inspect, please provide certified copies in the form prescribed "
+                    "by applicable law and identify any applicable fee or process."
+                ),
+                (
+                    "Please provide any prescribed certification of authenticity/completeness available under the governing procedure. "
+                    "An affidavit is requested only where lawful and appropriate; do not assume one is mandatory."
+                )
             )),
             TemplateSection("requested_documents", "Part II — Documents and records requested", (
                 "Proposal and approval records for introduction or revision of the named levy, including disclosable note sheets, recommendations, objections and final decision records.",
@@ -127,8 +135,12 @@ _ADMINISTRATIVE_EVIDENCE_DEMAND = CivicDocumentTemplate(
                 )
             )),
             TemplateSection("references", "Notice references and supporting public references"),
-            TemplateSection("response_period", "Requested response period (verify applicable deadlines)"),
-            TemplateSection("deadline_date", "Requested date, if appropriate"),
+            TemplateSection("response_period", "Requested response period (verify applicable deadlines)", (
+                "Requested response period: [Insert a requested period; verify any binding statutory time limit and the proper channel.]"
+            )),
+            TemplateSection("deadline_date", "Requested date, if appropriate", (
+                "Requested date: [Insert a date if appropriate; distinguish a requested target from a statutory deadline.]"
+            )),
             TemplateSection("jurisdiction", "Public authority and jurisdiction")
         ),
         introduction=(
