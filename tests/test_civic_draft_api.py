@@ -10,12 +10,25 @@ def _app():
     return app
 
 
+def test_preview_is_rejected_without_explicit_server_processing_consent():
+    response = TestClient(_app()).post(
+        "/civic/drafts/preview",
+        json={
+            "template_id": "complaint.general",
+            "issue": "Do not forward this without consent.",
+        },
+    )
+    assert response.status_code == 403
+    assert "consent" in response.json()["detail"].lower()
+
+
 def test_unauthenticated_local_preview_is_allowed_but_not_persisted():
     response = TestClient(_app()).post(
         "/civic/drafts/preview",
         json={
             "template_id": "complaint.general",
             "issue": "The public streetlight has been out for three nights.",
+            "preview_processing_consent": True,
         },
     )
 
@@ -38,6 +51,7 @@ def test_rti_api_requires_jurisdiction_and_existing_record_requests():
         json={
             "template_id": "rti.records",
             "issue": "Please provide records about road repairs.",
+            "preview_processing_consent": True,
         },
     )
     assert response.status_code == 422
@@ -54,6 +68,7 @@ def test_remote_ai_without_identity_returns_local_preview_without_ai_call(monkey
         json={
             "template_id": "complaint.general",
             "issue": "The road needs repair.",
+            "preview_processing_consent": True,
             "use_ai": True,
             "remote_processing_consent": True,
         },
@@ -73,6 +88,7 @@ def test_invalid_authorization_fails_closed(monkeypatch):
         json={
             "template_id": "complaint.general",
             "issue": "The drain is blocked.",
+            "preview_processing_consent": True,
         },
     )
     assert response.status_code == 401
