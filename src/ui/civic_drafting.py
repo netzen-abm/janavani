@@ -32,9 +32,15 @@ def _draft_form(selected_template_id: str = "complaint.general") -> Div:
         H2("Draft a civic document"),
         P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
         P(
-            "Your text is sent to Janavani's preview API for transient processing; the local-template "
-            "option does not call the AI provider. Reusable starter questions and record requests are "
-            "editable in the final preview."
+            "This is server-side deterministic processing, not browser-local processing. The issue "
+            "and form details are sent to Janavani's preview API only after you agree below. The "
+            "preview is not saved or submitted."
+        ),
+        P(
+            "Remote AI improvement is temporarily disabled for free-text issue narratives and pasted "
+            "drafts while Janavani implements a privacy-safe, minimized-input boundary. The "
+            "deterministic template preview remains available; this flow will not send the raw "
+            "narrative or pasted draft to a remote AI provider."
         ),
 
         Form(action="/ai-drafting/preview", method="post")(
@@ -71,15 +77,11 @@ def _draft_form(selected_template_id: str = "complaint.general") -> Div:
             Label("Requested date (optional; do not treat as a statutory deadline without verification)", for_="deadline_date"),
             Input(name="deadline_date", id="deadline_date", maxlength=40, placeholder="e.g. 15 November 2026"),
             Div(
-                Label(Input(type="checkbox", name="use_ai", value="yes"), " Improve wording with AI (optional)"),
-                P("AI is optional. Without it, Janavani uses the selected reusable template."),
-            ),
-            Div(
                 Label(
-                    Input(type="checkbox", name="remote_processing_consent", value="yes"),
-                    " I consent to send the issue and any pasted draft to the configured remote AI provider for wording suggestions.",
+                    Input(type="checkbox", name="preview_processing_consent", value="yes", required=True),
+                    " I agree to send these details to Janavani's preview API for transient server-side processing.",
                 ),
-                P("Only select this when you understand the provider's processing terms. Legal citations, deadlines, authorities, and evidence are not generated as verified facts."),
+                P("Do not continue unless you agree to this processing. The preview is not saved or submitted."),
             ),
             Button("Generate preview", type="submit"),
         ),
@@ -114,12 +116,22 @@ def register_civic_drafting_routes(
         remedies_reserved: str = "",
         response_period: str = "",
         deadline_date: str = "",
-        use_ai: str = "",
-        remote_processing_consent: str = "",
+        preview_processing_consent: str = "",
     ):
+        consent_given = preview_processing_consent.lower() in {"yes", "true", "1", "on"}
+        if not consent_given:
+            return Titled(
+                "Processing consent required",
+                Div(
+                    H2("Preview not sent"),
+                    P("No request was forwarded to the canonical preview API because processing consent was not provided."),
+                    _draft_form(template_id),
+                ),
+            )
         if not issue.strip():
             return Titled("Describe the issue", Div(H2("Issue required"), P("Describe the issue before generating a preview."), _draft_form()))
         payload = {
+            "preview_processing_consent": True,
             "template_id": template_id,
             "issue": issue,
             "subject": subject,
@@ -137,15 +149,11 @@ def register_civic_drafting_routes(
             ],
             "response_period": response_period.strip() or None,
             "deadline_date": deadline_date.strip() or None,
-            "use_ai": use_ai.lower() in {"yes", "true", "1", "on"},
-            "remote_processing_consent": remote_processing_consent.lower() in {"yes", "true", "1", "on"},
+            # Remote AI stays disabled until the shared workflow has a tested
+            # privacy-safe, minimized-input boundary for arbitrary citizen narratives.
+            "use_ai": False,
+            "remote_processing_consent": False,
         }
-        if payload["use_ai"] and payload["remote_processing_consent"]:
-            origin = request.headers.get("origin")
-            host = request.headers.get("host", "").lower()
-            from urllib.parse import urlsplit
-            if not origin or urlsplit(origin).netloc.lower() != host:
-                payload["remote_processing_consent"] = False
         try:
             result = client_factory(request).preview_civic_draft(payload)
         except httpx.HTTPStatusError as exc:
