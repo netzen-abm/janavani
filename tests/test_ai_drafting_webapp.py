@@ -10,6 +10,11 @@ def test_ai_drafting_page_is_registered_and_explains_remote_processing():
     assert "RTI application — request for existing records" in response.text
     assert "Administrative notice reply — demand for documentary evidence" in response.text
     assert "configured remote AI provider" in response.text
+    assert "Foundational questions or interrogatories" in response.text
+    assert "Requested safeguards or administrative conditions" in response.text
+    assert "Rights or remedies to reserve" in response.text
+    assert "Requested response period" in response.text
+    assert "Requested date" in response.text
     assert "Generate preview" in response.text
 
 
