@@ -17,7 +17,6 @@ from starlette.requests import Request
 
 from src.documents.template_catalogue import list_templates
 
-
 # One source of truth for WebApp and Telegram template IDs/titles.
 _TEMPLATES = tuple(
     (item.template_id, item.title) for item in list_templates(language="en")
@@ -42,7 +41,6 @@ def _draft_form(selected_template_id: str = "complaint.general") -> Div:
             "deterministic template preview remains available; this flow will not send the raw "
             "narrative or pasted draft to a remote AI provider."
         ),
-
         Form(action="/ai-drafting/preview", method="post")(
             Label("Document format", for_="template_id"),
             Select(name="template_id", id="template_id")(
