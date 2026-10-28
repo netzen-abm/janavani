@@ -7,7 +7,7 @@
 |---|---|---|
 | `src/documents/complaint.py` | `archive/legacy/empty-document-placeholders/complaint.py` | `8b137891791fe96927ad78e64b0aad7bded08bdc` |
 | `src/documents/grievance.py` | `archive/legacy/empty-document-placeholders/grievance.py` | `8b137891791fe96927ad78e64b0aad7bded08bdc` |
-| `src/documents/rti.py` | `archive/legacy/empty-document-placeholders/rti.py` | `8b137891791fe96927ad78e64b0aad8c2e48c5391` |
+| `src/documents/rti.py` | `archive/legacy/empty-document-placeholders/rti.py` | `8b137891791fe96927ad78e64b0aad7bded08bdc` |
 | `src/documents/petition.py` | `archive/legacy/empty-document-placeholders/petition.py` | `8b137891791fe96927ad78e64b0aad7bded08bdc` |
 
 ## Evidence and decision
