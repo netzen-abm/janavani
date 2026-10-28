@@ -74,6 +74,7 @@ def test_webapp_remote_ai_requires_explicit_checkbox_and_reports_status(monkeypa
     monkeypatch.setattr(drafting, "client_for_request", lambda request: Client())
     response = TestClient(app).post(
         "/ai-drafting/preview",
+        headers={"Origin": "http://testserver"},
         data={
             "template_id": "representation.general",
             "issue": "Please consider the attached citizen representation.",
@@ -84,3 +85,38 @@ def test_webapp_remote_ai_requires_explicit_checkbox_and_reports_status(monkeypa
     assert response.status_code == 200
     assert "identity_required" in response.text
     assert "Deterministic preview remains available." in response.text
+
+
+def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatch):
+    import src.webapp.ai_drafting as drafting
+    from src.webapp.main import app
+
+    class Client:
+        def preview_civic_draft(self, payload):
+            assert payload["use_ai"] is True
+            assert payload["remote_processing_consent"] is False
+            return {
+                "template_id": "complaint.general",
+                "template_version": 1,
+                "ai_used": False,
+                "ai_status": "consent_required",
+                "message": "No remote AI call was made.",
+                "draft_body": "Local-only preview.",
+                "persistence": "not_persisted",
+                "submission": "not_submitted",
+            }
+
+    monkeypatch.setattr(drafting, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        headers={"Origin": "https://attacker.example"},
+        data={
+            "template_id": "complaint.general",
+            "issue": "An ordinary civic issue.",
+            "use_ai": "yes",
+            "remote_processing_consent": "yes",
+        },
+    )
+    assert response.status_code == 200
+    assert "consent_required" in response.text
+    assert "Local-only preview." in response.text
