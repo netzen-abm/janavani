@@ -19,9 +19,10 @@ from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 
 
-def _update(user_id: int, text: str = ""):
+def _update(user_id: int, text: str = "", *, chat_type: str = "private"):
     message = SimpleNamespace(
         text=text,
+        chat=SimpleNamespace(type=chat_type),
         reply_text=AsyncMock(),
         reply_document=AsyncMock(),
     )
@@ -63,7 +64,11 @@ def test_rti_flow_collects_authority_and_existing_records_before_preview(monkeyp
     context = SimpleNamespace(args=[], application=SimpleNamespace(bot_data={}))
     asyncio.run(ai_command.ai_draft_command(update, context))
 
-    callback_message = SimpleNamespace(reply_text=AsyncMock(), reply_document=AsyncMock())
+    callback_message = SimpleNamespace(
+        chat=SimpleNamespace(type="private"),
+        reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
+    )
     query = SimpleNamespace(
         data="civicdraft:type:rti.records",
         from_user=SimpleNamespace(id=user_id),
@@ -154,7 +159,11 @@ def test_remote_ai_callback_requires_explicit_click_and_clears_transient_content
             }
 
     monkeypatch.setattr(ai_command, "CivicDraftPreviewWorkflow", FakeWorkflow)
-    message = SimpleNamespace(reply_text=AsyncMock(), reply_document=AsyncMock())
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private"),
+        reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
+    )
     query = SimpleNamespace(
         data="civicdraft:ai",
         from_user=SimpleNamespace(id=user_id),
@@ -174,3 +183,41 @@ def test_remote_ai_callback_requires_explicit_click_and_clears_transient_content
     assert "AI used: Yes" in caption
     assert get_ephemeral_civic_draft(user_id) is None
     assert get_state(user_id) == COMPLETED
+
+
+def test_ai_draft_command_rejects_group_chat_before_collecting_content():
+    user_id = 88004
+    _reset(user_id)
+    update, message = _update(user_id, chat_type="group")
+    context = SimpleNamespace(args=[], application=SimpleNamespace(bot_data={}))
+
+    asyncio.run(ai_command.ai_draft_command(update, context))
+
+    assert get_state(user_id) != WAITING_FOR_CIVIC_DRAFT_TYPE
+    assert get_ephemeral_civic_draft(user_id) is None
+    assert "only in a private chat" in message.reply_text.await_args.args[0]
+
+
+def test_draft_callback_rejects_group_chat_before_mutating_state():
+    user_id = 88005
+    _reset(user_id)
+    set_state(user_id, WAITING_FOR_CIVIC_DRAFT_TYPE)
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="group"),
+        reply_text=AsyncMock(),
+    )
+    query = SimpleNamespace(
+        data="civicdraft:type:complaint.general",
+        from_user=SimpleNamespace(id=user_id),
+        message=message,
+        answer=AsyncMock(),
+    )
+    context = SimpleNamespace(application=SimpleNamespace(bot_data={}))
+
+    asyncio.run(ai_command.handle_civic_draft_callback(
+        SimpleNamespace(callback_query=query), context
+    ))
+
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_TYPE
+    assert get_ephemeral_civic_draft(user_id) is None
+    assert "only in a private chat" in message.reply_text.await_args.args[0]
