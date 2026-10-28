@@ -5,7 +5,6 @@ names, contact details, issue narratives, case IDs, evidence or completed letter
 into this source-controlled catalogue.
 """
 from src.documents.template_models import CivicDocumentTemplate, TemplateSection
-
 _COMMON_SECTIONS = (
     TemplateSection("issue", "Matter described by the citizen"),
     TemplateSection("proposal_or_notice", "Proposal or notice"),
@@ -127,6 +126,10 @@ _TEMPLATES = (
         required_fields=("subject", "issue", "jurisdiction"),
         optional_fields=("proposal_or_notice", "part_i_interrogatories", "legal_framework", "requested_conditions", "requested_documents", "remedies_reserved", "references", "response_period", "deadline_date"),
         sections=(
+            TemplateSection("document_header", "Dispatch and party details — complete locally", (
+                "Date: [Insert date of writing]\nReference: [Insert issuing notice number and date, if available]\nTo: [Insert the competent authority's official name, designation, department and address]",
+                "Copy to: [Insert relevant oversight authority or local body, if appropriate]\nDelivery: [Select an appropriate trackable method and official email, if applicable]\nFrom / signature: [Complete locally; disclose only necessary personal details]"
+            )),
             TemplateSection("issue", "Administrative notice, fee or levy being challenged"),
             TemplateSection("proposal_or_notice", "Citizen's response or existing draft"),
             TemplateSection("part_i_interrogatories", "Part I — Foundational and constitutional questions", (
