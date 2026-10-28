@@ -9,12 +9,7 @@ from typing import Any
 
 import requests
 
-from src.access.capability_scope import (
-    CapabilityDataScope,
-    CapabilityDataScopePolicy,
-    DataClassification,
-    DataRequirement,
-)
+from src.access.capability_scope import CapabilityDataScope, CapabilityDataScopePolicy, DataClassification, DataRequirement
 from src.access.scoped_execution_policy import ScopedExecutionPolicy
 from src.ai.composition import create_openrouter_provider
 from src.ai.gateway import AIExecutionGateway, AIExecutionRequest
@@ -29,15 +24,12 @@ CAPABILITY_ID = "civic:ai-draft"
 PURPOSE = "civic_document_drafting"
 
 _SYSTEM_PROMPT = (
-    "You transform a citizen's supplied civic issue or existing draft into an "
-    "editable civic-document proposal. Return strict JSON only with subject, "
-    "proposal_or_notice, part_i_interrogatories, requested_conditions, and "
-    "remedies_reserved fields. Preserve the citizen's stated intent and facts. "
-    "Never invent facts, statutes, legal citations, sources, deadlines, people, "
-    "official actions, authority details, acknowledgements, verification states, "
-    "or evidence. Do not output legal_framework or references. Do not give legal "
-    "advice or claim any automatic legal effect. Suggested wording must remain "
-    "subject to citizen review."
+    "Transform the citizen's issue or existing draft into editable civic wording. "
+    "Return strict JSON with subject, proposal_or_notice, part_i_interrogatories, "
+    "requested_conditions and remedies_reserved. Preserve stated facts and intent. "
+    "Never invent facts, statutes, citations, sources, deadlines, people, authorities, "
+    "evidence, verification states or official actions. No legal advice/effect claims; "
+    "citizen review is required."
 )
 
 
@@ -81,21 +73,14 @@ class CivicDraftAIExecutor:
         if location_code:
             fields.add("regional_routing_metadata")
         return CapabilityDataScope(
-            capability_id=CAPABILITY_ID,
-            purpose=PURPOSE,
-            approved_fields=frozenset(fields),
-            provider=self.provider_id,
+            capability_id=CAPABILITY_ID, purpose=PURPOSE,
+            approved_fields=frozenset(fields), provider=self.provider_id,
             processing_mode="remote_model",
         )
 
     @staticmethod
     def _degraded(issue: str, *, ai_used: bool, message: str) -> dict[str, Any]:
-        return {
-            "status": "degraded",
-            "ai_used": ai_used,
-            "draft": issue,
-            "message": message,
-        }
+        return {"status": "degraded", "ai_used": ai_used, "draft": issue, "message": message}
 
     def draft(
         self,
@@ -132,8 +117,8 @@ class CivicDraftAIExecutor:
         system = f"{_SYSTEM_PROMPT} Document type: {document_type.strip() or 'civic complaint'}."
         if regional_profile is not None:
             system += (
-                f" Regional context: {regional_profile}. Treat it as routing metadata, "
-                "not verified legal authority."
+                f" Regional context: {regional_profile}. Treat it as contextual "
+                "routing metadata, not verified legal authority."
             )
         request = AIRequest(
             purpose=PURPOSE,
@@ -163,8 +148,7 @@ class CivicDraftAIExecutor:
             )
         except PermissionError:
             return {
-                "status": "consent_required",
-                "ai_used": False,
+                "status": "consent_required", "ai_used": False,
                 "message": "Explicit consent for remote AI processing is required.",
             }
         except (requests.RequestException, ValueError, TypeError):
