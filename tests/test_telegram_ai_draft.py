@@ -47,8 +47,9 @@ def test_ai_draft_command_starts_with_template_choice_and_no_remote_call():
     assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_TYPE
     notice = message.reply_text.await_args.args[0]
     assert "not saved to a Janavani Case or submitted" in notice
-    assert "encrypted processing queue for up to 24 hours" in notice
-    assert "Remote AI is a separate, optional step" in notice
+    assert "24-hour expiry window" in notice
+    assert "encrypted payloads may remain until cleanup resumes" in notice
+    assert "Remote AI is separate" in notice
     buttons = message.reply_text.await_args.kwargs["reply_markup"].inline_keyboard
     callback_data = {button.callback_data for row in buttons for button in row}
     assert "civicdraft:type:rti.records" in callback_data
