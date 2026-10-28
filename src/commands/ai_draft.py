@@ -39,6 +39,12 @@ async def ai_draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user = update.effective_user
     if message is None or user is None:
         return
+    if getattr(getattr(message, "chat", None), "type", None) != "private":
+        await message.reply_text(
+            "For privacy, civic drafting is available only in a private chat with Janavani. "
+            "Open the bot directly and use /ai_draft there."
+        )
+        return
     clear_ephemeral_civic_draft(user.id)
     get_session(user.id).pop("ai_draft_template", None)
     set_state(user.id, WAITING_FOR_CIVIC_DRAFT_TYPE)
@@ -65,6 +71,12 @@ async def handle_civic_draft_callback(
     user = query.from_user
     data = str(query.data or "")
     await query.answer()
+    if getattr(getattr(query.message, "chat", None), "type", None) != "private":
+        await query.message.reply_text(
+            "For privacy, civic drafting is available only in a private chat with Janavani. "
+            "Restart with /ai_draft in the bot's private chat."
+        )
+        return
     session = get_session(user.id)
     state = get_state(user.id)
 
