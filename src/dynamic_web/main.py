@@ -38,7 +38,11 @@ h1{max-width:850px;font-size:clamp(2.5rem,7vw,5.7rem);margin:0 0 22px}
 h2{font-size:clamp(1.7rem,4vw,2.8rem)}
 .lead{max-width:760px;color:rgba(255,255,255,.84);font-size:clamp(1.05rem,2vw,1.25rem)}
 .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
-.button,button{display:inline-block;border:1px solid var(--gold);border-radius:8px;background:var(--gold);color:#172d3c;padding:11px 16px;font:inherit;font-weight:750;text-decoration:none;cursor:pointer}
+.button,button{
+ display:inline-block;border:1px solid var(--gold);border-radius:8px;
+ background:var(--gold);color:#172d3c;padding:11px 16px;
+ font:inherit;font-weight:750;text-decoration:none;cursor:pointer
+}
 .button.secondary{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
 .section{padding:clamp(45px,7vw,78px) 0}
 .intro{max-width:780px}
@@ -145,7 +149,12 @@ def get_home():
                 Div(
                     P("THE INFRASTRUCTURE OF CITIZEN VOICE", cls="eyebrow"),
                     H1("WE, THE PEOPLE OF INDIA"),
-                    P("Civic infrastructure for meaningful citizen participation. Understand a public issue, choose an appropriate civic pathway, and prepare a document you can review and edit.", cls="lead"),
+                    P(
+                        "Civic infrastructure for meaningful citizen participation. Understand a public "
+                        "issue, choose an appropriate civic pathway, and prepare a document you can "
+                        "review and edit.",
+                        cls="lead",
+                    ),
                     Div(
                         A("Find a civic pathway", href="/pathway", cls="button"),
                         A("Draft a civic document", href="/ai-drafting", cls="button secondary"),
@@ -173,7 +182,11 @@ def get_home():
             Div(
                 Div(
                     H2("Designed for citizen control"),
-                    P("Draft previews are sent to the configured JanaVani preview API for transient processing and are not saved or submitted by this site. Remote AI is optional, requires explicit request-scoped consent, and also requires verified identity."),
+                    P(
+                        "Draft previews are sent to the configured JanaVani preview API for transient "
+                        "processing and are not saved or submitted by this site. Remote AI is optional, "
+                        "requires explicit request-scoped consent, and also requires verified identity."
+                    ),
                     P("Review all facts, recipients, statutory references and deadlines before use. A polished draft is not proof that its claims are true."),
                     A("Read the processing boundary", href="/privacy"),
                     cls="wrap intro",
@@ -243,9 +256,18 @@ def get_privacy():
                     H2("Pathway selection"),
                     P("The pathway selector sends a purpose choice to this web service. JanaVani does not persist that choice as a citizen profile or case."),
                     H2("Document preview"),
-                    P("When you request a draft preview, the issue, selected fields and any pasted draft are sent to the configured JanaVani preview API for transient processing. The preview is not saved or submitted by this site."),
+                    P(
+                        "When you request a draft preview, the issue, selected fields and any pasted "
+                        "draft are sent to the configured JanaVani preview API for transient processing. "
+                        "The preview is not saved or submitted by this site."
+                    ),
                     H2("Optional remote AI"),
-                    P("Remote AI must be requested explicitly and requires the applicable identity and request-scoped consent checks. Without that authorization, deterministic template drafting remains available. Do not include unnecessary personal or sensitive details."),
+                    P(
+                        "Remote AI must be requested explicitly and requires the applicable identity "
+                        "and request-scoped consent checks. Without that authorization, deterministic "
+                        "template drafting remains available. Do not include unnecessary personal or "
+                        "sensitive details."
+                    ),
                     H2("Your control"),
                     P("Review the draft before use. Verify facts, recipients, the relevant disclosure process, statutes and deadlines. JanaVani does not automatically submit or email documents."),
                     A("Return home", href="/"),
