@@ -5,15 +5,13 @@ import httpx
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Textarea, Titled
 from starlette.requests import Request
 
+from src.documents.template_catalogue import list_templates
 from src.webapp.services.api_client import client_for_request
 
 
-_TEMPLATES = (
-    ("complaint.general", "Civic complaint"),
-    ("grievance.service", "Public-service grievance"),
-    ("rti.records", "RTI — existing records"),
-    ("representation.general", "Citizen representation"),
-    ("petition.general", "Petition"),
+# One source of truth for WebApp and Telegram template IDs/titles.
+_TEMPLATES = tuple(
+    (item.template_id, item.title) for item in list_templates(language="en")
 )
 
 
@@ -21,7 +19,7 @@ def _draft_form() -> Div:
     return Div(
         H2("Draft a civic document"),
         P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
-        P("Your text is sent to Janavani's preview API for transient processing; the local-template option does not call the AI provider."),
+        P("Your text is sent to Janavani's preview API for transient processing; the local-template option does not call the AI provider. Reusable starter questions and record requests are editable in the final preview."),
 
         Form(action="/ai-drafting/preview", method="post")(
             Label("Document format"),
@@ -34,8 +32,8 @@ def _draft_form() -> Div:
             Textarea(name="existing_draft", rows=5, maxlength=8000, placeholder="Paste your draft here, or leave blank."),
             Label("Subject (optional; generated from your description if blank)"),
             Input(name="subject", maxlength=200, placeholder="Document subject"),
-            Label("Public authority or jurisdiction (required for RTI)"),
-            Input(name="jurisdiction", maxlength=300, placeholder="e.g. Kerala State public authority"),
+            Label("Public authority or jurisdiction (required for RTI and administrative evidence-demand drafts)"),
+            Input(name="jurisdiction", maxlength=300, placeholder="e.g. the issuing municipal authority / department"),
             Label("Existing records requested (RTI; one request per line)"),
             Textarea(name="requested_documents", rows=4, placeholder="Copies of existing work orders\nCopies of inspection reports, if held"),
             Div(
