@@ -138,7 +138,7 @@ def test_start_discloses_telegram_data_boundary():
     update = SimpleNamespace(message=SimpleNamespace(reply_text=reply))
     asyncio.run(start(update, MagicMock()))
 
-    message = reply.await_args.args[0]
+    message = " ".join(reply.await_args.args[0].split())
     assert "not an end-to-end encrypted Secret Chat" in message
     assert "processed by Telegram and Janavani's bot service" in message
     assert "Please do not send identity documents" in message
