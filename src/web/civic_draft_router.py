@@ -26,6 +26,7 @@ class CivicDraftPreviewModel(BaseModel):
     remedies_reserved: list[str] = Field(default_factory=list, max_length=8)
     response_period: str | None = Field(default=None, max_length=120)
     deadline_date: str | None = Field(default=None, max_length=40)
+    preview_processing_consent: bool = False
     use_ai: bool = False
     remote_processing_consent: bool = False
 
@@ -37,7 +38,12 @@ def preview_civic_draft(
     authorization: str | None = Header(default=None),
     request_id: str | None = Header(default=None, alias="X-Request-ID"),
 ) -> dict[str, object]:
-    """Return an ephemeral preview; remote AI still requires verified identity."""
+    """Return an ephemeral preview after explicit server-processing consent."""
+    if not request.preview_processing_consent:
+        raise HTTPException(
+            status_code=403,
+            detail="Explicit consent to transient server-side preview processing is required",
+        )
     context: IdentityContext | None = None
     if authorization is not None:
         context = require_authenticated_identity(authorization, request_id)
