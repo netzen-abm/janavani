@@ -109,7 +109,7 @@ def register_ai_drafting_routes(rt) -> None:
             "Review civic document draft",
             Div(
                 H2("Your draft preview"),
-                P(f"Template: {result['template_id']} · version {result['template_version']}"),
+                P(f"Template: {dict(_TEMPLATES).get(result['template_id'], result['template_id'])} · version {result['template_version']}"),
                 P(f"AI used: {'Yes' if result['ai_used'] else 'No'} · AI status: {result['ai_status']}"),
                 P(result["message"]),
                 Label("Edit and review your draft (this preview is not saved)"),
