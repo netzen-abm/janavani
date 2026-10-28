@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
-from src.dynamic_web.main import _PATHWAYS, app
+from src.dynamic_web.main import app
+from src.dynamic_web.pathways import PATHWAYS as _PATHWAYS
 from src.documents.template_catalogue import get_template
 
 
