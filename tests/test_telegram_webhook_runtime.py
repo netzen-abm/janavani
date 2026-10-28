@@ -124,3 +124,20 @@ def test_render_manifest_declares_webhook_and_not_polling():
 
     assert "src.web.telegram_webhook_app:app" in manifest
     assert "python src/bot_telegram.py" not in manifest
+
+
+def test_start_discloses_telegram_data_boundary():
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from src.commands.start import start
+
+    reply = AsyncMock()
+    update = SimpleNamespace(message=SimpleNamespace(reply_text=reply))
+    asyncio.run(start(update, MagicMock()))
+
+    message = reply.await_args.args[0]
+    assert "not an end-to-end encrypted Secret Chat" in message
+    assert "processed by Telegram and Janavani's bot service" in message
+    assert "Please do not send identity documents" in message
