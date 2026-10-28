@@ -2,52 +2,56 @@
 
 ## Status
 
-Implemented as a shared capability over the canonical Case → Authority → Document
-path. It is not a WebApp or Telegram feature.
+Implemented as a shared Case → Authority → Document capability and extended by a
+non-persistent template-first preview workflow consumed by the WebApp and Telegram
+surfaces. The surfaces must not implement independent letter-composition engines.
 
-## Boundary
+## Boundaries
 
-src/capabilities/letter_drafting.py owns structured citizen letter inputs,
-composition, evidence/provenance references, and draft → reviewed → approved
-state.
+- `src/capabilities/letter_drafting.py` owns structured citizen inputs and canonical
+  document composition over an owned Case and verified Authority.
+- `src/documents/template_catalogue.py` owns the versioned, content-free source
+  models for complaint, grievance, RTI, representation and petition formats.
+- `src/services/civic_draft_workflow.py` composes a transient preview through those
+  templates and optionally requests a validated AI wording proposal.
+- `src/services/civic_draft_executor.py` is the remote AI trust boundary. It uses
+  the shared AI execution gateway, actual caller identity, capability authorization,
+  exact remote-processing scope, and allow-listed model-output validation.
+- `src/web/civic_draft_router.py` and the Telegram command/state adapter are transports;
+  they do not own legal or template semantics.
 
-It does not own HTTP or Telegram transport, identity authentication,
-authorization implementation, authority verification, evidence storage,
-renderer internals, external submission, delivery, or legal determination.
+These preview routes do not create a Case, persist the citizen's draft, or submit a
+document. Case-bound draft persistence and owner-scoped review remain with the
+canonical `LetterDraftingCapability` / `DocumentReviewCapability` flow.
 
-## Source template
+## Template and privacy rules
 
-The reusable source format is:
-docs/templates/NOTICE_NON_CONSENT_CONDITIONAL_ACCEPTANCE_RESOLUTION.md
+The catalogue stores structure, version, purpose, field names, language, jurisdiction
+scope and review metadata—not citizen names, addresses, raw narratives, evidence,
+credentials or completed documents. A user-provided draft may be sent to the remote
+AI provider only after an explicit remote-processing action and the required verified
+identity/capability checks. The model may propose editable wording; legal citations,
+deadlines, verified authorities, evidence, and legal effects are not inferred as facts.
 
-User-position language such as non-consent, conditional acceptance, requests for
-resolution, response periods, reservations and legal-framework references is
-preserved as input. The capability does not turn a stated position into an
-automatically established legal effect.
-
-Jurisdiction-specific legal citations must be supplied or verified by the
-appropriate authority/evidence workflow. They are not silently invented or
-injected.
+The currently shipped catalogue is a curated source-controlled library. Saving a
+citizen-specific custom structure is **not** implemented yet. Any future saved-format
+feature must store only a separately reviewed, allow-listed structural model, never
+a redacted copy of arbitrary private prose, and must use a durable owner/approval
+boundary before it becomes reusable by others.
 
 ## Canonical flow
 
-Citizen input → owned Case + verified Authority → LetterDraftingCapability →
-DocumentDraft + evidence/provenance references → citizen review/correction →
-explicit approval → consequential submission capability, if applicable.
+Citizen inputs → template selection → deterministic preview → optional explicit AI
+improvement → schema-validated suggested wording → editable citizen review. For a
+Case-bound draft, the canonical path remains:
 
-## Surface rule
-
-WebApp, Telegram, Android, iOS, WhatsApp, Messenger and future surfaces consume
-this capability rather than implementing independent letter composition.
-
-## Separation rule
-
-Letter composition is separate from rendering because rendering is an
-independent provider boundary. Approval remains with the drafting capability
-because it is part of the document review state; splitting it would create
-duplicated orchestration.
+Owned Case + verified Authority → LetterDraftingCapability → DocumentDraft and
+evidence/provenance references → citizen review/correction → explicit approval →
+separate consequential submission capability, if applicable.
 
 ## Required gates
 
-Case ownership, verified destination, evidence/provenance references, explicit
-review, explicit approval, and no submission from the rendering path.
+Case ownership for Case-bound drafts; verified destinations where applicable; source
+provenance for factual/legal claims; explicit remote-processing consent; allow-listed
+AI output; editable citizen review; no submission from generation/rendering; and no
+promotion of private text into shared templates or AI training by default.
