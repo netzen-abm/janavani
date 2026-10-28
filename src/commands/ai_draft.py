@@ -123,6 +123,8 @@ async def handle_civic_draft_callback(
         await query.message.reply_text("This transient draft expired. Use /ai_draft to restart.")
         return
 
+    result = None
+    rejection_message = None
     links = context.application.bot_data.get("identity_link_repository")
     try:
         identity = identity_for_telegram_user(user.id, links=links)
@@ -133,16 +135,21 @@ async def handle_civic_draft_callback(
             remote_processing_consent=True,
         )
     except (LookupError, PermissionError, ValueError):
+        rejection_message = (
+            "Remote AI drafting could not be authorized. The issue and draft were not "
+            "sent to the model."
+        )
+    finally:
+        # Remote-use intent is one-shot: erase submitted text even if the provider or
+        # Telegram delivery path fails. A new AI request must start from a new draft.
         clear_ephemeral_civic_draft(user.id)
         session.pop("ai_draft_template", None)
         set_state(user.id, COMPLETED)
+
+    if rejection_message:
         await query.message.reply_text(
-            "Remote AI drafting could not be authorized. The issue and draft were not "
-            "sent to the model, and the transient draft was cleared."
+            rejection_message + " The transient draft was cleared."
         )
         return
-
-    await send_draft_preview(query.message, result, remote_requested=True)
-    clear_ephemeral_civic_draft(user.id)
-    session.pop("ai_draft_template", None)
-    set_state(user.id, COMPLETED)
+    if result is not None:
+        await send_draft_preview(query.message, result, remote_requested=True)
