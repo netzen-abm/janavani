@@ -67,18 +67,11 @@ def build_application(*, token: str | None = None) -> Application:
 
 
 def main() -> None:
-    """Run the Telegram polling process after composition succeeds."""
-    if not Config.TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
-
-    print("=" * 60)
-    print("🇮🇳 JANAVANI TELEGRAM BOT")
-    print("=" * 60)
-    print("Starting Bot...")
-
-    application = build_application(token=Config.TELEGRAM_BOT_TOKEN)
-    print("✅ Bot application composed; starting polling.")
-    application.run_polling(drop_pending_updates=True)
+    """Fail closed: the standalone polling entry point is retired."""
+    raise RuntimeError(
+        "Telegram polling is disabled. Start the HTTPS webhook service at "
+        "src.web.telegram_webhook_app:app instead."
+    )
 
 
 if __name__ == "__main__":
