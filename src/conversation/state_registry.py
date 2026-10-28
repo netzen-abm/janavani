@@ -21,6 +21,12 @@ from conversation.constants import (
     WAITING_FOR_OFFICE_SELECTION,
     WAITING_FOR_PREVIEW,
     WAITING_FOR_DOCUMENT,
+    WAITING_FOR_CIVIC_DRAFT_TYPE,
+    WAITING_FOR_CIVIC_DRAFT_ISSUE,
+    WAITING_FOR_CIVIC_DRAFT_JURISDICTION,
+    WAITING_FOR_CIVIC_DRAFT_RECORDS,
+    WAITING_FOR_CIVIC_DRAFT_EXISTING,
+    WAITING_FOR_CIVIC_DRAFT_CHOICE,
 )
 from conversation.steps.address import handle_address
 from conversation.steps.consent import handle_consent
@@ -36,6 +42,7 @@ from conversation.steps.office_manual import handle_office_manual
 from conversation.steps.office_selection import handle_office_selection
 from conversation.steps.preview import handle_preview
 from conversation.steps.select_office import handle_select_office
+from conversation.steps.civic_draft import handle_civic_draft_text
 
 STATE_HANDLERS = {
     WAITING_FOR_ISSUE: handle_issue,
@@ -52,6 +59,12 @@ STATE_HANDLERS = {
     WAITING_FOR_FORMAT: handle_format,
     WAITING_FOR_CONSENT: handle_consent,
     WAITING_FOR_GENERATE: handle_generate,
+    WAITING_FOR_CIVIC_DRAFT_TYPE: handle_civic_draft_text,
+    WAITING_FOR_CIVIC_DRAFT_ISSUE: handle_civic_draft_text,
+    WAITING_FOR_CIVIC_DRAFT_JURISDICTION: handle_civic_draft_text,
+    WAITING_FOR_CIVIC_DRAFT_RECORDS: handle_civic_draft_text,
+    WAITING_FOR_CIVIC_DRAFT_EXISTING: handle_civic_draft_text,
+    WAITING_FOR_CIVIC_DRAFT_CHOICE: handle_civic_draft_text,
 }
 
 def get_handler(state: str):
