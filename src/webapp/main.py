@@ -44,18 +44,6 @@ def get():
                 ),
                 cls="card",
             ),
-            Div(
-                H3("Help build Janavani"),
-                P("Volunteer in coding, testing, accessibility, content creation, letter drafting, proofreading, Malayalam and other Indian languages, documentation, or UX."),
-                A(
-                    "Explore volunteer opportunities",
-                    href="https://github.com/netzen-abm/janavani/blob/main/CONTRIBUTING.md",
-                    target="_blank",
-                    rel="noopener noreferrer",
-                ),
-                P("For everyone’s safety, do not post citizen narratives, personal data, API keys, or credentials in public issues."),
-                cls="card",
-            ),
         ),
     )
 
