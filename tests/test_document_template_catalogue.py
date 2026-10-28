@@ -5,6 +5,7 @@ import pytest
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
+from src.capabilities.letter_body import compose_template_body
 from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.core.authority import AuthorityContact, AuthorityRecord
 from src.core.civic_case import CaseType
@@ -76,6 +77,7 @@ def test_catalogue_contains_versioned_structural_models_not_citizen_values():
         "rti.records",
         "representation.general",
         "petition.general",
+        "administrative.evidence-demand",
     } <= ids
     assert all(item.version >= 1 for item in templates)
     assert all(item.review_status == "structural-only" for item in templates)
@@ -172,3 +174,51 @@ def test_complaint_and_rti_templates_have_distinct_purposes():
     assert complaint.document_type != rti.document_type
     assert "requested_documents" not in complaint.required_fields
     assert "requested_documents" in rti.required_fields
+
+
+def test_administrative_evidence_demand_is_content_free_and_renders_reviewed_defaults():
+    template = get_template("administrative.evidence-demand")
+    structural_text = repr(asdict(template)).casefold()
+    assert template.version == 1
+    assert template.review_status == "structural-only"
+    assert "certified copies" in structural_text
+    assert "authority name" not in structural_text
+    assert "phone number" not in structural_text
+    assert "self-executing instrument" not in structural_text
+    assert "tacit agreement" not in structural_text
+
+    body = compose_template_body(
+        LetterDraftRequest(
+            subject="Reply to sanitation levy notice",
+            issue="The notice requests a recurring sanitation levy.",
+            jurisdiction="Kerala municipal authority",
+            template_id=template.template_id,
+            template_version=template.version,
+        ),
+        template,
+    )
+
+    assert "Part I — Foundational and constitutional questions" in body
+    assert "Part II — Documents and records requested" in body
+    assert "Part III — Rights and remedies reserved" in body
+    assert "certified copies" in body
+    assert "The notice requests a recurring sanitation levy." in body
+    assert "Kerala municipal authority" in body
+    assert "Non-response alone is not asserted here to constitute agreement" in body
+    assert "Citizen-reviewed" not in body  # no data from a previous citizen draft
+
+
+def test_administrative_template_requires_jurisdiction_before_preview():
+    capability, _case, _identity, _review = _drafting(CaseType.OBJECTION)
+    template = get_template("administrative.evidence-demand")
+    with pytest.raises(ValueError, match="Template requires: jurisdiction"):
+        capability.create_draft(
+            "not-used-here",
+            LetterDraftRequest(
+                subject="Reply to fee notice",
+                issue="The notice requests payment.",
+                template_id=template.template_id,
+                template_version=template.version,
+            ),
+            identity=_identity("case:write", "document:review"),
+        )
