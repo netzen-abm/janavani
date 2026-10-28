@@ -53,6 +53,12 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         return
     state = get_state(user.id)
     text = message.text.strip()
+    if state == WAITING_FOR_CIVIC_DRAFT_TYPE:
+        await message.reply_text("Choose a document format using the buttons above.")
+        return
+    if state == WAITING_FOR_CIVIC_DRAFT_CHOICE:
+        await message.reply_text("Use the buttons on the draft file to request remote AI or discard it.")
+        return
     current = get_ephemeral_civic_draft(user.id)
     if not current:
         set_state(user.id, COMPLETED)
