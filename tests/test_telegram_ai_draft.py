@@ -1,6 +1,5 @@
 import asyncio
 
-import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -17,8 +16,6 @@ from conversation.session import get_ephemeral_civic_draft, user_sessions
 from conversation.state import get_state, set_state, user_states
 from src.commands import ai_draft as ai_command
 from src.conversation.steps import civic_draft as draft_step
-from src.identity.context import IdentityContext
-from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 
 
 def _update(user_id: int, text: str = "", *, chat_type: str = "private"):
