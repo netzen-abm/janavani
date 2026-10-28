@@ -202,7 +202,10 @@ def test_administrative_evidence_demand_is_content_free_and_renders_reviewed_def
     assert "Part II — Documents and records requested" in body
     assert "Part III — Rights and remedies reserved" in body
     assert "certified copies" in body
+    assert "Date: [Insert date of writing]" in body
+    assert "Copy to: [Insert relevant oversight authority or local body" in body
     assert "The notice requests a recurring sanitation levy." in body
     assert "Kerala municipal authority" in body
+    assert "Complete or remove every bracketed prompt" in body
     assert "Non-response alone is not asserted here to constitute agreement" in body
     assert "Citizen-reviewed" not in body  # no data from a previous citizen draft
