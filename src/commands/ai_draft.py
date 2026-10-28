@@ -1,0 +1,130 @@
+"""Telegram command and callback adapter for the shared civic-draft workflow."""
+from __future__ import annotations
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
+from conversation.constants import (
+    COMPLETED,
+    WAITING_FOR_CIVIC_DRAFT_CHOICE,
+    WAITING_FOR_CIVIC_DRAFT_ISSUE,
+    WAITING_FOR_CIVIC_DRAFT_TYPE,
+)
+from conversation.session import (
+    clear_ephemeral_civic_draft,
+    get_ephemeral_civic_draft,
+    get_session,
+    set_ephemeral_civic_draft,
+)
+from conversation.state import get_state, set_state
+from conversation.steps.civic_draft import (
+    request_from_transient_draft,
+    send_draft_preview,
+)
+from src.adapters.telegram.identity import identity_for_telegram_user
+from src.documents.template_catalogue import get_template, list_templates
+from src.services.civic_draft_workflow import CivicDraftPreviewWorkflow
+
+
+def _type_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(item.title, callback_data=f"civicdraft:type:{item.template_id}")]
+        for item in list_templates(language="en")
+    ])
+
+
+async def ai_draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Start a no-persistence draft flow separate from the canonical Case journey."""
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None:
+        return
+    clear_ephemeral_civic_draft(user.id)
+    get_session(user.id).pop("ai_draft_template", None)
+    set_state(user.id, WAITING_FOR_CIVIC_DRAFT_TYPE)
+    await message.reply_text(
+        "Choose a reusable document format. Your preview is held only in short-lived "
+        "process memory and is not saved or submitted.",
+        reply_markup=_type_keyboard(),
+    )
+
+
+async def handle_civic_draft_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handle template choice, explicit remote-AI request or discard."""
+    query = update.callback_query
+    if query is None or query.message is None:
+        return
+    user = query.from_user
+    data = str(query.data or "")
+    await query.answer()
+    session = get_session(user.id)
+    state = get_state(user.id)
+
+    if data.startswith("civicdraft:type:"):
+        if state != WAITING_FOR_CIVIC_DRAFT_TYPE:
+            await query.message.reply_text("That menu expired. Use /ai_draft to restart.")
+            return
+        template_id = data.split(":", 2)[2]
+        try:
+            template = get_template(template_id)
+        except LookupError:
+            await query.message.reply_text("That template is unavailable. Use /ai_draft to restart.")
+            return
+        set_ephemeral_civic_draft(user.id, {
+            "template_id": template.template_id,
+            "issue": "",
+            "subject": "",
+            "existing_draft": "",
+            "jurisdiction": "",
+            "requested_documents": [],
+        })
+        session["ai_draft_template"] = template.template_id
+        set_state(user.id, WAITING_FOR_CIVIC_DRAFT_ISSUE)
+        await query.message.reply_text(
+            f"Selected: {template.title}\n\nDescribe the issue or purpose in your own words."
+        )
+        return
+
+    if data == "civicdraft:cancel":
+        clear_ephemeral_civic_draft(user.id)
+        session.pop("ai_draft_template", None)
+        set_state(user.id, COMPLETED)
+        await query.message.reply_text("Draft flow discarded. Transient input was cleared.")
+        return
+
+    if data != "civicdraft:ai":
+        return
+    if state != WAITING_FOR_CIVIC_DRAFT_CHOICE:
+        await query.message.reply_text("That draft choice expired. Use /ai_draft to restart.")
+        return
+    current = get_ephemeral_civic_draft(user.id)
+    if not current:
+        set_state(user.id, COMPLETED)
+        await query.message.reply_text("This transient draft expired. Use /ai_draft to restart.")
+        return
+
+    links = context.application.bot_data.get("identity_link_repository")
+    try:
+        identity = identity_for_telegram_user(user.id, links=links)
+        result = CivicDraftPreviewWorkflow().preview(
+            request_from_transient_draft(current),
+            identity=identity,
+            use_ai=True,
+            remote_processing_consent=True,
+        )
+    except (LookupError, PermissionError, ValueError):
+        clear_ephemeral_civic_draft(user.id)
+        session.pop("ai_draft_template", None)
+        set_state(user.id, COMPLETED)
+        await query.message.reply_text(
+            "Remote AI drafting could not be authorized. The issue and draft were not "
+            "sent to the model, and the transient draft was cleared."
+        )
+        return
+
+    await send_draft_preview(query.message, result, remote_requested=True)
+    clear_ephemeral_civic_draft(user.id)
+    session.pop("ai_draft_template", None)
+    set_state(user.id, COMPLETED)
