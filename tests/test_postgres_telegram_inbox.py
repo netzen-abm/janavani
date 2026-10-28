@@ -29,6 +29,28 @@ def _inbox(dsn: str = DSN) -> PostgresTelegramInbox:
     return PostgresTelegramInbox(dsn=dsn, encryption_keys=[TEST_FERNET_KEY])
 
 
+def test_postgres_connection_uses_bounded_connect_timeout(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    observed = {}
+
+    def fake_connect(dsn, **kwargs):
+        observed["dsn"] = dsn
+        observed.update(kwargs)
+        return object()
+
+    monkeypatch.setitem(sys.modules, "psycopg", SimpleNamespace(connect=fake_connect))
+    inbox = PostgresTelegramInbox(
+        dsn="postgresql://unit-test.invalid/janavani",
+        encryption_keys=[TEST_FERNET_KEY],
+    )
+
+    assert inbox._connect() is not None
+    assert observed["dsn"] == "postgresql://unit-test.invalid/janavani"
+    assert observed["connect_timeout"] == 5
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not DSN, reason="requires JANAVANI_POSTGRES_TEST_DSN")
 def test_postgres_encrypted_queue_never_persists_plaintext_and_deduplicates():
