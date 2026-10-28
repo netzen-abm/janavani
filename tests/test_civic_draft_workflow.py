@@ -1,3 +1,5 @@
+import pytest
+
 from src.access.capability_scope import CapabilityDataScope
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
