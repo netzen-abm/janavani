@@ -52,6 +52,58 @@ def test_dynamic_site_registers_shared_template_first_drafting_flow():
     assert "not saved or submitted" in response.text
 
 
+def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(monkeypatch):
+    from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+
+    received = {}
+
+    def fake_preview(self, payload):
+        received.update(payload)
+        return {
+            "status": "preview",
+            "template_id": payload["template_id"],
+            "template_version": 1,
+            "ai_used": False,
+            "ai_status": "not_requested",
+            "message": "Deterministic preview generated for review.",
+            "draft_body": "Review this editable administrative draft.",
+            "persistence": "not_persisted",
+            "submission": "not_submitted",
+        }
+
+    monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", fake_preview)
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "administrative.evidence-demand",
+            "issue": "The local authority has imposed a recurring fee.",
+            "jurisdiction": "Relevant municipal authority",
+            "requested_documents": "Copy of the enabling order\\nCopy of the calculation record",
+            "part_i_interrogatories": "Identify the enabling law\\nExplain the calculation method",
+            "requested_conditions": "Provide a point-by-point response",
+            "remedies_reserved": "Any lawful remedy available on the facts",
+            "response_period": "14 days requested; verify applicable law",
+            "deadline_date": "15 November 2026",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert received["requested_documents"] == [
+        "Copy of the enabling order",
+        "Copy of the calculation record",
+    ]
+    assert received["part_i_interrogatories"] == [
+        "Identify the enabling law",
+        "Explain the calculation method",
+    ]
+    assert received["requested_conditions"] == ["Provide a point-by-point response"]
+    assert received["remedies_reserved"] == ["Any lawful remedy available on the facts"]
+    assert received["response_period"] == "14 days requested; verify applicable law"
+    assert received["deadline_date"] == "15 November 2026"
+    assert received["use_ai"] is False
+    assert received["remote_processing_consent"] is False
+
+
 def test_dynamic_site_liveness_is_independent_of_api_and_telegram():
     response = TestClient(app).get("/liveness")
     assert response.status_code == 200
