@@ -29,9 +29,12 @@ canonical `LetterDraftingCapability` / `DocumentReviewCapability` flow.
 The catalogue stores structure, version, purpose, field names, language, jurisdiction
 scope and review metadata—not citizen names, addresses, raw narratives, evidence,
 credentials or completed documents. A user-provided draft may be sent to the remote
-AI provider only after an explicit remote-processing action and the required verified
-identity/capability checks. The model may propose editable wording; legal citations,
-deadlines, verified authorities, evidence, and legal effects are not inferred as facts.
+AI provider only after an explicit remote-processing action and a verified authenticated
+identity. For this optional citizen-facing capability, `civic:ai-draft` is derived only
+for the current consented request; it is never persisted to the identity link, account,
+profile, or future session. The Telegram drafting journey is restricted to private chats.
+The model may propose editable wording; legal citations, deadlines, verified authorities,
+evidence, and legal effects are not inferred as facts.
 
 The currently shipped catalogue is a curated source-controlled library. Saving a
 citizen-specific custom structure is **not** implemented yet. Any future saved-format
