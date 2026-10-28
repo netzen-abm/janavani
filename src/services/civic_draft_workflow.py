@@ -8,10 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.access.remote_civic_drafting_policy import identity_for_explicit_remote_drafting
 from src.capabilities.letter_body import compose_template_body
 from src.capabilities.letter_drafting import LetterDraftRequest
 from src.documents.template_catalogue import get_template
 from src.identity.context import IdentityContext
+from src.identity.principal import AuthenticationMethod, IdentityMode
 from src.services.legal_agent import JanavaniLegalAgent
 
 
@@ -91,13 +93,17 @@ class CivicDraftPreviewWorkflow:
                 "issue and any pasted draft are sent to the configured AI provider."
             )
         elif use_ai:
-            if identity is None:
+            if (
+                identity is None
+                or identity.principal.identity_mode is not IdentityMode.AUTHENTICATED
+                or identity.principal.authentication_method is AuthenticationMethod.NONE
+            ):
                 ai_status = "identity_required"
                 message = "A verified identity is required for remote AI drafting."
-            elif not identity.principal.has_capability("civic:ai-draft"):
-                ai_status = "not_authorized"
-                message = "This identity is not authorized to use remote AI drafting."
             else:
+                identity = identity_for_explicit_remote_drafting(
+                    identity, explicit_consent=remote_processing_consent
+                )
                 ai_input = issue
                 if existing:
                     ai_input += "\n\nCitizen-provided draft to improve (preserve its purpose and facts):\n" + existing
