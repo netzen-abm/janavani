@@ -1,4 +1,4 @@
-"""Interactive Telegram adapter for transient civic-draft previews."""
+"""Telegram text-state handlers and preview presentation for civic drafting."""
 from __future__ import annotations
 
 from io import BytesIO
@@ -13,27 +13,19 @@ from conversation.constants import (
     WAITING_FOR_CIVIC_DRAFT_ISSUE,
     WAITING_FOR_CIVIC_DRAFT_JURISDICTION,
     WAITING_FOR_CIVIC_DRAFT_RECORDS,
-    WAITING_FOR_CIVIC_DRAFT_TYPE,
 )
 from conversation.session import (
     clear_ephemeral_civic_draft,
     get_ephemeral_civic_draft,
-    get_session,
     set_ephemeral_civic_draft,
 )
 from conversation.state import get_state, set_state
-from src.adapters.telegram.identity import identity_for_telegram_user
-from src.documents.template_catalogue import get_template, list_templates
-from src.services.civic_draft_workflow import (
-    CivicDraftPreviewRequest,
-    CivicDraftPreviewWorkflow,
-)
+from src.services.civic_draft_workflow import CivicDraftPreviewRequest, CivicDraftPreviewWorkflow
 
 _MAX_ISSUE = 5_000
 _MAX_DRAFT = 8_000
 
-
-def _request(data: dict) -> CivicDraftPreviewRequest:
+def request_from_transient_draft(data: dict) -> CivicDraftPreviewRequest:
     return CivicDraftPreviewRequest(
         template_id=data["template_id"],
         issue=data["issue"],
@@ -44,13 +36,6 @@ def _request(data: dict) -> CivicDraftPreviewRequest:
     )
 
 
-def _type_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(item.title, callback_data=f"civicdraft:type:{item.template_id}")]
-        for item in list_templates(language="en")
-    ])
-
-
 def _result_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
         InlineKeyboardButton(
@@ -59,96 +44,6 @@ def _result_keyboard() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton("Discard", callback_data="civicdraft:cancel"),
     ]])
-
-
-async def start_civic_draft(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Begin a separate, temporary draft flow without changing a Case in progress."""
-    message = update.effective_message
-    user = update.effective_user
-    if message is None or user is None:
-        return
-    clear_ephemeral_civic_draft(user.id)
-    get_session(user.id).pop("ai_draft_template", None)
-    set_state(user.id, WAITING_FOR_CIVIC_DRAFT_TYPE)
-    await message.reply_text(
-        "Choose a reusable civic document format. This is a separate preview flow; "
-        "it does not create or change a Case.",
-        reply_markup=_type_keyboard(),
-    )
-
-
-async def handle_civic_draft_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    """Handle template selection, explicit remote-AI consent or discard."""
-    query = update.callback_query
-    if query is None:
-        return
-    user = query.from_user
-    await query.answer()
-    data = str(query.data or "")
-    session = get_session(user.id)
-
-    if data.startswith("civicdraft:type:"):
-        template_id = data.split(":", 2)[2]
-        try:
-            template = get_template(template_id)
-        except LookupError:
-            await query.message.reply_text("That template is not available. Use /ai_draft to restart.")
-            return
-        clear_ephemeral_civic_draft(user.id)
-        session["ai_draft_template"] = template.template_id
-        set_ephemeral_civic_draft(user.id, {
-            "template_id": template.template_id,
-            "issue": "",
-            "subject": "",
-            "existing_draft": "",
-            "jurisdiction": "",
-            "requested_documents": [],
-        })
-        set_state(user.id, WAITING_FOR_CIVIC_DRAFT_ISSUE)
-        await query.message.reply_text(
-            f"Selected: {template.title}\n\nDescribe the issue or purpose in your own words. "
-            "Your input is kept in short-lived process memory for this draft flow only."
-        )
-        return
-
-    if data == "civicdraft:cancel":
-        clear_ephemeral_civic_draft(user.id)
-        session.pop("ai_draft_template", None)
-        set_state(user.id, COMPLETED)
-        await query.message.reply_text("Draft flow discarded. Its transient input was cleared.")
-        return
-
-    if data == "civicdraft:ai":
-        current = get_ephemeral_civic_draft(user.id)
-        if not current:
-            set_state(user.id, COMPLETED)
-            await query.message.reply_text("This transient draft expired. Use /ai_draft to restart.")
-            return
-        links = context.application.bot_data.get("identity_link_repository")
-        try:
-            identity = identity_for_telegram_user(user.id, links=links)
-            result = CivicDraftPreviewWorkflow().preview(
-                _request(current),
-                identity=identity,
-                use_ai=True,
-                remote_processing_consent=True,
-            )
-        except (LookupError, PermissionError, ValueError):
-            clear_ephemeral_civic_draft(user.id)
-            session.pop("ai_draft_template", None)
-            set_state(user.id, COMPLETED)
-            await query.message.reply_text(
-                "Remote AI drafting is unavailable for this account. No AI request was made "
-                "unless the verified identity and capability checks passed. The transient draft was cleared."
-            )
-            return
-        await _send_draft_file(query.message, result, remote_requested=True)
-        clear_ephemeral_civic_draft(user.id)
-        session.pop("ai_draft_template", None)
-        set_state(user.id, COMPLETED)
-
 
 async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Advance only this user's TTL-bounded template-preview flow."""
@@ -224,7 +119,7 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
     await message.reply_text("Use /ai_draft to begin or continue the civic-draft preview.")
 
 
-async def _send_draft_file(message, result: dict, *, remote_requested: bool) -> None:
+async def send_draft_preview(message, result: dict, *, remote_requested: bool) -> None:
     """Send a bounded text artifact as an ephemeral preview, never as submission."""
     body = str(result["draft_body"])
     if len(body) > 20_000:
