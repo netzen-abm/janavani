@@ -1,0 +1,156 @@
+from src.access.capability_scope import CapabilityDataScope
+from src.identity.context import IdentityContext
+from src.identity.principal import Principal
+from src.services.civic_draft_workflow import (
+    CivicDraftPreviewRequest,
+    CivicDraftPreviewWorkflow,
+)
+
+
+class FakeAgent:
+    provider_id = "openrouter"
+
+    def __init__(self, result=None):
+        self.calls = []
+        self.result = result or {
+            "status": "available",
+            "ai_used": True,
+            "structured_draft": {
+                "subject": "AI suggested subject",
+                "proposal_or_notice": "Please inspect and provide a written response.",
+                "part_i_interrogatories": ["Which office is responsible?"],
+                "requested_conditions": ["Please provide a status update."],
+                "remedies_reserved": [],
+            },
+        }
+
+    def remote_consent_scope(self, *, location_code=None):
+        return CapabilityDataScope(
+            capability_id="civic:ai-draft",
+            purpose="civic_document_drafting",
+            approved_fields=frozenset({"citizen_issue"}),
+            provider=self.provider_id,
+            processing_mode="remote_model",
+        )
+
+    def draft_legal_document(self, issue, **kwargs):
+        self.calls.append((issue, kwargs))
+        return self.result
+
+
+def _identity(*capabilities):
+    return IdentityContext(
+        principal=Principal(
+            principal_id="draft-preview-citizen",
+            interface="test",
+            capabilities=frozenset(capabilities),
+        )
+    )
+
+
+def test_complaint_preview_is_deterministic_and_never_persisted():
+    workflow = CivicDraftPreviewWorkflow(agent=FakeAgent())
+    result = workflow.preview(CivicDraftPreviewRequest(
+        template_id="complaint.general",
+        issue="The public streetlight has not worked for three nights.",
+    ))
+
+    assert result["template_version"] == 1
+    assert result["ai_used"] is False
+    assert result["persistence"] == "not_persisted"
+    assert result["submission"] == "not_submitted"
+    assert "The public streetlight has not worked for three nights." in result["draft_body"]
+
+
+def test_rti_requires_jurisdiction_and_existing_records():
+    workflow = CivicDraftPreviewWorkflow(agent=FakeAgent())
+    request = CivicDraftPreviewRequest(
+        template_id="rti.records",
+        issue="Please provide records about a road repair.",
+    )
+    try:
+        workflow.preview(request)
+        assert False, "RTI template must require jurisdiction and requested records"
+    except ValueError as exc:
+        assert "jurisdiction" in str(exc).lower()
+
+    request = CivicDraftPreviewRequest(
+        template_id="rti.records",
+        issue="Please provide records about a road repair.",
+        jurisdiction="Kerala State public authority",
+        requested_documents=("Copies of existing work orders",),
+    )
+    result = workflow.preview(request)
+    assert "Existing records requested" in result["draft_body"]
+    assert "not a request for a newly created explanation" in result["draft_body"]
+
+
+def test_ai_is_not_called_without_explicit_remote_processing_consent():
+    agent = FakeAgent()
+    result = CivicDraftPreviewWorkflow(agent=agent).preview(
+        CivicDraftPreviewRequest(
+            template_id="complaint.general",
+            issue="The road needs repair.",
+        ),
+        identity=_identity("civic:ai-draft"),
+        use_ai=True,
+        remote_processing_consent=False,
+    )
+
+    assert agent.calls == []
+    assert result["ai_status"] == "consent_required"
+    assert result["ai_used"] is False
+    assert result["persistence"] == "not_persisted"
+
+
+def test_ai_preview_uses_verified_identity_and_keeps_citizen_supplied_rti_records():
+    agent = FakeAgent()
+    result = CivicDraftPreviewWorkflow(agent=agent).preview(
+        CivicDraftPreviewRequest(
+            template_id="rti.records",
+            issue="Please provide existing road-work records.",
+            existing_draft="Please provide records and a status.",
+            jurisdiction="Kerala State public authority",
+            requested_documents=("Existing work orders for April",),
+        ),
+        identity=_identity("civic:ai-draft"),
+        use_ai=True,
+        remote_processing_consent=True,
+    )
+
+    assert len(agent.calls) == 1
+    sent_text, kwargs = agent.calls[0]
+    assert "Citizen-provided draft to improve" in sent_text
+    assert kwargs["identity"].principal.principal_id == "draft-preview-citizen"
+    assert result["ai_used"] is True
+    assert "Please inspect and provide a written response." in result["draft_body"]
+    assert "Existing work orders for April" in result["draft_body"]
+    assert "legal_framework" not in result["draft_body"]
+
+
+def test_remote_ai_without_identity_never_calls_provider_and_keeps_local_preview():
+    agent = FakeAgent()
+    result = CivicDraftPreviewWorkflow(agent=agent).preview(
+        CivicDraftPreviewRequest(
+            template_id="complaint.general",
+            issue="The drain is blocked.",
+        ),
+        use_ai=True,
+        remote_processing_consent=True,
+    )
+    assert agent.calls == []
+    assert result["ai_status"] == "identity_required"
+    assert result["ai_used"] is False
+    assert "The drain is blocked." in result["draft_body"]
+
+
+def test_unknown_template_fails_closed():
+    workflow = CivicDraftPreviewWorkflow(agent=FakeAgent())
+    try:
+        workflow.preview(CivicDraftPreviewRequest(
+            template_id="not-approved",
+            issue="An issue exists.",
+        ))
+        assert False, "Unknown template must not be guessed"
+    except LookupError:
+        pass
