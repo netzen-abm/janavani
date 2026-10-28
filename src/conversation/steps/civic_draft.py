@@ -115,11 +115,11 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         current["existing_draft"] = "" if text == "-" else text
         set_ephemeral_civic_draft(user.id, current)
         try:
-            preview = CivicDraftPreviewWorkflow().preview(_request(current))
+            preview = CivicDraftPreviewWorkflow().preview(request_from_transient_draft(current))
         except (LookupError, ValueError):
             await message.reply_text("The selected template needs more details. Use /ai_draft to restart.")
             return
-        await _send_draft_file(message, preview, remote_requested=False)
+        await send_draft_preview(message, preview, remote_requested=False)
         set_state(user.id, WAITING_FOR_CIVIC_DRAFT_CHOICE)
         return
 
