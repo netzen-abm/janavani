@@ -203,6 +203,8 @@ def test_administrative_evidence_demand_is_content_free_and_renders_reviewed_def
     assert "Part III — Rights and remedies reserved" in body
     assert "certified copies" in body
     assert "Date: [Insert date of writing]" in body
+    assert "Requested response period: [Insert a requested period" in body
+    assert "certified copies in the form prescribed" in body
     assert "Copy to: [Insert relevant oversight authority or local body" in body
     assert "The notice requests a recurring sanitation levy." in body
     assert "Kerala municipal authority" in body
