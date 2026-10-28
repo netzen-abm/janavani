@@ -154,3 +154,20 @@ def test_unknown_template_fails_closed():
         assert False, "Unknown template must not be guessed"
     except LookupError:
         pass
+
+
+def test_preview_rejects_oversized_or_blank_record_fields():
+    workflow = CivicDraftPreviewWorkflow(agent=FakeAgent())
+    with pytest.raises(ValueError, match="requested_documents exceeds drafting limits"):
+        workflow.preview(CivicDraftPreviewRequest(
+            template_id="rti.records",
+            issue="Please provide records.",
+            jurisdiction="Kerala State public authority",
+            requested_documents=("x" * 801,),
+        ))
+    with pytest.raises(ValueError, match="requested_conditions exceeds drafting limits"):
+        workflow.preview(CivicDraftPreviewRequest(
+            template_id="complaint.general",
+            issue="Please review the issue.",
+            requested_conditions=(" ",),
+        ))
