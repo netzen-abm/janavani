@@ -147,15 +147,13 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
 
         durable_inbox = getattr(request.app.state, "telegram_inbox", None)
         if durable_inbox is None:
-            # Test-only compatibility: production startup always requires encrypted durable storage.
-            try:
-                await bot_app.update_queue.put(update)
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Telegram update could not be accepted; retry delivery",
-                ) from exc
-            return {"status": "accepted"}
+            # Never acknowledge an update that has not been durably accepted.
+            # Test fixtures may omit the inbox for liveness-only checks, but a
+            # webhook delivery without durable storage must remain retryable.
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram durable inbox is unavailable; retry delivery",
+            )
 
         try:
             await asyncio.to_thread(durable_inbox.accept_encrypted, update_id, payload)
