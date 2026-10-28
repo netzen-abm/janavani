@@ -46,7 +46,7 @@ def test_ai_draft_command_starts_with_template_choice_and_no_remote_call():
 
     assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_TYPE
     notice = message.reply_text.await_args.args[0]
-    assert "not saved or submitted" in notice
+    assert "not saved to a Janavani Case or submitted" in notice
     assert "encrypted processing queue for up to 24 hours" in notice
     assert "Remote AI is a separate, optional step" in notice
     buttons = message.reply_text.await_args.kwargs["reply_markup"].inline_keyboard
