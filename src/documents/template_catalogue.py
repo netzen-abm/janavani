@@ -32,7 +32,7 @@ class CivicDocumentTemplate:
     optional_fields: tuple[str, ...]
     sections: tuple[TemplateSection, ...]
     introduction: str
-    provenance: str
+    provenance: str = "Janavani structural model; verify all legal citations and procedures."
     review_status: str = "structural-only"
 
 
@@ -69,7 +69,6 @@ _TEMPLATES = (
             "This is a draft complaint based on the citizen's account. It requests "
             "verification and any corrective action warranted by established facts."
         ),
-        provenance="Janavani neutral structural template; no legal determination is made.",
     ),
     CivicDocumentTemplate(
         template_id="grievance.service",
@@ -87,7 +86,6 @@ _TEMPLATES = (
             "This is a draft grievance. The described events are the citizen's account "
             "and should be checked by the responsible office."
         ),
-        provenance="Janavani neutral structural template; procedure must be verified.",
     ),
     CivicDocumentTemplate(
         template_id="rti.records",
@@ -111,7 +109,6 @@ _TEMPLATES = (
             "a public authority. It is not a request for a newly created explanation, "
             "finding or grievance remedy. Confirm the applicable RTI procedure before use."
         ),
-        provenance="Janavani neutral structural template; legal procedure and applicability require review.",
     ),
     CivicDocumentTemplate(
         template_id="representation.general",
@@ -130,7 +127,6 @@ _TEMPLATES = (
             "Statements about legal effect remain unverified positions unless supported "
             "by applicable law and facts."
         ),
-        provenance="Janavani neutral structural template; citations must be supplied or verified.",
     ),
     CivicDocumentTemplate(
         template_id="petition.general",
@@ -148,13 +144,11 @@ _TEMPLATES = (
             "This is a structured petition draft. Confirm the recipient's jurisdiction, "
             "filing requirements, facts and supporting material before submission."
         ),
-        provenance="Janavani neutral structural template; no outcome or legal effect is guaranteed.",
     ),
 )
 
 
-class TemplateNotFoundError(LookupError):
-    """Raised when a template ID/version is not in the approved catalogue."""
+class TemplateNotFoundError(LookupError): pass
 
 
 def list_templates(*, language: str | None = None) -> tuple[CivicDocumentTemplate, ...]:
@@ -177,8 +171,7 @@ def get_template(
     locale = language.strip().lower()
     matches = [
         item for item in _TEMPLATES
-        if item.template_id == key
-        and item.language == locale
+        if item.template_id == key and item.language == locale
         and (version is None or item.version == version)
     ]
     if not matches:
