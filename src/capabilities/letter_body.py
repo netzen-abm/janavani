@@ -94,6 +94,15 @@ def compose_template_body(request: LetterDraftRequest, template) -> str:
     }
     for section in template.sections:
         value = values.get(section.field_name)
+        if section.default_items:
+            if isinstance(value, (tuple, list)):
+                # The curated, non-personal starter structure remains available;
+                # citizen-supplied items extend it without duplicating exact entries.
+                value = section.default_items + tuple(
+                    item for item in value if item not in section.default_items
+                )
+            elif not value:
+                value = section.default_items
         if not value:
             continue
         sections.extend(["", section.heading])
