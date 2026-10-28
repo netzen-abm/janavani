@@ -159,7 +159,7 @@ def get_liveness():
     return JSONResponse({"status": "alive", "surface": "dynamic-web"})
 
 
-register_pathway_routes(rt)
+register_pathway_routes(app)
 register_civic_drafting_routes(rt, client_factory=client_for_request)
 
 
