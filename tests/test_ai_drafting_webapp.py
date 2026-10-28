@@ -19,7 +19,7 @@ def test_ai_drafting_page_is_registered_and_explains_remote_processing():
     assert "Generate preview" in response.text
 
 
-def test_webapp_sends_local_preview_without_identity(monkeypatch):
+def test_webapp_sends_consented_deterministic_preview_without_identity(monkeypatch):
     import src.webapp.ai_drafting as drafting
     from src.webapp.main import app
 
@@ -34,7 +34,7 @@ def test_webapp_sends_local_preview_without_identity(monkeypatch):
                 "template_version": 1,
                 "ai_used": False,
                 "ai_status": "not_requested",
-                "message": "Preview generated locally.",
+                "message": "Deterministic server-side preview generated after explicit consent.",
                 "draft_body": "Civic complaint preview for review.",
                 "persistence": "not_persisted",
                 "submission": "not_submitted",
@@ -56,6 +56,7 @@ def test_webapp_sends_local_preview_without_identity(monkeypatch):
     assert fake.payload["use_ai"] is False
     assert fake.payload["remote_processing_consent"] is False
     assert "Civic complaint preview for review." in response.text
+    assert "Deterministic server-side preview generated after explicit consent." in response.text
     assert "AI used: No" in response.text
     assert "not saved" in response.text.lower()
 
@@ -99,7 +100,7 @@ def test_webapp_cannot_enable_remote_ai_from_raw_text_form_fields(monkeypatch):
     assert "remote AI is disabled pending privacy-safe input minimization" in response.text
 
 
-def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatch):
+def test_origin_or_forged_fields_cannot_reenable_remote_ai(monkeypatch):
     import src.webapp.ai_drafting as drafting
     from src.webapp.main import app
 
@@ -113,7 +114,7 @@ def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatc
                 "ai_used": False,
                 "ai_status": "not_requested",
                 "message": "Remote AI is disabled pending privacy-safe input minimization.",
-                "draft_body": "Local-only preview.",
+                "draft_body": "Deterministic server-side preview.",
                 "persistence": "not_persisted",
                 "submission": "not_submitted",
             }
