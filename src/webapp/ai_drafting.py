@@ -19,7 +19,11 @@ def _draft_form() -> Div:
     return Div(
         H2("Draft a civic document"),
         P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
-        P("Your text is sent to Janavani's preview API for transient processing; the local-template option does not call the AI provider. Reusable starter questions and record requests are editable in the final preview."),
+        P(
+            "Your text is sent to Janavani's preview API for transient processing; the local-template "
+            "option does not call the AI provider. Reusable starter questions and record requests are "
+            "editable in the final preview."
+        ),
 
         Form(action="/ai-drafting/preview", method="post")(
             Label("Document format"),
