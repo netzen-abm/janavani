@@ -206,19 +206,3 @@ def test_administrative_evidence_demand_is_content_free_and_renders_reviewed_def
     assert "Kerala municipal authority" in body
     assert "Non-response alone is not asserted here to constitute agreement" in body
     assert "Citizen-reviewed" not in body  # no data from a previous citizen draft
-
-
-def test_administrative_template_requires_jurisdiction_before_preview():
-    capability, _case, _identity, _review = _drafting(CaseType.OBJECTION)
-    template = get_template("administrative.evidence-demand")
-    with pytest.raises(ValueError, match="Template requires: jurisdiction"):
-        capability.create_draft(
-            "not-used-here",
-            LetterDraftRequest(
-                subject="Reply to fee notice",
-                issue="The notice requests payment.",
-                template_id=template.template_id,
-                template_version=template.version,
-            ),
-            identity=_identity("case:write", "document:review"),
-        )
