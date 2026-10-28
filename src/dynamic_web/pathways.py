@@ -83,10 +83,10 @@ def pathway_form() -> Div:
     )
 
 
-def register_pathway_routes(rt) -> None:
+def register_pathway_routes(app) -> None:
     """Register the separate GET/POST pathway endpoints on the Dynamic Web app."""
 
-    @rt("/pathway")
+    @app.get("/pathway")
     def get_pathway():
         return Titled(
             "JanaVani — Choose a Civic Pathway",
@@ -96,7 +96,7 @@ def register_pathway_routes(rt) -> None:
             ),
         )
 
-    @rt("/pathway")
+    @app.post("/pathway")
     def post_pathway(purpose: str):
         pathway = PATHWAYS.get(purpose)
         if pathway is None:
