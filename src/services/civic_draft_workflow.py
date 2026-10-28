@@ -89,7 +89,7 @@ class CivicDraftPreviewWorkflow:
         remedies = request.remedies_reserved
         ai_used = False
         ai_status = "not_requested"
-        message = "Template preview created locally; it has not been saved or submitted."
+        message = "Preview generated from the selected reusable template; it has not been saved or submitted."
 
         if use_ai and not remote_processing_consent:
             ai_status = "consent_required"
