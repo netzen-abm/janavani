@@ -102,8 +102,7 @@ _TEMPLATES = (
             TemplateSection("issue", "Context for the records request"),
             TemplateSection("proposal_or_notice", "Optional wording for review (not a new information demand)"),
             TemplateSection("requested_documents", "Existing records requested"),
-            TemplateSection("references", "Reference numbers or public sources"),
-            TemplateSection("jurisdiction", "Public authority and jurisdiction"),
+            TemplateSection("references", "Reference numbers or public sources"), TemplateSection("jurisdiction", "Public authority and jurisdiction"),
         ),
         introduction=(
             "This draft requests existing records or information that may be held by "
