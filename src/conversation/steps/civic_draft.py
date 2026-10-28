@@ -16,7 +16,6 @@ from conversation.constants import (
     WAITING_FOR_CIVIC_DRAFT_TYPE,
 )
 from conversation.session import (
-    clear_ephemeral_civic_draft,
     get_ephemeral_civic_draft,
     set_ephemeral_civic_draft,
 )
