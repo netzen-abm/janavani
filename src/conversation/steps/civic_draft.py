@@ -13,6 +13,7 @@ from conversation.constants import (
     WAITING_FOR_CIVIC_DRAFT_ISSUE,
     WAITING_FOR_CIVIC_DRAFT_JURISDICTION,
     WAITING_FOR_CIVIC_DRAFT_RECORDS,
+    WAITING_FOR_CIVIC_DRAFT_TYPE,
 )
 from conversation.session import (
     clear_ephemeral_civic_draft,
