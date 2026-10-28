@@ -1,0 +1,86 @@
+from fastapi.testclient import TestClient
+
+
+def test_ai_drafting_page_is_registered_and_explains_remote_processing():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/ai-drafting")
+    assert response.status_code == 200
+    assert "Draft a civic document" in response.text
+    assert "RTI — existing records" in response.text
+    assert "configured remote AI provider" in response.text
+    assert "Generate preview" in response.text
+
+
+def test_webapp_sends_local_preview_without_identity(monkeypatch):
+    import src.webapp.ai_drafting as drafting
+    from src.webapp.main import app
+
+    class Client:
+        def __init__(self):
+            self.payload = None
+
+        def preview_civic_draft(self, payload):
+            self.payload = payload
+            return {
+                "template_id": payload["template_id"],
+                "template_version": 1,
+                "ai_used": False,
+                "ai_status": "not_requested",
+                "message": "Preview generated locally.",
+                "draft_body": "Civic complaint preview for review.",
+                "persistence": "not_persisted",
+                "submission": "not_submitted",
+            }
+
+    fake = Client()
+    monkeypatch.setattr(drafting, "client_for_request", lambda request: fake)
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "complaint.general",
+            "issue": "The drain is blocked.",
+            "requested_documents": "",
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake.payload["use_ai"] is False
+    assert fake.payload["remote_processing_consent"] is False
+    assert "Civic complaint preview for review." in response.text
+    assert "AI used: No" in response.text
+    assert "not saved" in response.text.lower()
+
+
+def test_webapp_remote_ai_requires_explicit_checkbox_and_reports_status(monkeypatch):
+    import src.webapp.ai_drafting as drafting
+    from src.webapp.main import app
+
+    class Client:
+        def preview_civic_draft(self, payload):
+            assert payload["use_ai"] is True
+            assert payload["remote_processing_consent"] is True
+            return {
+                "template_id": "representation.general",
+                "template_version": 1,
+                "ai_used": False,
+                "ai_status": "identity_required",
+                "message": "A verified identity is required for remote AI drafting.",
+                "draft_body": "Deterministic preview remains available.",
+                "persistence": "not_persisted",
+                "submission": "not_submitted",
+            }
+
+    monkeypatch.setattr(drafting, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "representation.general",
+            "issue": "Please consider the attached citizen representation.",
+            "use_ai": "yes",
+            "remote_processing_consent": "yes",
+        },
+    )
+    assert response.status_code == 200
+    assert "identity_required" in response.text
+    assert "Deterministic preview remains available." in response.text
