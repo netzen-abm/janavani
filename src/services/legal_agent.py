@@ -67,7 +67,8 @@ class JanavaniLegalAgent:
         """Draft structured civic wording, not legal advice or verified facts.
 
         Remote AI requires a verified identity, capability authorization and
-        exact processing consent. Outputs require source checks and citizen review.
+        exact processing consent. Outputs need source verification and must be
+        reviewed by the citizen.
         """
         issue = citizen_issue.strip()
         if not issue:
