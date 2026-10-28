@@ -7,7 +7,8 @@ def test_ai_drafting_page_is_registered_and_explains_remote_processing():
     response = TestClient(app).get("/ai-drafting")
     assert response.status_code == 200
     assert "Draft a civic document" in response.text
-    assert "RTI — existing records" in response.text
+    assert "RTI application — request for existing records" in response.text
+    assert "Administrative notice reply — demand for documentary evidence" in response.text
     assert "configured remote AI provider" in response.text
     assert "Generate preview" in response.text
 
@@ -120,3 +121,39 @@ def test_cross_origin_remote_ai_request_fails_closed_to_local_preview(monkeypatc
     assert response.status_code == 200
     assert "consent_required" in response.text
     assert "Local-only preview." in response.text
+
+
+def test_webapp_routes_administrative_evidence_demand_through_shared_preview(monkeypatch):
+    import src.webapp.ai_drafting as drafting
+    from src.webapp.main import app
+
+    class Client:
+        def preview_civic_draft(self, payload):
+            assert payload["template_id"] == "administrative.evidence-demand"
+            assert payload["jurisdiction"] == "Kerala municipal authority"
+            assert payload["use_ai"] is False
+            return {
+                "template_id": payload["template_id"],
+                "template_version": 1,
+                "ai_used": False,
+                "ai_status": "not_requested",
+                "message": "Saved structural defaults applied.",
+                "draft_body": "Part I — Foundational and constitutional questions\nPart II — Documents and records requested",
+                "persistence": "not_persisted",
+                "submission": "not_submitted",
+            }
+
+    monkeypatch.setattr(drafting, "client_for_request", lambda request: Client())
+    response = TestClient(app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "administrative.evidence-demand",
+            "issue": "The municipality has demanded a recurring sanitation levy.",
+            "jurisdiction": "Kerala municipal authority",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Administrative notice reply — demand for documentary evidence" in response.text
+    assert "Foundational and constitutional questions" in response.text
+    assert "Documents and records requested" in response.text
