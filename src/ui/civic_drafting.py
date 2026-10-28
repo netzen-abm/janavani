@@ -6,10 +6,13 @@ remains in the canonical API.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import httpx
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Textarea, Titled
+from fasthtml.common import (
+    A, Button, Div, Form, H2, Input, Label, Option, P, Select, Textarea, Titled,
+)
 from starlette.requests import Request
 
 from src.documents.template_catalogue import list_templates

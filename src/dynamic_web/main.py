@@ -6,7 +6,9 @@ module boundaries; the canonical API owns identity, drafting policy and data.
 """
 from __future__ import annotations
 
-from fasthtml.common import A, Div, H1, H2, H3, Meta, P, Style, Titled, fast_app
+from fasthtml.common import (
+    A, Div, H1, H2, H3, Meta, P, Style, Titled, fast_app,
+)
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 

@@ -1,12 +1,12 @@
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
-    fast_app,
+    Input, Label, P, Style, Textarea, Titled, fast_app,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from src.webapp.services.api_client import client_for_request
+
 from src.webapp.ai_drafting import register_ai_drafting_routes
+from src.webapp.services.api_client import client_for_request
 
 # Initialize the stateless web interface client
 app, rt = fast_app(

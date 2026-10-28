@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from fasthtml.common import A, Button, Div, Form, H1, H2, H3, Label, Option, P, Select, Titled
+from fasthtml.common import (
+    A, Button, Div, Form, H1, H2, H3, Label, Option, P, Select, Titled,
+)
 
 from src.documents.template_catalogue import get_template
 

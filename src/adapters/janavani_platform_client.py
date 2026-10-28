@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 
+
 class JanavaniWebAPIClient:
     """Call canonical civic endpoints without duplicating domain logic."""
 
