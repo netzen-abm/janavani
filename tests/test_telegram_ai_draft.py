@@ -1,4 +1,6 @@
 import asyncio
+
+import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -221,3 +223,58 @@ def test_draft_callback_rejects_group_chat_before_mutating_state():
     assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_TYPE
     assert get_ephemeral_civic_draft(user_id) is None
     assert "only in a private chat" in message.reply_text.await_args.args[0]
+
+
+def test_remote_ai_exception_erases_transient_content(monkeypatch):
+    user_id = 88006
+    _reset(user_id)
+    from conversation.session import set_ephemeral_civic_draft
+
+    set_ephemeral_civic_draft(user_id, {
+        "template_id": "complaint.general",
+        "issue": "The public drain is blocked.",
+        "subject": "",
+        "existing_draft": "",
+        "jurisdiction": "",
+        "requested_documents": [],
+    })
+    set_state(user_id, WAITING_FOR_CIVIC_DRAFT_CHOICE)
+    identity = IdentityContext(
+        principal=Principal(
+            principal_id="linked-citizen",
+            identity_mode=__import__("src.identity.principal", fromlist=["IdentityMode"]).IdentityMode.AUTHENTICATED,
+            interface="telegram",
+            authentication_method=__import__("src.identity.principal", fromlist=["AuthenticationMethod"]).AuthenticationMethod.WEB_TELEGRAM_PAIRING,
+        )
+    )
+    monkeypatch.setattr(
+        ai_command, "identity_for_telegram_user",
+        lambda user_id, links=None: identity,
+    )
+
+    class FailingWorkflow:
+        def preview(self, request, **kwargs):
+            raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(ai_command, "CivicDraftPreviewWorkflow", FailingWorkflow)
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private"),
+        reply_text=AsyncMock(),
+    )
+    query = SimpleNamespace(
+        data="civicdraft:ai",
+        from_user=SimpleNamespace(id=user_id),
+        message=message,
+        answer=AsyncMock(),
+    )
+    context = SimpleNamespace(application=SimpleNamespace(bot_data={
+        "identity_link_repository": object(),
+    }))
+
+    with pytest.raises(RuntimeError, match="provider unavailable"):
+        asyncio.run(ai_command.handle_civic_draft_callback(
+            SimpleNamespace(callback_query=query), context
+        ))
+
+    assert get_ephemeral_civic_draft(user_id) is None
+    assert get_state(user_id) == COMPLETED
