@@ -18,7 +18,7 @@ from conversation.state import get_state, set_state, user_states
 from src.commands import ai_draft as ai_command
 from src.conversation.steps import civic_draft as draft_step
 from src.identity.context import IdentityContext
-from src.identity.principal import Principal
+from src.identity.principal import AuthenticationMethod, IdentityMode, Principal
 
 
 def _update(user_id: int, text: str = "", *, chat_type: str = "private"):
@@ -242,9 +242,9 @@ def test_remote_ai_exception_erases_transient_content(monkeypatch):
     identity = IdentityContext(
         principal=Principal(
             principal_id="linked-citizen",
-            identity_mode=__import__("src.identity.principal", fromlist=["IdentityMode"]).IdentityMode.AUTHENTICATED,
+            identity_mode=IdentityMode.AUTHENTICATED,
             interface="telegram",
-            authentication_method=__import__("src.identity.principal", fromlist=["AuthenticationMethod"]).AuthenticationMethod.WEB_TELEGRAM_PAIRING,
+            authentication_method=AuthenticationMethod.WEB_TELEGRAM_PAIRING,
         )
     )
     monkeypatch.setattr(
