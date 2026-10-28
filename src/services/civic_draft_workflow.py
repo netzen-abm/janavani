@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.access.capability_scope import CapabilityDataScope
 from src.capabilities.letter_body import compose_template_body
 from src.capabilities.letter_drafting import LetterDraftRequest
 from src.documents.template_catalogue import get_template
