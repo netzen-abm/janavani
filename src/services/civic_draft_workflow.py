@@ -1,7 +1,8 @@
-"""Shared deterministic civic-draft preview and optional AI-improvement workflow.
+"""Shared deterministic civic-draft preview workflow.
 
-The workflow is used by independent surfaces. It never saves a draft or sends it
-to an authority. Model output is a proposal; the citizen remains the editor.
+The workflow is used by independent surfaces and never saves or submits a draft.
+Remote AI is fail-closed for free-text narratives until a tested input-minimization
+boundary is available. Citizens remain responsible for reviewing the generated text.
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ class CivicDraftPreviewRequest:
 
 
 class CivicDraftPreviewWorkflow:
-    """Compose a citizen-reviewed preview using the canonical template catalogue."""
+    """Compose a citizen-reviewed preview; never transmit raw narrative to remote AI."""
 
     def __init__(self, agent: JanavaniLegalAgent | None = None) -> None:
         self._agent = agent or JanavaniLegalAgent()
