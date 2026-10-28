@@ -13,6 +13,18 @@ services:
         value: meta-llama/llama-3.1-70b-instruct
 
   - type: web
+    name: janavani-dynamic-web
+    env: python
+    # Independent public presentation runtime; it consumes the canonical API contract.
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.dynamic_web.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /liveness
+    envVars:
+      - key: JANAVANI_WEB_API_URL
+        sync: false
+
+  - type: web
     name: janavani-telegram-webhook
     env: python
     # Free instances may cold-start. Use an always-on plan before production launch.
