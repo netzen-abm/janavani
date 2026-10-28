@@ -15,7 +15,10 @@ _TEMPLATES = tuple(
 )
 
 
-def _draft_form() -> Div:
+def _draft_form(selected_template_id: str = "complaint.general") -> Div:
+    allowed_ids = {template_id for template_id, _ in _TEMPLATES}
+    if selected_template_id not in allowed_ids:
+        selected_template_id = "complaint.general"
     return Div(
         H2("Draft a civic document"),
         P("Choose a format, describe the issue, and generate an editable preview. The preview is not saved or submitted."),
@@ -28,7 +31,7 @@ def _draft_form() -> Div:
         Form(action="/ai-drafting/preview", method="post")(
             Label("Document format"),
             Select(name="template_id")(
-                *(Option(label, value=value, selected=value == "complaint.general") for value, label in _TEMPLATES)
+                *(Option(label, value=value, selected=value == selected_template_id) for value, label in _TEMPLATES)
             ),
             Label("Describe the issue or purpose"),
             Textarea(name="issue", rows=5, required=True, maxlength=5000, placeholder="Describe the issue in your own words."),
@@ -61,8 +64,12 @@ def register_ai_drafting_routes(rt) -> None:
     """Register the interactive template-first, AI-optional drafting journey."""
 
     @rt("/ai-drafting")
-    def get_ai_drafting():
-        return Titled("Janavani — Civic Document Drafting", _draft_form())
+    def get_ai_drafting(request: Request):
+        requested_template = request.query_params.get("template_id", "complaint.general")
+        allowed_ids = {template_id for template_id, _ in _TEMPLATES}
+        if requested_template not in allowed_ids:
+            requested_template = "complaint.general"
+        return Titled("Janavani — Civic Document Drafting", _draft_form(requested_template))
 
     @rt("/ai-drafting/preview")
     def post_ai_drafting(
