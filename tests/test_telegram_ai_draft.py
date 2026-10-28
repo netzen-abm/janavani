@@ -52,7 +52,7 @@ def test_ai_draft_command_starts_with_template_choice_and_no_remote_call():
     assert "not saved to a Janavani Case or submitted" in notice
     assert "24-hour expiry window" in notice
     assert "encrypted payloads may remain until cleanup resumes" in notice
-    assert "Remote AI is separate" in notice
+    assert "Remote AI improvement is temporarily disabled" in notice
     buttons = message.reply_text.await_args.kwargs["reply_markup"].inline_keyboard
     callback_data = {button.callback_data for row in buttons for button in row}
     assert "civicdraft:type:rti.records" in callback_data
@@ -122,7 +122,7 @@ def test_rti_flow_collects_authority_and_existing_records_before_preview(monkeyp
     ]
 
 
-def test_remote_ai_callback_requires_explicit_click_and_clears_transient_content(monkeypatch):
+def test_legacy_remote_ai_callback_fails_closed_and_clears_transient_content(monkeypatch):
     user_id = 88003
     _reset(user_id)
     from conversation.session import set_ephemeral_civic_draft
@@ -135,33 +135,7 @@ def test_remote_ai_callback_requires_explicit_click_and_clears_transient_content
         "requested_documents": [],
     })
     set_state(user_id, WAITING_FOR_CIVIC_DRAFT_CHOICE)
-    identity = IdentityContext(
-        principal=Principal(
-            principal_id="linked-citizen",
-            interface="telegram",
-            capabilities=frozenset({"civic:ai-draft"}),
-        )
-    )
-    monkeypatch.setattr(
-        ai_command,
-        "identity_for_telegram_user",
-        lambda user_id, links=None: identity,
-    )
 
-    class FakeWorkflow:
-        def preview(self, request, **kwargs):
-            assert kwargs["identity"] is identity
-            assert kwargs["use_ai"] is True
-            assert kwargs["remote_processing_consent"] is True
-            return {
-                "template_id": request.template_id,
-                "template_version": 1,
-                "draft_body": "AI-improved wording, for citizen review.",
-                "ai_used": True,
-                "ai_status": "available",
-            }
-
-    monkeypatch.setattr(ai_command, "CivicDraftPreviewWorkflow", FakeWorkflow)
     message = SimpleNamespace(
         chat=SimpleNamespace(type="private"),
         reply_text=AsyncMock(),
@@ -181,9 +155,11 @@ def test_remote_ai_callback_requires_explicit_click_and_clears_transient_content
         SimpleNamespace(callback_query=query), context
     ))
 
-    message.reply_document.assert_awaited_once()
-    caption = message.reply_document.await_args.kwargs["caption"]
-    assert "AI used: Yes" in caption
+    message.reply_text.assert_awaited_once()
+    notice = message.reply_text.await_args.args[0]
+    assert "temporarily disabled" in notice
+    assert "No issue narrative or pasted draft was sent" in notice
+    message.reply_document.assert_not_awaited()
     assert get_ephemeral_civic_draft(user_id) is None
     assert get_state(user_id) == COMPLETED
 
@@ -226,7 +202,7 @@ def test_draft_callback_rejects_group_chat_before_mutating_state():
     assert "only in a private chat" in message.reply_text.await_args.args[0]
 
 
-def test_remote_ai_exception_erases_transient_content(monkeypatch):
+def test_legacy_remote_ai_callback_does_not_retain_transient_content_when_repeated():
     user_id = 88006
     _reset(user_id)
     from conversation.session import set_ephemeral_civic_draft
@@ -240,27 +216,10 @@ def test_remote_ai_exception_erases_transient_content(monkeypatch):
         "requested_documents": [],
     })
     set_state(user_id, WAITING_FOR_CIVIC_DRAFT_CHOICE)
-    identity = IdentityContext(
-        principal=Principal(
-            principal_id="linked-citizen",
-            identity_mode=IdentityMode.AUTHENTICATED,
-            interface="telegram",
-            authentication_method=AuthenticationMethod.WEB_TELEGRAM_PAIRING,
-        )
-    )
-    monkeypatch.setattr(
-        ai_command, "identity_for_telegram_user",
-        lambda user_id, links=None: identity,
-    )
-
-    class FailingWorkflow:
-        def preview(self, request, **kwargs):
-            raise RuntimeError("provider unavailable")
-
-    monkeypatch.setattr(ai_command, "CivicDraftPreviewWorkflow", FailingWorkflow)
     message = SimpleNamespace(
         chat=SimpleNamespace(type="private"),
         reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
     )
     query = SimpleNamespace(
         data="civicdraft:ai",
@@ -268,17 +227,16 @@ def test_remote_ai_exception_erases_transient_content(monkeypatch):
         message=message,
         answer=AsyncMock(),
     )
-    context = SimpleNamespace(application=SimpleNamespace(bot_data={
-        "identity_link_repository": object(),
-    }))
+    context = SimpleNamespace(application=SimpleNamespace(bot_data={}))
 
-    with pytest.raises(RuntimeError, match="provider unavailable"):
-        asyncio.run(ai_command.handle_civic_draft_callback(
-            SimpleNamespace(callback_query=query), context
-        ))
+    asyncio.run(ai_command.handle_civic_draft_callback(
+        SimpleNamespace(callback_query=query), context
+    ))
 
     assert get_ephemeral_civic_draft(user_id) is None
     assert get_state(user_id) == COMPLETED
+    assert "temporarily disabled" in message.reply_text.await_args.args[0]
+    message.reply_document.assert_not_awaited()
 
 
 def test_administrative_evidence_demand_telegram_flow_collects_jurisdiction(monkeypatch):
