@@ -111,7 +111,6 @@ def compose_template_body(request: LetterDraftRequest, template) -> str:
             if section.field_name == "part_i_interrogatories":
                 sections.extend(f"{index}. {item}" for index, item in enumerate(value, 1))
             elif section.field_name == "document_header":
-                sections.extend(item.splitlines() for item in ())
                 sections.extend(line for item in value for line in item.splitlines())
             else:
                 sections.extend(f"- {item}" for item in value)
