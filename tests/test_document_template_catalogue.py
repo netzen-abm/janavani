@@ -67,6 +67,15 @@ def _drafting(case_type: CaseType):
     return LetterDraftingCapability(action, review), case, identity, review
 
 
+def test_template_default_items_are_always_immutable_tuples():
+    for template in list_templates():
+        for section in template.sections:
+            assert isinstance(section.default_items, tuple), (
+                template.template_id, section.field_name, type(section.default_items).__name__
+            )
+            assert all(isinstance(item, str) for item in section.default_items)
+
+
 def test_catalogue_contains_versioned_structural_models_not_citizen_values():
     templates = list_templates(language="en")
     ids = {item.template_id for item in templates}
