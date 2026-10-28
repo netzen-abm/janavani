@@ -85,3 +85,11 @@ def purge_expired_ephemeral_issues() -> int:
             session["_ephemeral_issue_expires"] = 0.0
             purged += 1
     return purged
+
+async def run_ephemeral_issue_cleanup() -> None:
+    """Periodically erase expired issue text while the Telegram webhook is live."""
+    import asyncio
+
+    while True:
+        await asyncio.sleep(30)
+        purge_expired_ephemeral_issues()
