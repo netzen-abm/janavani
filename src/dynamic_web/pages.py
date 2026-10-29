@@ -5,7 +5,7 @@ not own legal rules, identity, persistence, or drafting orchestration.
 """
 from __future__ import annotations
 
-from fasthtml.common import A, Div, H1, H2, H3, Img, P, Titled
+from fasthtml.common import A, Div, H1, H2, H3, Img, P, Title
 
 from src.dynamic_web.pathways import pathway_form, site_nav
 
@@ -16,8 +16,8 @@ def register_public_pages(rt) -> None:
     @rt("/")
     def get_home():
         """Render the public landing page without requiring the API or Telegram."""
-        return Titled(
-            "JanaVani — The Infrastructure of Citizen Voice",
+        return (
+            Title("JanaVani — The Infrastructure of Citizen Voice"),
             Div(
                 site_nav(),
                 Div(
@@ -125,8 +125,8 @@ def register_public_pages(rt) -> None:
     @rt("/privacy")
     def get_privacy():
         """Explain processing boundaries in citizen-facing language."""
-        return Titled(
-            "JanaVani — Processing and Privacy",
+        return (
+            Title("JanaVani — Processing and Privacy"),
             Div(
                 site_nav(),
                 Div(

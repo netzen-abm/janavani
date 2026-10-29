@@ -9,6 +9,9 @@ def test_dynamic_website_is_a_separate_product_runtime_with_preamble_first():
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert "WE, THE PEOPLE OF INDIA" in response.text
+    assert response.text.count("<h1") == 1
+    assert 'href="/favicon.svg"' in response.text
+    assert 'src="/brand-assets/brand/janavani-mark"' in response.text
     assert "Find a civic pathway" in response.text
     assert "Draft a civic document" in response.text
     assert "/brand-assets/illustrations/preamble-of-india" in response.text
@@ -133,8 +136,7 @@ def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert response.headers["cache-control"] == "public, max-age=86400"
-    assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
-    assert 'aria-label="Janavani"' in response.text
+    assert '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="702" height="694">' in response.text
 
 
 def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():

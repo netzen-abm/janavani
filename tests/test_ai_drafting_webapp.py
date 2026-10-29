@@ -8,7 +8,25 @@ def test_webapp_serves_the_shared_packaged_brand_mark():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert response.headers["cache-control"] == "public, max-age=86400"
-    assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
+    assert '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="702" height="694">' in response.text
+
+
+
+def test_webapp_home_keeps_styles_in_head_and_uses_the_selected_brand():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/")
+    assert response.status_code == 200
+    assert response.text.count("<h1") == 1
+    assert response.text.index("body { padding: 2rem 0;") < response.text.index("</head>")
+    assert 'src="/brand-assets/brand/janavani-mark"' in response.text
+    assert 'href="/favicon.svg"' in response.text
+    assert 'class="container"' in response.text
+
+    favicon = TestClient(app).get("/favicon.svg")
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"].startswith("image/svg+xml")
+    assert len(favicon.content) > 100_000
 
 
 def test_webapp_serves_imported_webp_illustrations():

@@ -6,7 +6,7 @@ module boundaries; the canonical API owns identity, drafting policy and data.
 """
 from __future__ import annotations
 
-from fasthtml.common import Meta, Style, fast_app
+from fasthtml.common import Link, Meta, Style, fast_app
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -21,6 +21,7 @@ from src.ui.civic_drafting import register_civic_drafting_routes
 app, rt = fast_app(
     hdrs=(
         Style(DYNAMIC_WEB_STYLES),
+        Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
         Meta(
             name="description",
             content=(

@@ -56,8 +56,8 @@ def site_nav():
                 Img(
                     src="/brand-assets/brand/janavani-mark",
                     alt="",
-                    width="34",
-                    height="34",
+                    width="52",
+                    height="52",
                 ),
                 "JANAVANI",
                 href="/",

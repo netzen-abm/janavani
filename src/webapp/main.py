@@ -1,6 +1,6 @@
 from fasthtml.common import (
     A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Img,
-    Input, Label, P, Style, Textarea, Titled, fast_app,
+    Input, Label, Link, P, Style, Textarea, Title, Titled, fast_app,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -14,22 +14,23 @@ app, rt = fast_app(
     hdrs=(
         Style("""
             body { padding: 2rem 0; background-color: #f8f9fa; }
-            .container { max-width: 900px; }
+            .container { width: min(100% - 2rem, 960px); margin-inline: auto; }
             .header-banner { text-align: center; margin-bottom: 3rem; }
             .brand-lockup { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-bottom: .75rem; }
-            .brand-lockup img { display: block; width: 42px; height: 42px; }
+            .brand-lockup img { display: block; width: 64px; height: 64px; object-fit: contain; flex: 0 0 64px; }
             .brand-lockup h1 { margin: 0; }
             .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
-        """)
+        """),
+        Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
     )
 )
 
 @rt("/")
 def get():
     """Render the first-class Janavani WebApp civic Case workspace."""
-    return Titled(
-        "🇮🇳 Janavani — Citizen Action Hub",
+    return (
+        Title("🇮🇳 Janavani — Citizen Action Hub"),
         Div(
             Div(
                 Div(
@@ -55,6 +56,7 @@ def get():
                 ),
                 cls="card",
             ),
+            cls="container",
         ),
     )
 
