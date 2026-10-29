@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse
 from src.adapters.janavani_platform_client import client_for_request
 from src.dynamic_web.pathways import pathway_form, register_pathway_routes, site_nav
 from src.dynamic_web.styles import DYNAMIC_WEB_STYLES
+from src.ui.brand_assets import register_brand_assets
 from src.ui.civic_drafting import register_civic_drafting_routes
 
 
@@ -162,6 +163,7 @@ def get_liveness():
 
 
 register_pathway_routes(app)
+register_brand_assets(rt)
 register_civic_drafting_routes(rt, client_factory=client_for_request)
 
 
