@@ -33,7 +33,7 @@ def get():
         Div(
             Div(
                 Div(
-                    Img(src="/assets/brand/janavani-mark.svg", alt="", width="42", height="42"),
+                    Img(src="/brand-assets/brand/janavani-mark.svg", alt="", width="42", height="42"),
                     H1("JANAVANI"),
                     cls="brand-lockup",
                 ),
