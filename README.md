@@ -187,4 +187,4 @@ GitHub is the primary engineering workspace and source for current implementatio
 
 ## License
 
-The existing Janavani platform code remains under the repository's GNU GPL version 3 licence; see `LICENSE`. Component-level exceptions and imported-asset provenance are documented in [`docs/architecture/LICENSING_AND_ASSET_POLICY.md`](docs/architecture/LICENSING_AND_ASSET_POLICY.md) and [`src/ui/assets/brand/README.md`](src/ui/assets/brand/README.md). Do not infer that every dependency, government record, dataset, image, font or brand/trademark is licensed by JanaVani's root code licence.
+The existing Janavani platform code remains under the repository's GNU GPL version 3 licence; see `LICENSE`. Component-level exceptions are documented in [`docs/architecture/LICENSING_AND_ASSET_POLICY.md`](docs/architecture/LICENSING_AND_ASSET_POLICY.md); imported asset provenance is recorded in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`src/ui/assets/brand/README.md`](src/ui/assets/brand/README.md). Do not infer that every dependency, government record, dataset, image, font or brand/trademark is licensed by JanaVani's root code licence.
