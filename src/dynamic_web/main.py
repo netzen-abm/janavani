@@ -7,7 +7,7 @@ module boundaries; the canonical API owns identity, drafting policy and data.
 from __future__ import annotations
 
 from fasthtml.common import (
-    A, Div, H1, H2, H3, Meta, P, Style, Titled, fast_app,
+    A, Div, H1, H2, H3, Img, Meta, P, Style, Titled, fast_app,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -62,6 +62,13 @@ def get_home():
             ),
             Div(
                 Div(
+                    Img(
+                        src="/assets/illustrations/preamble-of-india.webp",
+                        alt="Visual rendering of the Preamble of the Constitution of India",
+                        loading="lazy",
+                        decoding="async",
+                        cls="preamble-visual",
+                    ),
                     H2("From citizen concern to informed action"),
                     P(
                         "JanaVani helps make civic procedures easier to navigate. It is not a "
@@ -84,6 +91,13 @@ def get_home():
                             cls="card",
                         ),
                         cls="grid",
+                    ),
+                    Img(
+                        src="/assets/illustrations/civic-action-pathway.webp",
+                        alt="JanaVani civic action pathway visual",
+                        loading="lazy",
+                        decoding="async",
+                        cls="pathway-visual",
                     ),
                     pathway_form(),
                     cls="wrap",
