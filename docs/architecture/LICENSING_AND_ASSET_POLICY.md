@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+
 # JanaVani Component Licensing and Asset Policy
 
 **Status:** Proposed governance policy for maintainer/legal review  
