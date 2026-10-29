@@ -10,15 +10,11 @@ from telegram.ext import (
 
 from core.config import Config
 from src.config.runtime import validate_runtime_configuration
-from conversation.session import purge_expired_ephemeral_issues
+from src.conversation.session import purge_expired_ephemeral_issues
 from src.commands.catalogue import telegram_bot_commands
-from src.commands.account import account
 from src.commands.ai_draft import ai_draft_command, handle_civic_draft_callback
-from commands.check import cases, check
-from commands.cancel import cancel
-from commands.pair import pair
-from commands.privacy import privacy
-from commands.start import help_command, start
+from commands.check import check
+from commands.start import start
 from commands.search import search
 from commands.rate import rate
 from src.capabilities.accountability_feedback import AccountabilityFeedbackCapability
@@ -28,8 +24,6 @@ from conversation.router import route
 from conversation.steps.generate import create_telegram_generation_dependencies
 from conversation.steps.format import handle_format
 from src.platform.surface_case_composition import create_surface_case_composition
-from src.identity.pairing import IdentityPairingService
-from src.platform.composition import create_identity_pairing_repository
 
 
 async def _set_bot_commands(application: Application) -> None:
@@ -97,15 +91,6 @@ def build_application(*, token: str | None = None) -> Application:
     application.bot_data["evidence_capability"] = composition.evidence_capability
     application.bot_data["authority_capability"] = composition.authority_capability
     application.bot_data["identity_link_repository"] = composition.identity_link_repository
-    # Pairing across independently deployed processes requires shared PostgreSQL.
-    pairing_service = None
-    if composition.provider_composition.provider_for("external_identity_links") == "postgres":
-        pairing_repository = create_identity_pairing_repository(
-            provider_composition=composition.provider_composition,
-            identity_link_repository=composition.identity_link_repository,
-        )
-        pairing_service = IdentityPairingService(pairing_repository)
-    application.bot_data["identity_pairing_service"] = pairing_service
     application.bot_data["accountability_feedback_capability"] = AccountabilityFeedbackCapability(
         create_accountability_feedback_repository(
             provider_composition=composition.provider_composition
@@ -127,17 +112,11 @@ def build_application(*, token: str | None = None) -> Application:
     application.add_handler(CallbackQueryHandler(handle_format, pattern=r"^(pdf|docx)$"))
     application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("account", account))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(CommandHandler("ai_draft", ai_draft_command))
-    application.add_handler(CommandHandler("privacy", privacy))
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
     application.add_handler(CommandHandler("check", check))
-    application.add_handler(CommandHandler("cases", cases))
-    application.add_handler(CommandHandler("pair", pair))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route))
     return application
 
