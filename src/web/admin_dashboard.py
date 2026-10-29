@@ -42,11 +42,11 @@ try:
     else:
         st.error(f"Failed to pull active metric grids. Gateway Status Code: {response.status_code}")
 except requests.RequestException as error_trace:
-    st.error(f"Metrics collection cluster currently unreachable: {error_trace}")
+    st.warning(f"Metrics collection cluster currently unreachable: {error_trace}")
 
-# --- Block 2: Municipal Office Performance Dashboard ---
+# --- Block 2: Aggregate office feedback ---
 st.markdown("---")
-st.markdown("### 🏛️ Municipal Office Citizen Satisfaction Tracking Board")
+st.markdown("### 🏛️ Municipal Office Citizen Service Experience")
 
 target_office = st.selectbox(
     "Select Target Center to Inspect Accountabilities:",
@@ -62,22 +62,34 @@ try:
     if feedback_response.status_code == 200:
         data = feedback_response.json()
         telemetry = data.get("aggregate_telemetry", {})
-        comments_list = data.get("recent_sanitized_comments", [])
+        total_reviews = int(telemetry.get("total_reviews_count", 0))
+        rating_counts = telemetry.get("rating_counts", {})
 
-        st.write(
-            f"**Total Review Records Registered for Center:** "
-            f"{telemetry.get('total_reviews_count', 0)}"
+        st.metric("Feedback submissions", total_reviews)
+        st.caption(
+            "Aggregate citizen-reported experience only. These figures are not a verified "
+            "measure of official performance and should not be used as a standalone ranking."
         )
 
-        st.markdown("#### Recent Sanitized Public Feedback Logs")
-        if not comments_list:
-            st.info("No anonymous review entries logged for this municipal office.")
-        for item in comments_list:
-            st.info(
-                f"⭐ **Rating: {item.get('rating_given', '—')}/5** — "
-                f"Description: \"{item.get('comment_body', '')}\""
+        ratings = pd.DataFrame(
+            {
+                "Rating": [f"{rating}/5" for rating in range(1, 6)],
+                "Submissions": [int(rating_counts.get(str(rating), 0)) for rating in range(1, 6)],
+            }
+        ).set_index("Rating")
+        st.markdown("#### Rating distribution")
+        st.bar_chart(ratings)
+
+        if total_reviews == 0:
+            st.info("No feedback submissions are available for this office.")
+        elif total_reviews < 10:
+            st.warning(
+                "Small sample: interpret this distribution cautiously. The provisional "
+                "10-submission warning is a display caution, not a validated statistical threshold."
             )
     else:
         st.warning(f"Feedback service returned status code: {feedback_response.status_code}")
-except requests.RequestException as error_trace:
-    st.warning(f"Could not load live experience review metrics at this time: {error_trace}")
+except requests.RequestException:
+    st.warning("Could not load office feedback metrics at this time.")
+except (TypeError, ValueError):
+    st.warning("The feedback service returned an invalid aggregate response.")
