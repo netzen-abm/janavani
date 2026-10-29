@@ -37,7 +37,8 @@ def test_telegram_rate_usage_is_concise_and_includes_valid_example():
 
 def test_telegram_rate_handler_uses_one_canonical_feedback_capability():
     source = (ROOT / "src" / "commands" / "rate.py").read_text(encoding="utf-8")
+    normalized = " ".join(source.split())
 
-    assert 'bot_data.get(\n            "accountability_feedback_capability"' in source
+    assert 'bot_data.get("accountability_feedback_capability")' in normalized
     assert "feedback_capability.record(" in source
     assert "save_rating(" not in source
