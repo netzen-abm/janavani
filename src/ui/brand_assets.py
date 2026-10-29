@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-only
 """Shared brand-asset delivery for independently deployed JanaVani web surfaces.
 
 The visual asset is packaged with the application so the public web experiences
