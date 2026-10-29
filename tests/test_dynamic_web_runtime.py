@@ -126,6 +126,15 @@ def test_dynamic_site_does_not_call_preview_api_without_processing_consent(monke
     assert "No request was forwarded to the canonical preview API" in response.text
 
 
+def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
+    response = TestClient(app).get("/assets/brand/janavani-mark.svg")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
+    assert "JanaVani" in response.text
+
+
 def test_dynamic_site_liveness_is_independent_of_api_and_telegram():
     response = TestClient(app).get("/liveness")
     assert response.status_code == 200
