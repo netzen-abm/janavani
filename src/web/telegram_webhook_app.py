@@ -13,9 +13,13 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import Update
 from telegram.ext import Application
 
-from src.bot_telegram import build_application
+from src.bot_telegram import (
+    _start_ephemeral_issue_cleanup,
+    _stop_ephemeral_issue_cleanup,
+    build_application,
+)
+from src.commands.catalogue import telegram_bot_commands
 from src.config.runtime import validate_runtime_configuration
-from conversation.session import run_ephemeral_issue_cleanup
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
 from src.web.telegram_webhook_config import load_telegram_webhook_settings
@@ -61,13 +65,14 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         await asyncio.to_thread(durable_inbox.secure_legacy_payloads)
         await bot_app.initialize()
         await bot_app.start()
+        await bot_app.bot.set_my_commands(telegram_bot_commands())
         await bot_app.bot.set_webhook(
             url=webhook_url,
             secret_token=secret,
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=False,
         )
-        cleanup_task = asyncio.create_task(run_ephemeral_issue_cleanup())
+        _start_ephemeral_issue_cleanup(bot_app)
         app.state.telegram_application = bot_app
         app.state.telegram_inbox = durable_inbox
         app.state.webhook_secret = secret
@@ -81,8 +86,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
                 await worker
             except asyncio.CancelledError:
                 pass
-            cleanup_task.cancel()
-            await asyncio.gather(cleanup_task, return_exceptions=True)
+            await _stop_ephemeral_issue_cleanup(bot_app)
             await bot_app.stop()
             await bot_app.shutdown()
 
