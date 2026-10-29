@@ -19,7 +19,6 @@ from src.bot_telegram import (
     build_application,
 )
 from src.commands.catalogue import telegram_bot_commands
-from src.config.runtime import validate_runtime_configuration
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
 from src.web.telegram_inbox_worker import run_inbox_worker
 from src.web.telegram_webhook_config import load_telegram_webhook_settings
@@ -58,7 +57,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         dsn = settings.inbox_dsn
         encryption_keys = list(settings.encryption_keys)
 
-        validate_runtime_configuration()
+        # build_application validates the shared runtime configuration before composition.
         bot_app = build_application(token=token)
         durable_inbox = PostgresTelegramInbox(dsn=dsn, encryption_keys=encryption_keys)
         # Migrate any historical plaintext rows to ciphertext before registering the webhook.
