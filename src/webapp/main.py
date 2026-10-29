@@ -1,12 +1,13 @@
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Img,
-    Input, Label, Link, P, Style, Textarea, Title, Titled, fast_app,
+    A, Br, Button, Div, Form, H2, H3, H4, Hidden, Hr,
+    Input, Label, Link, P, Style, Textarea, Titled, fast_app,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from src.webapp.ai_drafting import register_ai_drafting_routes
 from src.webapp.services.api_client import client_for_request
+from src.webapp.entry_routes import register_webapp_entry_routes
 from src.ui.brand_assets import register_brand_assets
 
 # Initialize the stateless web interface client
@@ -25,108 +26,6 @@ app, rt = fast_app(
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
     )
 )
-
-@rt("/")
-def get():
-    """Render the first-class Janavani WebApp civic Case workspace."""
-    return (
-        Title("🇮🇳 Janavani — Citizen Action Hub"),
-        Div(
-            Div(
-                Div(
-                    Img(src="/brand-assets/brand/janavani-mark", alt="", width="42", height="42"),
-                    H1("JANAVANI"),
-                    cls="brand-lockup",
-                ),
-                P("Create and review a civic Case through the shared Janavani platform."),
-                A("AI-assisted civic document drafting", href="/ai-drafting", style="display: inline-block; margin-top: 1rem;"),
-                style="text-align: center; margin-bottom: 3rem;",
-            ),
-            Div(
-                H3("📝 Create a Civic Case"),
-                P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
-                Form(action="/submit-issue", method="post")(
-                    Textarea(
-                        name="citizen_input",
-                        placeholder="Describe the civic issue...",
-                        rows=6,
-                        required=True,
-                    ),
-                    Div(
-                        Label(
-                            Input(
-                                type="checkbox",
-                                name="case_processing_consent",
-                                value="yes",
-                                required=True,
-                            ),
-                            " I agree to send these details to JanaVani's API to create a case record.",
-                        ),
-                        P(
-                            "This creates a JanaVani case record; it is not a saved draft preview "
-                            "and does not file anything with a government authority. A separate "
-                            "consent is required before any later external submission."
-                        ),
-                    ),
-                    Button("Create Case", type="submit", cls="button-primary"),
-                ),
-                cls="card",
-            ),
-            cls="container",
-        ),
-    )
-
-@rt("/submit-issue")
-def post(
-    citizen_input: str,
-    request: Request,
-    case_processing_consent: str = "",
-):
-    """Sends user text to the backend microservice and displays the structured draft fields."""
-    consent_given = case_processing_consent.strip().lower() in {
-        "yes", "true", "1", "on"
-    }
-    if not consent_given:
-        return Div(
-            Div(
-                H3("Consent required"),
-                P("No case was created and no issue details were sent to the API."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
-        )
-
-    try:
-        client = client_for_request(request)
-        result = client.submit_complaint_draft(citizen_input)
-    except (RuntimeError, ValueError):
-        return Div(
-            Div(
-                H3("Sign-in required"),
-                P("Authenticate through the Janavani identity gateway before creating a case."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
-        )
-    
-    if "error" in result:
-        return Div(
-            Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
-        )
-        
-    return Div(
-        Div(
-            H2("📁 Civic Case Created"),
-            P(f"Case ID: {result.get('case_id')}"),
-            P(f"Status: {result.get('status')}"),
-            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
-            Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
-                Button("Open Case Workspace", type="submit"),
-            ),
-            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
-            cls="card",
-        )
-    )
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
@@ -172,6 +71,9 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, r
 
 from src.webapp.case_workspace import register_case_workspace_routes
 
+register_webapp_entry_routes(
+    rt, client_factory=lambda request: client_for_request(request)
+)
 register_case_workspace_routes(rt)
 register_ai_drafting_routes(rt)
 register_brand_assets(rt)
