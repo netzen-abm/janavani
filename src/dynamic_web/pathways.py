@@ -8,7 +8,7 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from fasthtml.common import (
-    A, Button, Div, Form, H1, H2, H3, Label, Option, P, Select, Titled,
+    A, Button, Div, Form, H1, H2, H3, Img, Label, Option, P, Select, Titled,
 )
 
 from src.documents.template_catalogue import get_template
@@ -52,7 +52,18 @@ def site_nav():
     """Build the shared Dynamic Web navigation."""
     return Div(
         Div(
-            A("JANAVANI", href="/", cls="brand"),
+            A(
+                Img(
+                    src="/assets/brand/janavani-mark.svg",
+                    alt="",
+                    width="34",
+                    height="34",
+                ),
+                "JANAVANI",
+                href="/",
+                cls="brand",
+                aria_label="JanaVani home",
+            ),
             Div(
                 A("Explore pathways", href="/pathway"),
                 A("Draft a document", href="/ai-drafting"),
