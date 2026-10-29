@@ -28,9 +28,7 @@ async def rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     issue = " ".join(context.args[2:])
     try:
-        feedback_capability = context.application.bot_data.get(
-            "accountability_feedback_capability"
-        )
+        feedback_capability = context.application.bot_data.get("accountability_feedback_capability")
         links = context.application.bot_data.get("identity_link_repository")
         if feedback_capability is None or links is None:
             raise RuntimeError(
