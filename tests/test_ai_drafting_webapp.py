@@ -1,6 +1,16 @@
 from fastapi.testclient import TestClient
 
 
+def test_webapp_serves_the_shared_packaged_brand_mark():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/assets/brand/janavani-mark.svg")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
+
+
 def test_ai_drafting_page_is_registered_and_explains_remote_processing():
     from src.webapp.main import app
 
