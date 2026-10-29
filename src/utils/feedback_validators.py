@@ -24,8 +24,8 @@ class ContentSanitizationEngine:
     # These patterns target explicit personal insults and obvious script injection.
     # Allegations such as "corrupt" must not be rejected solely for their viewpoint.
     BANNED_EXPRESSIONS = [
-        r"\\bidiot\\b",
-        r"\\bcheat\\b",
+        r"\bidiot\b",
+        r"\bcheat\b",
         r"<script>",
         r"javascript:",
     ]
