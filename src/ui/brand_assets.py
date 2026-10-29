@@ -9,7 +9,10 @@ from pathlib import Path
 
 from starlette.responses import FileResponse
 
-_BRAND_MARK = Path(__file__).resolve().parent / "assets" / "brand" / "janavani-mark.svg"
+_ASSET_ROOT = Path(__file__).resolve().parent / "assets"
+_BRAND_MARK = _ASSET_ROOT / "brand" / "janavani-mark.svg"
+_PREAMBLE_IMAGE = _ASSET_ROOT / "illustrations" / "preamble-of-india.webp"
+_PATHWAY_IMAGE = _ASSET_ROOT / "illustrations" / "civic-action-pathway.webp"
 
 
 def register_brand_assets(rt) -> None:
@@ -20,5 +23,21 @@ def register_brand_assets(rt) -> None:
         return FileResponse(
             _BRAND_MARK,
             media_type="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    @rt("/assets/illustrations/preamble-of-india.webp")
+    def get_constitution_preamble_image():
+        return FileResponse(
+            _PREAMBLE_IMAGE,
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    @rt("/assets/illustrations/civic-action-pathway.webp")
+    def get_civic_action_pathway_image():
+        return FileResponse(
+            _PATHWAY_IMAGE,
+            media_type="image/webp",
             headers={"Cache-Control": "public, max-age=86400"},
         )
