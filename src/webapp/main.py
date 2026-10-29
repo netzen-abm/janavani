@@ -52,6 +52,22 @@ def get():
                         rows=6,
                         required=True,
                     ),
+                    Div(
+                        Label(
+                            Input(
+                                type="checkbox",
+                                name="case_processing_consent",
+                                value="yes",
+                                required=True,
+                            ),
+                            " I agree to send these details to JanaVani's API to create a case record.",
+                        ),
+                        P(
+                            "This creates a JanaVani case record; it is not a saved draft preview "
+                            "and does not file anything with a government authority. A separate "
+                            "consent is required before any later external submission."
+                        ),
+                    ),
                     Button("Create Case", type="submit", cls="button-primary"),
                 ),
                 cls="card",
@@ -61,8 +77,25 @@ def get():
     )
 
 @rt("/submit-issue")
-def post(citizen_input: str, request: Request):
+def post(
+    citizen_input: str,
+    request: Request,
+    case_processing_consent: str = "",
+):
     """Sends user text to the backend microservice and displays the structured draft fields."""
+    consent_given = case_processing_consent.strip().lower() in {
+        "yes", "true", "1", "on"
+    }
+    if not consent_given:
+        return Div(
+            Div(
+                H3("Consent required"),
+                P("No case was created and no issue details were sent to the API."),
+                A("Return to dashboard", href="/"),
+                cls="card",
+            )
+        )
+
     try:
         client = client_for_request(request)
         result = client.submit_complaint_draft(citizen_input)
