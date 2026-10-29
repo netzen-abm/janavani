@@ -9,7 +9,7 @@ JanaVani should use a **component-level licensing portfolio**, not attach every 
 
 The canonical Janavani repository currently ships a top-level GNU GPL version 3 licence. Preserve that licence for the existing platform and bot code unless the actual copyright holders approve a documented change. Do not relicense historical code simply to make the portfolio look diverse.
 
-The showcase repository `netzen-abm/janavani-website` has a root MIT licence. This candidate imports only its small 327-byte JanaVani brand mark as a packaged asset, adds source attribution, and preserves a separate reservation of brand/trademark rights. The mark is served by both web surfaces from the application bundle; product runtime does not depend on the showcase repository being available.
+The showcase repository `netzen-abm/janavani-website` has a root MIT licence. This candidate imports its small 327-byte JanaVani brand mark plus two non-duplicated WebP illustrations (constitutional preamble and civic-action pathway) as packaged assets. Source blob SHAs and use are documented in `src/ui/assets/brand/README.md`; the mark retains a separate reservation of brand/trademark rights. The shared asset route serves these files from the application bundle; product runtime does not depend on the showcase repository being available.
 
 This is an engineering policy proposal, not a legal opinion. Before a public release or any dual-licensing offer, verify contributor ownership/assignment, all dependency licences, trademark rights and jurisdiction-specific obligations with qualified counsel.
 
@@ -51,9 +51,9 @@ This is an engineering policy proposal, not a legal opinion. Before a public rel
 
 ## 5. Brand asset import record
 
-The current asset import is intentionally small and avoids duplicating the existing 205 KB legacy favicon/logo. The source repository already contains a 327-byte `assets/brand/favicon/janavani-mark.svg`; it is now bundled once at `src/ui/assets/brand/janavani-mark.svg` and served by a shared helper to the Dynamic Web and WebApp.
+The current asset import includes a 327-byte `assets/brand/favicon/janavani-mark.svg` and two WebP illustrations of approximately 86 KB and 250 KB. The mark is used in both web surfaces; the constitutional and civic-pathway illustrations are used on Dynamic Web. The binary assets were transferred byte-for-byte and their source blob SHAs match the new Git blob SHAs. A shared helper serves the packaged files with explicit MIME types and one-day cache headers.
 
-For further assets, prefer optimized WebP/SVG files with verified provenance. Do not bulk-copy the large BMP/TIFF/PNG logo variants or the full homepage images without checking whether the current platform already contains duplicates and whether the visuals are appropriate for an interactive citizen workflow.
+This intentionally avoids duplicating the 205 KB legacy favicon/logo, large BMP/TIFF/PNG logo variants, or the 1.5 MB source PNG diagrams. The two selected illustrations were already optimized WebP assets and were checked for duplication against the current repository tree before import.
 
 ## 6. Release checklist
 
