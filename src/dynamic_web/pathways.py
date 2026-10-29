@@ -54,7 +54,7 @@ def site_nav():
         Div(
             A(
                 Img(
-                    src="/brand-assets/brand/janavani-mark.svg",
+                    src="/brand-assets/brand/janavani-mark",
                     alt="",
                     width="34",
                     height="34",
