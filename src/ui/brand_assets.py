@@ -1,44 +1,37 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Shared brand-asset delivery for independently deployed JanaVani web surfaces.
-
-The visual asset is packaged with the application so the public web experiences
-do not depend on the showcase website being available at request time.
-"""
+"""Shared immutable brand and illustration assets for JanaVani web surfaces."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from starlette.responses import FileResponse
+from starlette.datastructures import Headers
+from starlette.responses import Response
+from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 _ASSET_ROOT = Path(__file__).resolve().parent / "assets"
-_BRAND_MARK = _ASSET_ROOT / "brand" / "janavani-mark.svg"
-_PREAMBLE_IMAGE = _ASSET_ROOT / "illustrations" / "preamble-of-india.webp"
-_PATHWAY_IMAGE = _ASSET_ROOT / "illustrations" / "civic-action-pathway.webp"
+
+
+class CachedBrandStaticFiles(StaticFiles):
+    """Serve the packaged allow-listed asset directory with an explicit cache policy."""
+
+    def file_response(
+        self,
+        full_path: str,
+        stat_result: os.stat_result,
+        scope: Scope,
+        status_code: int = 200,
+    ) -> Response:
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        return response
 
 
 def register_brand_assets(app) -> None:
-    """Register shared static-asset routes directly on the FastAPI application."""
-
-    @app.get("/brand-assets/brand/janavani-mark.svg")
-    def get_janavani_mark():
-        return FileResponse(
-            _BRAND_MARK,
-            media_type="image/svg+xml",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
-
-    @app.get("/brand-assets/illustrations/preamble-of-india.webp")
-    def get_constitution_preamble_image():
-        return FileResponse(
-            _PREAMBLE_IMAGE,
-            media_type="image/webp",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
-
-    @app.get("/brand-assets/illustrations/civic-action-pathway.webp")
-    def get_civic_action_pathway_image():
-        return FileResponse(
-            _PATHWAY_IMAGE,
-            media_type="image/webp",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
+    """Mount the shared SVG/WebP directory once on each independent web application."""
+    app.mount(
+        "/brand-assets",
+        CachedBrandStaticFiles(directory=str(_ASSET_ROOT), check_dir=True),
+        name="brand-assets",
+    )
