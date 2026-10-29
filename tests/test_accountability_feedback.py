@@ -1,4 +1,6 @@
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from src.utils.feedback_validators import ContentSanitizationEngine, OfficeFeedbackSchema
 
@@ -49,3 +51,42 @@ def test_markup_sanitization_does_not_claim_to_make_text_safe_for_html():
     assert ContentSanitizationEngine.sanitize_commentary(raw) == (
         "The office delayed my application without explanation."
     )
+
+
+def test_feedback_summary_excludes_individual_narratives(monkeypatch):
+    """The summary response is aggregate-only and does not disclose comment text."""
+    from src.web import feedback_router
+
+    class FakeRecord:
+        def __init__(self, rating, issue, submitted_at):
+            self.rating = rating
+            self.issue = issue
+            self.submitted_at = submitted_at
+
+    class FakeCapability:
+        def list_for_office(self, office_id):
+            assert office_id == "KL-TVM-01"
+            return [
+                FakeRecord(5, "PERSONAL-DRAFT-DO-NOT-EXPOSE", "2026-10-29T12:00:00Z"),
+                FakeRecord(3, "CASE-IDENTIFIER-DO-NOT-EXPOSE", "2026-10-29T12:01:00Z"),
+            ]
+
+    monkeypatch.setattr(feedback_router, "_capability", lambda: FakeCapability())
+    monkeypatch.setenv("JANAVANI_INTERFACE_TOKENS", "test-interface-token")
+    app = FastAPI()
+    app.include_router(feedback_router.router)
+
+    response = TestClient(app).get(
+        "/api/v1/feedback/summary/KL-TVM-01",
+        headers={"X-Janavani-Interface-Token": "test-interface-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["aggregate_telemetry"]["total_reviews_count"] == 2
+    assert body["aggregate_telemetry"]["rating_counts"] == {
+        "1": 0, "2": 0, "3": 1, "4": 0, "5": 1
+    }
+    assert "recent_sanitized_comments" not in body
+    assert "PERSONAL-DRAFT-DO-NOT-EXPOSE" not in response.text
+    assert "CASE-IDENTIFIER-DO-NOT-EXPOSE" not in response.text
