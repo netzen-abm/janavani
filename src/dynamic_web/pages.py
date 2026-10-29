@@ -46,7 +46,7 @@ def register_public_pages(rt) -> None:
                 Div(
                     Div(
                         Img(
-                            src="/assets/illustrations/preamble-of-india.webp",
+                            src="/brand-assets/illustrations/preamble-of-india.webp",
                             alt="Visual rendering of the Preamble of the Constitution of India",
                             loading="lazy",
                             decoding="async",
@@ -86,7 +86,7 @@ def register_public_pages(rt) -> None:
                             cls="grid",
                         ),
                         Img(
-                            src="/assets/illustrations/civic-action-pathway.webp",
+                            src="/brand-assets/illustrations/civic-action-pathway.webp",
                             alt="JanaVani civic action pathway visual",
                             loading="lazy",
                             decoding="async",
