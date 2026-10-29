@@ -41,7 +41,7 @@ def get_liveness():
 
 register_public_pages(rt)
 register_pathway_routes(app)
-register_brand_assets(app)
+register_brand_assets(rt)
 register_civic_drafting_routes(rt, client_factory=client_for_request)
 
 
