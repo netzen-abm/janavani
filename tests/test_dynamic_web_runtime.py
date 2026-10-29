@@ -11,8 +11,8 @@ def test_dynamic_website_is_a_separate_product_runtime_with_preamble_first():
     assert "WE, THE PEOPLE OF INDIA" in response.text
     assert "Find a civic pathway" in response.text
     assert "Draft a civic document" in response.text
-    assert "/brand-assets/illustrations/preamble-of-india.webp" in response.text
-    assert "/brand-assets/illustrations/civic-action-pathway.webp" in response.text
+    assert "/brand-assets/illustrations/preamble-of-india" in response.text
+    assert "/brand-assets/illustrations/civic-action-pathway" in response.text
     assert "janavani-website" not in response.text
 
 
@@ -129,7 +129,7 @@ def test_dynamic_site_does_not_call_preview_api_without_processing_consent(monke
 
 
 def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
-    response = TestClient(app).get("/brand-assets/brand/janavani-mark.svg")
+    response = TestClient(app).get("/brand-assets/brand/janavani-mark")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert response.headers["cache-control"] == "public, max-age=86400"
@@ -139,8 +139,8 @@ def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
 
 def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():
     for path in (
-        "/brand-assets/illustrations/preamble-of-india.webp",
-        "/brand-assets/illustrations/civic-action-pathway.webp",
+        "/brand-assets/illustrations/preamble-of-india",
+        "/brand-assets/illustrations/civic-action-pathway",
     ):
         response = TestClient(app).get(path)
         assert response.status_code == 200
