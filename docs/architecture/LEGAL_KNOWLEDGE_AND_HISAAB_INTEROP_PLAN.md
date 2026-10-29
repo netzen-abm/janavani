@@ -138,6 +138,18 @@ For RTI drafting, the engine must retrieve the amended clause applicable to the 
 
 For JanaVani's own privacy architecture, treat DPDP-related compliance analysis as a separate, current legal workstream: data inventory, purpose limitation, notice/consent and withdrawal semantics, retention, processor/provider disclosures, access control, deletion and incident handling must be mapped to the exact provisions/rules and their respective phased commencement. Do not claim full statutory compliance merely because a consent checkbox or privacy notice exists.
 
+### DPDP update — Removal of Difficulties Order, 2026
+
+As of the 29 October 2026 review, MeitY's official “What's New” page lists the **Digital Personal Data Protection (Removal of Difficulties) Order, 2026**: https://www.meity.gov.in/whats-new. The official-hosted PDF is linked at https://www.meity.gov.in/static/uploads/2026/10/daf495a7b5798a3dfa72a944b51fc176.pdf; fetch it, record its hash and verify its Gazette publication metadata during corpus ingestion.
+
+The order is identified as S.O. 5458(E), made on 5 October 2026 and published in the Gazette on 6 October 2026 in the sources reviewed. The reported operative changes are limited to two textual substitutions:
+- DPDP Act section 9(1): “child or a person with disability” becomes “child or of a person with disability”, clarifying the parallel categories for which parent/lawful-guardian verifiable consent is specified.
+- DPDP Act section 10(2)(c)(ii): “audit” becomes “data audit”.
+
+This is a required version in the corpus, not evidence that sections 9 and 10 became operative immediately. Under G.S.R. 843(E), sections 9 and 10 were placed in the eighteen-month commencement tranche. Preserve the 2026 order date and publication date separately from the substantive provisions' commencement dates; calculate a prospective date only from the applicable official notification and re-verify it before presenting it to a user. Do not use this order to state that the entire DPDP Act or every DPDP Rule is currently in force.
+
+The current knowledge graph must therefore link: (a) DPDP Act section 44(3) commencement on 13 November 2025; (b) the corresponding versioned RTI Act section 8(1)(j) text; (c) the DPDP Rules, 2025 and the 16 December 2025 corrigendum; (d) the 2026 Removal of Difficulties Order affecting sections 9(1) and 10(2)(c)(ii); and (e) each provision's separate commencement state. A question about RTI personal-information exemptions, children, persons with disabilities or significant-data-fiduciary audits must retrieve the applicable text and effective-date metadata rather than relying on the model's memorized version.
+
 ### Source hierarchy
 
 Prefer official legislation, Gazette amendments, official rules/notifications, and official court judgments. Use official ministry/authority pages for their published procedure and records. Secondary commentary can aid discovery but cannot silently overwrite primary law. Clearly label translations, unofficial summaries, AI explanations and user claims.
@@ -233,6 +245,8 @@ Do not advance if a source's currentness, jurisdiction, reuse terms or claimed e
 - Central Information Commission: RTI Act and rules — https://cic.gov.in/rti_act
 - MeitY/Gazette: DPDP Act section 44(3) commencement and RTI amendment — https://egazette.gov.in/WriteReadData/2025/267647.pdf
 - MeitY: DPDP Rules 2025, commencement timeline and corrigendum — https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025
+- MeitY official index for the DPDP (Removal of Difficulties) Order, 2026 — https://www.meity.gov.in/whats-new
+- MeitY-hosted DPDP (Removal of Difficulties) Order, 2026 PDF — https://www.meity.gov.in/static/uploads/2026/10/daf495a7b5798a3dfa72a944b51fc176.pdf
 - Hisaab repository — https://github.com/theadiram/Hisaab
 - Hisaab data acquisition contract — https://github.com/theadiram/Hisaab/blob/main/docs/data-acquisition-contract.md
 - Hisaab evidence publication path — https://github.com/theadiram/Hisaab/blob/main/docs/evidence-publication-path-2026-10-25.md
