@@ -14,7 +14,7 @@
 
 - **Path:** root `favicon.svg`
 - **Selected artwork:** the separately supplied `favicon(1).svg`.
-- **Git blob SHA:** `9f9b4d0a0ac8cee2b95b43d6bd7beef7e666c7e5` (see correction below if the SHA check is needed).
+- **Git blob SHA:** `9f9b4d0a0ac8cee2b95b43d6bd7beef7e666c7e5`.
 - **Size:** 205,452 bytes.
 - The supplied favicon SVG is byte-identical to the existing root `favicon.svg`; the existing file is reused instead of adding another copy.
 - Both independent FastHTML runtimes explicitly link `/favicon.svg` in the HTML head.
