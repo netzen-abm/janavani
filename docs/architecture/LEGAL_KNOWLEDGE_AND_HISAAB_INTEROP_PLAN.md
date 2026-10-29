@@ -127,7 +127,7 @@ The following are authoritative starting points observed in the 29 October 2026 
 ### Digital Personal Data Protection Act, 2023 (DPDP) — mandatory RTI temporal dependency
 
 - Official MeitY/India Code Act copy: https://www.indiacode.nic.in/bitstream/123456789/22037/1/a2023-22.pdf
-- Official Gazette commencement notification G.S.R. 843(E), dated 13 November 2025: https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf
+- Official Gazette commencement notification G.S.R. 843(E), dated 13 November 2025: https://egazette.gov.in/WriteReadData/2025/267647.pdf
 - Official DPDP Rules, 2025 and commencement/corrigendum listing: https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025
 
 The official commencement notification brought DPDP Act section 44(3) into force on 13 November 2025. That provision substitutes RTI Act section 8(1)(j) with the text “information which relates to personal information”. The RTI consolidated Act dated 18 November 2025 lists DPDP Act 2023 as an amending Act. This linkage is a material legal knowledge dependency and must be reflected in source versioning, retrieval and RTI-draft review.
@@ -231,7 +231,7 @@ Do not advance if a source's currentness, jurisdiction, reuse terms or claimed e
 - India Code: Bharatiya Sakshya Adhiniyam, 2023 — https://www.indiacode.nic.in/indiacode/handle/123456789/20063?col=123456789%2F1362&view_type=search
 - India Code: Right to Information Act, 2005 — https://www.indiacode.nic.in/indiacode/handle/123456789/17520?col=123456789%2F2510&view_type=search
 - Central Information Commission: RTI Act and rules — https://cic.gov.in/rti_act
-- MeitY/Gazette: DPDP Act section 44(3) commencement and RTI amendment — https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf
+- MeitY/Gazette: DPDP Act section 44(3) commencement and RTI amendment — https://egazette.gov.in/WriteReadData/2025/267647.pdf
 - MeitY: DPDP Rules 2025, commencement timeline and corrigendum — https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025
 - Hisaab repository — https://github.com/theadiram/Hisaab
 - Hisaab data acquisition contract — https://github.com/theadiram/Hisaab/blob/main/docs/data-acquisition-contract.md
