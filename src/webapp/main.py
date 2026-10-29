@@ -1,5 +1,5 @@
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
+    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr, Img,
     Input, Label, P, Style, Textarea, Titled, fast_app,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -7,6 +7,7 @@ from starlette.requests import Request
 
 from src.webapp.ai_drafting import register_ai_drafting_routes
 from src.webapp.services.api_client import client_for_request
+from src.ui.brand_assets import register_brand_assets
 
 # Initialize the stateless web interface client
 app, rt = fast_app(
@@ -15,6 +16,9 @@ app, rt = fast_app(
             body { padding: 2rem 0; background-color: #f8f9fa; }
             .container { max-width: 900px; }
             .header-banner { text-align: center; margin-bottom: 3rem; }
+            .brand-lockup { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-bottom: .75rem; }
+            .brand-lockup img { display: block; width: 42px; height: 42px; }
+            .brand-lockup h1 { margin: 0; }
             .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
         """)
@@ -28,7 +32,11 @@ def get():
         "🇮🇳 Janavani — Citizen Action Hub",
         Div(
             Div(
-                H1("JANAVANI"),
+                Div(
+                    Img(src="/assets/brand/janavani-mark.svg", alt="", width="42", height="42"),
+                    H1("JANAVANI"),
+                    cls="brand-lockup",
+                ),
                 P("Create and review a civic Case through the shared Janavani platform."),
                 A("AI-assisted civic document drafting", href="/ai-drafting", style="display: inline-block; margin-top: 1rem;"),
                 style="text-align: center; margin-bottom: 3rem;",
@@ -131,6 +139,7 @@ from src.webapp.case_workspace import register_case_workspace_routes
 
 register_case_workspace_routes(rt)
 register_ai_drafting_routes(rt)
+register_brand_assets(rt)
 
 
 async def protect_user_generated_responses(request: Request, call_next):
