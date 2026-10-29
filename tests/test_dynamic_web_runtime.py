@@ -134,7 +134,7 @@ def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert response.headers["cache-control"] == "public, max-age=86400"
     assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
-    assert "JanaVani" in response.text
+    assert 'aria-label="Janavani"' in response.text
 
 
 def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():
