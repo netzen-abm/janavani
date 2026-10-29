@@ -5,7 +5,7 @@
 - **Source path:** `assets/brand/favicon/janavani-mark.svg`
 - **Source blob SHA:** `eb80c5c7540b4da4e9781df599ee8843a7c5169d`
 - **Source size:** 327 bytes
-- **Source repository licence:** root MIT licence, copyright 2026 NetZen.
+- **Source repository licence:** root MIT licence, copyright 2026 NetZen; exact source terms are retained at [`LICENSES/MIT.txt`](../../../../LICENSES/MIT.txt).
 - **Use in JanaVani:** one shared static asset served by Dynamic Web and WebApp using `src/ui/brand_assets.py`.
 
 The source asset is included under the source repository's MIT copyright terms, subject to confirmation that the relevant copyright holder controls the asset. MIT terms do **not** grant trademark rights or permission to imply government, partner or maintainer endorsement. JanaVani name/logo use remains subject to applicable brand permissions.
