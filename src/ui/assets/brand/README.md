@@ -1,14 +1,27 @@
-# JanaVani brand mark asset
+# JanaVani logo and brand asset provenance
+
+## Active product logo
 
 - **Bundled path:** `src/ui/assets/brand/janavani-mark.svg`
-- **Source repository:** https://github.com/netzen-abm/janavani-website
-- **Source path:** `assets/brand/favicon/janavani-mark.svg`
-- **Source blob SHA:** `eb80c5c7540b4da4e9781df599ee8843a7c5169d`
-- **Source size:** 327 bytes
-- **Source repository licence:** root MIT licence, copyright 2026 NetZen; exact source terms are retained at [`LICENSES/MIT.txt`](../../../../LICENSES/MIT.txt).
-- **Use in JanaVani:** one shared static asset served by Dynamic Web and WebApp using `src/ui/brand_assets.py`.
+- **Selected artwork:** the JanaVani profile-picture SVG supplied by the project owner in this conversation.
+- **Pre-existing source:** `archive/assets/root-brand-legacy-2026-09-21/JanaVani Profile Pictures re-size svg.svg`
+- **Git blob SHA:** `7cfdaf2187560e4253510cc348721fdfdc0d27a7`
+- **Size:** 202,771 bytes.
+- **Implementation:** the active path reuses that existing Git blob; it does not introduce another image copy.
+- **Use:** the shared asset route displays it in the Dynamic Web navigation and WebApp home page.
 
-The source asset is included under the source repository's MIT copyright terms, subject to confirmation that the relevant copyright holder controls the asset. MIT terms do **not** grant trademark rights or permission to imply government, partner or maintainer endorsement. JanaVani name/logo use remains subject to applicable brand permissions.
+## Browser favicon
+
+- **Path:** root `favicon.svg`
+- **Selected artwork:** the separately supplied `favicon(1).svg`.
+- **Git blob SHA:** `9f9b4d0a0ac8cee2b95b43d6bd7beef7e666c7e5` (see correction below if the SHA check is needed).
+- **Size:** 205,452 bytes.
+- The supplied favicon SVG is byte-identical to the existing root `favicon.svg`; the existing file is reused instead of adding another copy.
+- Both independent FastHTML runtimes explicitly link `/favicon.svg` in the HTML head.
+
+## Ownership and licence distinction
+
+The selected profile SVG matches an archived repository blob, but it is **not** the 327-byte mark previously copied from the showcase website. The showcase website's MIT licence must not be assumed to cover this selected profile artwork. This repository does not yet establish a separate redistribution licence for the profile SVG or favicon artwork. The project-owner request permits using the supplied artwork for JanaVani in this task; confirm ownership and redistribution rights before wider third-party reuse. Trademark/endorsement rights remain distinct from copyright permissions.
 
 ## Imported illustration assets
 

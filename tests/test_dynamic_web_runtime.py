@@ -139,6 +139,13 @@ def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
     assert '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="702" height="694">' in response.text
 
 
+def test_dynamic_site_serves_selected_favicon():
+    response = TestClient(app).get("/favicon.svg")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert len(response.content) > 100_000
+
+
 def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():
     for path in (
         "/brand-assets/illustrations/preamble-of-india",
