@@ -109,7 +109,7 @@ The following are authoritative starting points observed in the 29 October 2026 
 
 ### Bharatiya Sakshya Adhiniyam, 2023 (BSA)
 
-- India Code Act detail: https://www.indiacode.nic.in/indiacode/handle/123456789/20063?col=123456789%2F1362&view_type=search
+- India Code portal: https://www.indiacode.gov.in/ (the former `indiacode.nic.in` pages now redirect to this portal; resolve the Act through the current official search and record the final canonical URL at ingestion). Legacy indexed Act detail: https://www.indiacode.nic.in/indiacode/handle/123456789/20063?col=123456789%2F1362&view_type=search
 - India Code official PDF shown during this review as consolidated “as on the 6th October, 2025”: https://www.indiacode.nic.in/bitstream/123456789/20063/1/aa202347.pdf
 - India Code identifies Act No. 47 of 2023 and an enforcement date of 1 July 2024. Verify later amendment/commencement notifications as part of source refresh.
 - BSA covers rules and principles of evidence for judicial proceedings in its statutory scope. It is not part of the Constitution, and Janavani must not imply that every citizen attachment or administrative complaint is thereby proved admissible or compliant with evidence law.
@@ -117,8 +117,8 @@ The following are authoritative starting points observed in the 29 October 2026 
 
 ### Right to Information Act, 2005 and rules
 
-- India Code Act detail: https://www.indiacode.nic.in/indiacode/handle/123456789/17520?col=123456789%2F2510&view_type=search
-- India Code official PDF shown during this review as “as on the 18th November, 2025”: https://upload.indiacode.nic.in/showfile?actid=AC_CEN_26_36_00004_200522_1517807322955&filename=a2005-22.pdf&type=actfile
+- India Code portal: https://www.indiacode.gov.in/ (the former `indiacode.nic.in` pages now redirect to this portal; resolve the Act through the current official search and record the final canonical URL at ingestion). Legacy indexed Act detail: https://www.indiacode.nic.in/indiacode/handle/123456789/17520?col=123456789%2F2510&view_type=search
+- India Code official PDF shown during this review as “as on the 17th November, 2025”: https://upload.indiacode.nic.in/showfile?actid=AC_CEN_26_36_00004_200522_1517807322955&filename=a2005-22.pdf&type=actfile
 - Central Information Commission Act/rules index: https://cic.gov.in/rti_act and notifications: https://cic.gov.in/rti-notifications
 - Do not freeze the 2025 consolidated copy as the law through October 2026. Check later Central Gazette amendments, applicable RTI Rules and fee rules, and relevant state rules/orders before stating a current procedure or deadline.
 - RTI drafting must request existing records with a clearly named public authority, relevant period and specific record descriptions. Do not disguise a request for a newly authored explanation, opinion or remedy as a request for existing records. Validate jurisdiction and applicable procedure. Fee, CPIO/FAA routing, exemptions, third-party process, timelines and appeals must be grounded in the correct central/state/local rules and current official routing information.
