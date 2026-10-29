@@ -10,27 +10,34 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 _ASSET_ROOT = Path(__file__).resolve().parent / "assets"
+_BRAND_MARK = _ASSET_ROOT / "brand" / "janavani-mark.svg"
+_PREAMBLE_IMAGE = _ASSET_ROOT / "illustrations" / "preamble-of-india.webp"
+_PATHWAY_IMAGE = _ASSET_ROOT / "illustrations" / "civic-action-pathway.webp"
 
 
-class CachedBrandStaticFiles(StaticFiles):
-    """Serve the packaged allow-listed asset directory with an explicit cache policy."""
+def register_brand_assets(rt) -> None:
+    """Register extensionless static routes to avoid FastHTML's extension route."""
 
-    def file_response(
-        self,
-        full_path: str,
-        stat_result: os.stat_result,
-        scope: Scope,
-        status_code: int = 200,
-    ) -> Response:
-        response = super().file_response(full_path, stat_result, scope, status_code)
-        response.headers["Cache-Control"] = "public, max-age=86400"
-        return response
+    @rt("/brand-assets/brand/janavani-mark")
+    def get_janavani_mark():
+        return FileResponse(
+            _BRAND_MARK,
+            media_type="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
+    @rt("/brand-assets/illustrations/preamble-of-india")
+    def get_constitution_preamble_image():
+        return FileResponse(
+            _PREAMBLE_IMAGE,
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
-def register_brand_assets(app) -> None:
-    """Mount the shared SVG/WebP directory once on each independent web application."""
-    app.mount(
-        "/brand-assets",
-        CachedBrandStaticFiles(directory=str(_ASSET_ROOT), check_dir=True),
-        name="brand-assets",
-    )
+    @rt("/brand-assets/illustrations/civic-action-pathway")
+    def get_civic_action_pathway_image():
+        return FileResponse(
+            _PATHWAY_IMAGE,
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
