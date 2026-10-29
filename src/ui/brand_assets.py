@@ -16,10 +16,10 @@ _PREAMBLE_IMAGE = _ASSET_ROOT / "illustrations" / "preamble-of-india.webp"
 _PATHWAY_IMAGE = _ASSET_ROOT / "illustrations" / "civic-action-pathway.webp"
 
 
-def register_brand_assets(rt) -> None:
-    """Register the same first-party mark route on a FastHTML runtime."""
+def register_brand_assets(app) -> None:
+    """Register shared static-asset routes directly on the FastAPI application."""
 
-    @rt("/brand-assets/brand/janavani-mark.svg")
+    @app.get("/brand-assets/brand/janavani-mark.svg")
     def get_janavani_mark():
         return FileResponse(
             _BRAND_MARK,
@@ -27,7 +27,7 @@ def register_brand_assets(rt) -> None:
             headers={"Cache-Control": "public, max-age=86400"},
         )
 
-    @rt("/brand-assets/illustrations/preamble-of-india.webp")
+    @app.get("/brand-assets/illustrations/preamble-of-india.webp")
     def get_constitution_preamble_image():
         return FileResponse(
             _PREAMBLE_IMAGE,
@@ -35,7 +35,7 @@ def register_brand_assets(rt) -> None:
             headers={"Cache-Control": "public, max-age=86400"},
         )
 
-    @rt("/brand-assets/illustrations/civic-action-pathway.webp")
+    @app.get("/brand-assets/illustrations/civic-action-pathway.webp")
     def get_civic_action_pathway_image():
         return FileResponse(
             _PATHWAY_IMAGE,
