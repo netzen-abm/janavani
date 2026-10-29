@@ -211,6 +211,19 @@ Initial format catalogue:
 - administrative notice/evidence demand: notice reference, asserted demand, document requests and requested point-by-point response;
 - constitutional-objection format: relevant measure/source, citizen comments and carefully qualified grounds.
 
+### Workflow when a citizen provides an existing draft
+
+Offer two equal starting modes: **start from a JanaVani template** or **improve my existing draft**. The second path is especially important for people who already understand their situation and do not want the system to replace their voice.
+
+1. Preserve the user's original text as the read-only source for that editing session. Ask what kind of edit they want: proofreading, plain-language improvement, structural reorganisation, a stronger factual chronology, a request/relief section, or an evidence/record list. Do not silently convert one kind of document into another.
+2. Show a structured change plan before making substantial legal edits. Distinguish user-supplied facts, missing facts/questions, verified legal propositions, and suggestions that need human verification.
+3. Improve within the selected versioned template. Preserve dates, names, quantities, allegations, quotations and reservations unless the user explicitly changes them. Flag contradictions and missing support; never fill gaps by invention. Where the user asks for stronger language, offer a measured option rather than presenting accusations or legal conclusions as established.
+4. Provide a side-by-side comparison or change summary, a clean editable draft, and clearly separated verification notes/citations. Let the user accept or reject proposed edits and return to their own wording.
+5. Build a new reusable model only from the **content-free structure**: field schema, section ordering, generic clause, jurisdiction/rule references, validation rules and review notes. Strip names, addresses, phone/email, case numbers, dates unique to the event, signatures, evidence, account IDs, free-text details and hidden document metadata. If safe structural de-identification cannot be demonstrated, do not promote it into a shared catalogue.
+6. Keep a source user draft and a canonical template model as separate concepts. Saving a reusable structure must be an explicit action; global templates require editorial/legal review, versioning, a changelog, test cases and rollback. Do not globally save or train from the raw letter just because the user requested a draft improvement.
+
+The AI is an editor and bounded drafting assistant, not the factual record owner or a substitute legal decision-maker. The user-supplied draft remains the controlling reference for that editing session. All previews remain review/download artifacts; they are not silently filed, emailed or submitted.
+
 The citizen remains the factual authority for their own account. Janavani must not invent dates, events, legal provisions, citations, authorities, evidence, deadlines or statements that silence creates agreement. The preview ends in review/download; the citizen sends it independently.
 
 ## 6. Hisaab: observed state and complementarity
