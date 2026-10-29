@@ -11,6 +11,8 @@ def test_dynamic_website_is_a_separate_product_runtime_with_preamble_first():
     assert "WE, THE PEOPLE OF INDIA" in response.text
     assert "Find a civic pathway" in response.text
     assert "Draft a civic document" in response.text
+    assert "/assets/illustrations/preamble-of-india.webp" in response.text
+    assert "/assets/illustrations/civic-action-pathway.webp" in response.text
     assert "janavani-website" not in response.text
 
 
@@ -133,6 +135,18 @@ def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
     assert response.headers["cache-control"] == "public, max-age=86400"
     assert '<svg xmlns="http://www.w3.org/2000/svg"' in response.text
     assert "JanaVani" in response.text
+
+
+def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():
+    for path in (
+        "/assets/illustrations/preamble-of-india.webp",
+        "/assets/illustrations/civic-action-pathway.webp",
+    ):
+        response = TestClient(app).get(path)
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/webp")
+        assert response.headers["cache-control"] == "public, max-age=86400"
+        assert len(response.content) > 1000
 
 
 def test_dynamic_site_liveness_is_independent_of_api_and_telegram():
