@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from starlette.datastructures import Headers
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
