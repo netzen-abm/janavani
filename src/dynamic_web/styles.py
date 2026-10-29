@@ -31,6 +31,7 @@ h2{font-size:clamp(1.7rem,4vw,2.8rem)}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:24px}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px}
 .card p{color:var(--muted)}
+.preamble-visual,.pathway-visual{display:block;width:100%;height:auto;max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}.preamble-visual{margin:22px 0 34px;padding:12px;object-fit:contain}.pathway-visual{margin:26px 0 18px}
 .pathway-box{margin-top:28px;padding:clamp(20px,4vw,32px);background:var(--paper);border:1px solid var(--line);border-radius:14px}
 label{display:block;font-weight:700;margin:14px 0 7px}
 select{width:100%;max-width:620px;padding:12px;border:1px solid #778793;border-radius:7px;background:#fff;font:inherit}
