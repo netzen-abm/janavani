@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 def test_webapp_serves_the_shared_packaged_brand_mark():
     from src.webapp.main import app
 
-    response = TestClient(app).get("/brand-assets/brand/janavani-mark.svg")
+    response = TestClient(app).get("/brand-assets/brand/janavani-mark")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert response.headers["cache-control"] == "public, max-age=86400"
@@ -15,8 +15,8 @@ def test_webapp_serves_imported_webp_illustrations():
     from src.webapp.main import app
 
     for path in (
-        "/brand-assets/illustrations/preamble-of-india.webp",
-        "/brand-assets/illustrations/civic-action-pathway.webp",
+        "/brand-assets/illustrations/preamble-of-india",
+        "/brand-assets/illustrations/civic-action-pathway",
     ):
         response = TestClient(app).get(path)
         assert response.status_code == 200
