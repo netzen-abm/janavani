@@ -2,12 +2,9 @@
 """Shared immutable brand and illustration assets for JanaVani web surfaces."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from starlette.responses import Response
-from starlette.staticfiles import StaticFiles
-from starlette.types import Scope
+from starlette.responses import FileResponse
 
 _ASSET_ROOT = Path(__file__).resolve().parent / "assets"
 _BRAND_MARK = _ASSET_ROOT / "brand" / "janavani-mark.svg"
