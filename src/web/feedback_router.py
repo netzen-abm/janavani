@@ -56,7 +56,7 @@ async def fetch_office_performance_summary(
     office_id: str,
     token: str = Security(verify_client_token),
 ) -> dict[str, Any]:
-    """Expose canonical feedback records through the provider-neutral repository."""
+    """Return aggregate counts only; individual narratives are not public summary data."""
     del token
     records = _capability().list_for_office(office_id)
     return {
@@ -68,12 +68,4 @@ async def fetch_office_performance_summary(
                 for rating in range(1, 6)
             },
         },
-        "recent_sanitized_comments": [
-            {
-                "rating_given": record.rating,
-                "comment_body": record.issue,
-                "recorded_at": record.submitted_at,
-            }
-            for record in records[-50:]
-        ],
     }
