@@ -124,7 +124,7 @@ def build_application(*, token: str | None = None) -> Application:
 
     # Keep feature-specific callbacks ahead of broad handlers to prevent shadowing.
     application.add_handler(CallbackQueryHandler(handle_civic_draft_callback, pattern=r"^civicdraft:"))
-    application.add_handler(CallbackQueryHandler(handle_format))
+    application.add_handler(CallbackQueryHandler(handle_format, pattern=r"^(pdf|docx)$"))
     application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("account", account))
