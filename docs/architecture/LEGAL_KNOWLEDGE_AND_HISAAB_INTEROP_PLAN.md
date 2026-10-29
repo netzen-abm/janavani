@@ -104,7 +104,7 @@ The following are authoritative starting points observed in the 29 October 2026 
 ### Constitution of India
 
 - Official Legislative Department document index: https://www.legislative.gov.in/documents
-- The index displayed a Constitution of India entry with publication date 23 December 2025 during this review. At ingestion, select and verify the latest actual document, its cover/cutoff and amendment coverage; do not identify an edition only from the PDF filename.
+- Official consolidated English/Hindi diglot edition: https://www.legislative.gov.in/static/uploads/2025/07/88cca69e868e50b217f855be2fb8bdba.pdf. Its cover states “The Constitution of India [As on 1st May, 2026]”; the preface says it incorporates amendments up to the Constitution (One Hundred and Sixth Amendment) Act, 2023. The document index also displays an English Constitution entry published 23 December 2025. Record the exact edition, language, cutoff and amendment coverage for each ingested file; before claiming currency, check later official amendment Acts/Gazette material rather than relying on the edition label alone.
 - Primary uses: constitutional structure, rights/duties context and carefully qualified issue routing. A citizen complaint does not automatically establish a constitutional violation. Do not generate an Article-based conclusion unless the applicable text and relevant interpretation have been retrieved and the facts support the limited statement.
 
 ### Bharatiya Sakshya Adhiniyam, 2023 (BSA)
@@ -118,11 +118,25 @@ The following are authoritative starting points observed in the 29 October 2026 
 ### Right to Information Act, 2005 and rules
 
 - India Code portal: https://www.indiacode.gov.in/ (the former `indiacode.nic.in` pages now redirect to this portal; resolve the Act through the current official search and record the final canonical URL at ingestion). Legacy indexed Act detail: https://www.indiacode.nic.in/indiacode/handle/123456789/17520?col=123456789%2F2510&view_type=search
-- India Code official PDF shown during this review as “as on the 17th November, 2025”: https://upload.indiacode.nic.in/showfile?actid=AC_CEN_26_36_00004_200522_1517807322955&filename=a2005-22.pdf&type=actfile
+- India Code official PDF: https://upload.indiacode.nic.in/showfile?actid=AC_CEN_26_36_00004_200522_1517807322955&filename=a2005-22.pdf&type=actfile. Its cover says “As on the 18th November, 2025” and its list of amending Acts includes the Digital Personal Data Protection Act, 2023 (22 of 2023).
 - Central Information Commission Act/rules index: https://cic.gov.in/rti_act and notifications: https://cic.gov.in/rti-notifications
-- Do not freeze the 2025 consolidated copy as the law through October 2026. Check later Central Gazette amendments, applicable RTI Rules and fee rules, and relevant state rules/orders before stating a current procedure or deadline.
+- Do not freeze the 2025 consolidated copy as the law through October 2026. Check later Central Gazette amendments, applicable RTI Rules and fee rules, and relevant State rules/orders before stating a current procedure or deadline. In particular, apply the commencement history of DPDP Act section 44(3) to RTI section 8(1)(j); do not use a pre-amendment RTI text for a question arising after the amendment took effect.
 - RTI drafting must request existing records with a clearly named public authority, relevant period and specific record descriptions. Do not disguise a request for a newly authored explanation, opinion or remedy as a request for existing records. Validate jurisdiction and applicable procedure. Fee, CPIO/FAA routing, exemptions, third-party process, timelines and appeals must be grounded in the correct central/state/local rules and current official routing information.
 - A PIB release dated January 2026 noted central RTI-cell decentralization to section-level CPIOs/FAAs effective in October 2025 for the described department. Treat this as a department-specific administrative update, not as a universal amendment to the RTI Act or a substitute for the relevant authority's current directory.
+
+### Digital Personal Data Protection Act, 2023 (DPDP) — mandatory RTI temporal dependency
+
+- Official MeitY/India Code Act copy: https://www.indiacode.nic.in/bitstream/123456789/22037/1/a2023-22.pdf
+- Official Gazette commencement notification G.S.R. 843(E), dated 13 November 2025: https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf
+- Official DPDP Rules, 2025 and commencement/corrigendum listing: https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025
+
+The official commencement notification brought DPDP Act section 44(3) into force on 13 November 2025. That provision substitutes RTI Act section 8(1)(j) with the text “information which relates to personal information”. The RTI consolidated Act dated 18 November 2025 lists DPDP Act 2023 as an amending Act. This linkage is a material legal knowledge dependency and must be reflected in source versioning, retrieval and RTI-draft review.
+
+Do not infer that every substantive DPDP obligation became operative on 13 November 2025. The same official commencement notification phases different DPDP provisions: it assigns specified provisions to the notification date, another group to one year after publication, and a further group to eighteen months after publication. The official DPDP Rules page also lists a 16 December 2025 corrigendum and an 18-month implementation timeline. The legal corpus must represent each provision/rule's own effective date and verify amendments/corrigenda, rather than assign one commencement date to the whole Act or Rules.
+
+For RTI drafting, the engine must retrieve the amended clause applicable to the relevant date, and must not reuse an older template note or generated explanation describing the former text of section 8(1)(j) as current. Any advice about exemptions, public-interest considerations, severability or appeal strategy requires the operative statutory text and current authoritative interpretation; do not extrapolate from the amendment's short wording alone.
+
+For JanaVani's own privacy architecture, treat DPDP-related compliance analysis as a separate, current legal workstream: data inventory, purpose limitation, notice/consent and withdrawal semantics, retention, processor/provider disclosures, access control, deletion and incident handling must be mapped to the exact provisions/rules and their respective phased commencement. Do not claim full statutory compliance merely because a consent checkbox or privacy notice exists.
 
 ### Source hierarchy
 
@@ -217,6 +231,8 @@ Do not advance if a source's currentness, jurisdiction, reuse terms or claimed e
 - India Code: Bharatiya Sakshya Adhiniyam, 2023 — https://www.indiacode.nic.in/indiacode/handle/123456789/20063?col=123456789%2F1362&view_type=search
 - India Code: Right to Information Act, 2005 — https://www.indiacode.nic.in/indiacode/handle/123456789/17520?col=123456789%2F2510&view_type=search
 - Central Information Commission: RTI Act and rules — https://cic.gov.in/rti_act
+- MeitY/Gazette: DPDP Act section 44(3) commencement and RTI amendment — https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf
+- MeitY: DPDP Rules 2025, commencement timeline and corrigendum — https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025
 - Hisaab repository — https://github.com/theadiram/Hisaab
 - Hisaab data acquisition contract — https://github.com/theadiram/Hisaab/blob/main/docs/data-acquisition-contract.md
 - Hisaab evidence publication path — https://github.com/theadiram/Hisaab/blob/main/docs/evidence-publication-path-2026-10-25.md
