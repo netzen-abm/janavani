@@ -139,7 +139,7 @@ from src.webapp.case_workspace import register_case_workspace_routes
 
 register_case_workspace_routes(rt)
 register_ai_drafting_routes(rt)
-register_brand_assets(rt)
+register_brand_assets(app)
 
 
 async def protect_user_generated_responses(request: Request, call_next):
