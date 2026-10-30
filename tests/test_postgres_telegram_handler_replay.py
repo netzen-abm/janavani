@@ -17,8 +17,9 @@ from conversation.constants import WAITING_FOR_OFFICE_SELECTION
 from conversation.engine import run_step
 from conversation.session import clear_session, get_session, set_ephemeral_issue
 from conversation.state import set_state, user_states
+from src.capabilities.civic_case import CAPABILITY_ID
 from src.identity.external import ExternalIdentity
-from src.identity.linking import PostgresExternalIdentityLinkRepository
+from src.identity.linking import InMemoryExternalIdentityLinkRepository
 from src.platform.surface_case_composition import create_surface_case_composition
 from src.storage.provider_composition import ProviderComposition
 from src.storage.repositories.postgres_civic_case import PostgresCivicCaseRepository
@@ -30,7 +31,6 @@ DSN = os.getenv("JANAVANI_POSTGRES_TEST_DSN", "").strip()
 FERNET_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
 MIGRATIONS = (
     "db/migrations/20260912100000_canonical_case_policy_schema.sql",
-    "db/migrations/20260920100000_external_identity_links.sql",
     "db/migrations/20261012120000_telegram_update_inbox.sql",
     "db/migrations/20261025120000_telegram_inbox_encrypted_payloads.sql",
 )
@@ -102,7 +102,9 @@ def test_telegram_case_commit_replay_after_worker_restart_is_idempotent(monkeypa
 
     monkeypatch.setattr(Message, "reply_text", fake_reply_text)
 
-    links = PostgresExternalIdentityLinkRepository(lambda: psycopg.connect(DSN))
+    # Authorization is explicit test setup; the identity adapter itself must
+    # not invent capabilities from a verified identity link.
+    links = InMemoryExternalIdentityLinkRepository()
     links.save(
         ExternalIdentity(
             provider="telegram",
@@ -110,6 +112,7 @@ def test_telegram_case_commit_replay_after_worker_restart_is_idempotent(monkeypa
             principal_id=principal_id,
             authentication_method="explicit_verified_link",
             verified=True,
+            capabilities=frozenset({CAPABILITY_ID}),
         )
     )
     case_repository = PostgresCivicCaseRepository(dsn=DSN)
@@ -267,8 +270,4 @@ def test_telegram_case_commit_replay_after_worker_restart_is_idempotent(monkeypa
             connection.execute(
                 "DELETE FROM public.telegram_update_inbox WHERE update_id = %s",
                 (update_id,),
-            )
-            connection.execute(
-                "DELETE FROM public.external_identity_links WHERE provider = 'telegram' AND subject = %s",
-                (telegram_subject,),
             )
