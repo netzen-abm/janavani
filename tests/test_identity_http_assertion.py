@@ -125,15 +125,24 @@ def test_replay_store_allows_distinct_assertion_ids() -> None:
 
 def test_concurrent_replay_attempts_have_exactly_one_success() -> None:
     secret = b"test-secret"
-    store = InMemoryReplayStore()
-    verifier = IdentityAssertionVerifier(secret=secret, replay_store=store)
+    server = fakeredis.FakeServer()
+    stores = [
+        RedisIdentityAssertionReplayStore("redis://localhost/0"),
+        RedisIdentityAssertionReplayStore("redis://localhost/0"),
+    ]
+    for store in stores:
+        store._client = fakeredis.FakeRedis(server=server, decode_responses=True)
+    verifiers = [
+        IdentityAssertionVerifier(secret=secret, replay_store=store)
+        for store in stores
+    ]
     assertion = _encode(_payload(), secret)
     barrier = threading.Barrier(8)
 
-    def attempt() -> bool:
+    def attempt(index: int) -> bool:
         barrier.wait()
         try:
-            verifier.verify(assertion)
+            verifiers[index % len(verifiers)].verify(assertion)
             return True
         except ValueError:
             return False
@@ -141,11 +150,10 @@ def test_concurrent_replay_attempts_have_exactly_one_success() -> None:
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(lambda _: attempt(), range(8)))
+        results = list(executor.map(attempt, range(8)))
 
     assert results.count(True) == 1
     assert results.count(False) == 7
-
 
 def test_replay_store_outage_fails_closed() -> None:
     secret = b"test-secret"
