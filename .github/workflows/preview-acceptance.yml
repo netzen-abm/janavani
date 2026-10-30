@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - feat/canonical-civic-action-vertical-slice
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
