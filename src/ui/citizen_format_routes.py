@@ -99,7 +99,12 @@ def register_citizen_format_routes(rt, *, client_factory: Callable[[Request], An
                 section_field_names=section_field_names or [], save_confirmation=True,
             )
         except httpx.HTTPStatusError as exc:
-            message = ("Sign in with the account where you want to keep this format." if exc.response.status_code in {401, 403} else "Choose only the listed sections and retain all required sections." if exc.response.status_code == 422 else "Durable saved-format storage is not configured yet.")
+            if exc.response.status_code in {401, 403}:
+                message = "Sign in with the account where you want to keep this format."
+            elif exc.response.status_code == 422:
+                message = "Choose only the listed sections and retain all required sections."
+            else:
+                message = "Durable saved-format storage is not configured yet."
             return _error_page(message)
         except (httpx.HTTPError, RuntimeError, ValueError):
             return _error_page("The private format could not be saved. No source draft was stored.")
