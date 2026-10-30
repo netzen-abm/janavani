@@ -45,7 +45,7 @@ class PostgresCitizenDocumentFormatRepository:
                          section_field_names, structure_hash, created_at, updated_at)
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                         ON CONFLICT (owner_principal_id, structure_hash)
-                        DO UPDATE SET updated_at = EXCLUDED.updated_at
+                        DO UPDATE SET updated_at = citizen_document_formats.updated_at
                         RETURNING format_id, owner_principal_id, template_id, template_version,
                                   section_field_names, structure_hash, created_at, updated_at""",
                         (record.format_id, owner_principal_id, record.template_id,
