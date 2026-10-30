@@ -23,6 +23,11 @@ from fastapi import Header, HTTPException
 from .adapter import DefaultIdentityAdapter
 from .context import IdentityContext
 from .external import ExternalIdentity
+from .replay_store import (
+    IdentityAssertionReplayStore,
+    RedisIdentityAssertionReplayStore,
+    ReplayProtectionUnavailable,
+)
 
 
 @dataclass(frozen=True)
@@ -32,6 +37,7 @@ class IdentityAssertionVerifier:
     expected_audience: str | None = None
     max_clock_skew_seconds: int = 30
     max_lifetime_seconds: int = 300
+    replay_store: IdentityAssertionReplayStore | None = None
 
     def verify(self, assertion: str) -> ExternalIdentity:
         try:
@@ -65,7 +71,7 @@ class IdentityAssertionVerifier:
         now = int(time.time())
         if issued_at > now + self.max_clock_skew_seconds:
             raise ValueError("identity assertion is issued in the future")
-        if expires_at < now - self.max_clock_skew_seconds:
+        if expires_at <= now:
             raise ValueError("identity assertion has expired")
         if expires_at <= issued_at or expires_at - issued_at > self.max_lifetime_seconds:
             raise ValueError("identity assertion lifetime is invalid")
@@ -74,6 +80,24 @@ class IdentityAssertionVerifier:
             raise ValueError("identity assertion issuer is invalid")
         if self.expected_audience is not None and payload.get("aud") != self.expected_audience:
             raise ValueError("identity assertion audience is invalid")
+
+        if self.replay_store is not None:
+            replay_material = "\\0".join((
+                str(payload.get("iss", "")),
+                str(payload.get("aud", "")),
+                str(payload["jti"]),
+            ))
+            replay_id = hashlib.sha256(replay_material.encode("utf-8")).hexdigest()
+            try:
+                first_use = self.replay_store.consume(replay_id, expires_at)
+            except ReplayProtectionUnavailable:
+                raise
+            except Exception as exc:
+                raise ReplayProtectionUnavailable(
+                    "identity assertion replay protection is unavailable"
+                ) from exc
+            if not first_use:
+                raise ValueError("identity assertion has been replayed")
 
         return ExternalIdentity(
             provider=str(payload["provider"]),
@@ -102,14 +126,27 @@ def require_authenticated_identity(
         raise HTTPException(status_code=401, detail="Authenticated identity required")
 
     assertion = authorization.removeprefix("Bearer ").strip()
+    replay_url = os.getenv("JANAVANI_IDENTITY_REPLAY_REDIS_URL", "").strip()
+    if not replay_url:
+        raise HTTPException(
+            status_code=503,
+            detail="Identity assertion replay protection is not configured",
+        )
+
     try:
         verifier = IdentityAssertionVerifier(
             secret=secret_value.encode("utf-8"),
             expected_issuer=os.getenv("JANAVANI_IDENTITY_ASSERTION_ISSUER") or None,
             expected_audience=os.getenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE") or None,
+            replay_store=RedisIdentityAssertionReplayStore(replay_url),
         )
         identity = verifier.verify(assertion)
         context = DefaultIdentityAdapter().resolve(identity)
+    except ReplayProtectionUnavailable as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Identity assertion replay protection is unavailable",
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=401, detail="Invalid authenticated identity") from exc
 
