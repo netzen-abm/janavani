@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from src.adapters.telegram.identity import __name__ as _identity_module_name
 from src.capabilities.civic_case import CAPABILITY_ID
 from src.identity.adapter import DefaultIdentityAdapter
 from src.identity.context import IdentityContext
