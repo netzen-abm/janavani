@@ -19,6 +19,7 @@ In particular:
 - Database and artifact-storage credentials belong to the canonical persistence runtime that uses them.
 - Interface tokens are service-to-service credentials, not citizen identity credentials.
 - `JANAVANI_IDENTITY_ASSERTION_SECRET` is a service-to-service trust credential for the temporary signed-assertion gateway boundary; it is **not** a citizen credential and must never be exposed to browsers, Telegram clients, or other untrusted interfaces.
+- `JANAVANI_IDENTITY_REPLAY_REDIS_URL` is a server-side Redis connection URL required by authenticated HTTP identity routes for atomic, cross-replica single-use assertion checks. It must be configured in the server-side secret store; absence or outage fails closed. No process-local fallback is permitted.
 
 ## Canonical provider credentials
 
@@ -57,6 +58,7 @@ Configure only where the corresponding interface or internal service is enabled:
 - `JANAVANI_INTERFACE_TOKENS` — configured interface-token set for protected API endpoints.
 - `ADMIN_INTERFACE_SECRET_TOKEN` — internal admin interface credential.
 - `JANAVANI_IDENTITY_ASSERTION_SECRET` — temporary trusted-gateway signing secret used by the Web/API identity assertion verifier. This must be generated and stored only in the server-side secret store.
+- `JANAVANI_IDENTITY_REPLAY_REDIS_URL` — shared Redis connection URL used for atomic single-use assertion replay protection. Treat as a secret and configure on every Web/API replica that accepts these assertions. The authenticated identity dependency returns 503 when it is missing or unavailable; it must not bypass replay protection.
 
 These values must never be hard-coded, committed, or reused as citizen identity.
 
@@ -80,6 +82,7 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `JANAVANI_INTERFACE_TOKENS` | If protected API endpoints are enabled | If interface calls them | If interface calls them | No | Fixture | Service credential |
 | `ADMIN_INTERFACE_SECRET_TOKEN` | No | No | No | Yes | Fixture | Service credential |
 | `JANAVANI_IDENTITY_ASSERTION_SECRET` | If Web/API identity gateway is enabled | No | No | No | Test-only fixture | Service trust secret |
+| `JANAVANI_IDENTITY_REPLAY_REDIS_URL` | Required for authenticated HTTP routes | No by default | No | No | Fake Redis/unit-test fixture | Secret / replay state |
 | `JANAVANI_AI_BASE_URL` | If server-side AI adapter is used | No | Yes | No | Fixture | Non-secret URL |
 | `JANAVANI_INTERNAL_API_URL` | No | No | No | Yes | Fixture | Internal URL |
 | `JANAVANI_INTERNAL_FEEDBACK_URL` | No | No | No | Yes | Fixture | Internal URL |
