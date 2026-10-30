@@ -59,6 +59,7 @@ Configure only where the corresponding interface or internal service is enabled:
 - `ADMIN_INTERFACE_SECRET_TOKEN` — internal admin interface credential.
 - `JANAVANI_IDENTITY_ASSERTION_SECRET` — temporary trusted-gateway signing secret used by the Web/API identity assertion verifier. This must be generated and stored only in the server-side secret store.
 - `JANAVANI_IDENTITY_REPLAY_REDIS_URL` — shared Redis connection URL used for atomic single-use assertion replay protection. Treat as a secret and configure on every Web/API replica that accepts these assertions. The authenticated identity dependency returns 503 when it is missing or unavailable; it must not bypass replay protection.
+- `JANAVANI_IDENTITY_ASSERTION_ISSUER` and `JANAVANI_IDENTITY_ASSERTION_AUDIENCE` — required expected claim values for the trusted identity gateway. Authenticated HTTP routes fail closed with 503 if either is missing; do not leave the issuer/audience checks optional in the production dependency.
 
 These values must never be hard-coded, committed, or reused as citizen identity.
 
@@ -82,6 +83,7 @@ These values must never be hard-coded, committed, or reused as citizen identity.
 | `JANAVANI_INTERFACE_TOKENS` | If protected API endpoints are enabled | If interface calls them | If interface calls them | No | Fixture | Service credential |
 | `ADMIN_INTERFACE_SECRET_TOKEN` | No | No | No | Yes | Fixture | Service credential |
 | `JANAVANI_IDENTITY_ASSERTION_SECRET` | If Web/API identity gateway is enabled | No | No | No | Test-only fixture | Service trust secret |
+| `JANAVANI_IDENTITY_ASSERTION_ISSUER` / `JANAVANI_IDENTITY_ASSERTION_AUDIENCE` | Required for authenticated HTTP routes | No | No | No | Test fixture | Trust-boundary configuration |
 | `JANAVANI_IDENTITY_REPLAY_REDIS_URL` | Required for authenticated HTTP routes | No by default | No | No | Fake Redis/unit-test fixture | Secret / replay state |
 | `JANAVANI_AI_BASE_URL` | If server-side AI adapter is used | No | Yes | No | Fixture | Non-secret URL |
 | `JANAVANI_INTERNAL_API_URL` | No | No | No | Yes | Fixture | Internal URL |
