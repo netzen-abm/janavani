@@ -211,3 +211,16 @@ def test_authenticated_dependency_fails_closed_without_replay_store(monkeypatch)
         require_authenticated_identity(authorization="Bearer not-used", request_id=None)
 
     assert error.value.status_code == 503
+
+
+
+def test_authenticated_dependency_fails_closed_without_issuer_and_audience(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", "test-secret")
+    monkeypatch.setenv("JANAVANI_IDENTITY_REPLAY_REDIS_URL", "redis://localhost/0")
+    monkeypatch.delenv("JANAVANI_IDENTITY_ASSERTION_ISSUER", raising=False)
+    monkeypatch.delenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE", raising=False)
+
+    with pytest.raises(HTTPException) as error:
+        require_authenticated_identity(authorization="Bearer not-used", request_id=None)
+
+    assert error.value.status_code == 503
