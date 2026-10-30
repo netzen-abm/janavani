@@ -5,12 +5,14 @@ import json
 import threading
 import time
 
+import fakeredis
 import pytest
 
 from src.identity.http_assertion import (
     IdentityAssertionVerifier,
     ReplayProtectionUnavailable,
 )
+from src.identity.replay_store import RedisIdentityAssertionReplayStore
 
 
 def _encode(payload: dict[str, object], secret: bytes) -> str:
@@ -170,3 +172,21 @@ def test_invalid_audience_does_not_consume_assertion_id() -> None:
         expected_audience="janavani-api",
         replay_store=store,
     ).verify(assertion).verified is True
+
+
+
+def test_redis_replay_store_is_atomic_across_instances_and_bounds_ttl() -> None:
+    server = fakeredis.FakeServer()
+    first = RedisIdentityAssertionReplayStore("redis://localhost/0")
+    second = RedisIdentityAssertionReplayStore("redis://localhost/0")
+    first._client = fakeredis.FakeRedis(server=server, decode_responses=True)
+    second._client = fakeredis.FakeRedis(server=server, decode_responses=True)
+    expires_at = int(time.time()) + 30
+
+    assert first.consume("opaque-assertion-digest", expires_at) is True
+    assert second.consume("opaque-assertion-digest", expires_at) is False
+
+    keys = list(first._client.scan_iter(match="janavani:identity-assertion-replay:v1:*"))
+    assert len(keys) == 1
+    ttl = first._client.ttl(keys[0])
+    assert 0 < ttl <= expires_at - int(time.time())
