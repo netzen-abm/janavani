@@ -41,7 +41,9 @@ class RedisIdentityAssertionReplayStore:
         )
 
     def consume(self, assertion_id: str, expires_at: int) -> bool:
-        remaining = int(expires_at) - int(time.time())
+        # Floor the remaining duration so Redis expiry cannot extend beyond
+        # the assertion's absolute expiry because of fractional clock seconds.
+        remaining = int(int(expires_at) - time.time())
         if remaining <= 0:
             return False
 
