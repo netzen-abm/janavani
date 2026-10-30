@@ -5,9 +5,6 @@ Persistent capability access requires an explicit verified identity link.
 """
 from __future__ import annotations
 
-from dataclasses import replace
-
-from src.capabilities.civic_case import CAPABILITY_ID
 from src.identity.adapter import DefaultIdentityAdapter
 from src.identity.context import IdentityContext
 from src.identity.linking import ExternalIdentityLinkRepository, IdentityLinkResolver
@@ -23,13 +20,6 @@ def identity_for_telegram_user(
     if links is None:
         raise PermissionError("Telegram identity must be explicitly linked before protected access")
     external = IdentityLinkResolver(links).resolve("telegram", str(user_id))
-    context = DefaultIdentityAdapter().resolve(external)
-
-    # An explicitly verified citizen link receives only the baseline self-service
-    # Case-creation capability. This adapter does not grant administrative,
-    # submission, or other consequential capabilities.
-    principal = replace(
-        context.principal,
-        capabilities=context.principal.capabilities | frozenset({CAPABILITY_ID}),
-    )
-    return IdentityContext(principal=principal, request_id=context.request_id)
+    # Authentication mapping does not grant capabilities. The canonical
+    # authorization boundary must decide what this principal may do.
+    return DefaultIdentityAdapter().resolve(external)
