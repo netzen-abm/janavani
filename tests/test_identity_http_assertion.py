@@ -199,7 +199,7 @@ def test_redis_replay_store_is_atomic_across_instances_and_bounds_ttl() -> None:
     keys = list(first._client.scan_iter(match="janavani:identity-assertion-replay:v1:*"))
     assert len(keys) == 1
     ttl = first._client.ttl(keys[0])
-    assert 0 < ttl <= expires_at - int(time.time())
+    assert 0 < ttl <= int(expires_at - time.time())
 
 
 
