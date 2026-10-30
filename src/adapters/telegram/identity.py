@@ -5,21 +5,25 @@ Persistent capability access requires an explicit verified identity link.
 """
 from __future__ import annotations
 
-from src.identity.adapter import DefaultIdentityAdapter
-from src.identity.context import IdentityContext
-from src.identity.linking import ExternalIdentityLinkRepository, IdentityLinkResolver
+from src.identity.linking import (
+    ExternalIdentityLinkRepository,
+    context_for_verified_external_link,
+)
 
 
 def identity_for_telegram_user(
     user_id: int,
     *,
     links: ExternalIdentityLinkRepository | None = None,
-) -> IdentityContext:
+):
     if user_id <= 0:
         raise ValueError("Telegram user identity is required")
     if links is None:
         raise PermissionError("Telegram identity must be explicitly linked before protected access")
-    external = IdentityLinkResolver(links).resolve("telegram", str(user_id))
-    # Authentication mapping does not grant capabilities. The canonical
-    # authorization boundary must decide what this principal may do.
-    return DefaultIdentityAdapter().resolve(external)
+    # This is authentication mapping only; the shared authorization boundary
+    # determines the capabilities/actions this canonical principal can use.
+    return context_for_verified_external_link(
+        links,
+        provider="telegram",
+        subject=str(user_id),
+    )
