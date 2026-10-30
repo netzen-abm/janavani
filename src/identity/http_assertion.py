@@ -138,11 +138,19 @@ def require_authenticated_identity(
             detail="Identity assertion replay protection is not configured",
         )
 
+    expected_issuer = os.getenv("JANAVANI_IDENTITY_ASSERTION_ISSUER", "").strip()
+    expected_audience = os.getenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE", "").strip()
+    if not expected_issuer or not expected_audience:
+        raise HTTPException(
+            status_code=503,
+            detail="Identity assertion issuer and audience are not configured",
+        )
+
     try:
         verifier = IdentityAssertionVerifier(
             secret=secret_value.encode("utf-8"),
-            expected_issuer=os.getenv("JANAVANI_IDENTITY_ASSERTION_ISSUER") or None,
-            expected_audience=os.getenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE") or None,
+            expected_issuer=expected_issuer,
+            expected_audience=expected_audience,
             replay_store=RedisIdentityAssertionReplayStore(replay_url),
         )
         identity = verifier.verify(assertion)
