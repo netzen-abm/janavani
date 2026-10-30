@@ -43,11 +43,15 @@ The Telegram drafting journey is restricted to private chats. The model may prop
 editable wording; legal citations, deadlines, verified authorities, evidence, and legal
 effects are not inferred as facts.
 
-The currently shipped catalogue is a curated source-controlled library. Saving a
-citizen-specific custom structure is **not** implemented yet. Any future saved-format
-feature must store only a separately reviewed, allow-listed structural model, never a
-redacted copy of arbitrary private prose, and must use a durable owner/approval
-boundary before it becomes reusable by others.
+The candidate includes private owner-scoped saved format selections. The current
+version allows only canonical template IDs/versions and allow-listed section identifiers;
+it deliberately does not extract arbitrary headings from pasted drafts. Saving and
+deletion each require a separate citizen confirmation. The API requires a verified
+identity assertion and the `document:format:manage` capability; it owner-filters each
+repository operation and includes a forced-RLS PostgreSQL migration. The migration and
+dedicated least-privilege runtime DSN/role remain deployment prerequisites, so durable
+saved-format storage is unavailable until they are reviewed and configured. The
+implementation must not silently fall back to process memory in a deployed runtime.
 
 ## Canonical flow
 

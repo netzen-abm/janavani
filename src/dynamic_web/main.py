@@ -15,7 +15,8 @@ from src.dynamic_web.pages import register_public_pages
 from src.dynamic_web.pathways import register_pathway_routes
 from src.dynamic_web.styles import DYNAMIC_WEB_STYLES
 from src.ui.brand_assets import register_brand_assets
-from src.ui.civic_drafting import register_civic_drafting_routes
+from src.ui.civic_drafting_routes import register_civic_drafting_routes
+from src.ui.citizen_format_routes import register_citizen_format_routes
 
 
 app, rt = fast_app(
@@ -44,6 +45,7 @@ register_public_pages(rt)
 register_pathway_routes(app)
 register_brand_assets(rt)
 register_civic_drafting_routes(rt, client_factory=client_for_request)
+register_citizen_format_routes(rt, client_factory=client_for_request)
 
 
 async def protect_responses(request, call_next):
@@ -51,7 +53,8 @@ async def protect_responses(request, call_next):
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if request.method in {"POST", "PUT", "PATCH"}:
+    private_format_page = request.url.path.startswith("/citizen-formats") or (request.url.path == "/ai-drafting" and "format_id" in request.query_params)
+    if request.method in {"POST", "PUT", "PATCH"} or private_format_page:
         response.headers["Cache-Control"] = "no-store, private"
         response.headers["Pragma"] = "no-cache"
     return response

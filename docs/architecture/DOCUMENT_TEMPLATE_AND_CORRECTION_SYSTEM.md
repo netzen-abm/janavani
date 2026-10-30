@@ -66,16 +66,29 @@ than treating generated text as verified. No preview is submitted or emailed by 
 
 ## Saving a reusable format from a citizen draft
 
-Do not store a copy of user prose and then rely on regex redaction. If custom formats
-are added, the citizen must explicitly choose “save as a reusable format”; the
-application must extract only allow-listed structure (section order, labels, field
-requirements, document type, language and declared jurisdiction scope). Reject any
-candidate containing values in fields intended for personal/case content. Store it as
-a proposed version, with explicit review/moderation before it becomes a shared catalogue
-item. Store no source document or evidence with that structural model.
+The candidate now supports private, owner-scoped saved structures through
+`/civic/drafts/formats` and the WebApp/Dynamic Web pages. A citizen separately confirms
+saving the structure and separately confirms deletion. The implementation saves only a
+canonical template ID/version and allow-listed section identifiers, ordered according
+to the source-controlled catalogue. It does not parse arbitrary prose into shared
+headings, and it does not save completed letters, source drafts, personal values,
+case identifiers, evidence, credentials or model-generated claims. Repeated saves of
+the same structure for one owner are idempotent.
 
-The six curated catalogue entries are reusable source-controlled models. A user-saving
-workflow is a future capability and must not be represented as implemented yet.
+Access requires a verified identity assertion plus the `document:format:manage`
+capability. Repository queries are owner-filtered, and the new migration defines
+ENABLE + FORCE ROW LEVEL SECURITY with owner-bound SELECT/INSERT/UPDATE/DELETE policies
+based on the transaction-local `janavani.principal_id`. Before enabling persistence,
+apply `db/migrations/20261030120000_citizen_document_formats.sql` to the intended
+database, grant only required table privileges to a dedicated runtime role, and verify
+that the role cannot bypass RLS. **The migration is not applied by application startup
+and has not been applied to production.** If the dedicated provider/DSN is absent, the
+API fails closed rather than silently using process-local memory in a deployed runtime.
+
+This first slice saves curated structural selections, not arbitrary custom headings
+extracted from a personal document. It is not model-training consent. Using a saved
+structure deterministically reuses the selected section layout; it never means that the
+citizen's original document is retained or sent to AI.
 
 ## Correction learning
 

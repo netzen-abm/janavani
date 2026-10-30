@@ -25,6 +25,7 @@ PERSISTED_DOMAINS = (
     "accountability_feedback",
     "external_channel",
     "external_identity_links",
+    "citizen_document_format",
 )
 
 DEFAULT_PROVIDER = "memory"

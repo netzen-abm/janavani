@@ -3,7 +3,7 @@
 Identity remains request-scoped to this WebApp. The shared form/preview UI is
 in src.ui.civic_drafting and the canonical API owns drafting workflow policy.
 """
-from src.ui.civic_drafting import register_civic_drafting_routes
+from src.ui.civic_drafting_routes import register_civic_drafting_routes
 from src.webapp.services.api_client import client_for_request
 
 

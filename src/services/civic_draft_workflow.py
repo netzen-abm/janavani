@@ -6,12 +6,13 @@ boundary is available. Citizens remain responsible for reviewing the generated t
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from src.capabilities.letter_body import compose_template_body
 from src.capabilities.letter_drafting import LetterDraftRequest
 from src.documents.template_catalogue import get_template
+from src.documents.citizen_document_format import canonical_section_fields
 from src.identity.context import IdentityContext
 from src.identity.principal import AuthenticationMethod, IdentityMode
 from src.services.legal_agent import JanavaniLegalAgent
@@ -34,6 +35,8 @@ class CivicDraftPreviewRequest:
     remedies_reserved: tuple[str, ...] = field(default_factory=tuple)
     response_period: str | None = None
     deadline_date: str | None = None
+    template_version: int | None = None
+    section_field_names: tuple[str, ...] | None = None
 
 
 class CivicDraftPreviewWorkflow:
@@ -66,7 +69,11 @@ class CivicDraftPreviewWorkflow:
                 not isinstance(v, str) or not v.strip() or len(v) > size for v in values
             ):
                 raise ValueError(f"{name} exceeds drafting limits")
-        template = get_template(request.template_id)
+        template = get_template(request.template_id, version=request.template_version)
+        if request.section_field_names is not None:
+            selected = canonical_section_fields(template.template_id, template.version, request.section_field_names)
+            by_name = {section.field_name: section for section in template.sections}
+            template = replace(template, sections=tuple(by_name[name] for name in selected))
         subject = request.subject.strip() or self._default_subject(issue)
         if len(subject) > 200:
             raise ValueError("Subject must be 200 characters or fewer")

@@ -113,6 +113,17 @@ jobs:
           dynamic_privacy, _ = expect(DYNAMIC, "/privacy")
           assert "privacy" in dynamic_privacy.lower()
 
+          # Private saved-format pages must not be cacheable on either independent surface.
+          for label, base in (("WebApp", WEBAPP), ("Dynamic Web", DYNAMIC)):
+              saved_list, saved_headers = expect(base, "/citizen-formats")
+              assert saved_headers.get("cache-control") == "no-store, private"
+              confirm_page, confirm_headers = expect(
+                  base, "/citizen-formats/confirm?template_id=complaint.general&template_version=1"
+              )
+              assert "Save a reusable structure" in confirm_page
+              assert confirm_headers.get("cache-control") == "no-store, private"
+              print(f"PASS {label} private saved-format pages have no-store response policy")
+
           pathway_result, _ = post_form(DYNAMIC, "/pathway", {"purpose": "existing_records"})
           assert "RTI application" in pathway_result
           assert "existing records" in pathway_result.lower()

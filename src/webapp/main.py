@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from src.webapp.ai_drafting import register_ai_drafting_routes
+from src.ui.citizen_format_routes import register_citizen_format_routes
 from src.webapp.services.api_client import client_for_request
 from src.webapp.entry_routes import register_webapp_entry_routes
 from src.ui.brand_assets import register_brand_assets
@@ -76,6 +77,7 @@ register_webapp_entry_routes(
 )
 register_case_workspace_routes(rt)
 register_ai_drafting_routes(rt)
+register_citizen_format_routes(rt, client_factory=lambda request: client_for_request(request))
 register_brand_assets(rt)
 
 
@@ -84,7 +86,8 @@ async def protect_user_generated_responses(request: Request, call_next):
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if request.method in {"POST", "PUT", "PATCH"}:
+    private_format_page = request.url.path.startswith("/citizen-formats") or (request.url.path == "/ai-drafting" and "format_id" in request.query_params)
+    if request.method in {"POST", "PUT", "PATCH"} or private_format_page:
         response.headers["Cache-Control"] = "no-store, private"
         response.headers["Pragma"] = "no-cache"
     return response
