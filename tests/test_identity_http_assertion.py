@@ -7,10 +7,12 @@ import time
 
 import fakeredis
 import pytest
+from fastapi import HTTPException
 
 from src.identity.http_assertion import (
     IdentityAssertionVerifier,
     ReplayProtectionUnavailable,
+    require_authenticated_identity,
 )
 from src.identity.replay_store import RedisIdentityAssertionReplayStore
 
@@ -190,3 +192,14 @@ def test_redis_replay_store_is_atomic_across_instances_and_bounds_ttl() -> None:
     assert len(keys) == 1
     ttl = first._client.ttl(keys[0])
     assert 0 < ttl <= expires_at - int(time.time())
+
+
+
+def test_authenticated_dependency_fails_closed_without_replay_store(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", "test-secret")
+    monkeypatch.delenv("JANAVANI_IDENTITY_REPLAY_REDIS_URL", raising=False)
+
+    with pytest.raises(HTTPException) as error:
+        require_authenticated_identity(authorization="Bearer not-used", request_id=None)
+
+    assert error.value.status_code == 503
