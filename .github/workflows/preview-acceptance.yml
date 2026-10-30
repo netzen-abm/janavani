@@ -50,7 +50,7 @@ jobs:
               request = Request(base + path, data=data, headers=headers, method=method)
               try:
                   with urlopen(request, timeout=timeout) as response:
-                      return response.status, response.read().decode("utf-8", "replace"), dict(response.headers)
+                      return response.status, response.read().decode("utf-8", "replace"), {key.lower(): value for key, value in response.headers.items()}
               except HTTPError as error:
                   return error.code, error.read().decode("utf-8", "replace"), dict(error.headers)
               except URLError as error:
@@ -148,8 +148,8 @@ jobs:
           assert result.get("ai_used") is False
           assert result.get("persistence") == "not_persisted"
           assert result.get("submission") == "not_submitted"
-          assert headers.get("Cache-Control") == "no-store, private"
-          assert headers.get("X-Content-Type-Options") == "nosniff"
+          assert headers.get("cache-control") == "no-store, private"
+          assert headers.get("x-content-type-options") == "nosniff"
           print("PASS API preview is deterministic, ephemeral, and not submitted")
 
           # End-to-end form submits verify both UI services reach the canonical API.
@@ -159,14 +159,24 @@ jobs:
               "preview_processing_consent": "yes",
           }
           for label, base in (("WebApp", WEBAPP), ("Dynamic Web", DYNAMIC)):
+              denied_page, _ = post_form(
+                  base,
+                  "/ai-drafting/preview",
+                  {**form, "preview_processing_consent": ""},
+              )
+              assert "No request was forwarded to the canonical preview API" in denied_page, (
+                  f"{label} should reject missing processing consent before calling the API"
+              )
+              print(f"PASS {label} refuses a draft request without processing consent")
+
               page, response_headers = post_form(base, "/ai-drafting/preview", form)
               assert "Your draft preview" in page, f"{label} did not render the API preview"
               assert "AI used: No" in page, f"{label} unexpectedly used AI"
               assert "not submitted" in page.lower(), f"{label} omitted the no-submission disclosure"
-              assert response_headers.get("Cache-Control") == "no-store, private", (
+              assert response_headers.get("cache-control") == "no-store, private", (
                   f"{label} preview response is cacheable"
               )
-              assert response_headers.get("Referrer-Policy") == "no-referrer", (
+              assert response_headers.get("referrer-policy") == "no-referrer", (
                   f"{label} preview response is missing Referrer-Policy"
               )
               print(f"PASS {label} form → canonical API → editable preview; no AI, persistence, or submission")
