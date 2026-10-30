@@ -55,12 +55,17 @@ class IdentityAssertionVerifier:
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
             raise ValueError("invalid identity assertion") from exc
 
+        if not isinstance(payload, dict):
+            raise ValueError("identity assertion payload must be an object")
+
         required = ("principal_id", "provider", "subject", "authentication_method", "iat", "exp", "jti")
         if any(not payload.get(key) for key in required):
             raise ValueError("identity assertion is missing required fields")
 
-        if not isinstance(payload["principal_id"], str) or not payload["principal_id"]:
+        if not isinstance(payload["principal_id"], str) or not payload["principal_id"].strip():
             raise ValueError("principal_id must be opaque text")
+        if not isinstance(payload["jti"], str) or not payload["jti"].strip():
+            raise ValueError("identity assertion jti must be opaque text")
 
         try:
             issued_at = int(payload["iat"])
@@ -82,7 +87,7 @@ class IdentityAssertionVerifier:
             raise ValueError("identity assertion audience is invalid")
 
         if self.replay_store is not None:
-            replay_material = "\\0".join((
+            replay_material = "\0".join((
                 str(payload.get("iss", "")),
                 str(payload.get("aud", "")),
                 str(payload["jti"]),
