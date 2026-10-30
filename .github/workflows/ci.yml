@@ -104,6 +104,15 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
 
     steps:
       - name: Checkout repository
@@ -142,6 +151,9 @@ jobs:
       - name: Canonical Web vertical-slice gate
         env:
           JANAVANI_IDENTITY_ASSERTION_SECRET: test-identity-secret
+          JANAVANI_IDENTITY_ASSERTION_ISSUER: janavani-identity
+          JANAVANI_IDENTITY_ASSERTION_AUDIENCE: janavani-api
+          JANAVANI_IDENTITY_REPLAY_REDIS_URL: redis://localhost:6379/0
         run: python -m pytest -q tests/test_canonical_app.py tests/test_web_civic_action_e2e.py
 
       - name: Web/Telegram shared-capability gate
