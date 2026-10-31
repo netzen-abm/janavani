@@ -150,3 +150,22 @@ def test_start_discloses_telegram_data_boundary():
     assert "not an end-to-end encrypted Secret Chat" in message
     assert "processed by Telegram and Janavani's bot service" in message
     assert "Please do not send identity documents" in message
+
+def test_inbox_worker_shutdown_does_not_mask_worker_failure(caplog):
+    import asyncio
+
+    from src.web.telegram_webhook_app import _stop_inbox_worker
+
+    async def failed_worker():
+        raise RuntimeError("synthetic database outage with sensitive detail")
+
+    async def exercise_shutdown():
+        worker = asyncio.create_task(failed_worker())
+        await asyncio.sleep(0)
+        await _stop_inbox_worker(worker)
+
+    asyncio.run(exercise_shutdown())
+
+    assert "Telegram inbox shutdown worker failure type=RuntimeError" in caplog.text
+    assert "sensitive detail" not in caplog.text
+
