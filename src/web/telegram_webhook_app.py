@@ -26,6 +26,18 @@ from src.web.telegram_webhook_config import load_telegram_webhook_settings
 logger = logging.getLogger(__name__)
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
 
+async def _stop_inbox_worker(worker: asyncio.Task[Any] | None) -> None:
+    if worker is None:
+        return
+    worker.cancel()
+    try:
+        await worker
+    except asyncio.CancelledError:
+        pass
+    except Exception as exc:
+        logger.error("Telegram inbox shutdown worker failure type=%s", type(exc).__name__)
+
+
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
     """Create an endpoint that acknowledges only updates durably encrypted in PostgreSQL."""
     injected_application, injected_inbox = application is not None, inbox is not None
@@ -41,13 +53,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             try:
                 yield
             finally:
-                worker = getattr(app.state, "inbox_worker", None)
-                if worker:
-                    worker.cancel()
-                    try:
-                        await worker
-                    except asyncio.CancelledError:
-                        pass
+                await _stop_inbox_worker(getattr(app.state, "inbox_worker", None))
             return
 
         settings = load_telegram_webhook_settings()
@@ -80,11 +86,7 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         try:
             yield
         finally:
-            worker.cancel()
-            try:
-                await worker
-            except asyncio.CancelledError:
-                pass
+            await _stop_inbox_worker(worker)
             await _stop_ephemeral_issue_cleanup(bot_app)
             await bot_app.stop()
             await bot_app.shutdown()
