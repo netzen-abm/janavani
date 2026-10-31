@@ -166,6 +166,10 @@ jobs:
           OPENROUTER_API_KEY: mock-verification-token
           HF_TOKEN: mock-verification-token
           JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+          JANAVANI_IDENTITY_ASSERTION_SECRET: test-identity-secret
+          JANAVANI_IDENTITY_ASSERTION_ISSUER: janavani-identity
+          JANAVANI_IDENTITY_ASSERTION_AUDIENCE: janavani-api
+          JANAVANI_IDENTITY_REPLAY_REDIS_URL: redis://localhost:6379/0
         run: bash ./run_all_tests.sh
 
       - name: Run live PostgreSQL RLS isolation gate
