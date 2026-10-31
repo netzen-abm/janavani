@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from src.documents.citizen_document_format import CitizenDocumentFormat
@@ -38,52 +38,52 @@ class PostgresCitizenDocumentFormatRepository:
             raise PermissionError("Format owner does not match authenticated principal")
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             bind_postgres_principal(conn, owner_principal_id)
-                    cur.execute(
-                        """INSERT INTO public.citizen_document_formats
-                        (format_id, owner_principal_id, template_id, template_version,
-                         section_field_names, structure_hash, created_at, updated_at)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT (owner_principal_id, structure_hash)
-                        DO UPDATE SET updated_at = citizen_document_formats.updated_at
-                        RETURNING format_id, owner_principal_id, template_id, template_version,
-                                  section_field_names, structure_hash, created_at, updated_at""",
-                        (record.format_id, owner_principal_id, record.template_id,
-                         record.template_version, list(record.section_field_names),
-                         record.structure_hash, datetime.fromisoformat(record.created_at), datetime.fromisoformat(record.updated_at)),
-                    )
-                    return self._hydrate(cur.fetchone())
+                cur.execute(
+                    """INSERT INTO public.citizen_document_formats
+                    (format_id, owner_principal_id, template_id, template_version,
+                     section_field_names, structure_hash, created_at, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (owner_principal_id, structure_hash)
+                    DO UPDATE SET updated_at = citizen_document_formats.updated_at
+                    RETURNING format_id, owner_principal_id, template_id, template_version,
+                              section_field_names, structure_hash, created_at, updated_at""",
+                    (record.format_id, owner_principal_id, record.template_id,
+                     record.template_version, list(record.section_field_names),
+                     record.structure_hash, datetime.fromisoformat(record.created_at), datetime.fromisoformat(record.updated_at)),
+                )
+                return self._hydrate(cur.fetchone())
 
     def list_for_owner(self, *, owner_principal_id: str) -> list[CitizenDocumentFormat]:
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             bind_postgres_principal(conn, owner_principal_id)
-                    cur.execute(
-                        """SELECT format_id, owner_principal_id, template_id, template_version,
-                                  section_field_names, structure_hash, created_at, updated_at
-                           FROM public.citizen_document_formats WHERE owner_principal_id = %s
-                           ORDER BY created_at, format_id""",
-                        (owner_principal_id,),
-                    )
-                    return [self._hydrate(row) for row in cur.fetchall()]
+                cur.execute(
+                    """SELECT format_id, owner_principal_id, template_id, template_version,
+                              section_field_names, structure_hash, created_at, updated_at
+                       FROM public.citizen_document_formats WHERE owner_principal_id = %s
+                       ORDER BY created_at, format_id""",
+                    (owner_principal_id,),
+                )
+                return [self._hydrate(row) for row in cur.fetchall()]
 
     def get_for_owner(self, format_id: str, *, owner_principal_id: str) -> CitizenDocumentFormat | None:
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             bind_postgres_principal(conn, owner_principal_id)
-                    cur.execute(
-                        """SELECT format_id, owner_principal_id, template_id, template_version,
-                                  section_field_names, structure_hash, created_at, updated_at
-                           FROM public.citizen_document_formats
-                           WHERE format_id = %s AND owner_principal_id = %s""",
-                        (format_id, owner_principal_id),
-                    )
-                    row = cur.fetchone()
-                    return self._hydrate(row) if row else None
+                cur.execute(
+                    """SELECT format_id, owner_principal_id, template_id, template_version,
+                              section_field_names, structure_hash, created_at, updated_at
+                       FROM public.citizen_document_formats
+                       WHERE format_id = %s AND owner_principal_id = %s""",
+                    (format_id, owner_principal_id),
+                )
+                row = cur.fetchone()
+                return self._hydrate(row) if row else None
 
     def delete_for_owner(self, format_id: str, *, owner_principal_id: str) -> bool:
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             bind_postgres_principal(conn, owner_principal_id)
-                    cur.execute(
-                        """DELETE FROM public.citizen_document_formats
-                           WHERE format_id = %s AND owner_principal_id = %s""",
-                        (format_id, owner_principal_id),
-                    )
-                    return cur.rowcount == 1
+                cur.execute(
+                    """DELETE FROM public.citizen_document_formats
+                       WHERE format_id = %s AND owner_principal_id = %s""",
+                    (format_id, owner_principal_id),
+                )
+                return cur.rowcount == 1
