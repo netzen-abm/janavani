@@ -1,7 +1,11 @@
 """Authorization policy for citizen-owned reusable document structures."""
 from __future__ import annotations
 
-from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.access.authorization import (
+    AuthorizationDecision,
+    AuthorizationRequest,
+    authorize,
+)
 from src.identity.context import IdentityContext
 
 FORMAT_CAPABILITY = "document:format:manage"
