@@ -25,6 +25,7 @@ def test_postgres_saved_formats_enforce_owner_scope_and_survive_repository_resta
             "JANAVANI_POSTGRES_DSN",
             "JANAVANI_IDENTITY_LINKS_DSN",
             "JANAVANI_CASE_DATABASE_URL",
+            "JANAVANI_CITIZEN_DOCUMENT_FORMAT_DSN",
         )
     } - {""}
     assert DSN not in runtime_dsns, "the integration DSN must not be a configured runtime database"
