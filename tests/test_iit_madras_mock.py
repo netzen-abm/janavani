@@ -1,5 +1,19 @@
+import json
+
 from src.services.legal_agent import JanavaniLegalAgent
 from src.access.capability_scope import CapabilityDataScope
+from src.identity.context import IdentityContext
+from src.identity.principal import Principal
+
+
+def _identity(*capabilities):
+    return IdentityContext(
+        principal=Principal(
+            principal_id="ai-test-citizen",
+            interface="test",
+            capabilities=frozenset(capabilities),
+        )
+    )
 
 
 def test_legal_agent_degrades_without_ai_credentials(monkeypatch):
@@ -40,7 +54,17 @@ def test_legal_agent_translation_fails_open(monkeypatch):
 
     agent = JanavaniLegalAgent(http_session=FakeSession())
     original = "റോഡ് തകർന്നിരിക്കുന്നു"
-    assert agent.translate_input_if_needed(original) == original
+    assert agent.translate_input_if_needed(
+        original,
+        identity=_identity("civic:translation"),
+        consent_scope=CapabilityDataScope(
+            capability_id="civic:translation",
+            purpose="civic_translation",
+            approved_fields=frozenset({"citizen_text"}),
+            provider="huggingface-translation",
+            processing_mode="remote_model",
+        ),
+    ) == original
 
 
 def test_legal_agent_translation_uses_canonical_hf_token(monkeypatch):
@@ -67,6 +91,7 @@ def test_legal_agent_translation_uses_canonical_hf_token(monkeypatch):
     session = FakeSession()
     result = JanavaniLegalAgent(http_session=session).translate_input_if_needed(
         "റോഡ് തകർന്നിരിക്കുന്നു",
+        identity=_identity("civic:translation"),
         consent_scope=CapabilityDataScope(
             capability_id="civic:translation",
             purpose="civic_translation",
@@ -94,7 +119,15 @@ def test_legal_agent_regional_context_is_metadata_not_authority(monkeypatch):
             return None
 
         def json(self):
-            return {"choices": [{"message": {"content": "{}"}}]}
+            return {"choices": [{
+                "message": {"content": json.dumps({
+                    "subject": "Road maintenance",
+                    "proposal_or_notice": "Please inspect the road and respond.",
+                    "part_i_interrogatories": ["Which office is responsible?"],
+                    "requested_conditions": [],
+                    "remedies_reserved": [],
+                })}
+            }]}
 
     class FakeSession:
         def __init__(self):
@@ -107,6 +140,7 @@ def test_legal_agent_regional_context_is_metadata_not_authority(monkeypatch):
     session = FakeSession()
     result = JanavaniLegalAgent(http_session=session).draft_legal_document(
         "Roads in my area are damaged.", "KA-BLR-02",
+        identity=_identity("civic:ai-draft"),
         consent_scope=CapabilityDataScope(
             capability_id="civic:ai-draft",
             purpose="civic_document_drafting",
@@ -121,6 +155,7 @@ def test_legal_agent_regional_context_is_metadata_not_authority(monkeypatch):
     prompt = session.calls[0][1]["json"]["messages"][0]["content"]
     assert "contextual routing metadata" in prompt
     assert "verified legal authority" in prompt
+    assert result["structured_draft"]["subject"] == "Road maintenance"
 
 
 
@@ -135,7 +170,33 @@ def test_legal_agent_requires_consent_before_remote_ai(monkeypatch):
             raise AssertionError("provider must not be called without consent")
 
     result = JanavaniLegalAgent(http_session=Session()).draft_legal_document(
-        "Citizen supplied issue."
+        "Citizen supplied issue.",
+        identity=_identity("civic:ai-draft"),
     )
     assert result["status"] == "consent_required"
     assert result["ai_used"] is False
+
+
+def test_legal_agent_does_not_make_remote_call_without_identity(monkeypatch):
+    from src.core.settings import ai_settings
+
+    monkeypatch.setattr(ai_settings, "OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(ai_settings, "LEGAL_DRAFTING_MODEL", "test-model")
+
+    class Session:
+        def post(self, *args, **kwargs):
+            raise AssertionError("provider must not be called without identity")
+
+    result = JanavaniLegalAgent(http_session=Session()).draft_legal_document(
+        "Citizen supplied issue."
+    )
+    assert result["status"] == "identity_required"
+    assert result["ai_used"] is False
+
+
+def test_legal_agent_refuses_remote_translation_without_identity(monkeypatch):
+    from src.core.settings import ai_settings
+
+    monkeypatch.setattr(ai_settings, "HF_TOKEN", "test-token")
+    original = "റോഡ് തകർന്നിരിക്കുന്നു"
+    assert JanavaniLegalAgent().translate_input_if_needed(original) == original

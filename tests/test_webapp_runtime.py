@@ -13,13 +13,36 @@ def test_webapp_registers_case_workspace_routes():
     assert "/cases/{case_id}/artifact" in paths
 
 
+def test_case_creation_requires_explicit_consent_before_calling_api(monkeypatch):
+    import src.webapp.main as webapp
+
+    api_calls = []
+    monkeypatch.setattr(
+        webapp,
+        "client_for_request",
+        lambda request: api_calls.append(request),
+    )
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={"citizen_input": "A private citizen issue narrative."},
+    )
+
+    assert response.status_code == 200
+    assert "Consent required" in response.text
+    assert "No case was created" in response.text
+    assert api_calls == []
+
+
 def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
     from src.webapp.main import app
 
     monkeypatch.delenv("JANAVANI_WEB_IDENTITY_ASSERTION", raising=False)
     response = TestClient(app).post(
         "/submit-issue",
-        data={"citizen_input": "The public streetlight has been out for three nights."},
+        data={
+            "citizen_input": "The public streetlight has been out for three nights.",
+            "case_processing_consent": "yes",
+        },
     )
     assert response.status_code == 200
     assert "Sign-in required" in response.text

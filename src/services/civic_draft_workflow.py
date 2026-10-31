@@ -1,0 +1,160 @@
+"""Shared deterministic civic-draft preview workflow.
+
+The workflow is used by independent surfaces and never saves or submits a draft.
+Remote AI is fail-closed for free-text narratives until a tested input-minimization
+boundary is available. Citizens remain responsible for reviewing the generated text.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field, replace
+from typing import Any
+
+from src.capabilities.letter_body import compose_template_body
+from src.capabilities.letter_drafting import LetterDraftRequest
+from src.documents.template_catalogue import get_template
+from src.documents.citizen_document_format import canonical_section_fields
+from src.identity.context import IdentityContext
+from src.identity.principal import AuthenticationMethod, IdentityMode
+from src.services.legal_agent import JanavaniLegalAgent
+
+
+_MAX_ISSUE_CHARS = 5_000
+_MAX_DRAFT_CHARS = 8_000
+@dataclass(frozen=True, slots=True)
+class CivicDraftPreviewRequest:
+    """Citizen-controlled inputs for a non-persistent document preview."""
+
+    template_id: str
+    issue: str
+    subject: str = ""
+    existing_draft: str = ""
+    jurisdiction: str = ""
+    requested_documents: tuple[str, ...] = field(default_factory=tuple)
+    part_i_interrogatories: tuple[str, ...] = field(default_factory=tuple)
+    requested_conditions: tuple[str, ...] = field(default_factory=tuple)
+    remedies_reserved: tuple[str, ...] = field(default_factory=tuple)
+    response_period: str | None = None
+    deadline_date: str | None = None
+    template_version: int | None = None
+    section_field_names: tuple[str, ...] | None = None
+
+
+class CivicDraftPreviewWorkflow:
+    """Compose a citizen-reviewed preview; never transmit raw narrative to remote AI."""
+
+    def __init__(self, agent: JanavaniLegalAgent | None = None) -> None:
+        self._agent = agent or JanavaniLegalAgent()
+
+    def preview(
+        self,
+        request: CivicDraftPreviewRequest,
+        *,
+        identity: IdentityContext | None = None,
+        use_ai: bool = False,
+        remote_processing_consent: bool = False,
+        location_code: str | None = None,
+    ) -> dict[str, Any]:
+        issue = request.issue.strip()
+        existing = request.existing_draft.strip()
+        if not issue:
+            raise ValueError("Describe the civic issue before drafting")
+        if len(issue) > _MAX_ISSUE_CHARS or len(existing) > _MAX_DRAFT_CHARS:
+            raise ValueError("Issue or existing draft exceeds the allowed length")
+        for name, count, size in (
+            ("requested_documents", 12, 800), ("part_i_interrogatories", 12, 800),
+            ("requested_conditions", 12, 800), ("remedies_reserved", 8, 500),
+        ):
+            values = getattr(request, name)
+            if len(values) > count or any(
+                not isinstance(v, str) or not v.strip() or len(v) > size for v in values
+            ):
+                raise ValueError(f"{name} exceeds drafting limits")
+        template = get_template(request.template_id, version=request.template_version)
+        if request.section_field_names is not None:
+            selected = canonical_section_fields(template.template_id, template.version, request.section_field_names)
+            by_name = {section.field_name: section for section in template.sections}
+            template = replace(template, sections=tuple(by_name[name] for name in selected))
+        subject = request.subject.strip() or self._default_subject(issue)
+        if len(subject) > 200:
+            raise ValueError("Subject must be 200 characters or fewer")
+        if template.template_id == "rti.records":
+            if not request.jurisdiction.strip():
+                raise ValueError("Select the public authority or jurisdiction for an RTI draft")
+            if not request.requested_documents or any(
+                not item.strip() for item in request.requested_documents
+            ):
+                raise ValueError("Specify the existing records requested in the RTI draft")
+
+        required_values = {"subject": subject, "issue": issue, "jurisdiction": request.jurisdiction.strip(), "requested_documents": request.requested_documents}
+        missing = [name for name in template.required_fields if not required_values.get(name)]
+        if missing:
+            raise ValueError("Template requires: " + ", ".join(missing))
+
+        proposal = existing
+        interrogatories = request.part_i_interrogatories
+        conditions = request.requested_conditions
+        remedies = request.remedies_reserved
+        ai_used = False
+        ai_status = "not_requested"
+        message = "Preview generated from the selected reusable template; it has not been saved or submitted."
+
+        if use_ai and not remote_processing_consent:
+            ai_status = "consent_required"
+            message = (
+                "No remote AI call was made. Explicit consent is required before any "
+                "remote AI processing."
+            )
+        elif use_ai:
+            if (
+                identity is None
+                or identity.principal.identity_mode is not IdentityMode.AUTHENTICATED
+                or identity.principal.authentication_method is AuthenticationMethod.NONE
+            ):
+                ai_status = "identity_required"
+                message = "A verified identity is required for remote AI drafting."
+            else:
+                # Fail closed until the platform has a tested local minimization
+                # boundary. Consent alone is not permission to send arbitrary free-text
+                # narratives or pasted drafts to a remote model.
+                ai_status = "privacy_boundary_required"
+                message = (
+                    "Remote AI drafting is temporarily disabled for free-text issue "
+                    "narratives and pasted drafts until a privacy-safe, minimized-input "
+                    "boundary is implemented. No remote AI provider was called. The "
+                    "deterministic template preview remains available."
+                )
+
+        draft_request = LetterDraftRequest(
+            subject=subject,
+            issue=issue,
+            proposal_or_notice=proposal,
+            part_i_interrogatories=tuple(interrogatories),
+            requested_conditions=tuple(conditions),
+            requested_documents=tuple(item.strip() for item in request.requested_documents),
+            remedies_reserved=tuple(remedies),
+            response_period=request.response_period,
+            deadline_date=request.deadline_date,
+            jurisdiction=request.jurisdiction.strip() or None,
+            document_type=template.document_type,
+            language=template.language,
+            template_id=template.template_id,
+            template_version=template.version,
+        )
+        return {
+            "status": "preview",
+            "template_id": template.template_id,
+            "template_version": template.version,
+            "document_type": template.document_type,
+            "subject": subject,
+            "draft_body": compose_template_body(draft_request, template),
+            "ai_used": ai_used,
+            "ai_status": ai_status,
+            "message": message,
+            "persistence": "not_persisted",
+            "submission": "not_submitted",
+        }
+
+    @staticmethod
+    def _default_subject(issue: str) -> str:
+        line = next((value.strip() for value in issue.splitlines() if value.strip()), issue)
+        return " ".join(line.split())[:200] or "Citizen civic issue"

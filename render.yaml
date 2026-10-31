@@ -4,15 +4,82 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    # Canonical Web/API runtime. Telegram is an independent service.
+    # Canonical Web/API runtime. Keep this surface independent of Telegram.
     startCommand: uvicorn src.web.canonical_app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: LEGAL_DRAFTING_MODEL
+        value: meta-llama/llama-3.1-70b-instruct
 
-  - type: worker
-    name: janavani-telegram
+  - type: web
+    name: janavani-dynamic-web
     env: python
-    # Telegram has an independent process and failure domain.
+    # Independent public presentation runtime; it consumes the canonical API contract.
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python src/bot_telegram.py
+    startCommand: uvicorn src.dynamic_web.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /liveness
+    envVars:
+      - key: JANAVANI_WEB_API_URL
+        sync: false
+
+  - type: web
+    name: janavani-webapp
+    env: python
+    # Same Janavani product; separate UI process, shared canonical API and drafting catalogue.
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.webapp.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: JANAVANI_WEB_API_URL
+        sync: false
+
+  - type: web
+    name: janavani-telegram-webhook
+    env: python
+    # Free instances may cold-start. Use an always-on plan before production launch.
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=src uvicorn src.web.telegram_webhook_app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /liveness
     envVars:
       - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: LEGAL_DRAFTING_MODEL
+        value: meta-llama/llama-3.1-70b-instruct
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: TELEGRAM_WEBHOOK_URL
+        sync: false
+      - key: JANAVANI_TELEGRAM_INBOX_DSN
+        sync: false
+      - key: JANAVANI_TELEGRAM_INBOX_ENCRYPTION_KEYS
+        sync: false
+      - key: JANAVANI_RUNTIME_MODE
+        value: production
+      - key: JANAVANI_CASE_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_ARTIFACT_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_EVIDENCE_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_AUTHORITY_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_CONSENT_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER
+        value: postgres
+      - key: JANAVANI_ARTIFACT_BLOB_PROVIDER
+        value: s3
+      - key: JANAVANI_POSTGRES_DSN
+        sync: false
+      - key: JANAVANI_IDENTITY_LINKS_DSN
+        sync: false
+      - key: JANAVANI_ARTIFACT_S3_BUCKET
+        sync: false
+      - key: JANAVANI_ARTIFACT_S3_ENDPOINT_URL
         sync: false

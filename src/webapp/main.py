@@ -1,86 +1,32 @@
 from fasthtml.common import (
-    A, Br, Button, Div, Form, H1, H2, H3, H4, Hidden, Hr,
-    I, Input, Label, P, Span, Style, Textarea, Titled, Ul, Li,
-    fast_app,
+    A, Br, Button, Div, Form, H2, H3, H4, Hidden, Hr,
+    Input, Label, Link, P, Style, Textarea, Titled, fast_app,
 )
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+
+from src.webapp.ai_drafting import register_ai_drafting_routes
+from src.ui.citizen_format_routes import register_citizen_format_routes
 from src.webapp.services.api_client import client_for_request
+from src.webapp.entry_routes import register_webapp_entry_routes
+from src.ui.brand_assets import register_brand_assets
 
 # Initialize the stateless web interface client
 app, rt = fast_app(
     hdrs=(
         Style("""
             body { padding: 2rem 0; background-color: #f8f9fa; }
-            .container { max-width: 900px; }
+            .container { width: min(100% - 2rem, 960px); margin-inline: auto; }
             .header-banner { text-align: center; margin-bottom: 3rem; }
+            .brand-lockup { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-bottom: .75rem; }
+            .brand-lockup img { display: block; width: 64px; height: 64px; object-fit: contain; flex: 0 0 64px; }
+            .brand-lockup h1 { margin: 0; }
             .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
-        """)
+        """),
+        Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
     )
 )
-
-@rt("/")
-def get():
-    """Render the first-class Janavani WebApp civic Case workspace."""
-    return Titled(
-        "🇮🇳 Janavani — Citizen Action Hub",
-        Div(
-            Div(
-                H1("JANAVANI"),
-                P("Create and review a civic Case through the shared Janavani platform."),
-                style="text-align: center; margin-bottom: 3rem;",
-            ),
-            Div(
-                H3("📝 Create a Civic Case"),
-                P("Describe the civic issue. The canonical API owns Case, identity, authorization, evidence, consent, document and lifecycle state."),
-                Form(action="/submit-issue", method="post")(
-                    Textarea(
-                        name="citizen_input",
-                        placeholder="Describe the civic issue...",
-                        rows=6,
-                        required=True,
-                    ),
-                    Button("Create Case", type="submit", cls="button-primary"),
-                ),
-                cls="card",
-            ),
-        ),
-    )
-
-@rt("/submit-issue")
-def post(citizen_input: str, request: Request):
-    """Sends user text to the backend microservice and displays the structured draft fields."""
-    try:
-        client = client_for_request(request)
-        result = client.submit_complaint_draft(citizen_input)
-    except (RuntimeError, ValueError):
-        return Div(
-            Div(
-                H3("Sign-in required"),
-                P("Authenticate through the Janavani identity gateway before creating a case."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
-        )
-    
-    if "error" in result:
-        return Div(
-            Div(H3("⚠️ Request Processing Failure"), P(result["error"]), A("Return to Dashboard", href="/"), cls="card")
-        )
-        
-    return Div(
-        Div(
-            H2("📁 Civic Case Created"),
-            P(f"Case ID: {result.get('case_id')}"),
-            P(f"Status: {result.get('status')}"),
-            P("Continue through the canonical Case lifecycle for evidence, document review, consent and submission."),
-            Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
-                Button("Open Case Workspace", type="submit"),
-            ),
-            A("Return to Home Dashboard", href="/", style="margin-top: 2rem; display: inline-block;"),
-            cls="card",
-        )
-    )
 
 @rt("/bill-review/{bill_code}")
 def get_bill_review(bill_code: str):
@@ -126,7 +72,29 @@ def post_dispatch_objection(bill_code: str, comments: str, format_choice: str, r
 
 from src.webapp.case_workspace import register_case_workspace_routes
 
+register_webapp_entry_routes(
+    rt, client_factory=lambda request: client_for_request(request)
+)
 register_case_workspace_routes(rt)
+register_ai_drafting_routes(rt)
+register_citizen_format_routes(rt, client_factory=lambda request: client_for_request(request))
+register_brand_assets(rt)
+
+
+async def protect_user_generated_responses(request: Request, call_next):
+    """Prevent browsers and intermediaries from caching citizen-submitted POST responses."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    private_format_page = request.url.path.startswith("/citizen-formats") or (request.url.path == "/ai-drafting" and "format_id" in request.query_params)
+    if request.method in {"POST", "PUT", "PATCH"} or private_format_page:
+        response.headers["Cache-Control"] = "no-store, private"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
+app.add_middleware(BaseHTTPMiddleware, dispatch=protect_user_generated_responses)
+
 
 if __name__ == "__main__":
     import uvicorn

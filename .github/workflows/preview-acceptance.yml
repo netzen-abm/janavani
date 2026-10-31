@@ -1,0 +1,256 @@
+name: Preview deployment acceptance
+
+on:
+  push:
+    branches:
+      - feat/canonical-civic-action-vertical-slice
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: janavani-preview-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-acceptance:
+    name: Deployed WebApp, Dynamic Web and API acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Wait for preview services and verify live citizen journeys
+        env:
+          JANAVANI_API_URL: https://janavani-api-preview.onrender.com
+          JANAVANI_WEBAPP_URL: https://janavani-webapp-preview.onrender.com
+          JANAVANI_DYNAMIC_WEB_URL: https://janavani-dynamic-preview.onrender.com
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          API = os.environ["JANAVANI_API_URL"].rstrip("/")
+          WEBAPP = os.environ["JANAVANI_WEBAPP_URL"].rstrip("/")
+          DYNAMIC = os.environ["JANAVANI_DYNAMIC_WEB_URL"].rstrip("/")
+          USER_AGENT = "JanaVani-Preview-Acceptance/1.0"
+          SYNTHETIC_ISSUE = "Acceptance test: the public streetlight is not working."
+          ERRORS = []
+
+          def call(base, path, *, method="GET", data=None, content_type=None, timeout=70):
+              headers = {"User-Agent": USER_AGENT, "Accept": "text/html, application/json"}
+              if content_type:
+                  headers["Content-Type"] = content_type
+              request = Request(base + path, data=data, headers=headers, method=method)
+              try:
+                  with urlopen(request, timeout=timeout) as response:
+                      return response.status, response.read().decode("utf-8", "replace"), {key.lower(): value for key, value in response.headers.items()}
+              except HTTPError as error:
+                  return error.code, error.read().decode("utf-8", "replace"), dict(error.headers)
+              except URLError as error:
+                  raise RuntimeError(f"{base}{path} network error: {error.reason}") from error
+
+          def expect(base, path, expected=200, **kwargs):
+              status, body, headers = call(base, path, **kwargs)
+              if status != expected:
+                  raise AssertionError(f"{path}: expected HTTP {expected}, received {status}; body={body[:400]!r}")
+              print(f"PASS HTTP {status} {kwargs.get('method', 'GET')} {path}")
+              return body, headers
+
+          def wait_for_service(base, path, label):
+              last_error = "no response"
+              for attempt in range(1, 19):
+                  try:
+                      status, body, _ = call(base, path, timeout=12)
+                      if status == 200:
+                          print(f"PASS {label} ready (attempt {attempt})")
+                          return
+                      last_error = f"HTTP {status}"
+                  except Exception as error:
+                      last_error = str(error)
+                  time.sleep(10)
+              raise RuntimeError(f"{label} did not become ready within 180 seconds: {last_error}")
+
+          def post_form(base, path, fields):
+              return expect(
+                  base,
+                  path,
+                  method="POST",
+                  data=urlencode(fields).encode("utf-8"),
+                  content_type="application/x-www-form-urlencoded",
+              )
+
+          # Wait for the currently deployed public service entrypoints; these GETs
+          # use no user data and do not invoke the drafting API.
+          wait_for_service(API, "/liveness", "canonical API")
+          wait_for_service(WEBAPP, "/", "authenticated WebApp")
+          wait_for_service(DYNAMIC, "/", "public Dynamic Web")
+
+          api_health, _ = expect(API, "/liveness")
+          health_json = json.loads(api_health)
+          assert health_json.get("status") == "alive", "API liveness payload is unexpected"
+
+          web_home, _ = expect(WEBAPP, "/")
+          web_form, _ = expect(WEBAPP, "/ai-drafting")
+          assert "Draft a civic document" in web_form, "WebApp drafting form is missing"
+
+          dynamic_health, _ = expect(DYNAMIC, "/liveness")
+          assert json.loads(dynamic_health).get("surface") == "dynamic-web"
+          dynamic_home, _ = expect(DYNAMIC, "/")
+          assert "WE, THE PEOPLE OF INDIA" in dynamic_home, "Preamble-first Dynamic Web home marker is missing"
+          dynamic_pathway, _ = expect(DYNAMIC, "/pathway")
+          assert "Find a civic pathway" in dynamic_pathway
+          dynamic_privacy, _ = expect(DYNAMIC, "/privacy")
+          assert "privacy" in dynamic_privacy.lower()
+
+          # Private saved-format pages must not be cacheable on either independent surface.
+          for label, base in (("WebApp", WEBAPP), ("Dynamic Web", DYNAMIC)):
+              saved_list, saved_headers = expect(base, "/citizen-formats")
+              assert saved_headers.get("cache-control") == "no-store, private"
+              confirm_page, confirm_headers = expect(
+                  base, "/citizen-formats/confirm?template_id=complaint.general&template_version=1"
+              )
+              assert "Save a reusable structure" in confirm_page
+              assert confirm_headers.get("cache-control") == "no-store, private"
+              print(f"PASS {label} private saved-format pages have no-store response policy")
+
+          pathway_result, _ = post_form(DYNAMIC, "/pathway", {"purpose": "existing_records"})
+          assert "RTI application" in pathway_result
+          assert "existing records" in pathway_result.lower()
+          assert "/ai-drafting?template_id=rti.records" in pathway_result
+
+          # Negative consent test is synthetic and must be rejected before preview.
+          denied_body = json.dumps({
+              "template_id": "complaint.general",
+              "issue": SYNTHETIC_ISSUE,
+              "preview_processing_consent": False,
+              "use_ai": False,
+              "remote_processing_consent": False,
+          }).encode("utf-8")
+          denied, _, _ = call(
+              API, "/civic/drafts/preview", method="POST", data=denied_body,
+              content_type="application/json",
+          )
+          if denied != 403:
+              raise AssertionError(f"API must reject preview without consent (expected 403, got {denied})")
+          print("PASS API refuses preview without explicit processing consent (403)")
+
+          # Positive preview uses synthetic content, explicit transient-processing
+          # consent, no remote AI, and no filing/submission operation.
+          approved_body = json.dumps({
+              "template_id": "complaint.general",
+              "issue": SYNTHETIC_ISSUE,
+              "preview_processing_consent": True,
+              "use_ai": False,
+              "remote_processing_consent": False,
+          }).encode("utf-8")
+          preview, headers = expect(
+              API, "/civic/drafts/preview", method="POST", data=approved_body,
+              content_type="application/json",
+          )
+          result = json.loads(preview)
+          assert result.get("status") == "preview"
+          assert result.get("ai_used") is False
+          assert result.get("persistence") == "not_persisted"
+          assert result.get("submission") == "not_submitted"
+          assert headers.get("cache-control") == "no-store, private"
+          assert headers.get("x-content-type-options") == "nosniff"
+          print("PASS API preview is deterministic, ephemeral, and not submitted")
+
+          # End-to-end form submits verify both UI services reach the canonical API.
+          form = {
+              "template_id": "complaint.general",
+              "issue": SYNTHETIC_ISSUE,
+              "preview_processing_consent": "yes",
+          }
+          for label, base in (("WebApp", WEBAPP), ("Dynamic Web", DYNAMIC)):
+              denied_page, _ = post_form(
+                  base,
+                  "/ai-drafting/preview",
+                  {**form, "preview_processing_consent": ""},
+              )
+              assert "No request was forwarded to the canonical preview API" in denied_page, (
+                  f"{label} should reject missing processing consent before calling the API"
+              )
+              print(f"PASS {label} refuses a draft request without processing consent")
+
+              page, response_headers = post_form(base, "/ai-drafting/preview", form)
+              assert "Your draft preview" in page, f"{label} did not render the API preview"
+              assert "AI used: No" in page, f"{label} unexpectedly used AI"
+              assert "not submitted" in page.lower(), f"{label} omitted the no-submission disclosure"
+              assert response_headers.get("cache-control") == "no-store, private", (
+                  f"{label} preview response is cacheable"
+              )
+              assert response_headers.get("referrer-policy") == "no-referrer", (
+                  f"{label} preview response is missing Referrer-Policy"
+              )
+              print(f"PASS {label} form → canonical API → editable preview; no AI, persistence, or submission")
+
+          print("PASS all deployed preview acceptance checks")
+          PY
+
+  telegram-webhook-candidate-gate:
+    name: Telegram webhook, encrypted inbox and replay acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: janavani
+          POSTGRES_PASSWORD: janavani-test
+          POSTGRES_DB: janavani_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U janavani -d janavani_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install candidate dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e '.[postgres]'
+          python -m pip install pytest fakeredis
+
+      - name: Validate webhook contract, secret checks, deduplication and retry behaviour
+        env:
+          TELEGRAM_WEBHOOK_SECRET: synthetic-webhook-test-secret
+          JANAVANI_RUNTIME_MODE: test
+        run: |
+          python -m pytest -q \
+            tests/test_telegram_webhook_runtime.py \
+            tests/test_telegram_inbox_worker.py
+
+      - name: Validate encrypted PostgreSQL inbox and crash/replay idempotency
+        env:
+          JANAVANI_POSTGRES_TEST_DSN: postgresql://janavani:janavani-test@localhost:5432/janavani_test
+          JANAVANI_RUNTIME_MODE: test
+          JANAVANI_CASE_CONTENT_POLICY: transient
+        run: |
+          python -m pytest -q \
+            tests/test_postgres_telegram_inbox.py \
+            tests/test_postgres_telegram_handler_replay.py

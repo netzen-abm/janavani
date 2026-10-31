@@ -1,3 +1,5 @@
+import asyncio
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -7,6 +9,10 @@ from telegram.ext import (
 )
 
 from core.config import Config
+from src.config.runtime import validate_runtime_configuration
+from src.conversation.session import purge_expired_ephemeral_issues
+from src.commands.catalogue import telegram_bot_commands
+from src.commands.ai_draft import ai_draft_command, handle_civic_draft_callback
 from commands.check import check
 from commands.start import start
 from commands.search import search
@@ -15,9 +21,45 @@ from src.capabilities.accountability_feedback import AccountabilityFeedbackCapab
 from src.platform.composition import create_accountability_feedback_repository
 from commands.complaint import complaint
 from conversation.router import route
-from conversation.steps.format import handle_format
 from conversation.steps.generate import create_telegram_generation_dependencies
+from conversation.steps.format import handle_format
 from src.platform.surface_case_composition import create_surface_case_composition
+
+
+async def _set_bot_commands(application: Application) -> None:
+    """Publish the canonical bot command catalogue."""
+    await application.bot.set_my_commands(telegram_bot_commands())
+
+
+async def _post_init(application: Application) -> None:
+    """Initialize shared commands and start privacy cleanup for transient text."""
+    await _set_bot_commands(application)
+    _start_ephemeral_issue_cleanup(application)
+
+
+async def _cleanup_expired_issue_text() -> None:
+    while True:
+        await asyncio.sleep(30)
+        purge_expired_ephemeral_issues()
+
+
+def _start_ephemeral_issue_cleanup(application: Application) -> None:
+    task = application.bot_data.get("janavani_ephemeral_issue_cleanup")
+    if task is None or task.done():
+        application.bot_data["janavani_ephemeral_issue_cleanup"] = asyncio.create_task(
+            _cleanup_expired_issue_text()
+        )
+
+
+async def _stop_ephemeral_issue_cleanup(application: Application) -> None:
+    task = application.bot_data.pop("janavani_ephemeral_issue_cleanup", None)
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 def build_application(*, token: str | None = None) -> Application:
@@ -26,7 +68,16 @@ def build_application(*, token: str | None = None) -> Application:
     if not bot_token:
         raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
 
-    application = Application.builder().token(bot_token).build()
+    # Do not let a production Telegram process silently compose memory-backed domains.
+    validate_runtime_configuration()
+
+    application = (
+        Application.builder()
+        .token(bot_token)
+        .post_init(_post_init)
+        .post_stop(_stop_ephemeral_issue_cleanup)
+        .build()
+    )
 
     # Compose the shared ecosystem graph once at the bot application boundary.
     composition = create_surface_case_composition()
@@ -56,8 +107,12 @@ def build_application(*, token: str | None = None) -> Application:
         )
     )
 
-    application.add_handler(CallbackQueryHandler(handle_format))
+    # Keep feature-specific callbacks ahead of broad handlers to prevent shadowing.
+    application.add_handler(CallbackQueryHandler(handle_civic_draft_callback, pattern=r"^civicdraft:"))
+    application.add_handler(CallbackQueryHandler(handle_format, pattern=r"^(pdf|docx)$"))
+    application.add_handler(CallbackQueryHandler(route))
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("ai_draft", ai_draft_command))
     application.add_handler(CommandHandler("search", search))
     application.add_handler(CommandHandler("rate", rate))
     application.add_handler(CommandHandler("complaint", complaint))
@@ -67,18 +122,11 @@ def build_application(*, token: str | None = None) -> Application:
 
 
 def main() -> None:
-    """Run the Telegram polling process after composition succeeds."""
-    if not Config.TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
-
-    print("=" * 60)
-    print("🇮🇳 JANAVANI TELEGRAM BOT")
-    print("=" * 60)
-    print("Starting Bot...")
-
-    application = build_application(token=Config.TELEGRAM_BOT_TOKEN)
-    print("✅ Bot application composed; starting polling.")
-    application.run_polling(drop_pending_updates=True)
+    """Fail closed so the retired polling runtime cannot start accidentally."""
+    raise RuntimeError(
+        "Telegram polling is disabled. Use the HTTPS webhook service configured for "
+        "src.web.telegram_webhook_app:app; do not call run_polling()."
+    )
 
 
 if __name__ == "__main__":
