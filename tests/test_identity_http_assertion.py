@@ -203,6 +203,30 @@ def test_redis_replay_store_is_atomic_across_instances_and_bounds_ttl() -> None:
 
 
 
+def test_authenticated_dependency_returns_503_when_replay_store_fails(monkeypatch) -> None:
+    secret = b"test-secret"
+    store = InMemoryReplayStore()
+    store.fail = True
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", secret.decode("utf-8"))
+    monkeypatch.setenv("JANAVANI_IDENTITY_REPLAY_REDIS_URL", "redis://localhost/0")
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_ISSUER", "janavani-identity")
+    monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_AUDIENCE", "janavani-api")
+    monkeypatch.setattr(
+        "src.identity.http_assertion.RedisIdentityAssertionReplayStore",
+        lambda _redis_url: store,
+    )
+    assertion = _encode(_payload(), secret)
+
+    with pytest.raises(HTTPException) as error:
+        require_authenticated_identity(
+            authorization=f"Bearer {assertion}",
+            request_id="request-1",
+        )
+
+    assert error.value.status_code == 503
+    assert error.value.detail == "Identity assertion replay protection is unavailable"
+
+
 def test_authenticated_dependency_fails_closed_without_replay_store(monkeypatch) -> None:
     monkeypatch.setenv("JANAVANI_IDENTITY_ASSERTION_SECRET", "test-secret")
     monkeypatch.delenv("JANAVANI_IDENTITY_REPLAY_REDIS_URL", raising=False)
