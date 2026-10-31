@@ -1,10 +1,10 @@
 """Privacy-safe citizen-owned structural format models for civic documents."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import hashlib
 import json
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from src.documents.template_catalogue import get_template
@@ -63,7 +63,7 @@ def create_citizen_document_format(
         sort_keys=True,
     ).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     return CitizenDocumentFormat(
         format_id=uuid4().hex,
         owner_principal_id=owner_principal_id,
