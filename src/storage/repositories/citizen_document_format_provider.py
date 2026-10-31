@@ -8,7 +8,9 @@ from src.storage.repositories.citizen_document_format import (
     CitizenDocumentFormatRepository,
     InMemoryCitizenDocumentFormatRepository,
 )
-from src.storage.repositories.postgres_citizen_document_format import PostgresCitizenDocumentFormatRepository
+from src.storage.repositories.postgres_citizen_document_format import (
+    PostgresCitizenDocumentFormatRepository,
+)
 
 SUPPORTED_CITIZEN_FORMAT_PROVIDERS = frozenset({"memory", "postgres"})
 
