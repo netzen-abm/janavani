@@ -129,6 +129,30 @@ def test_postgres_saved_formats_enforce_owner_scope_and_survive_repository_resta
         )
         assert second_owner.format_id != first.format_id
 
+        # The wrong owner must not mutate or delete the first owner's row,
+        # either through the repository contract or PostgreSQL's RLS policy.
+        assert repository.delete_for_owner(
+            first.format_id, owner_principal_id=owner_b
+        ) is False
+        with psycopg.connect(role_dsn) as limited:
+            with limited.transaction():
+                limited.execute(
+                    "SELECT set_config('janavani.principal_id', %s, true)", (owner_b,)
+                )
+                update_result = limited.execute(
+                    "UPDATE public.citizen_document_formats "
+                    "SET template_version = template_version + 1 WHERE format_id = %s",
+                    (first.format_id,),
+                )
+                assert update_result.rowcount == 0
+                delete_result = limited.execute(
+                    "DELETE FROM public.citizen_document_formats WHERE format_id = %s",
+                    (first.format_id,),
+                )
+                assert delete_result.rowcount == 0
+
+        assert repository.get_for_owner(first.format_id, owner_principal_id=owner_a) == first
+
         # Recreate the repository to prove database durability independent of an
         # in-process map or the original repository instance.
         restarted_repository = PostgresCitizenDocumentFormatRepository(dsn=role_dsn)
