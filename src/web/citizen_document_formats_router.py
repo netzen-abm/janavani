@@ -5,14 +5,16 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from src.access.citizen_document_format_policy import require_format_permission
-from src.documents.citizen_document_format import create_citizen_document_format, public_format_model
-from src.documents.template_catalogue import get_template
+from src.documents.citizen_document_format import (
+    create_citizen_document_format,
+    public_format_model,
+)
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
+from src.platform.composition import create_citizen_document_format_repository
 from src.storage.repositories.citizen_document_format_provider import (
     CitizenDocumentFormatProviderConfigurationError,
 )
-from src.platform.composition import create_citizen_document_format_repository
 
 router = APIRouter(prefix="/civic/drafts/formats", tags=["Citizen Document Formats"])
 
