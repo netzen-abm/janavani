@@ -23,7 +23,7 @@ class PostgresCitizenDocumentFormatRepository:
         if self._connection_factory:
             return self._connection_factory()
         import psycopg
-        return psycopg.connect(self._dsn)
+        return psycopg.connect(self._dsn, connect_timeout=5)
 
     @staticmethod
     def _hydrate(row: Any) -> CitizenDocumentFormat:
