@@ -11,6 +11,10 @@ Janavani uses independent runtime surfaces. A credential is configured only on t
 
 **Do not copy every secret into every Render service.** Apply least privilege.
 
+### Canonical public portal and interactive route ownership
+
+WordPress is the only public landing page and the authoritative location for privacy/safety and knowledge-hub content. Configure `JANAVANI_WORDPRESS_PORTAL_URL` on Dynamic Web as the HTTPS root of the WordPress portal. Dynamic Web `/` and `/privacy` must redirect to the portal and its `/privacy-safety/` page; do not maintain a second public homepage or duplicate privacy copy in the interactive runtime. The Dynamic Web runtime retains the interactive `/pathway` flow; drafting and private saved formats remain solely on the authenticated WebApp origin via `JANAVANI_CANONICAL_WEBAPP_URL`. Do not point any public site link to a preview deployment.
+
 In particular:
 
 - The canonical Web/API service does **not** need `TELEGRAM_BOT_TOKEN` merely because Janavani supports Telegram.

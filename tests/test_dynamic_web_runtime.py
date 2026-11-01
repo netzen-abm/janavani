@@ -5,18 +5,33 @@ from src.dynamic_web.pathways import PATHWAYS as _PATHWAYS
 from src.documents.template_catalogue import get_template
 
 
-def test_dynamic_website_is_a_separate_product_runtime_with_preamble_first():
-    response = TestClient(app).get("/")
-    assert response.status_code == 200
-    assert "WE, THE PEOPLE OF INDIA" in response.text
-    assert response.text.count("<h1") == 1
-    assert 'href="/favicon.svg"' in response.text
-    assert 'src="/brand-assets/brand/janavani-mark"' in response.text
-    assert "Find a civic pathway" in response.text
-    assert "Draft a civic document" in response.text
-    assert "/brand-assets/illustrations/preamble-of-india" in response.text
-    assert "/brand-assets/illustrations/civic-action-pathway" in response.text
-    assert "janavani-website" not in response.text
+def test_dynamic_root_redirects_to_the_canonical_wordpress_portal(monkeypatch):
+    monkeypatch.setenv("JANAVANI_WORDPRESS_PORTAL_URL", "https://janavani7.wordpress.com")
+    response = TestClient(app, follow_redirects=False).get("/")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://janavani7.wordpress.com/"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert "WE, THE PEOPLE OF INDIA" not in response.text
+
+
+def test_dynamic_privacy_route_redirects_to_the_authoritative_wordpress_page(monkeypatch):
+    monkeypatch.setenv("JANAVANI_WORDPRESS_PORTAL_URL", "https://janavani7.wordpress.com")
+    response = TestClient(app, follow_redirects=False).get("/privacy")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://janavani7.wordpress.com/privacy-safety/"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_dynamic_public_routes_fail_closed_without_portal_configuration(monkeypatch):
+    monkeypatch.delenv("JANAVANI_WORDPRESS_PORTAL_URL", raising=False)
+    client = TestClient(app, follow_redirects=False)
+
+    assert client.get("/").status_code == 503
+    assert client.get("/privacy").status_code == 503
 
 
 def test_dynamic_site_pathway_registry_resolves_only_canonical_templates():
@@ -198,10 +213,12 @@ def test_dynamic_site_marks_post_responses_no_store():
     assert response.headers["pragma"] == "no-cache"
 
 
-def test_render_declares_dynamic_website_as_a_distinct_runtime():
+def test_render_declares_dynamic_pathway_runtime_and_canonical_portal():
     from pathlib import Path
 
     manifest = (Path(__file__).resolve().parents[1] / "render.yaml").read_text(encoding="utf-8")
     assert "name: janavani-dynamic-web" in manifest
     assert "uvicorn src.dynamic_web.main:app" in manifest
     assert "healthCheckPath: /liveness" in manifest
+    assert "JANAVANI_WORDPRESS_PORTAL_URL" in manifest
+    assert "JANAVANI_CANONICAL_WEBAPP_URL" in manifest

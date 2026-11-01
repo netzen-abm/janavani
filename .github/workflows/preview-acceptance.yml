@@ -31,6 +31,7 @@ jobs:
           JANAVANI_API_URL: https://janavani-api-preview.onrender.com
           JANAVANI_WEBAPP_URL: https://janavani-webapp-preview.onrender.com
           JANAVANI_DYNAMIC_WEB_URL: https://janavani-dynamic-preview.onrender.com
+          JANAVANI_WORDPRESS_PORTAL_URL: https://janavani7.wordpress.com
         run: |
           python - <<'PY'
           import json
@@ -43,6 +44,7 @@ jobs:
           API = os.environ["JANAVANI_API_URL"].rstrip("/")
           WEBAPP = os.environ["JANAVANI_WEBAPP_URL"].rstrip("/")
           DYNAMIC = os.environ["JANAVANI_DYNAMIC_WEB_URL"].rstrip("/")
+          WORDPRESS = os.environ["JANAVANI_WORDPRESS_PORTAL_URL"].rstrip("/")
           USER_AGENT = "JanaVani-Preview-Acceptance/1.0"
           SYNTHETIC_ISSUE = "Acceptance test: the public streetlight is not working."
           ERRORS = []
@@ -169,12 +171,12 @@ jobs:
 
           dynamic_health, _ = expect(DYNAMIC, "/liveness")
           assert json.loads(dynamic_health).get("surface") == "dynamic-web"
-          dynamic_home, _ = expect(DYNAMIC, "/")
-          assert "WE, THE PEOPLE OF INDIA" in dynamic_home, "Preamble-first Dynamic Web home marker is missing"
+          expect_redirect(DYNAMIC, "/", WORDPRESS + "/")
+          expect_redirect(DYNAMIC, "/privacy", WORDPRESS + "/privacy-safety/")
+          print("PASS Dynamic Web root and privacy route converge on WordPress; no duplicate public landing content")
+
           dynamic_pathway, _ = expect(DYNAMIC, "/pathway")
           assert "Find a civic pathway" in dynamic_pathway
-          dynamic_privacy, _ = expect(DYNAMIC, "/privacy")
-          assert "privacy" in dynamic_privacy.lower()
 
           # Private saved-format pages are owned by the authenticated WebApp only.
           saved_list, saved_headers = expect(WEBAPP, "/citizen-formats")

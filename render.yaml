@@ -25,6 +25,8 @@ services:
         sync: false
       - key: JANAVANI_CANONICAL_WEBAPP_URL
         sync: false
+      - key: JANAVANI_WORDPRESS_PORTAL_URL
+        value: https://janavani7.wordpress.com
 
   - type: web
     name: janavani-webapp
