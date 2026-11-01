@@ -159,3 +159,26 @@ def test_production_saved_formats_fail_closed_without_durable_provider(monkeypat
     monkeypatch.delenv("JANAVANI_CITIZEN_DOCUMENT_FORMAT_DSN", raising=False)
     with pytest.raises(CitizenDocumentFormatProviderConfigurationError):
         create_citizen_document_format_repository()
+
+def test_postgres_saved_format_connection_has_bounded_connect_timeout(monkeypatch):
+    import psycopg
+
+    from src.storage.repositories.postgres_citizen_document_format import (
+        PostgresCitizenDocumentFormatRepository,
+    )
+
+    dsn = "postgresql://synthetic.invalid/janavani_test"
+    sentinel = object()
+    observed = {}
+
+    def fake_connect(actual_dsn, **kwargs):
+        observed["dsn"] = actual_dsn
+        observed.update(kwargs)
+        return sentinel
+
+    monkeypatch.setattr(psycopg, "connect", fake_connect)
+    repository = PostgresCitizenDocumentFormatRepository(dsn=dsn)
+
+    assert repository._connect() is sentinel
+    assert observed == {"dsn": dsn, "connect_timeout": 5}
+
