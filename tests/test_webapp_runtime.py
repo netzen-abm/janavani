@@ -120,3 +120,12 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
 
+def test_webapp_does_not_register_retired_nonfunctional_objection_routes():
+    from src.webapp.main import app
+
+    paths = {getattr(route, "path", "") for route in app.routes}
+
+    assert "/ai-drafting" in paths
+    assert "/ai-drafting/preview" in paths
+    assert not any(path.startswith("/bill-review/") for path in paths)
+    assert "/dispatch-objection" not in paths
