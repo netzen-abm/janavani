@@ -1,6 +1,7 @@
 import pytest
 
 from src.adapters.telegram.identity import identity_for_telegram_user
+from src.capabilities.civic_case import CAPABILITY_ID
 from src.identity.external import ExternalIdentity
 from src.identity.linking import InMemoryExternalIdentityLinkRepository
 
@@ -12,7 +13,7 @@ def test_telegram_identity_requires_verified_link():
         identity_for_telegram_user(12345, links=links)
 
 
-def test_telegram_identity_resolves_to_linked_canonical_principal():
+def test_telegram_identity_resolves_principal_without_granting_capabilities():
     links = InMemoryExternalIdentityLinkRepository()
     links.save(
         ExternalIdentity(
@@ -29,3 +30,5 @@ def test_telegram_identity_resolves_to_linked_canonical_principal():
 
     assert first.principal.principal_id == "janavani:principal-a"
     assert first.principal.principal_id == second.principal.principal_id
+    assert not first.principal.has_capability(CAPABILITY_ID)
+    assert not first.principal.has_capability("janavani:admin")

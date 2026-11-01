@@ -74,3 +74,18 @@ def test_none_authentication_method_is_rejected():
 
     with pytest.raises(ValueError, match="authenticated identity requires"):
         DefaultIdentityAdapter().resolve(identity)
+
+
+def test_verified_web_telegram_pairing_authentication_method_is_supported():
+    identity = ExternalIdentity(
+        provider="telegram",
+        subject="telegram-subject-1",
+        principal_id="principal-1",
+        authentication_method="web_telegram_pairing",
+        verified=True,
+    )
+
+    context = DefaultIdentityAdapter().resolve(identity)
+
+    assert context.principal.identity_mode == IdentityMode.AUTHENTICATED
+    assert context.principal.authentication_method == AuthenticationMethod.WEB_TELEGRAM_PAIRING
