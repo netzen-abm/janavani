@@ -23,6 +23,8 @@ services:
     envVars:
       - key: JANAVANI_WEB_API_URL
         sync: false
+      - key: JANAVANI_CANONICAL_WEBAPP_URL
+        sync: false
 
   - type: web
     name: janavani-webapp

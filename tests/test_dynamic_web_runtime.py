@@ -49,16 +49,42 @@ def test_unknown_pathway_fails_closed_to_supported_selector():
     assert "Continue to this document format" not in response.text
 
 
-def test_dynamic_site_registers_shared_template_first_drafting_flow():
-    response = TestClient(app).get("/ai-drafting?template_id=rti.records")
-    assert response.status_code == 200
-    assert "Draft a civic document" in response.text
-    assert "RTI application — request for existing records" in response.text
-    assert "not saved or submitted" in response.text
+def test_dynamic_site_redirects_drafting_to_the_canonical_webapp(monkeypatch):
+    monkeypatch.setenv("JANAVANI_CANONICAL_WEBAPP_URL", "https://webapp.example.test")
+    client = TestClient(app, follow_redirects=False)
+    response = client.get("/ai-drafting?template_id=rti.records&ignored=discard")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == (
+        "https://webapp.example.test/ai-drafting?template_id=rti.records"
+    )
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
 
 
-def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(monkeypatch):
+def test_dynamic_site_redirects_saved_formats_to_the_canonical_webapp(monkeypatch):
+    monkeypatch.setenv("JANAVANI_CANONICAL_WEBAPP_URL", "https://webapp.example.test")
+    client = TestClient(app, follow_redirects=False)
+
+    listed = client.get("/citizen-formats")
+    assert listed.status_code == 307
+    assert listed.headers["location"] == "https://webapp.example.test/citizen-formats"
+
+    confirm = client.get(
+        "/citizen-formats/confirm?template_id=complaint.general"
+        "&template_version=1&tracking=discard"
+    )
+    assert confirm.status_code == 307
+    assert confirm.headers["location"] == (
+        "https://webapp.example.test/citizen-formats/confirm"
+        "?template_id=complaint.general&template_version=1"
+    )
+
+
+
+def test_canonical_webapp_forwards_administrative_fields_to_the_canonical_preview(monkeypatch):
     from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+    from src.webapp.main import app as webapp_app
 
     received = {}
 
@@ -77,7 +103,7 @@ def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(mo
         }
 
     monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", fake_preview)
-    response = TestClient(app).post(
+    response = TestClient(webapp_app).post(
         "/ai-drafting/preview",
         data={
             "template_id": "administrative.evidence-demand",
@@ -111,14 +137,15 @@ def test_dynamic_site_forwards_administrative_fields_to_the_canonical_preview(mo
     assert received["remote_processing_consent"] is False
 
 
-def test_dynamic_site_does_not_call_preview_api_without_processing_consent(monkeypatch):
+def test_canonical_webapp_does_not_call_preview_api_without_processing_consent(monkeypatch):
     from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+    from src.webapp.main import app as webapp_app
 
     def forbidden_preview(self, payload):
         raise AssertionError("Preview API must not be called without consent")
 
     monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", forbidden_preview)
-    response = TestClient(app).post(
+    response = TestClient(webapp_app).post(
         "/ai-drafting/preview",
         data={
             "template_id": "complaint.general",
@@ -178,4 +205,3 @@ def test_render_declares_dynamic_website_as_a_distinct_runtime():
     assert "name: janavani-dynamic-web" in manifest
     assert "uvicorn src.dynamic_web.main:app" in manifest
     assert "healthCheckPath: /liveness" in manifest
-

@@ -38,7 +38,7 @@ jobs:
           import time
           from urllib.error import HTTPError, URLError
           from urllib.parse import urlencode
-          from urllib.request import Request, urlopen
+          from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
           API = os.environ["JANAVANI_API_URL"].rstrip("/")
           WEBAPP = os.environ["JANAVANI_WEBAPP_URL"].rstrip("/")
@@ -66,6 +66,40 @@ jobs:
                   raise AssertionError(f"{path}: expected HTTP {expected}, received {status}; body={body[:400]!r}")
               print(f"PASS HTTP {status} {kwargs.get('method', 'GET')} {path}")
               return body, headers
+
+          class NoRedirectHandler(HTTPRedirectHandler):
+              def redirect_request(self, request, fp, code, msg, headers, newurl):
+                  return None
+
+          def expect_redirect(base, path, expected_location):
+              request = Request(
+                  base + path,
+                  headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
+              )
+              try:
+                  with build_opener(NoRedirectHandler()).open(request, timeout=30) as response:
+                      status = response.status
+                      headers = dict(response.headers)
+              except HTTPError as error:
+                  status = error.code
+                  headers = dict(error.headers)
+                  error.read()
+              location = next(
+                  (value for key, value in headers.items() if key.lower() == "location"),
+                  None,
+              )
+              normalized = {key.lower(): value for key, value in headers.items()}
+              if status != 307 or location != expected_location:
+                  raise AssertionError(
+                      f"{path}: expected HTTP 307 Location={expected_location!r}; "
+                      f"received HTTP {status} Location={location!r}"
+                  )
+              if normalized.get("cache-control") != "no-store, private":
+                  raise AssertionError(f"{path}: redirect must not be cacheable")
+              if normalized.get("referrer-policy") != "no-referrer":
+                  raise AssertionError(f"{path}: redirect must suppress referrers")
+              print(f"PASS {base}{path} → {location}")
+              return location, normalized
 
           def wait_for_service(base, path, label):
               last_error = "no response"
@@ -102,7 +136,23 @@ jobs:
 
           web_home, _ = expect(WEBAPP, "/")
           web_form, _ = expect(WEBAPP, "/ai-drafting")
-          assert "Draft a civic document" in web_form, "WebApp drafting form is missing"
+          assert "Draft a civic document" in web_form, "Canonical WebApp drafting form is missing"
+          expect_redirect(
+              DYNAMIC,
+              "/ai-drafting?template_id=rti.records&ignored=discard",
+              WEBAPP + "/ai-drafting?template_id=rti.records",
+          )
+          expect_redirect(
+              DYNAMIC,
+              "/citizen-formats",
+              WEBAPP + "/citizen-formats",
+          )
+          expect_redirect(
+              DYNAMIC,
+              "/citizen-formats/confirm?template_id=complaint.general&template_version=1&ignored=discard",
+              WEBAPP + "/citizen-formats/confirm?template_id=complaint.general&template_version=1",
+          )
+          print("PASS all Dynamic Web drafting and saved-format entry points converge on WebApp")
 
           dynamic_health, _ = expect(DYNAMIC, "/liveness")
           assert json.loads(dynamic_health).get("surface") == "dynamic-web"
@@ -167,34 +217,27 @@ jobs:
           assert headers.get("x-content-type-options") == "nosniff"
           print("PASS API preview is deterministic, ephemeral, and not submitted")
 
-          # End-to-end form submits verify both UI services reach the canonical API.
+          # The authenticated WebApp alone owns the form and saved-format workflow.
           form = {
               "template_id": "complaint.general",
               "issue": SYNTHETIC_ISSUE,
               "preview_processing_consent": "yes",
           }
-          for label, base in (("WebApp", WEBAPP), ("Dynamic Web", DYNAMIC)):
-              denied_page, _ = post_form(
-                  base,
-                  "/ai-drafting/preview",
-                  {**form, "preview_processing_consent": ""},
-              )
-              assert "No request was forwarded to the canonical preview API" in denied_page, (
-                  f"{label} should reject missing processing consent before calling the API"
-              )
-              print(f"PASS {label} refuses a draft request without processing consent")
+          denied_page, _ = post_form(
+              WEBAPP,
+              "/ai-drafting/preview",
+              {**form, "preview_processing_consent": ""},
+          )
+          assert "No request was forwarded to the canonical preview API" in denied_page
+          print("PASS canonical WebApp refuses missing processing consent")
 
-              page, response_headers = post_form(base, "/ai-drafting/preview", form)
-              assert "Your draft preview" in page, f"{label} did not render the API preview"
-              assert "AI used: No" in page, f"{label} unexpectedly used AI"
-              assert "not submitted" in page.lower(), f"{label} omitted the no-submission disclosure"
-              assert response_headers.get("cache-control") == "no-store, private", (
-                  f"{label} preview response is cacheable"
-              )
-              assert response_headers.get("referrer-policy") == "no-referrer", (
-                  f"{label} preview response is missing Referrer-Policy"
-              )
-              print(f"PASS {label} form → canonical API → editable preview; no AI, persistence, or submission")
+          page, response_headers = post_form(WEBAPP, "/ai-drafting/preview", form)
+          assert "Your draft preview" in page
+          assert "AI used: No" in page
+          assert "not submitted" in page.lower()
+          assert response_headers.get("cache-control") == "no-store, private"
+          assert response_headers.get("referrer-policy") == "no-referrer"
+          print("PASS single WebApp form → canonical API → editable preview; no AI, persistence, or submission")
 
           print("PASS all deployed preview acceptance checks")
           PY

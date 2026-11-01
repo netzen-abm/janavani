@@ -42,7 +42,7 @@ def register_webapp_entry_routes(
                         "JanaVani platform."
                     ),
                     A(
-                        "AI-assisted civic document drafting",
+                        "Start a letter, complaint or RTI draft",
                         href="/ai-drafting",
                         style="display: inline-block; margin-top: 1rem;",
                     ),

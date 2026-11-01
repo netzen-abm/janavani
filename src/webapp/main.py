@@ -4,6 +4,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from src.ui.brand_assets import register_brand_assets
 from src.ui.citizen_format_routes import register_citizen_format_routes
 from src.webapp.ai_drafting import register_ai_drafting_routes
+from src.ui.citizen_format_routes import register_citizen_format_routes
+from src.webapp.ai_drafting import register_ai_drafting_routes
 from src.webapp.case_workspace import register_case_workspace_routes
 from src.webapp.entry_routes import register_webapp_entry_routes
 from src.webapp.services.api_client import client_for_request
