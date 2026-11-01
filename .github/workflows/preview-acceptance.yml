@@ -72,34 +72,47 @@ jobs:
                   return None
 
           def expect_redirect(base, path, expected_location):
-              request = Request(
-                  base + path,
-                  headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
-              )
-              try:
-                  with build_opener(NoRedirectHandler()).open(request, timeout=30) as response:
-                      status = response.status
-                      headers = dict(response.headers)
-              except HTTPError as error:
-                  status = error.code
-                  headers = dict(error.headers)
-                  error.read()
-              location = next(
-                  (value for key, value in headers.items() if key.lower() == "location"),
-                  None,
-              )
-              normalized = {key.lower(): value for key, value in headers.items()}
-              if status != 307 or location != expected_location:
-                  raise AssertionError(
-                      f"{path}: expected HTTP 307 Location={expected_location!r}; "
-                      f"received HTTP {status} Location={location!r}"
+              last = (None, None, {})
+              for attempt in range(1, 19):
+                  request = Request(
+                      base + path,
+                      headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
                   )
-              if normalized.get("cache-control") != "no-store, private":
-                  raise AssertionError(f"{path}: redirect must not be cacheable")
-              if normalized.get("referrer-policy") != "no-referrer":
-                  raise AssertionError(f"{path}: redirect must suppress referrers")
-              print(f"PASS {base}{path} → {location}")
-              return location, normalized
+                  try:
+                      with build_opener(NoRedirectHandler()).open(request, timeout=30) as response:
+                          status = response.status
+                          headers = dict(response.headers)
+                  except HTTPError as error:
+                      status = error.code
+                      headers = dict(error.headers)
+                      error.read()
+                  except URLError as error:
+                      status = None
+                      headers = {}
+                  location = next(
+                      (value for key, value in headers.items() if key.lower() == "location"),
+                      None,
+                  )
+                  normalized = {key.lower(): value for key, value in headers.items()}
+                  last = (status, location, normalized)
+                  if (
+                      status == 307
+                      and location == expected_location
+                      and normalized.get("cache-control") == "no-store, private"
+                      and normalized.get("referrer-policy") == "no-referrer"
+                  ):
+                      print(f"PASS {base}{path} → {location} (attempt {attempt})")
+                      return location, normalized
+                  # A deployment may serve the old instance while Render updates the
+                  # redirect target. Retry briefly rather than accept stale content.
+                  if attempt < 18:
+                      time.sleep(10)
+              status, location, headers = last
+              raise AssertionError(
+                  f"{path}: expected HTTP 307 Location={expected_location!r} with "
+                  f"no-store/referrer protections; received HTTP {status} Location={location!r} "
+                  f"headers={headers!r}"
+              )
 
           def wait_for_service(base, path, label):
               last_error = "no response"
