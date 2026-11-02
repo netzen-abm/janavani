@@ -14,6 +14,7 @@ from src.core.evidence import EvidenceSource
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 from src.platform.composition import create_civic_action_vertical_slice
+from src.platform.capability_activation_policy import CapabilityActivation, CapabilityActivationPolicy
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
@@ -78,11 +79,21 @@ def build_slice(external_channel_capability: ExternalChannelCapability | None = 
 
     case_capability = CivicCaseCapability(cases)
     evidence_capability = EvidenceCapability(evidence, case_capability)
+    activation_policy = CapabilityActivationPolicy(
+        environment="test", surface="test",
+        activations={"case:submit": CapabilityActivation(
+            capability_id="case:submit", maturity="integration_verified", enabled=True,
+            allowed_surfaces=frozenset({"test"}), allowed_environments=frozenset({"test"}),
+            dependencies_verified=True, accountable_owner="test-suite",
+            approval_ref="approval:test-only",
+        )},
+    )
     slice_ = create_civic_action_vertical_slice(
         case_repository=cases,
         authority_repository=authorities,
         consent_repository=consents,
         submission_transport=transport,
+        activation_policy=activation_policy,
         evidence_repository=evidence,
         document_review_repository=reviews,
         artifact_repository=artifacts,
@@ -266,4 +277,19 @@ def test_vertical_slice_rejects_forged_execution_context():
             SubmissionRequest(case.case_id, "doc-context", "office:office-1", "office:office-1", idempotency_key="forged-key"),
             channel_id="channel-verified", identity=actor, explicit_user_approval=True,
             execution_context=forged,
+        )
+
+
+
+def test_transport_injection_alone_cannot_activate_submission():
+    import pytest
+    cases = InMemoryCivicCaseRepository()
+    authorities = InMemoryAuthorityRepository([])
+    with pytest.raises(PermissionError, match="activation policy"):
+        create_civic_action_vertical_slice(
+            case_repository=cases,
+            authority_repository=authorities,
+            consent_repository=InMemoryConsentRepository(),
+            evidence_repository=InMemoryEvidenceRepository(),
+            submission_transport=FakeTransport(),
         )
