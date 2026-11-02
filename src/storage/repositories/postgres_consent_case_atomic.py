@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from src.core.consent import Consent
-from src.core.civic_case import CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.unit_of_work import UnitOfWorkFactory
 
@@ -49,6 +49,9 @@ class PostgresConsentCaseAtomicRepository:
             raise PermissionError("Case owner must match transaction principal")
         if consent.consent_id not in case.consent_refs:
             raise ValueError("Case must reference the consent before atomic persistence")
+        event_id = f"consent-{consent.consent_id}"
+        if any(event.event_id == event_id for event in case.events):
+            raise ValueError("Consent event already exists on Case")
         with self._unit_of_work_factory() as uow:
             conn = uow.connection
             bind_postgres_principal(conn, principal_id)
@@ -59,37 +62,22 @@ class PostgresConsentCaseAtomicRepository:
                         granted_by, subject_id, created_at, expires_at, revoked_at, proof_ref
                     ) VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (consent_id) DO UPDATE SET
-                        case_id=EXCLUDED.case_id,
-                        purpose=EXCLUDED.purpose,
-                        scope=EXCLUDED.scope,
-                        grant_type=EXCLUDED.grant_type,
-                        status=EXCLUDED.status,
-                        granted_by=EXCLUDED.granted_by,
-                        subject_id=EXCLUDED.subject_id,
-                        created_at=EXCLUDED.created_at,
-                        expires_at=EXCLUDED.expires_at,
-                        revoked_at=EXCLUDED.revoked_at,
+                        case_id=EXCLUDED.case_id, purpose=EXCLUDED.purpose,
+                        scope=EXCLUDED.scope, grant_type=EXCLUDED.grant_type,
+                        status=EXCLUDED.status, granted_by=EXCLUDED.granted_by,
+                        subject_id=EXCLUDED.subject_id, created_at=EXCLUDED.created_at,
+                        expires_at=EXCLUDED.expires_at, revoked_at=EXCLUDED.revoked_at,
                         proof_ref=EXCLUDED.proof_ref""",
                     (
-                        consent.consent_id,
-                        case.case_id,
-                        consent.purpose,
+                        consent.consent_id, case.case_id, consent.purpose,
                         __import__("json").dumps(list(consent.scope)),
-                        consent.grant_type.value,
-                        consent.status.value,
-                        principal_id,
-                        consent.subject_id,
-                        consent.created_at,
-                        consent.expires_at,
-                        consent.revoked_at,
-                        consent.proof_ref,
+                        consent.grant_type.value, consent.status.value, principal_id,
+                        consent.subject_id, consent.created_at, consent.expires_at,
+                        consent.revoked_at, consent.proof_ref,
                     ),
                 )
-                # Case projection update is intentionally delegated through the
-                # same transaction rather than calling a second repository/UoW.
                 cur.execute(
-                    """SELECT version FROM civic_cases
-                       WHERE case_id=%s FOR UPDATE""",
+                    "SELECT version FROM civic_cases WHERE case_id=%s FOR UPDATE",
                     (case.case_id,),
                 )
                 row = cur.fetchone()
@@ -102,16 +90,10 @@ class PostgresConsentCaseAtomicRepository:
                     )
                 new_version = current_version + 1
                 cur.execute(
-                    """UPDATE civic_cases
-                       SET status=%s, updated_at=%s, version=%s
+                    """UPDATE civic_cases SET status=%s, updated_at=%s, version=%s
                        WHERE case_id=%s AND version=%s""",
-                    (
-                        case.status.value,
-                        case.updated_at,
-                        new_version,
-                        case.case_id,
-                        current_version,
-                    ),
+                    (case.status.value, case.updated_at, new_version,
+                     case.case_id, current_version),
                 )
                 if cur.rowcount != 1:
                     raise RuntimeError("Case optimistic concurrency check failed")
@@ -120,17 +102,14 @@ class PostgresConsentCaseAtomicRepository:
                         event_id, case_id, event_type, occurred_at, actor_id,
                         source_channel, source_ref, notes, event_version, created_at
                     ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (
-                        f"consent-{consent.consent_id}",
-                        case.case_id,
-                        "CONSENT_RECORDED",
-                        consent.created_at,
-                        principal_id,
-                        None,
-                        consent.proof_ref,
-                        consent.purpose,
-                        new_version,
-                        consent.created_at,
-                    ),
+                    (event_id, case.case_id, CaseEventType.CONSENT_RECORDED.value,
+                     consent.created_at, principal_id, None, consent.proof_ref,
+                     consent.purpose, new_version, consent.created_at),
                 )
+        case.events.append(CaseEvent(
+            event_id=event_id, case_id=case.case_id,
+            event_type=CaseEventType.CONSENT_RECORDED,
+            occurred_at=consent.created_at, actor_id=principal_id,
+            source_ref=consent.proof_ref, notes=consent.purpose,
+        ))
         case.version = new_version
