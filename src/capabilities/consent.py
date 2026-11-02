@@ -18,6 +18,7 @@ from src.storage.repositories.consent_case_atomic import ConsentCaseAtomicReposi
 
 CAPABILITY_ID = "case:consent"
 PURPOSE_SUBMISSION = "case_submission"
+PURPOSE_DOCUMENT_PREPARATION = "document_preparation"
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,15 @@ class ConsentCapability:
         self._atomic_repository = atomic_repository
 
     def record_submission_consent(self, case_id: str, *, scope: str, identity: IdentityContext, proof_ref: str | None = None) -> ConsentResult:
-        """Persist explicit submission consent and attach it to the owned Case."""
+        """Persist consent for an actual Janavani external-delivery operation."""
+        return self._record_consent(case_id, scope=scope, identity=identity, purpose=PURPOSE_SUBMISSION, proof_ref=proof_ref)
+
+    def record_document_preparation_consent(self, case_id: str, *, scope: str, identity: IdentityContext, proof_ref: str | None = None) -> ConsentResult:
+        """Persist consent for preparing a document the citizen will download and send."""
+        return self._record_consent(case_id, scope=scope, identity=identity, purpose=PURPOSE_DOCUMENT_PREPARATION, proof_ref=proof_ref)
+
+    def _record_consent(self, case_id: str, *, scope: str, identity: IdentityContext, purpose: str, proof_ref: str | None = None) -> ConsentResult:
+        """Persist consent and attach its reference without advancing Case lifecycle."""
         if not scope.strip():
             raise ValueError("Consent scope is required")
         case = self._cases.get_owned(case_id, identity=identity)
@@ -48,35 +57,22 @@ class ConsentCapability:
         ))
         if decision is not AuthorizationDecision.ALLOW:
             raise PermissionError("Identity is not authorized to record consent")
-        consent_id = self._consent_id(case_id, PURPOSE_SUBMISSION, scope)
+        consent_id = self._consent_id(case_id, purpose, scope)
         consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
         if consent is None:
             now = datetime.now(timezone.utc).isoformat()
             consent = Consent(
                 consent_id=consent_id, subject_id=identity.principal.principal_id,
-                purpose=PURPOSE_SUBMISSION, scope=(scope,), grant_type=ConsentGrantType.EXPLICIT,
+                purpose=purpose, scope=(scope,), grant_type=ConsentGrantType.EXPLICIT,
                 status=ConsentStatus.GRANTED, created_at=now, proof_ref=proof_ref,
             )
             if self._atomic_repository is None:
                 self._repository.save(consent, principal_id=identity.principal.principal_id)
-        elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(PURPOSE_SUBMISSION, scope):
+        elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(purpose, scope):
             raise PermissionError("Existing consent does not authorize this identity and scope")
+        if consent.consent_id not in case.consent_refs:
+            case.consent_refs.append(consent.consent_id)
         if self._atomic_repository is not None:
-            # Build the final Case projection before the single persistence call.
-            if consent.consent_id not in case.consent_refs:
-                case.consent_refs.append(consent.consent_id)
-            if case.status.value == "draft":
-                case.start_review(
-                    event_id=f"event-consent-review-{consent.consent_id}",
-                    occurred_at=consent.created_at,
-                    actor_id=identity.principal.principal_id,
-                )
-            if case.status.value == "review":
-                case.mark_ready(
-                    event_id=f"event-consent-ready-{consent.consent_id}",
-                    occurred_at=consent.created_at,
-                    actor_id=identity.principal.principal_id,
-                )
             self._atomic_repository.save_consent_and_case(
                 consent,
                 case,
@@ -87,10 +83,6 @@ class ConsentCapability:
                 case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
             )
         attached = self._cases.add_consent(case_id, consent.consent_id, identity=identity)
-        if attached.case.status.value == "draft":
-            attached = self._cases.start_review(case_id, identity=identity)
-        if attached.case.status.value == "review":
-            attached = self._cases.approve(case_id, identity=identity)
         return ConsentResult(consent=consent, case=attached)
 
     @staticmethod

@@ -184,3 +184,25 @@ def test_atomic_consent_case_rejects_case_owned_by_other_principal():
         pass
     else:
         raise AssertionError("cross-user Case must be rejected")
+
+
+def test_atomic_consent_keeps_draft_lifecycle_and_syncs_event_projection():
+    conn = FakeConnection()
+    case = CivicCase(
+        case_id="case-atomic-draft",
+        case_type=CaseType.COMPLAINT,
+        subject="Road",
+        narrative="Repair",
+        created_by="citizen-1",
+        status=CaseStatus.DRAFT,
+        version=1,
+        consent_refs=["consent-1"],
+    )
+    repo = PostgresConsentCaseAtomicRepository(connection_factory=lambda: conn)
+    repo.save_consent_and_case(consent(), case, principal_id="citizen-1")
+
+    assert case.status is CaseStatus.DRAFT
+    assert case.version == 2
+    assert len(case.events) == 1
+    assert case.events[0].event_type.value == "CONSENT_RECORDED"
+    assert case.events[0].event_id == "consent-consent-1"

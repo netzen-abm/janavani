@@ -1,5 +1,5 @@
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
-from src.capabilities.consent import ConsentCapability, PURPOSE_SUBMISSION
+from src.capabilities.consent import ConsentCapability, PURPOSE_DOCUMENT_PREPARATION, PURPOSE_SUBMISSION
 from src.core.civic_case import CaseType, CivicCase
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
@@ -35,7 +35,7 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     assert result.consent.scope == ("office:office-1",)
     assert result.consent.is_authorized
     assert result.consent.consent_id in result.case.case.consent_refs
-    assert result.case.case.status.value == "ready"
+    assert result.case.case.status.value == "draft"
 
 
 def test_record_submission_consent_denies_cross_principal_case():
@@ -60,3 +60,31 @@ def test_record_submission_consent_requires_scope():
         pass
     else:
         raise AssertionError("Expected empty consent scope to fail closed")
+
+
+
+def test_document_preparation_consent_is_not_external_submission_consent():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Broken streetlight",
+            narrative="The streetlight has not worked for three nights.",
+        ),
+        identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"),
+    ).case
+    repository = InMemoryConsentRepository()
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+
+    result = capability.record_document_preparation_consent(
+        case.case_id,
+        scope="citizen_download_and_self_send",
+        identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"),
+    )
+
+    assert result.consent.purpose == PURPOSE_DOCUMENT_PREPARATION
+    assert result.consent.purpose != PURPOSE_SUBMISSION
+    assert result.consent.scope == ("citizen_download_and_self_send",)
+    assert result.consent.consent_id in result.case.case.consent_refs
+    assert result.case.case.status.value == "draft"
