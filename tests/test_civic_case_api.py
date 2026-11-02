@@ -123,5 +123,5 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
-    assert consent.json()["status"] == "ready"
+    assert consent.json()["status"] == "review"
     assert consent.json()["delivery"] == "citizen_download_and_self_send"
