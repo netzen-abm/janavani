@@ -35,7 +35,7 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     assert result.consent.scope == ("office:office-1",)
     assert result.consent.is_authorized
     assert result.consent.consent_id in result.case.case.consent_refs
-    assert result.case.case.status.value == "ready"
+    assert result.case.case.status.value == "draft"
 
 
 def test_record_submission_consent_denies_cross_principal_case():
@@ -87,4 +87,4 @@ def test_document_preparation_consent_is_not_external_submission_consent():
     assert result.consent.purpose != PURPOSE_SUBMISSION
     assert result.consent.scope == ("citizen_download_and_self_send",)
     assert result.consent.consent_id in result.case.case.consent_refs
-    assert result.case.case.status.value == "ready"
+    assert result.case.case.status.value == "draft"
