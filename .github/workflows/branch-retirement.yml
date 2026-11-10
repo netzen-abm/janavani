@@ -191,7 +191,12 @@ jobs:
           tag="archive/branches/$branch"
           git_ref="refs/remotes/origin/retirement-candidate"
 
-          open_prs="$(BRANCH="$branch" REPO="$REPO" gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' | wc -l | tr -d ' ')"
+          open_prs="$(
+            BRANCH="$branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+                --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          )"
           if [ "$open_prs" != "0" ]; then
             echo "::error::Retirement held: open PRs still reference $branch."
             exit 2
