@@ -30,7 +30,7 @@ Repeat each command at least five times. Record CPU, OS, Python version, rustc v
 - Memory allocation parity beyond what the runtimes naturally incur.
 - Overall JANAVANI application performance.
 
-The harness deliberately excludes fixture construction from the timed region. The Rust validator currently accepts owned events, so its benchmark clones the prebuilt event vector per iteration; the Python validator consumes an iterable without cloning. This asymmetry must be accounted for when interpreting results. A fair follow-up can compare both on prebuilt cloned inputs or redesign both APIs around borrowed/slice inputs, but do not change production APIs merely to improve benchmark scores.
+The harness deliberately excludes fixture construction from the timed region. The Rust validator accepts both owned and borrowed events; the benchmark passes a borrowed iterator. The Python validator likewise receives the prebuilt list. Event construction and allocation are outside the timed region in both implementations.
 
 ## Acceptance criteria before migration
 
