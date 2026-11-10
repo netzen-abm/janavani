@@ -97,17 +97,12 @@ pub fn confirmed_delivery(status: CaseStatus) -> bool {
     matches!(status, CaseStatus::Acknowledged | CaseStatus::FollowUp | CaseStatus::InProgress | CaseStatus::Responded | CaseStatus::Resolved | CaseStatus::Escalated | CaseStatus::Closed)
 }
 
-pub fn validate_event_chain<I, E>(events: I) -> bool
-where
-    I: IntoIterator<Item = E>,
-    E: std::borrow::Borrow<CaseEvent>,
-{
+pub fn validate_event_chain(events: &[CaseEvent]) -> bool {
     let mut previous: Option<CaseEventType> = None;
     let mut seen = std::collections::HashSet::new();
     let mut case_id: Option<&str> = None;
 
-    for item in events {
-        let event = item.borrow();
+    for event in events {
         if case_id.is_none() { case_id = Some(event.case_id.as_str()); }
         if Some(event.case_id.as_str()) != case_id || !seen.insert(event.event_id.as_str()) { return false; }
         if previous == Some(CaseEventType::Acknowledged) && event.event_type == CaseEventType::Submitted { return false; }
