@@ -32,7 +32,7 @@ fn main() {
     let mut samples = Vec::with_capacity(repetitions);
     for _ in 0..repetitions {
         let start = Instant::now();
-        let valid = validate_event_chain(events.iter());
+        let valid = validate_event_chain(&events);
         let elapsed = start.elapsed().as_nanos();
         assert!(valid, "benchmark validation unexpectedly failed");
         samples.push(elapsed);
