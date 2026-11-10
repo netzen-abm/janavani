@@ -26,13 +26,13 @@ fn main() {
         .collect();
 
     for _ in 0..5 {
-        assert!(validate_event_chain(events.clone()));
+        assert!(validate_event_chain(events.iter()));
     }
 
     let mut samples = Vec::with_capacity(repetitions);
     for _ in 0..repetitions {
         let start = Instant::now();
-        let valid = validate_event_chain(events.clone());
+        let valid = validate_event_chain(events.iter());
         let elapsed = start.elapsed().as_nanos();
         assert!(valid, "benchmark validation unexpectedly failed");
         samples.push(elapsed);
