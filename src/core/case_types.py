@@ -1,6 +1,7 @@
 """Canonical civic case enums and status vocabulary."""
 from enum import Enum
 
+
 class CaseType(str, Enum):
     COMPLAINT = "complaint"
     GRIEVANCE = "grievance"
@@ -14,6 +15,7 @@ class CaseType(str, Enum):
     MISBEHAVIOUR = "misbehaviour"
     TRANSFER_CONCERN = "transfer_concern"
     OTHER = "other"
+
 
 class CaseStatus(str, Enum):
     DRAFT = "draft"
@@ -31,12 +33,13 @@ class CaseStatus(str, Enum):
     CLOSED = "closed"
     ARCHIVED = "archived"
 
+
 class CaseEventType(str, Enum):
     CREATED = "created"
     EDITED = "edited"
     REVIEW_STARTED = "review_started"
     APPROVED = "approved"
-    CONSENT_RECORDED = "CONSENT_RECORDED"
+    CONSENT_RECORDED = "consent_recorded"
     EVIDENCE_ADDED = "evidence_added"
     DOCUMENT_ADDED = "document_added"
     SUBMITTING = "submitting"
@@ -55,6 +58,7 @@ class CaseEventType(str, Enum):
     CITIZEN_REOPENED = "citizen_reopened"
     CLOSED = "closed"
     ARCHIVED = "archived"
+
 
 CITIZEN_VERIFIED_EVENT = CaseEventType.CITIZEN_VERIFIED
 CITIZEN_REOPENED_EVENT = CaseEventType.CITIZEN_REOPENED
