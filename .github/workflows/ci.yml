@@ -24,6 +24,19 @@ jobs:
           set -euo pipefail
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
+            feat/capability-activation-governance)
+              if [ "$EVENT_NAME" != "pull_request" ] || [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
+                echo "::error::Consent governance branch is permitted only for its integration PR to main."
+                exit 1
+              fi
+              expiry="2026-11-17"
+              today="$(date -u +%F)"
+              if [[ "$today" > "$expiry" ]]; then
+                echo "::error::Temporary consent-governance integration exception expired on $expiry."
+                exit 1
+              fi
+              echo "Temporary integration-only exception through $expiry; post-merge retirement must reduce physical refs to eight."
+              ;;
             main|integration/canonical-platform|feat/canonical-case-kernel)
               echo "Allowed active branch role: $branch"
               ;;
