@@ -121,7 +121,7 @@ mod tests {
             CaseEvent::new("2", "case-1", CaseEventType::EvidenceAdded, "2026-08-24T00:01:00Z"),
             CaseEvent::new("3", "case-1", CaseEventType::Edited, "2026-08-24T00:02:00Z"),
         ];
-        assert!(validate_event_chain(events));
+        assert!(validate_event_chain(&events));
     }
 
     #[test]
@@ -179,10 +179,10 @@ mod tests {
         };
 
         assert_eq!(vectors["contract_version"], "1.0");
-        assert!(validate_event_chain(parse_events("valid_chain")));
-        assert!(!validate_event_chain(parse_events("invalid_ack_then_submitted")));
-        assert!(!validate_event_chain(parse_events("invalid_duplicate_ids")));
-        assert!(!validate_event_chain(parse_events("invalid_mixed_cases")));
+        assert!(validate_event_chain(&parse_events("valid_chain")));
+        assert!(!validate_event_chain(&parse_events("invalid_ack_then_submitted")));
+        assert!(!validate_event_chain(&parse_events("invalid_duplicate_ids")));
+        assert!(!validate_event_chain(&parse_events("invalid_mixed_cases")));
     }
 
 }
