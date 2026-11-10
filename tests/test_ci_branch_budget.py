@@ -132,3 +132,29 @@ def test_backup_restore_uses_postgres16_matched_client_binaries() -> None:
     assert "pg_dump --username=\"$PGUSER\"" in section
     assert "pg_restore --username=\"$PGUSER\"" in section
     assert "pg_restore --exit-on-error --no-owner --no-privileges --dbname=janavani_restore_test \"$backup_file\"" not in section
+
+
+def test_consent_governance_is_a_time_limited_integration_exception() -> None:
+    source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "feat/capability-activation-governance)" in source
+    assert 'EVENT_NAME" != "pull_request"' in source
+    assert 'github.event.pull_request.base.ref' in source
+    assert 'expiry="2026-11-17"' in source
+    assert "Temporary consent-governance integration exception expired" in source
+
+
+def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split("retire-consent-capability-governance:", 1)[1].split(
+        "retire-canonical-capability-envelope:", 1
+    )[0]
+
+    assert "github.event.pull_request.merged == true" in section
+    assert "feat/capability-activation-governance" in section
+    assert "archive/branches/" in section
+    assert "Archive/head verification failed" in section
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert 'if [ "$remaining" -ne 8 ]' in section
