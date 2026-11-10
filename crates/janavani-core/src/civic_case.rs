@@ -36,7 +36,7 @@ pub enum CaseStatus {
     Submitting,
     Queued,
     Submitted,
-undefined    Acknowledged,
+    Acknowledged,
     FollowUp,
     InProgress,
     Responded,
