@@ -26,7 +26,7 @@ fn main() {
         .collect();
 
     for _ in 0..5 {
-        assert!(validate_event_chain(events.iter()));
+        assert!(validate_event_chain(&events));
     }
 
     let mut samples = Vec::with_capacity(repetitions);
