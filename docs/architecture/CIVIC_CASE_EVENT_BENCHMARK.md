@@ -30,7 +30,7 @@ Repeat each command at least five times. Record CPU, OS, Python version, rustc v
 - Memory allocation parity beyond what the runtimes naturally incur.
 - Overall JANAVANI application performance.
 
-The harness deliberately excludes fixture construction from the timed region. The Rust validator accepts both owned and borrowed events; the benchmark passes a borrowed iterator. The Python validator likewise receives the prebuilt list. Event construction and allocation are outside the timed region in both implementations.
+The harness deliberately excludes fixture construction from the timed region. The Rust validator accepts a borrowed event slice; the benchmark passes a reference to the prebuilt vector. The Python validator likewise receives the prebuilt list. Event construction and allocation are outside the timed region in both implementations.
 
 ## Acceptance criteria before migration
 
