@@ -1,0 +1,85 @@
+{
+  "contract_version": "1.0",
+  "description": "Shared language-neutral event-chain conformance vectors for Python and Rust.",
+  "valid_chain": [
+    {
+      "event_id": "evt-001",
+      "case_id": "case-001",
+      "event_type": "created",
+      "occurred_at": "2026-11-10T09:00:00Z"
+    },
+    {
+      "event_id": "evt-002",
+      "case_id": "case-001",
+      "event_type": "evidence_added",
+      "occurred_at": "2026-11-10T09:01:00Z",
+      "source_ref": "evidence-001"
+    },
+    {
+      "event_id": "evt-003",
+      "case_id": "case-001",
+      "event_type": "consent_recorded",
+      "occurred_at": "2026-11-10T09:02:00Z"
+    },
+    {
+      "event_id": "evt-004",
+      "case_id": "case-001",
+      "event_type": "approved",
+      "occurred_at": "2026-11-10T09:03:00Z"
+    },
+    {
+      "event_id": "evt-005",
+      "case_id": "case-001",
+      "event_type": "submitted",
+      "occurred_at": "2026-11-10T09:04:00Z"
+    },
+    {
+      "event_id": "evt-006",
+      "case_id": "case-001",
+      "event_type": "acknowledged",
+      "occurred_at": "2026-11-10T09:05:00Z"
+    }
+  ],
+  "invalid_ack_then_submitted": [
+    {
+      "event_id": "evt-101",
+      "case_id": "case-002",
+      "event_type": "acknowledged",
+      "occurred_at": "2026-11-10T09:00:00Z"
+    },
+    {
+      "event_id": "evt-102",
+      "case_id": "case-002",
+      "event_type": "submitted",
+      "occurred_at": "2026-11-10T09:01:00Z"
+    }
+  ],
+  "invalid_duplicate_ids": [
+    {
+      "event_id": "evt-201",
+      "case_id": "case-003",
+      "event_type": "created",
+      "occurred_at": "2026-11-10T09:00:00Z"
+    },
+    {
+      "event_id": "evt-201",
+      "case_id": "case-003",
+      "event_type": "edited",
+      "occurred_at": "2026-11-10T09:01:00Z"
+    }
+  ],
+  "invalid_mixed_cases": [
+    {
+      "event_id": "evt-301",
+      "case_id": "case-004",
+      "event_type": "created",
+      "occurred_at": "2026-11-10T09:00:00Z"
+    },
+    {
+      "event_id": "evt-302",
+      "case_id": "case-005",
+      "event_type": "edited",
+      "occurred_at": "2026-11-10T09:01:00Z"
+    }
+  ]
+}
