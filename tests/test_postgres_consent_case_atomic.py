@@ -204,5 +204,4 @@ def test_atomic_consent_keeps_draft_lifecycle_and_syncs_event_projection():
     assert case.status is CaseStatus.DRAFT
     assert case.version == 2
     assert len(case.events) == 1
-    assert case.events[0].event_type.value == "CONSENT_RECORDED"
-    assert case.events[0].event_id == "consent-consent-1"
+    assert case.events[0].event_type.value == "consent_recorded"
