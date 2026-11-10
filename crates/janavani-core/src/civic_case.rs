@@ -138,6 +138,8 @@ mod submission;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod contract_tests;
 
 impl CivicCase {
     pub fn new(
