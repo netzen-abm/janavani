@@ -6,6 +6,7 @@ consent, explicit approval, or execution-context validation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Mapping
 
 CAPABILITY_MATURITY = (
@@ -50,9 +51,11 @@ class CapabilityActivationPolicy:
     def __post_init__(self) -> None:
         if not self.environment.strip() or not self.surface.strip():
             raise ValueError("environment and surface must not be blank")
-        for key, activation in self.activations.items():
+        snapshot = dict(self.activations)
+        for key, activation in snapshot.items():
             if key != activation.capability_id:
                 raise ValueError("Activation mapping key must match capability_id")
+        object.__setattr__(self, "activations", MappingProxyType(snapshot))
 
     def permits(self, capability_id: str) -> bool:
         """Return True only when every platform activation condition is satisfied."""
