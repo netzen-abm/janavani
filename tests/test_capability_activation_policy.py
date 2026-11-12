@@ -59,3 +59,17 @@ def test_invalid_activation_mapping_is_rejected():
     activation = CapabilityActivation(capability_id="case:submit", maturity="implemented")
     with pytest.raises(ValueError, match="mapping key"):
         CapabilityActivationPolicy("test", "test", {"wrong:key": activation})
+
+
+def test_policy_snapshots_caller_mapping_and_rejects_mutation():
+    activation = CapabilityActivation(
+        capability_id="case:submit", maturity="integration_verified", enabled=True,
+        allowed_surfaces=frozenset({"internal"}), allowed_environments=frozenset({"staging"}),
+        dependencies_verified=True, accountable_owner="security", approval_ref="approval:1",
+    )
+    supplied = {"case:submit": activation}
+    policy = CapabilityActivationPolicy("staging", "internal", supplied)
+    supplied.clear()
+    assert policy.permits("case:submit") is True
+    with pytest.raises(TypeError):
+        policy.activations["case:submit"] = activation
