@@ -11,6 +11,7 @@ from hashlib import sha256
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+from src.core.civic_case import CaseEventType
 from src.identity.context import IdentityContext
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.storage.repositories.consent import ConsentRepository
@@ -70,6 +71,24 @@ class ConsentCapability:
                 self._repository.save(consent, principal_id=identity.principal.principal_id)
         elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(purpose, scope):
             raise PermissionError("Existing consent does not authorize this identity and scope")
+        event_id = f"consent-{consent.consent_id}"
+        existing_event = next(
+            (event for event in case.events if event.event_id == event_id),
+            None,
+        )
+        if existing_event is not None:
+            if (
+                existing_event.event_type is not CaseEventType.CONSENT_RECORDED
+                or existing_event.actor_id != identity.principal.principal_id
+                or existing_event.notes != purpose
+                or existing_event.source_ref != consent.proof_ref
+                or consent.consent_id not in case.consent_refs
+            ):
+                raise RuntimeError("Existing consent event does not match its persisted grant")
+            return ConsentResult(
+                consent=consent,
+                case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
+            )
         if consent.consent_id not in case.consent_refs:
             case.consent_refs.append(consent.consent_id)
         if self._atomic_repository is not None:
