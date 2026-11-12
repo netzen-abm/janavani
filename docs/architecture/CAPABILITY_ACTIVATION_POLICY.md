@@ -12,7 +12,8 @@ supplemental to domain authorization, consent, explicit approval, idempotency,
 execution-context validation, and audit requirements.
 
 ## Policy dimensions
-The immutable policy records runtime environment and surface, plus per-capability:
+The immutable policy snapshots the supplied activation mapping at construction and
+records runtime environment and surface, plus per-capability:
 - stable capability identifier;
 - maturity: designed, implemented, composed, integration_verified,
   production_approved, suspended, or retired;
@@ -39,13 +40,20 @@ approval is not evidence of external submission.
 
 ## Consent boundary
 `case_submission` remains reserved for explicit external delivery consent.
-Preparation consent must be represented separately only after a complete inventory
-of consent writers, readers, persisted records, and user-facing copy. Historical
-consent records must not be reinterpreted.
+The canonical consent capability now records `document_preparation` separately for
+preparing a document that the citizen downloads and sends independently. Preparation
+consent does not authorize external delivery, advance the Case lifecycle, or imply
+that a document was submitted. External delivery requires its own purpose- and
+scope-bound consent plus the separate activation and execution gates.
+
+Historical consent records are not reinterpreted or migrated by this change. Existing
+`case_submission` records retain their original meaning; no record is silently
+converted into preparation consent.
 
 ## Verification
 Automated tests cover missing/disabled policy, maturity, surface/environment scope,
-dependency verification, accountability, retirement, and transport-injection bypass.
+dependency verification, accountability, retirement, immutable mapping snapshots,
+and transport-injection bypass.
 
 ## Non-goals
 This change does not create a delivery adapter, change database schemas, migrate
