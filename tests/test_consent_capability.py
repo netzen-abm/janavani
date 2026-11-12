@@ -88,3 +88,65 @@ def test_document_preparation_consent_is_not_external_submission_consent():
     assert result.consent.scope == ("citizen_download_and_self_send",)
     assert result.consent.consent_id in result.case.case.consent_refs
     assert result.case.case.status.value == "draft"
+
+
+def test_repeated_atomic_preparation_consent_is_idempotent():
+    from src.core.civic_case import CaseEvent, CaseEventType
+
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Broken streetlight",
+            narrative="The streetlight has not worked for three nights.",
+        ),
+        identity=_identity(
+            "telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"
+        ),
+    ).case
+    consents = InMemoryConsentRepository()
+
+    class AtomicRecorder:
+        calls = 0
+
+        def save_consent_and_case(self, consent, current_case, *, principal_id):
+            self.calls += 1
+            consents.save(consent, principal_id=principal_id)
+            current_case.events.append(CaseEvent(
+                event_id=f"consent-{consent.consent_id}",
+                case_id=current_case.case_id,
+                event_type=CaseEventType.CONSENT_RECORDED,
+                occurred_at=consent.created_at,
+                actor_id=principal_id,
+                source_ref=consent.proof_ref,
+                notes=consent.purpose,
+            ))
+            current_case.version += 1
+            cases.save(current_case, principal_id=principal_id)
+
+    atomic = AtomicRecorder()
+    capability = ConsentCapability(
+        repository=consents,
+        case_capability=case_capability,
+        atomic_repository=atomic,
+    )
+    identity = _identity(
+        "telegram:12345", "case:consent", "case:write", "case:review"
+    )
+
+    first = capability.record_document_preparation_consent(
+        case.case_id, scope="citizen_download_and_self_send", identity=identity
+    )
+    second = capability.record_document_preparation_consent(
+        case.case_id, scope="citizen_download_and_self_send", identity=identity
+    )
+
+    assert first.consent == second.consent
+    assert atomic.calls == 1
+    assert second.case.case.consent_refs.count(first.consent.consent_id) == 1
+    assert sum(
+        event.event_id == f"consent-{first.consent.consent_id}"
+        for event in second.case.case.events
+    ) == 1
+    assert second.case.case.status.value == "draft"
