@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
 
-from src.config.runtime import RUNTIME_MODES
+from src.config.runtime import RUNTIME_MODES, RuntimeConfigurationError, current_runtime_mode
 
 CAPABILITY_MATURITY = (
     "designed",
@@ -47,7 +47,7 @@ class CapabilityActivation:
 
 @dataclass(frozen=True)
 class CapabilityActivationPolicy:
-    """Immutable, deny-by-default policy for one runtime composition."""
+    """Immutable, deny-by-default policy bound to the actual process environment."""
 
     environment: str
     surface: str
@@ -59,6 +59,13 @@ class CapabilityActivationPolicy:
             raise ValueError(f"Unsupported runtime environment: {environment}")
         if not self.surface.strip():
             raise ValueError("surface must not be blank")
+
+        process_environment = current_runtime_mode()
+        if environment != process_environment:
+            raise ValueError(
+                "Capability activation environment does not match "
+                f"JANAVANI_RUNTIME_MODE ({environment!r} != {process_environment!r})"
+            )
         object.__setattr__(self, "environment", environment)
 
         snapshot = dict(self.activations)
@@ -68,7 +75,13 @@ class CapabilityActivationPolicy:
         object.__setattr__(self, "activations", MappingProxyType(snapshot))
 
     def permits(self, capability_id: str) -> bool:
-        """Return True only when every platform activation condition is satisfied."""
+        """Return True only while every policy and live runtime condition holds."""
+        try:
+            if current_runtime_mode() != self.environment:
+                return False
+        except RuntimeConfigurationError:
+            return False
+
         activation = self.activations.get(capability_id)
         if activation is None or not activation.enabled:
             return False
