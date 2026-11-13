@@ -295,3 +295,51 @@ def test_transport_injection_alone_cannot_activate_submission():
             evidence_repository=InMemoryEvidenceRepository(),
             submission_transport=FakeTransport(),
         )
+
+
+def test_direct_vertical_slice_construction_cannot_bypass_activation():
+    from dataclasses import replace
+
+    slice_, _, _, _, _ = build_slice()
+    with pytest.raises(PermissionError, match="Direct CivicActionVerticalSlice construction"):
+        CivicActionVerticalSlice(replace(slice_._deps, activation_policy=None))
+
+
+def test_submission_rechecks_process_runtime_immediately_before_transport(monkeypatch):
+    slice_, _, consents, transport, case = build_slice()
+    actor = identity()
+    consents.save(Consent(
+        consent_id="consent-runtime-change",
+        subject_id="citizen-1",
+        purpose="case_submission",
+        scope=("office:office-1",),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-09-09T10:00:00Z",
+    ))
+    slice_.add_consent(
+        case.case_id,
+        "consent-runtime-change",
+        identity=actor,
+        purpose="case_submission",
+        occurred_at="2026-09-09T10:00:00Z",
+    )
+    slice_.prepare_document(case.case_id, identity=actor, document_id="doc-runtime-change")
+    slice_.start_review(case.case_id, identity=actor)
+    slice_.approve(case.case_id, identity=actor)
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    with pytest.raises(PermissionError, match="not enabled for this runtime and surface"):
+        slice_.submit(
+            SubmissionRequest(
+                case_id=case.case_id,
+                document_id="doc-runtime-change",
+                destination_ref="office:office-1",
+                consent_scope="office:office-1",
+            ),
+            channel_id="channel-verified",
+            identity=actor,
+            explicit_user_approval=True,
+        )
+
+    assert transport.calls == []
