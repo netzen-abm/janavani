@@ -27,7 +27,7 @@ PR #243 changes consent-purpose separation and the deny-by-default activation bo
 
 The current `main` ruleset was inspected on 13 November 2026 and reports `required_approving_review_count: 0` and `require_code_owner_review: false`. Therefore GitHub does not currently enforce the independent-approval requirement. Repository administration must configure at least one required approval before this governance PR is merged. A successful CI run or a comment from the PR author is not an independent approval.
 
-After approved merge, the archive-first retirement workflow must archive the exact PR branch head, verify the branch tree matches merged `main`, delete the branch, and query GitHub again to prove exactly eight physical refs remain. Until that verification succeeds, report the observed physical count; do not claim eight-ref compliance.
+After approved merge, the dedicated PR #243 retirement job first verifies that at least one reviewer other than the PR author has a latest `APPROVED` review whose `commit_id` equals the exact branch head. It then checks there are no other open PRs, archives that exact head, verifies the archive and branch ref, compares the full branch tree with merged `main` (not commit ancestry, so squash/rebase is supported), deletes the ref, and queries GitHub again to prove exactly eight physical refs remain. If the approval, open-PR, archive, or tree-parity check fails, the branch is not deleted. Until live re-inventory confirms eight refs, report the observed physical count; do not claim eight-ref compliance.
 
 ## Rules
 
