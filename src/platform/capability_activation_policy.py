@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
 
+from src.config.runtime import RUNTIME_MODES
+
 CAPABILITY_MATURITY = (
     "designed",
     "implemented",
@@ -36,21 +38,29 @@ class CapabilityActivation:
             raise ValueError("capability_id must not be blank")
         if self.maturity not in CAPABILITY_MATURITY:
             raise ValueError(f"Unsupported capability maturity: {self.maturity}")
-        if any(not value.strip() for value in self.allowed_surfaces | self.allowed_environments):
+        if any(
+            not value.strip()
+            for value in self.allowed_surfaces | self.allowed_environments
+        ):
             raise ValueError("Allowed surfaces and environments must not contain blank values")
 
 
 @dataclass(frozen=True)
 class CapabilityActivationPolicy:
-    """Immutable, deny-by-default activation policy for one runtime composition."""
+    """Immutable, deny-by-default policy for one runtime composition."""
 
     environment: str
     surface: str
     activations: Mapping[str, CapabilityActivation]
 
     def __post_init__(self) -> None:
-        if not self.environment.strip() or not self.surface.strip():
-            raise ValueError("environment and surface must not be blank")
+        environment = self.environment.strip().lower()
+        if environment not in RUNTIME_MODES:
+            raise ValueError(f"Unsupported runtime environment: {environment}")
+        if not self.surface.strip():
+            raise ValueError("surface must not be blank")
+        object.__setattr__(self, "environment", environment)
+
         snapshot = dict(self.activations)
         for key, activation in snapshot.items():
             if key != activation.capability_id:
@@ -65,10 +75,13 @@ class CapabilityActivationPolicy:
         if activation.maturity in {"suspended", "retired"}:
             return False
         required_maturity = (
-            "production_approved" if self.environment == "production"
+            "production_approved"
+            if self.environment == "production"
             else "integration_verified"
         )
-        if CAPABILITY_MATURITY.index(activation.maturity) < CAPABILITY_MATURITY.index(required_maturity):
+        if CAPABILITY_MATURITY.index(activation.maturity) < CAPABILITY_MATURITY.index(
+            required_maturity
+        ):
             return False
         if self.surface not in activation.allowed_surfaces:
             return False
