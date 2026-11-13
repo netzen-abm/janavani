@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
-from src.core.civic_case import CaseEventType, CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.core.execution import CapabilityExecutionContext
 from src.capabilities.civic_case_contract import CivicCaseResult
 from src.identity.context import IdentityContext
@@ -24,13 +24,41 @@ class CivicCaseLifecycleMixin:
         consent_id: str,
         *,
         identity: IdentityContext,
+        purpose: str | None = None,
+        proof_ref: str | None = None,
+        occurred_at: str | None = None,
         execution_context: CapabilityExecutionContext | None = None,
     ) -> CivicCaseResult:
         self._validate_execution_context(execution_context, identity, action="case:consent", resource_id=case_id)
         case = self._owned(case_id, identity)
         self._require(identity, "case:write", "case:consent")
+        event_id = f"consent-{consent_id}"
+        existing_event = next(
+            (event for event in case.events if event.event_id == event_id),
+            None,
+        )
+        if existing_event is not None:
+            if (
+                existing_event.event_type is not CaseEventType.CONSENT_RECORDED
+                or existing_event.actor_id != identity.principal.principal_id
+                or existing_event.notes != purpose
+                or existing_event.source_ref != proof_ref
+                or consent_id not in case.consent_refs
+            ):
+                raise RuntimeError("Existing consent event does not match its consent reference")
+            return CivicCaseResult(case, AuthorizationDecision.ALLOW)
+
         if consent_id not in case.consent_refs:
             case.consent_refs.append(consent_id)
+        case.events.append(CaseEvent(
+            event_id=event_id,
+            case_id=case.case_id,
+            event_type=CaseEventType.CONSENT_RECORDED,
+            occurred_at=occurred_at or datetime.now(timezone.utc).isoformat(),
+            actor_id=identity.principal.principal_id,
+            source_ref=proof_ref,
+            notes=purpose,
+        ))
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
@@ -129,6 +157,5 @@ class CivicCaseLifecycleMixin:
 
     @staticmethod
     def _event(case_id: str, event_type: CaseEventType, identity: IdentityContext, occurred_at: str, source_channel: str | None):
-        from src.core.civic_case import CaseEvent
         return CaseEvent(event_id=f"event-{uuid4().hex}", case_id=case_id, event_type=event_type,
                          occurred_at=occurred_at, actor_id=identity.principal.principal_id, source_channel=source_channel)
