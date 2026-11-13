@@ -1,3 +1,5 @@
+import pytest
+
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
@@ -14,6 +16,7 @@ from src.core.evidence import EvidenceSource
 from src.identity.context import IdentityContext
 from src.identity.principal import Principal
 from src.platform.composition import create_civic_action_vertical_slice
+from src.platform.capability_activation_policy import CapabilityActivation, CapabilityActivationPolicy
 from src.storage.repositories.authority import InMemoryAuthorityRepository
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
@@ -21,6 +24,11 @@ from src.storage.repositories.document_artifact import InMemoryDocumentArtifactR
 from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.external_channel import InMemoryExternalChannelRepository
+
+
+@pytest.fixture(autouse=True)
+def test_runtime_mode(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "test")
 
 
 class FakeTransport:
@@ -78,11 +86,21 @@ def build_slice(external_channel_capability: ExternalChannelCapability | None = 
 
     case_capability = CivicCaseCapability(cases)
     evidence_capability = EvidenceCapability(evidence, case_capability)
+    activation_policy = CapabilityActivationPolicy(
+        environment="test", surface="test",
+        activations={"case:submit": CapabilityActivation(
+            capability_id="case:submit", maturity="integration_verified", enabled=True,
+            allowed_surfaces=frozenset({"test"}), allowed_environments=frozenset({"test"}),
+            dependencies_verified=True, accountable_owner="test-suite",
+            approval_ref="approval:test-only",
+        )},
+    )
     slice_ = create_civic_action_vertical_slice(
         case_repository=cases,
         authority_repository=authorities,
         consent_repository=consents,
         submission_transport=transport,
+        activation_policy=activation_policy,
         evidence_repository=evidence,
         document_review_repository=reviews,
         artifact_repository=artifacts,
@@ -169,7 +187,6 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
 
-    import pytest
     with pytest.raises(PermissionError):
         slice_.submit(
             SubmissionRequest(case.case_id, "doc-1", "office:office-1", "office:office-1"),
@@ -220,7 +237,6 @@ def test_vertical_slice_recommends_follow_up_from_canonical_case():
 
 
 def test_vertical_slice_rejects_submission_for_different_principal():
-    import pytest
     slice_, _, consents, _, case = build_slice()
     owner = identity()
     other = IdentityContext(principal=Principal(
@@ -244,7 +260,6 @@ def test_vertical_slice_rejects_submission_for_different_principal():
 
 
 def test_vertical_slice_rejects_forged_execution_context():
-    import pytest
     from src.core.execution import CapabilityExecutionContext
     slice_, _, consents, _, case = build_slice()
     actor = identity()
@@ -267,3 +282,64 @@ def test_vertical_slice_rejects_forged_execution_context():
             channel_id="channel-verified", identity=actor, explicit_user_approval=True,
             execution_context=forged,
         )
+
+
+def test_transport_injection_alone_cannot_activate_submission():
+    cases = InMemoryCivicCaseRepository()
+    authorities = InMemoryAuthorityRepository([])
+    with pytest.raises(PermissionError, match="activation policy"):
+        create_civic_action_vertical_slice(
+            case_repository=cases,
+            authority_repository=authorities,
+            consent_repository=InMemoryConsentRepository(),
+            evidence_repository=InMemoryEvidenceRepository(),
+            submission_transport=FakeTransport(),
+        )
+
+
+def test_direct_vertical_slice_construction_cannot_bypass_activation():
+    from dataclasses import replace
+
+    slice_, _, _, _, _ = build_slice()
+    with pytest.raises(PermissionError, match="Direct CivicActionVerticalSlice construction"):
+        CivicActionVerticalSlice(replace(slice_._deps, activation_policy=None))
+
+
+def test_submission_rechecks_process_runtime_immediately_before_transport(monkeypatch):
+    slice_, _, consents, transport, case = build_slice()
+    actor = identity()
+    consents.save(Consent(
+        consent_id="consent-runtime-change",
+        subject_id="citizen-1",
+        purpose="case_submission",
+        scope=("office:office-1",),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-09-09T10:00:00Z",
+    ))
+    slice_.add_consent(
+        case.case_id,
+        "consent-runtime-change",
+        identity=actor,
+        purpose="case_submission",
+        occurred_at="2026-09-09T10:00:00Z",
+    )
+    slice_.prepare_document(case.case_id, identity=actor, document_id="doc-runtime-change")
+    slice_.start_review(case.case_id, identity=actor)
+    slice_.approve(case.case_id, identity=actor)
+
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    with pytest.raises(PermissionError, match="not enabled for this runtime and surface"):
+        slice_.submit(
+            SubmissionRequest(
+                case_id=case.case_id,
+                document_id="doc-runtime-change",
+                destination_ref="office:office-1",
+                consent_scope="office:office-1",
+            ),
+            channel_id="channel-verified",
+            identity=actor,
+            explicit_user_approval=True,
+        )
+
+    assert transport.calls == []

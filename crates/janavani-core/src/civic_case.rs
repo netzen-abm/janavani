@@ -53,6 +53,7 @@ pub enum CaseEventType {
     Edited,
     ReviewStarted,
     Approved,
+    ConsentRecorded,
     EvidenceAdded,
     DocumentAdded,
     Submitting,
@@ -167,5 +168,4 @@ impl CivicCase {
             version: 1,
         }
     }
-
 }

@@ -24,6 +24,8 @@ from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.core.obligation import ObligationResolver
 from .composition_repositories import create_document_review_repository_for_platform, create_provider_composition
+from .capability_activation_policy import CapabilityActivationPolicy
+
 
 def create_civic_action_vertical_slice(
     *,
@@ -43,6 +45,7 @@ def create_civic_action_vertical_slice(
     escalation_capability: EscalationCapability | None = None,
     submission_capability: SubmissionCapability | None = None,
     submission_transport=None,
+    activation_policy: CapabilityActivationPolicy | None = None,
     provider_composition: ProviderComposition | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
@@ -72,6 +75,9 @@ def create_civic_action_vertical_slice(
     )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
+    if submission_capability is not None or submission_transport is not None:
+        if activation_policy is None or not activation_policy.permits("case:submit"):
+            raise PermissionError("Submission capability is not enabled by platform activation policy")
     if submission_capability is None and submission_transport is not None:
         submission_capability = SubmissionCapability(
             case_capability=case_capability,
@@ -89,6 +95,7 @@ def create_civic_action_vertical_slice(
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
             submission_capability=submission_capability,
+            activation_policy=activation_policy,
             external_channel_capability=external_channel_capability
             or create_external_channel_capability(provider_composition=composition),
             case_repository=case_repository,
@@ -99,4 +106,3 @@ def create_civic_action_vertical_slice(
             escalation_capability=escalation_capability or create_escalation_capability(),
         )
     )
-

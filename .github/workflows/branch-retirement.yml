@@ -166,6 +166,111 @@ jobs:
             exit 2
           fi
 
+  retire-consent-capability-governance:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'feat/capability-activation-governance' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Archive exact consent-governance head, verify merge, then retire ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="feat/capability-activation-governance"
+          tag="archive/branches/$branch"
+          git_ref="refs/remotes/origin/retirement-candidate"
+
+          open_prs="$(
+            BRANCH="$branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+                --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          )"
+          if [ "$open_prs" != "0" ]; then
+            echo "::error::Retirement held: open PRs still reference $branch."
+            exit 2
+          fi
+
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_author="${{ github.event.pull_request.user.login }}"
+          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          review_rows="$(gh api --paginate "repos/$REPO/pulls/$pr_number/reviews?per_page=100" --jq '.[] | [.user.login, .state, .submitted_at, .commit_id] | @tsv')"
+          approved_count="$(
+            printf '%s\n' "$review_rows" |
+              sort -s -t "$(printf '\t')" -k1,1 -k3,3 |
+              awk -F '\t' -v author="$pr_author" -v expected="$head_sha" '
+                NF == 4 {
+                  latest_state[$1] = $2
+                  latest_commit[$1] = $4
+                }
+                END {
+                  for (login in latest_state) {
+                    if (login != author &&
+                        latest_state[login] == "APPROVED" &&
+                        latest_commit[login] == expected) {
+                      count++
+                    }
+                  }
+                  print count + 0
+                }
+              '
+          )"
+          if [ "$approved_count" -lt 1 ]; then
+            echo "::error::Retirement held: PR #$pr_number has no current-head approval from a reviewer other than its author."
+            exit 2
+          fi
+          git fetch --no-tags origin "refs/heads/$branch:$git_ref"
+          if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
+            echo "::error::Fetched branch head does not match GitHub ref."
+            exit 2
+          fi
+          if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
+            echo "::error::Retirement held: consent-governance tree differs from merged main."
+            exit 2
+          fi
+
+          if gh api "repos/$REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+            if [ "$archive_sha" != "$head_sha" ]; then
+              echo "::error::Archive tag exists at a different SHA."
+              exit 2
+            fi
+          else
+            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$head_sha"
+          fi
+
+          archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$archive_sha" != "$head_sha" ] || [ "$current_sha" != "$head_sha" ]; then
+            echo "::error::Archive/head verification failed; branch will not be deleted."
+            exit 2
+          fi
+
+          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            echo "::error::Branch still exists after deletion."
+            exit 2
+          fi
+
+          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
+          echo "Remaining physical branch refs: $remaining"
+          if [ "$remaining" -ne 8 ]; then
+            echo "::error::Expected exactly eight physical branch refs after retirement; found $remaining."
+            exit 2
+          fi
+          echo "RETIREMENT VERIFIED: exact head archived, branch deleted, and exactly eight refs remain."
+
   retire-canonical-capability-envelope:
     if: >-
       github.event_name == 'pull_request' &&

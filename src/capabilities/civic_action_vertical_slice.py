@@ -32,6 +32,14 @@ from src.storage.repositories.document_artifact import DocumentArtifactRepositor
 from src.storage.repositories.document_review import DocumentReviewRepository
 
 
+def _submission_is_activated(policy: object | None) -> bool:
+    """Fail closed when activation is absent or invalid."""
+    try:
+        return bool(policy is not None and policy.permits("case:submit"))
+    except Exception:
+        return False
+
+
 @dataclass(frozen=True)
 class CivicActionVerticalSliceDependencies:
     """All capabilities required by the canonical civic-action slice."""
@@ -46,10 +54,15 @@ class CivicActionVerticalSliceDependencies:
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
     submission_capability: SubmissionCapability | None = None
+    activation_policy: object | None = None
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
     follow_up_capability: FollowUpCapability | None = None
     escalation_capability: EscalationCapability | None = None
+
+    def __post_init__(self) -> None:
+        if self.submission_capability is not None and not _submission_is_activated(self.activation_policy):
+            raise PermissionError("Direct CivicActionVerticalSlice construction requires an active case:submit platform policy")
 
 
 @dataclass(frozen=True)
@@ -68,50 +81,37 @@ class CivicActionVerticalSlice:
         self._deps = dependencies
         self._documents = CivicActionDocuments(dependencies)
 
-    def resolve_responsibility(
-        self,
-        request: ResponsibilityResolutionRequest,
-    ) -> ResponsibilityResolution:
+    def resolve_responsibility(self, request: ResponsibilityResolutionRequest) -> ResponsibilityResolution:
         """Resolve traceable responsibility candidates without asserting liability."""
         return self._deps.responsibility_capability.resolve(request)
 
-    def resolve_obligation(
-        self,
-        request: ObligationResolutionRequest,
-    ) -> ObligationResolution:
-        """Resolve source-backed obligations for an already identified authority."""
+    def resolve_obligation(self, request: ObligationResolutionRequest) -> ObligationResolution:
+        """Resolve source-backed obligations for an identified authority."""
         return self._deps.obligation_capability.resolve(request)
 
-    def discover_external_channels(
-        self,
-        query: ExternalChannelQuery | None = None,
-    ) -> tuple[ExternalChannel, ...]:
-        """Expose only source-backed, currently verified external destinations."""
+    def discover_external_channels(self, query: ExternalChannelQuery | None = None) -> tuple[ExternalChannel, ...]:
+        """Expose only source-backed, verified external destinations."""
         return self._deps.external_channel_capability.discover(query)
 
     def get_verified_external_channel(self, channel_id: str) -> ExternalChannel:
         """Select one verified external destination through the shared channel boundary."""
         return self._deps.external_channel_capability.get_verified(channel_id)
 
-    def recommend_follow_up(
-        self,
-        context: FollowUpContext,
-    ) -> FollowUpRecommendation:
-        """Recommend a user-controlled next step from canonical Case state and history."""
+    def recommend_follow_up(self, context: FollowUpContext) -> FollowUpRecommendation:
+        """Recommend a user-controlled follow-up from canonical Case state."""
         capability = self._deps.follow_up_capability or FollowUpCapability()
         return capability.recommend(context)
 
-    def recommend_escalation(
-        self,
-        context: EscalationContext,
-    ) -> EscalationRecommendation:
-        """Recommend a user-controlled escalation step from canonical Case state and history."""
+    def recommend_escalation(self, context: EscalationContext) -> EscalationRecommendation:
+        """Recommend a user-controlled escalation from canonical Case state."""
         capability = self._deps.escalation_capability or EscalationCapability()
         return capability.recommend(context)
 
     def submit(self, request, *, channel_id: str, identity: IdentityContext, explicit_user_approval: bool, execution_context=None):
         if self._deps.submission_capability is None:
             raise RuntimeError("Submission capability is not configured")
+        if not _submission_is_activated(self._deps.activation_policy):
+            raise PermissionError("Submission capability is not enabled for this runtime and surface")
         from dataclasses import replace
         if request.external_channel_id is not None and request.external_channel_id != channel_id:
             raise ValueError("Submission channel does not match the selected verified channel")
@@ -132,9 +132,14 @@ class CivicActionVerticalSlice:
             source_channel=source_channel or "shared",
         )
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
-        """Attach a previously recorded consent through the canonical Case boundary."""
-        return self._deps.case_capability.add_consent(case_id, consent_id, identity=identity)
+    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext,
+                    purpose: str | None = None, proof_ref: str | None = None,
+                    occurred_at: str | None = None) -> CivicCaseResult:
+        """Attach consent and record the corresponding audit event on the Case."""
+        return self._deps.case_capability.add_consent(
+            case_id, consent_id, identity=identity, purpose=purpose,
+            proof_ref=proof_ref, occurred_at=occurred_at,
+        )
 
     def prepare_document(self, case_id: str, *, identity: IdentityContext, document_id=None):
         draft = self._documents.prepare(case_id, identity=identity, document_id=document_id)
