@@ -108,13 +108,10 @@ def test_policy_rechecks_process_environment_at_decision_time(monkeypatch):
 
 def test_invalid_process_environment_denies_activation(monkeypatch):
     monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "prod")
-    policy = CapabilityActivationPolicy(
-        "test", "internal", {"case:submit": _verified_test_activation()}
-    )
-    assert policy.permits("case:submit") is False
-    with pytest.raises(RuntimeConfigurationError):
-        from src.config.runtime import current_runtime_mode
-        current_runtime_mode()
+    with pytest.raises(RuntimeConfigurationError, match="Unsupported JANAVANI_RUNTIME_MODE"):
+        CapabilityActivationPolicy(
+            "test", "internal", {"case:submit": _verified_test_activation()}
+        )
 
 
 def test_unverified_dependencies_or_missing_accountability_deny_activation():
