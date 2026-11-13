@@ -76,6 +76,14 @@ Historical consent records are not reinterpreted or migrated. Existing
 `case_submission` records retain their original meaning; no record is silently
 converted into preparation consent.
 
+The legacy `POST /civic/cases/{case_id}/consent` attachment route no
+longer accepts an arbitrary identifier. It delegates to the Consent capability,
+which verifies that the grant is persisted, owned by the authenticated principal,
+active, explicit, and bound to the requested Case by its deterministic consent ID
+before attaching a reference or writing an audit event. Unpersisted identifiers,
+another citizen's grants, expired/revoked grants, and grants from another Case are
+rejected. New grants continue to be created through the explicit-consent workflow.
+
 ## Verification
 Automated tests cover process/runtime mismatch rejection, runtime recheck at
 decision time, invalid process modes, missing/disabled activation, maturity,
