@@ -159,6 +159,8 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" -ne 8 ]' in section
     assert 'pulls/$pr_number/reviews?per_page=100' in section
-    assert 'latest[login] == "APPROVED"' in section
+    assert '.commit_id' in section
+    assert 'latest_state[$1] == "APPROVED"' in section
+    assert 'latest_commit[$1] == expected' in section
     assert 'login != author' in section
-    assert 'no current approval from a reviewer other than its author' in section
+    assert 'no current-head approval from a reviewer other than its author' in section
