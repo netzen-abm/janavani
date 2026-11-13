@@ -1,12 +1,32 @@
 import pytest
 
+from src.config.runtime import RuntimeConfigurationError
 from src.platform.capability_activation_policy import (
     CapabilityActivation,
     CapabilityActivationPolicy,
 )
 
 
-def test_missing_or_disabled_activation_is_denied():
+@pytest.fixture(autouse=True)
+def test_runtime_mode(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "test")
+
+
+def _verified_test_activation():
+    return CapabilityActivation(
+        capability_id="case:submit",
+        maturity="integration_verified",
+        enabled=True,
+        allowed_surfaces=frozenset({"internal"}),
+        allowed_environments=frozenset({"test"}),
+        dependencies_verified=True,
+        accountable_owner="security",
+        approval_ref="approval:1",
+    )
+
+
+def test_missing_or_disabled_activation_is_denied(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
     policy = CapabilityActivationPolicy(
         environment="production", surface="web", activations={}
     )
@@ -26,7 +46,8 @@ def test_missing_or_disabled_activation_is_denied():
     ).permits("case:submit") is False
 
 
-def test_production_requires_production_approval_and_all_gates():
+def test_production_requires_production_approval_and_all_gates(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
     activation = CapabilityActivation(
         capability_id="case:submit",
         maturity="integration_verified",
@@ -44,16 +65,7 @@ def test_production_requires_production_approval_and_all_gates():
 
 
 def test_nonproduction_activation_requires_verified_dependencies_and_exact_scope():
-    activation = CapabilityActivation(
-        capability_id="case:submit",
-        maturity="integration_verified",
-        enabled=True,
-        allowed_surfaces=frozenset({"internal"}),
-        allowed_environments=frozenset({"test"}),
-        dependencies_verified=True,
-        accountable_owner="security",
-        approval_ref="approval:1",
-    )
+    activation = _verified_test_activation()
     policy = CapabilityActivationPolicy(
         "test", "internal", {"case:submit": activation}
     )
@@ -70,21 +82,39 @@ def test_unknown_runtime_environments_are_rejected():
 
 
 def test_runtime_environment_is_normalized_before_policy_evaluation():
-    activation = CapabilityActivation(
-        capability_id="case:submit",
-        maturity="integration_verified",
-        enabled=True,
-        allowed_surfaces=frozenset({"internal"}),
-        allowed_environments=frozenset({"test"}),
-        dependencies_verified=True,
-        accountable_owner="security",
-        approval_ref="approval:1",
-    )
     policy = CapabilityActivationPolicy(
-        " TEST ", "internal", {"case:submit": activation}
+        " TEST ", "internal", {"case:submit": _verified_test_activation()}
     )
     assert policy.environment == "test"
     assert policy.permits("case:submit") is True
+
+
+def test_policy_rejects_test_scope_when_process_is_production(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    with pytest.raises(ValueError, match="does not match JANAVANI_RUNTIME_MODE"):
+        CapabilityActivationPolicy(
+            "test", "internal", {"case:submit": _verified_test_activation()}
+        )
+
+
+def test_policy_rechecks_process_environment_at_decision_time(monkeypatch):
+    policy = CapabilityActivationPolicy(
+        "test", "internal", {"case:submit": _verified_test_activation()}
+    )
+    assert policy.permits("case:submit") is True
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "production")
+    assert policy.permits("case:submit") is False
+
+
+def test_invalid_process_environment_denies_activation(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "prod")
+    policy = CapabilityActivationPolicy(
+        "test", "internal", {"case:submit": _verified_test_activation()}
+    )
+    assert policy.permits("case:submit") is False
+    with pytest.raises(RuntimeConfigurationError):
+        from src.config.runtime import current_runtime_mode
+        current_runtime_mode()
 
 
 def test_unverified_dependencies_or_missing_accountability_deny_activation():
@@ -130,16 +160,7 @@ def test_invalid_activation_mapping_is_rejected():
 
 
 def test_policy_snapshots_caller_mapping_and_rejects_mutation():
-    activation = CapabilityActivation(
-        capability_id="case:submit",
-        maturity="integration_verified",
-        enabled=True,
-        allowed_surfaces=frozenset({"internal"}),
-        allowed_environments=frozenset({"test"}),
-        dependencies_verified=True,
-        accountable_owner="security",
-        approval_ref="approval:1",
-    )
+    activation = _verified_test_activation()
     supplied = {"case:submit": activation}
     policy = CapabilityActivationPolicy("test", "internal", supplied)
     supplied.clear()
