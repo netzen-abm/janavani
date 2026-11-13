@@ -82,7 +82,13 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert body["related_official_id"] == "official-1"
     assert body["related_representative_id"] == "rep-1"
     assert body["claims"][0]["claim_id"] == "claim-1"
-    assert len(body["events"]) == 3
+    assert len(body["events"]) == 4
+    consent_events = [
+        event for event in body["events"]
+        if event["event_type"] == "consent_recorded"
+    ]
+    assert len(consent_events) == 1
+    assert consent_events[0]["actor_id"] == "principal-1"
 
 
 
