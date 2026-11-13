@@ -24,11 +24,14 @@ records runtime environment and surface, plus per-capability:
 - explicit approval reference.
 
 The policy denies activation when any required condition is missing or mismatched.
-Production requires production_approved maturity. Non-production activation requires
-at least integration_verified maturity.
+It uses the canonical runtime modes from src/config/runtime.py: development, test,
+and production. Unknown values and aliases such as prod or staging are rejected
+rather than treated as non-production. Environment strings are trimmed and
+lower-cased before matching. Production requires production_approved maturity;
+development and test require at least integration_verified.
 
 ## Current submission posture
-- Capability: `case:submit`
+- Capability: case:submit
 - Default activation: absent/disabled
 - Ordinary Web and Telegram compositions: no submission capability is injected
 - External delivery: not authorized
@@ -39,21 +42,21 @@ The citizen independently sends the document. Download, reminder, or document
 approval is not evidence of external submission.
 
 ## Consent boundary
-`case_submission` remains reserved for explicit external delivery consent.
-The canonical consent capability now records `document_preparation` separately for
+case_submission remains reserved for explicit external delivery consent.
+The canonical consent capability now records document_preparation separately for
 preparing a document that the citizen downloads and sends independently. Preparation
 consent does not authorize external delivery, advance the Case lifecycle, or imply
 that a document was submitted. External delivery requires its own purpose- and
 scope-bound consent plus the separate activation and execution gates.
 
 Historical consent records are not reinterpreted or migrated by this change. Existing
-`case_submission` records retain their original meaning; no record is silently
+case_submission records retain their original meaning; no record is silently
 converted into preparation consent.
 
 ## Verification
 Automated tests cover missing/disabled policy, maturity, surface/environment scope,
 dependency verification, accountability, retirement, immutable mapping snapshots,
-and transport-injection bypass.
+unknown environment rejection and normalization, and transport-injection bypass.
 
 ## Non-goals
 This change does not create a delivery adapter, change database schemas, migrate
