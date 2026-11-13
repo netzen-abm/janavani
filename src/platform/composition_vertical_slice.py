@@ -26,6 +26,7 @@ from src.core.obligation import ObligationResolver
 from .composition_repositories import create_document_review_repository_for_platform, create_provider_composition
 from .capability_activation_policy import CapabilityActivationPolicy
 
+
 def create_civic_action_vertical_slice(
     *,
     case_repository: CivicCaseRepository,
@@ -94,6 +95,7 @@ def create_civic_action_vertical_slice(
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
             submission_capability=submission_capability,
+            activation_policy=activation_policy,
             external_channel_capability=external_channel_capability
             or create_external_channel_capability(provider_composition=composition),
             case_repository=case_repository,
@@ -104,4 +106,3 @@ def create_civic_action_vertical_slice(
             escalation_capability=escalation_capability or create_escalation_capability(),
         )
     )
-
