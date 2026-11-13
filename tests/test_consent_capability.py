@@ -211,17 +211,19 @@ def test_attaching_existing_consent_requires_case_consent_capability():
     repository.save(consent, principal_id=owner.principal.principal_id)
     capability = ConsentCapability(repository=repository, case_capability=case_capability)
 
-    without_consent_permission = _identity(
-        "telegram:12345", "case:write", "case:review"
+    unauthorized_identities = (
+        _identity("telegram:12345", "case:write", "case:review"),
+        _identity("telegram:12345", "case:consent", "case:review"),
     )
-    try:
-        capability.attach_existing_consent(
-            case.case_id, consent.consent_id, identity=without_consent_permission
-        )
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError("Expected persisted grant attachment to require case:consent")
+    for unauthorized in unauthorized_identities:
+        try:
+            capability.attach_existing_consent(
+                case.case_id, consent.consent_id, identity=unauthorized
+            )
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError("Expected attachment to require case:consent and case:write")
 
     current = case_capability.get_owned(case.case_id, identity=owner)
     assert current is not None
