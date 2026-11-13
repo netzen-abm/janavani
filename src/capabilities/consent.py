@@ -46,6 +46,59 @@ class ConsentCapability:
         """Persist consent for preparing a document the citizen will download and send."""
         return self._record_consent(case_id, scope=scope, identity=identity, purpose=PURPOSE_DOCUMENT_PREPARATION, proof_ref=proof_ref)
 
+    def attach_existing_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> ConsentResult:
+        """Attach only a persisted, active, principal-owned grant for this exact Case."""
+        case = self._cases.get_owned(case_id, identity=identity)
+        if case is None:
+            raise LookupError("Case not found")
+        consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
+        if consent is None or consent.subject_id != identity.principal.principal_id:
+            raise LookupError("Consent grant not found")
+        if consent.grant_type is not ConsentGrantType.EXPLICIT or not consent.is_authorized:
+            raise PermissionError("Consent grant is not active and explicit")
+        if not any(
+            self._consent_id(case_id, consent.purpose, scope) == consent.consent_id
+            for scope in consent.scope
+        ):
+            raise LookupError("Consent grant not found")
+
+        event_id = f"consent-{consent.consent_id}"
+        existing_event = next(
+            (event for event in case.events if event.event_id == event_id),
+            None,
+        )
+        if existing_event is not None:
+            if (
+                existing_event.event_type is not CaseEventType.CONSENT_RECORDED
+                or existing_event.actor_id != identity.principal.principal_id
+                or existing_event.notes != consent.purpose
+                or existing_event.source_ref != consent.proof_ref
+                or consent.consent_id not in case.consent_refs
+            ):
+                raise RuntimeError("Existing consent event does not match its persisted grant")
+            return ConsentResult(
+                consent=consent,
+                case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
+            )
+
+        if self._atomic_repository is not None:
+            if consent.consent_id not in case.consent_refs:
+                case.consent_refs.append(consent.consent_id)
+            self._atomic_repository.save_consent_and_case(
+                consent, case, principal_id=identity.principal.principal_id
+            )
+            attached = CivicCaseResult(case, AuthorizationDecision.ALLOW)
+        else:
+            attached = self._cases.add_consent(
+                case_id,
+                consent.consent_id,
+                identity=identity,
+                purpose=consent.purpose,
+                proof_ref=consent.proof_ref,
+                occurred_at=consent.created_at,
+            )
+        return ConsentResult(consent=consent, case=attached)
+
     def _record_consent(self, case_id: str, *, scope: str, identity: IdentityContext, purpose: str, proof_ref: str | None = None) -> ConsentResult:
         """Persist consent and attach its reference without advancing Case lifecycle."""
         if not scope.strip():
