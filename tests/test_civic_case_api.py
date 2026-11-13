@@ -61,8 +61,13 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert client.get(f"/civic/cases/{case_id}", headers=_auth_header("principal-2")).status_code == 404
     review = client.post(f"/civic/cases/{case_id}/review", headers=_auth_header(), json={"subject": "Delayed public service", "narrative": "The requested service has not been delivered."})
     assert review.status_code == 200, review.json()
-    consent = client.post(f"/civic/cases/{case_id}/consent", headers=_auth_header(), json={"consent_id": "consent-1"})
-    assert consent.status_code == 200
+    consent = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=_auth_header(),
+        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert consent.status_code == 200, consent.json()
+    assert consent.json()["consent_recorded"] is True
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
     submitting = client.post(f"/civic/cases/{case_id}/submitting", headers=_auth_header(), json={})
@@ -131,3 +136,60 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     assert consent.json()["consent_recorded"] is True
     assert consent.json()["status"] == "review"
     assert consent.json()["delivery"] == "citizen_download_and_self_send"
+
+
+def test_legacy_consent_attachment_requires_persisted_case_owned_grant():
+    headers = _auth_header("principal-consent-boundary")
+    first = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={"case_type": "complaint", "subject": "First case", "narrative": "Synthetic test case one."},
+    )
+    second = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={"case_type": "complaint", "subject": "Second case", "narrative": "Synthetic test case two."},
+    )
+    assert first.status_code == second.status_code == 200
+    first_case_id = first.json()["case_id"]
+    second_case_id = second.json()["case_id"]
+
+    unpersisted = client.post(
+        f"/civic/cases/{first_case_id}/consent",
+        headers=headers,
+        json={"consent_id": "forged-unpersisted-consent"},
+    )
+    assert unpersisted.status_code == 404
+
+    grant = client.post(
+        f"/civic/cases/{first_case_id}/explicit-consent",
+        headers=headers,
+        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert grant.status_code == 200, grant.json()
+    consent_id = grant.json()["consent_id"]
+
+    wrong_case = client.post(
+        f"/civic/cases/{second_case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert wrong_case.status_code == 404
+
+    first_case = client.get(f"/civic/cases/{first_case_id}", headers=headers).json()
+    second_case = client.get(f"/civic/cases/{second_case_id}", headers=headers).json()
+    assert first_case["events"][-1]["event_type"] == "consent_recorded"
+    assert sum(event["event_type"] == "consent_recorded" for event in first_case["events"]) == 1
+    assert consent_id in first_case["consent_refs"]
+    assert all(event["event_type"] != "consent_recorded" for event in second_case["events"])
+    assert consent_id not in second_case["consent_refs"]
+
+    repeated = client.post(
+        f"/civic/cases/{first_case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert repeated.status_code == 200, repeated.json()
+    final_case = client.get(f"/civic/cases/{first_case_id}", headers=headers).json()
+    assert sum(event["event_type"] == "consent_recorded" for event in final_case["events"]) == 1
+    assert final_case["consent_refs"].count(consent_id) == 1
