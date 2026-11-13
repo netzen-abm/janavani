@@ -1,3 +1,5 @@
+import pytest
+
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
@@ -22,6 +24,11 @@ from src.storage.repositories.document_artifact import InMemoryDocumentArtifactR
 from src.storage.repositories.document_review import InMemoryDocumentReviewRepository
 from src.storage.repositories.evidence import InMemoryEvidenceRepository
 from src.storage.repositories.external_channel import InMemoryExternalChannelRepository
+
+
+@pytest.fixture(autouse=True)
+def test_runtime_mode(monkeypatch):
+    monkeypatch.setenv("JANAVANI_RUNTIME_MODE", "test")
 
 
 class FakeTransport:
@@ -180,7 +187,6 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
 
-    import pytest
     with pytest.raises(PermissionError):
         slice_.submit(
             SubmissionRequest(case.case_id, "doc-1", "office:office-1", "office:office-1"),
@@ -231,7 +237,6 @@ def test_vertical_slice_recommends_follow_up_from_canonical_case():
 
 
 def test_vertical_slice_rejects_submission_for_different_principal():
-    import pytest
     slice_, _, consents, _, case = build_slice()
     owner = identity()
     other = IdentityContext(principal=Principal(
@@ -255,7 +260,6 @@ def test_vertical_slice_rejects_submission_for_different_principal():
 
 
 def test_vertical_slice_rejects_forged_execution_context():
-    import pytest
     from src.core.execution import CapabilityExecutionContext
     slice_, _, consents, _, case = build_slice()
     actor = identity()
@@ -280,9 +284,7 @@ def test_vertical_slice_rejects_forged_execution_context():
         )
 
 
-
 def test_transport_injection_alone_cannot_activate_submission():
-    import pytest
     cases = InMemoryCivicCaseRepository()
     authorities = InMemoryAuthorityRepository([])
     with pytest.raises(PermissionError, match="activation policy"):
