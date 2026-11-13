@@ -89,9 +89,8 @@ class ConsentCapability:
                 consent=consent,
                 case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
             )
-        if consent.consent_id not in case.consent_refs:
-            case.consent_refs.append(consent.consent_id)
         if self._atomic_repository is not None:
+            case.consent_refs.append(consent.consent_id)
             self._atomic_repository.save_consent_and_case(
                 consent,
                 case,
@@ -101,7 +100,14 @@ class ConsentCapability:
                 consent=consent,
                 case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
             )
-        attached = self._cases.add_consent(case_id, consent.consent_id, identity=identity)
+        attached = self._cases.add_consent(
+            case_id,
+            consent.consent_id,
+            identity=identity,
+            purpose=purpose,
+            proof_ref=consent.proof_ref,
+            occurred_at=consent.created_at,
+        )
         return ConsentResult(consent=consent, case=attached)
 
     @staticmethod
