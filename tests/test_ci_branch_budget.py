@@ -160,7 +160,7 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'if [ "$remaining" -ne 8 ]' in section
     assert 'pulls/$pr_number/reviews?per_page=100' in section
     assert '.commit_id' in section
-    assert 'latest_state[$1] == "APPROVED"' in section
-    assert 'latest_commit[$1] == expected' in section
+    assert 'latest_state[login] == "APPROVED"' in section
+    assert 'latest_commit[login] == expected' in section
     assert 'login != author' in section
     assert 'no current-head approval from a reviewer other than its author' in section
