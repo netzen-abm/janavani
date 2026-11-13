@@ -78,18 +78,22 @@ converted into preparation consent.
 
 The legacy `POST /civic/cases/{case_id}/consent` attachment route no
 longer accepts an arbitrary identifier. It delegates to the Consent capability,
-which verifies that the grant is persisted, owned by the authenticated principal,
-active, explicit, and bound to the requested Case by its deterministic consent ID
-before attaching a reference or writing an audit event. Unpersisted identifiers,
-another citizen's grants, expired/revoked grants, and grants from another Case are
-rejected. New grants continue to be created through the explicit-consent workflow.
+which requires both `case:consent` and `case:write` authorization, then verifies
+that the grant is persisted, owned by the authenticated principal, active,
+explicit, and bound to the requested Case by its deterministic consent ID before
+attaching a reference or writing an audit event. The same two authorization
+requirements apply to atomic and standard repository paths. Unpersisted
+identifiers, another citizen's grants, expired/revoked grants, and grants from
+another Case are rejected. New grants continue to be created through the
+explicit-consent workflow.
 
 ## Verification
 Automated tests cover process/runtime mismatch rejection, runtime recheck at
 decision time, invalid process modes, missing/disabled activation, maturity,
 surface/environment scope, dependency verification, accountability, retirement,
 immutable mapping snapshots, direct-slice construction bypass, submit-time policy
-recheck, and audit event idempotency on both standard and atomic consent paths.
+recheck, persisted-grant ownership and Case binding, both consent authorization
+capabilities, and audit event idempotency on standard and atomic consent paths.
 
 ## Non-goals
 This change does not create a delivery adapter, change database schemas, migrate
