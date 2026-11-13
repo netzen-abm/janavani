@@ -52,8 +52,9 @@ def _draft_form(selected_template_id: str = "complaint.general", saved_format_id
             Textarea(name="issue", id="issue", rows=5, required=True, maxlength=5000, placeholder="Describe the issue in your own words."),
             Details(
                 Summary("Additional details — optional fields for more specific documents"),
-                Label("Existing draft to improve (optional)", for_="existing_draft"),
-                Textarea(name="existing_draft", id="existing_draft", rows=5, maxlength=8000, placeholder="Paste your draft here, or leave blank."),
+                Label("Your existing draft, notice or text (optional)", for_="existing_draft"),
+                Textarea(name="existing_draft", id="existing_draft", rows=5, maxlength=8000, placeholder="Paste text you want included in the structured preview, or leave blank."),
+                P("Your text is included as supplied; AI rewriting is not yet enabled for private free-text content. Review and edit the result yourself."),
                 Label("Subject (optional; generated from your description if blank)", for_="subject"),
                 Input(name="subject", id="subject", maxlength=200, placeholder="Document subject"),
                 Label("Public authority or jurisdiction (required for RTI and administrative evidence-demand drafts)", for_="jurisdiction"),
