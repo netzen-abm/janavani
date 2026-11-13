@@ -11,6 +11,17 @@ class RuntimeConfigurationError(RuntimeError):
     """Raised when runtime configuration violates a deployment contract."""
 
 
+def current_runtime_mode(*, environ: dict[str, str] | None = None) -> str:
+    """Return the configured process mode without accepting caller overrides."""
+    values = os.environ if environ is None else environ
+    mode = values.get("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+    if mode not in RUNTIME_MODES:
+        raise RuntimeConfigurationError(
+            f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
+        )
+    return mode
+
+
 def validate_runtime_configuration(
     *,
     environment: str | None = None,
