@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import time
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -28,7 +29,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "iss": "janavani-identity", "aud": "janavani-api", "sub": principal_id,
         "provider": "test-identity", "subject": principal_id, "principal_id": principal_id,
         "authentication_method": "passkey", "iat": now, "exp": now + 60,
-        "jti": f"test-{principal_id}-{now}",
+        "jti": f"test-{principal_id}-{uuid4().hex}",
         "capabilities": ["JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review", "case:evidence", "case:consent", "case:submit"],
     }
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -87,10 +88,9 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
 
 
 def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() -> None:
-    headers = _auth_header("principal-explicit-consent")
     created = client.post(
         "/civic/cases",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={
             "case_type": "complaint",
             "subject": "Streetlight outage",
@@ -101,7 +101,7 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     case_id = created.json()["case_id"]
     reviewed = client.post(
         f"/civic/cases/{case_id}/review",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={
             "subject": "Streetlight outage",
             "narrative": "The streetlight has been out for three nights.",
@@ -111,14 +111,14 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
 
     denied = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={"scope": "citizen_download_and_self_send", "explicit_confirmation": False},
     )
     assert denied.status_code == 400
 
     consent = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert consent.status_code == 200, consent.json()

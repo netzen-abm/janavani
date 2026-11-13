@@ -13,13 +13,36 @@ def test_webapp_registers_case_workspace_routes():
     assert "/cases/{case_id}/artifact" in paths
 
 
+def test_case_creation_requires_explicit_consent_before_calling_api(monkeypatch):
+    import src.webapp.main as webapp
+
+    api_calls = []
+    monkeypatch.setattr(
+        webapp,
+        "client_for_request",
+        lambda request: api_calls.append(request),
+    )
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={"citizen_input": "A private citizen issue narrative."},
+    )
+
+    assert response.status_code == 200
+    assert "Consent required" in response.text
+    assert "No case was created" in response.text
+    assert api_calls == []
+
+
 def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
     from src.webapp.main import app
 
     monkeypatch.delenv("JANAVANI_WEB_IDENTITY_ASSERTION", raising=False)
     response = TestClient(app).post(
         "/submit-issue",
-        data={"citizen_input": "The public streetlight has been out for three nights."},
+        data={
+            "citizen_input": "The public streetlight has been out for three nights.",
+            "case_processing_consent": "yes",
+        },
     )
     assert response.status_code == 200
     assert "Sign-in required" in response.text
@@ -97,3 +120,14 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
 
+def test_webapp_owns_the_canonical_drafting_and_saved_format_ui():
+    from src.webapp.main import app
+
+    paths = {getattr(route, "path", "") for route in app.routes}
+
+    assert "/ai-drafting" in paths
+    assert "/ai-drafting/preview" in paths
+    assert "/citizen-formats" in paths
+    assert "/citizen-formats/confirm" in paths
+    assert not any(path.startswith("/bill-review/") for path in paths)
+    assert "/dispatch-objection" not in paths

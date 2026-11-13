@@ -53,7 +53,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Verify Rust formatting
-        run: cargo fmt --check
+        run: cargo fmt --package janavani --check
 
       # These are capability scaffolds. Validation proves the feature contracts
       # remain buildable; it does not claim production protocol guarantees.

@@ -22,6 +22,7 @@ from src.storage.repositories.provider import create_civic_case_repository
 from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from src.identity.linking import ExternalIdentityLinkRepository, InMemoryExternalIdentityLinkRepository, PostgresExternalIdentityLinkRepository
 from src.storage.repositories.submission_provider import create_submission_repository as create_submission_repository_for_provider
+from src.storage.repositories.citizen_document_format_provider import create_citizen_document_format_repository as create_citizen_document_format_repository_for_provider
 
 def create_provider_composition() -> ProviderComposition:
     return ProviderComposition.from_environment()
@@ -98,3 +99,8 @@ def create_responsibility_resolver(authority_repository: AuthorityRepository):
 
 def create_obligation_resolver(authority_repository: AuthorityRepository, records: dict[str, list[dict[str, object]]] | None = None):
     return AuthorityBackedObligationResolver(records or {})
+
+def create_citizen_document_format_repository(*, provider_composition: ProviderComposition | None = None):
+    """Select owner-scoped format persistence at the shared provider boundary."""
+    composition = provider_composition or create_provider_composition()
+    return create_citizen_document_format_repository_for_provider(composition=composition)

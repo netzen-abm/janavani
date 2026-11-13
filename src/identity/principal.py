@@ -30,6 +30,7 @@ class AuthenticationMethod(str, Enum):
     CRYPTOGRAPHIC_SIGNATURE = "cryptographic_signature"
     SERVICE_CREDENTIAL = "service_credential"
     EXPLICIT_VERIFIED_LINK = "explicit_verified_link"
+    WEB_TELEGRAM_PAIRING = "web_telegram_pairing"
 
 
 @dataclass(frozen=True)

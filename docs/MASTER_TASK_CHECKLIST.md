@@ -11,6 +11,34 @@
 
 > **Completion rule:** A task is not COMPLETE merely because code or documentation exists. Engineering completion requires implementation, tests, repository verification, security/privacy review where applicable, functional verification, and evidence. Design completion is explicitly labelled DESIGN COMPLETE and must not be confused with implementation completion.
 
+## 0C. CURRENT EXECUTION UPDATE — 01 NOVEMBER 2026
+
+**Purpose:** Record the latest repository, CI, and runtime evidence without replacing historical checkpoints. This is a source/runtime checkpoint, not a production-readiness declaration.
+
+### Verified repository and CI state
+- A fresh GitHub branch query returned exactly eight physical branch refs: `main`, `integration/canonical-platform`, `chore/ecosystem-shared-capability-infrastructure`, `audit/postgres-provider-production-gates`, `feat/canonical-case-kernel`, `feat/canonical-civic-action-vertical-slice`, `feat/canonical-sos-contract`, and `feat/capability-scoped-consent-agent-enforcement`.
+- PR [#226](https://github.com/netzen-abm/janavani/pull/226) is still Draft/open/unmerged. It contains the existing shared deterministic drafting catalogue, Dynamic Web/WebApp journeys, consent-gated optional AI, and webhook-only Telegram candidate.
+- The current PR-head workflow checks inspected during this audit passed: CI (run `41218279479`), preview acceptance (run `41218279491`), Security CI (`41218279478`), Architecture Guard (`41218279598`), Dependency Review (`41218279634`), and Docker (`41218279475`). Passing checks establish tested candidate evidence, not full production readiness.
+- The candidate branch already contains a bounded Telegram inbox connection timeout and exception-safe worker shutdown. Do not create a duplicate fix.
+
+### Production/runtime blockers
+- Railway production service `janavani-telegram-webhook` is currently reported as **SLEEPING**. Its latest deployed revision is on `chore/ecosystem-shared-capability-infrastructure` at `649d3f36e61ab0db7b9b368737c7ca1d8aa39694`.
+- Railway logs show webhook POSTs returning HTTP 202 on earlier dates, but the 202 response confirms durable inbox acceptance only. Shutdown logs on 31 October show `psycopg.errors.ConnectionTimeout` while the inbox worker was claiming work, followed by application shutdown failure. Delivery completion, restart recovery, dead-letter behavior, and production database availability remain unaccepted.
+- The deployed `chore/ecosystem-shared-capability-infrastructure` code does not yet contain the candidate's complete shutdown guard/connection timeout. Production must not be redeployed or switched to candidate code until the current database route and recovery path are proved in a safe environment.
+- The separate Railway `telegram-bot` service is also sleeping. The current `main` branch's `src/bot_telegram.py` still exposes a `run_polling()` entry point; the candidate changes that entry point to fail closed. Do not start the polling entry point or enable a polling service.
+- Cloudflare Worker `janavani` exists, but the inspected settings have no bindings or secret bindings, workers.dev is disabled, and no Worker domains were returned. It is not yet a verified public application entry point.
+- Citizen-owned saved document structures are present in candidate source, but authenticated save/list/read/delete, cross-owner denial, deployed persistence, and restart durability are not yet accepted. Keep Issue [#231](https://github.com/netzen-abm/janavani/issues/231) open and fail closed; no in-memory production fallback.
+- The public WordPress site is the explanatory/content surface. The Dynamic Web and WebApp remain separate product runtimes; do not move citizen drafting or application business logic into WordPress page content.
+
+### Release decision
+- Keep PR #226 Draft and unmerged until deployment/runtime gates are satisfied.
+- Keep exactly eight physical branch refs. Do not delete, merge, or create branches to force the count.
+- Do not enable polling, change production service settings, apply database migrations, provision paid resources, attach public Cloudflare routes, or publish new WordPress content as part of this checkpoint.
+
+### Next two proof gates
+1. **Telegram reliability:** establish approved database reachability and service availability; test authenticated webhook acceptance, encrypted inbox delivery, duplicate/replay idempotency, connection outage, restart, retry/dead-letter, and graceful shutdown against the candidate code before considering production convergence.
+2. **Private reusable document formats:** configure the approved trusted identity/replay-protection and least-privilege persistent-storage boundary, then prove explicit-save confirmation, owner A save/read, owner B denial, deterministic reuse without an AI call, delete, and restart durability on a deployed staging service.
+
 ## 0B. CURRENT EXECUTION UPDATE — 23 OCTOBER 2026
 
 **Current objective:** converge the shared civic-action workflow, verify WebApp and Telegram independently, and retire one proven redundant branch without creating a tenth branch.
