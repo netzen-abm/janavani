@@ -129,7 +129,7 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         interface="webapp",
         capabilities=frozenset({"case:consent", "case:write", "case:review"}),
     ))
-    consent_grant = composition.consent_capability.record_submission_consent(
+    consent_grant = civic_case_dependencies._COMPOSITION.consent_capability.record_submission_consent(
         case_id,
         scope="office:office-e2e",
         identity=consent_identity,
