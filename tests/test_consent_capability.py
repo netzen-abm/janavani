@@ -1,5 +1,6 @@
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.consent import ConsentCapability, PURPOSE_DOCUMENT_PREPARATION, PURPOSE_SUBMISSION
+from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.civic_case import CaseEventType, CaseType, CivicCase
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
@@ -174,3 +175,55 @@ def test_repeated_atomic_preparation_consent_is_idempotent():
         for event in second.case.case.events
     ) == 1
     assert second.case.case.status.value == "draft"
+
+
+def test_attaching_existing_consent_requires_case_consent_capability():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    owner = _identity(
+        "telegram:12345",
+        "JNV-CIVIC-COMPLAINT",
+        "case:consent",
+        "case:write",
+        "case:review",
+    )
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Consent authorization",
+            narrative="Synthetic case for consent attachment authorization.",
+        ),
+        identity=owner,
+    ).case
+
+    scope = "office:office-1"
+    consent = Consent(
+        consent_id=ConsentCapability._consent_id(case.case_id, PURPOSE_SUBMISSION, scope),
+        subject_id=owner.principal.principal_id,
+        purpose=PURPOSE_SUBMISSION,
+        scope=(scope,),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-09-09T10:01:00Z",
+        proof_ref="proof:stored-grant",
+    )
+    repository = InMemoryConsentRepository()
+    repository.save(consent, principal_id=owner.principal.principal_id)
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+
+    without_consent_permission = _identity(
+        "telegram:12345", "case:write", "case:review"
+    )
+    try:
+        capability.attach_existing_consent(
+            case.case_id, consent.consent_id, identity=without_consent_permission
+        )
+    except PermissionError:
+        pass
+    else:
+        raise AssertionError("Expected persisted grant attachment to require case:consent")
+
+    current = case_capability.get_owned(case.case_id, identity=owner)
+    assert current is not None
+    assert consent.consent_id not in current.consent_refs
+    assert all(event.event_id != f"consent-{consent.consent_id}" for event in current.events)
