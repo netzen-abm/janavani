@@ -38,6 +38,15 @@ class ConsentCapability:
         self._cases = case_capability
         self._atomic_repository = atomic_repository
 
+    @staticmethod
+    def _authorize_case_consent(identity: IdentityContext, case_id: str, operation: str) -> None:
+        for capability in (CAPABILITY_ID, "case:write"):
+            decision = authorize(AuthorizationRequest(
+                context=identity, capability=capability, action="case:consent", resource_id=case_id
+            ))
+            if decision is not AuthorizationDecision.ALLOW:
+                raise PermissionError(f"Identity is not authorized to {operation}")
+
     def record_submission_consent(self, case_id: str, *, scope: str, identity: IdentityContext, proof_ref: str | None = None) -> ConsentResult:
         """Persist consent for an actual Janavani external-delivery operation."""
         return self._record_consent(case_id, scope=scope, identity=identity, purpose=PURPOSE_SUBMISSION, proof_ref=proof_ref)
@@ -51,12 +60,7 @@ class ConsentCapability:
         case = self._cases.get_owned(case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=CAPABILITY_ID, action="case:consent",
-            resource_id=case_id,
-        ))
-        if decision is not AuthorizationDecision.ALLOW:
-            raise PermissionError("Identity is not authorized to attach consent")
+        self._authorize_case_consent(identity, case_id, "attach consent")
         consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
         if consent is None or consent.subject_id != identity.principal.principal_id:
             raise LookupError("Consent grant not found")
@@ -112,11 +116,7 @@ class ConsentCapability:
         case = self._cases.get_owned(case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
-        decision = authorize(AuthorizationRequest(
-            context=identity, capability=CAPABILITY_ID, action="case:consent", resource_id=case_id
-        ))
-        if decision is not AuthorizationDecision.ALLOW:
-            raise PermissionError("Identity is not authorized to record consent")
+        self._authorize_case_consent(identity, case_id, "record consent")
         consent_id = self._consent_id(case_id, purpose, scope)
         consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
         if consent is None:
