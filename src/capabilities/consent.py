@@ -51,6 +51,12 @@ class ConsentCapability:
         case = self._cases.get_owned(case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
+        decision = authorize(AuthorizationRequest(
+            context=identity, capability=CAPABILITY_ID, action="case:consent",
+            resource_id=case_id,
+        ))
+        if decision is not AuthorizationDecision.ALLOW:
+            raise PermissionError("Identity is not authorized to attach consent")
         consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
         if consent is None or consent.subject_id != identity.principal.principal_id:
             raise LookupError("Consent grant not found")
