@@ -1,9 +1,10 @@
 # Capability Activation Policy
 
 ## Status
-Implemented as a platform composition gate on the dedicated feature branch.
-Submission remains disabled on ordinary citizen-facing surfaces. No production
-approval or external delivery authorization is granted by this implementation.
+Implemented as a deny-by-default platform composition and submission-boundary
+gate on the dedicated feature branch. Submission remains disabled on ordinary
+citizen-facing surfaces. No production approval or external delivery authorization
+is granted by this implementation.
 
 ## Principle
 A capability's existence in source code, or injection of a transport/dependency,
@@ -11,9 +12,9 @@ does not grant permission to activate it. Platform activation is separate from a
 supplemental to domain authorization, consent, explicit approval, idempotency,
 execution-context validation, and audit requirements.
 
-## Policy dimensions
-The immutable policy snapshots the supplied activation mapping at construction and
-records runtime environment and surface, plus per-capability:
+## Policy dimensions and runtime binding
+The immutable policy snapshots the supplied activation mapping and records the
+process runtime environment and surface, plus per-capability:
 - stable capability identifier;
 - maturity: designed, implemented, composed, integration_verified,
   production_approved, suspended, or retired;
@@ -23,15 +24,28 @@ records runtime environment and surface, plus per-capability:
 - accountable owner;
 - explicit approval reference.
 
-The policy denies activation when any required condition is missing or mismatched.
-It uses the canonical runtime modes from src/config/runtime.py: development, test,
-and production. Unknown values and aliases such as prod or staging are rejected
-rather than treated as non-production. Environment strings are trimmed and
-lower-cased before matching. Production requires production_approved maturity;
-development and test require at least integration_verified.
+The process environment is read from `JANAVANI_RUNTIME_MODE` through
+`src/config/runtime.py`. Only `development`, `test`, and `production` are
+supported. The policy constructor rejects an environment that differs from the
+actual process mode; `permits()` checks the current process mode again at the
+decision point and denies if it has changed or is invalid. Unknown values and
+aliases such as `prod` and `staging` fail closed. Production requires
+`production_approved` maturity; development and test require at least
+`integration_verified`.
+
+## Submission enforcement
+An injected `SubmissionCapability` requires a valid activation policy when the
+`CivicActionVerticalSliceDependencies` object is constructed, including when
+callers instantiate `CivicActionVerticalSlice` directly instead of using the
+platform factory. The public `submit()` method rechecks activation immediately
+before invoking the submission capability. The platform factory also rejects
+transport/capability injection without an active policy. This platform gate
+supplements (and does not replace) submission authorization, purpose- and
+scope-bound consent, citizen approval, verified destination checks,
+execution-context validation, and idempotency.
 
 ## Current submission posture
-- Capability: case:submit
+- Capability: `case:submit`
 - Default activation: absent/disabled
 - Ordinary Web and Telegram compositions: no submission capability is injected
 - External delivery: not authorized
@@ -41,22 +55,33 @@ The citizen-facing document workflow remains Prepare -> Review -> Approve -> Dow
 The citizen independently sends the document. Download, reminder, or document
 approval is not evidence of external submission.
 
-## Consent boundary
-case_submission remains reserved for explicit external delivery consent.
-The canonical consent capability now records document_preparation separately for
-preparing a document that the citizen downloads and sends independently. Preparation
-consent does not authorize external delivery, advance the Case lifecycle, or imply
-that a document was submitted. External delivery requires its own purpose- and
-scope-bound consent plus the separate activation and execution gates.
+## Consent boundary and audit
+`case_submission` remains reserved for explicit external delivery consent.
+The canonical consent capability records `document_preparation` separately for
+preparing a document that the citizen downloads and sends independently.
+Preparation consent does not authorize external delivery, advance the Case
+lifecycle, or imply that a document was submitted.
 
-Historical consent records are not reinterpreted or migrated by this change. Existing
-case_submission records retain their original meaning; no record is silently
+Both persistence paths record a deterministic `CONSENT_RECORDED` Case event
+with consent purpose, actor, proof reference and timestamp:
+- atomic consent-plus-Case repository transaction; and
+- standard Case repository path used when no atomic repository is configured.
+
+The standard path makes consent-reference/event persistence one Case repository
+save. Consent storage remains a separate repository operation when no atomic
+provider boundary is injected; provider-specific atomicity is not claimed by this
+fallback. PostgreSQL atomic composition must use the atomic consent repository.
+
+Historical consent records are not reinterpreted or migrated. Existing
+`case_submission` records retain their original meaning; no record is silently
 converted into preparation consent.
 
 ## Verification
-Automated tests cover missing/disabled policy, maturity, surface/environment scope,
-dependency verification, accountability, retirement, immutable mapping snapshots,
-unknown environment rejection and normalization, and transport-injection bypass.
+Automated tests cover process/runtime mismatch rejection, runtime recheck at
+decision time, invalid process modes, missing/disabled activation, maturity,
+surface/environment scope, dependency verification, accountability, retirement,
+immutable mapping snapshots, direct-slice construction bypass, submit-time policy
+recheck, and audit event idempotency on both standard and atomic consent paths.
 
 ## Non-goals
 This change does not create a delivery adapter, change database schemas, migrate
