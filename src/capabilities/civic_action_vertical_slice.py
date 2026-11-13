@@ -32,6 +32,17 @@ from src.storage.repositories.document_artifact import DocumentArtifactRepositor
 from src.storage.repositories.document_review import DocumentReviewRepository
 
 
+def _submission_is_activated(policy: object | None) -> bool:
+    """Fail closed when an activation policy is missing, mismatched or invalid."""
+    permits = getattr(policy, "permits", None)
+    if not callable(permits):
+        return False
+    try:
+        return bool(permits("case:submit"))
+    except Exception:
+        return False
+
+
 @dataclass(frozen=True)
 class CivicActionVerticalSliceDependencies:
     """All capabilities required by the canonical civic-action slice."""
@@ -46,10 +57,20 @@ class CivicActionVerticalSliceDependencies:
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
     submission_capability: SubmissionCapability | None = None
+    activation_policy: object | None = None
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
     follow_up_capability: FollowUpCapability | None = None
     escalation_capability: EscalationCapability | None = None
+
+    def __post_init__(self) -> None:
+        if self.submission_capability is not None and not _submission_is_activated(
+            self.activation_policy
+        ):
+            raise PermissionError(
+                "Direct CivicActionVerticalSlice construction requires an active "
+                "case:submit platform policy"
+            )
 
 
 @dataclass(frozen=True)
@@ -112,6 +133,8 @@ class CivicActionVerticalSlice:
     def submit(self, request, *, channel_id: str, identity: IdentityContext, explicit_user_approval: bool, execution_context=None):
         if self._deps.submission_capability is None:
             raise RuntimeError("Submission capability is not configured")
+        if not _submission_is_activated(self._deps.activation_policy):
+            raise PermissionError("Submission capability is not enabled for this runtime and surface")
         from dataclasses import replace
         if request.external_channel_id is not None and request.external_channel_id != channel_id:
             raise ValueError("Submission channel does not match the selected verified channel")
@@ -132,9 +155,14 @@ class CivicActionVerticalSlice:
             source_channel=source_channel or "shared",
         )
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
-        """Attach a previously recorded consent through the canonical Case boundary."""
-        return self._deps.case_capability.add_consent(case_id, consent_id, identity=identity)
+    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext,
+                    purpose: str | None = None, proof_ref: str | None = None,
+                    occurred_at: str | None = None) -> CivicCaseResult:
+        """Attach consent and record the corresponding audit event on the Case."""
+        return self._deps.case_capability.add_consent(
+            case_id, consent_id, identity=identity, purpose=purpose,
+            proof_ref=proof_ref, occurred_at=occurred_at,
+        )
 
     def prepare_document(self, case_id: str, *, identity: IdentityContext, document_id=None):
         draft = self._documents.prepare(case_id, identity=identity, document_id=document_id)
