@@ -33,12 +33,9 @@ from src.storage.repositories.document_review import DocumentReviewRepository
 
 
 def _submission_is_activated(policy: object | None) -> bool:
-    """Fail closed when an activation policy is missing, mismatched or invalid."""
-    permits = getattr(policy, "permits", None)
-    if not callable(permits):
-        return False
+    """Fail closed when activation is absent or invalid."""
     try:
-        return bool(permits("case:submit"))
+        return bool(policy is not None and policy.permits("case:submit"))
     except Exception:
         return False
 
@@ -64,13 +61,8 @@ class CivicActionVerticalSliceDependencies:
     escalation_capability: EscalationCapability | None = None
 
     def __post_init__(self) -> None:
-        if self.submission_capability is not None and not _submission_is_activated(
-            self.activation_policy
-        ):
-            raise PermissionError(
-                "Direct CivicActionVerticalSlice construction requires an active "
-                "case:submit platform policy"
-            )
+        if self.submission_capability is not None and not _submission_is_activated(self.activation_policy):
+            raise PermissionError("Direct CivicActionVerticalSlice construction requires an active case:submit platform policy")
 
 
 @dataclass(frozen=True)
@@ -89,44 +81,29 @@ class CivicActionVerticalSlice:
         self._deps = dependencies
         self._documents = CivicActionDocuments(dependencies)
 
-    def resolve_responsibility(
-        self,
-        request: ResponsibilityResolutionRequest,
-    ) -> ResponsibilityResolution:
+    def resolve_responsibility(self, request: ResponsibilityResolutionRequest) -> ResponsibilityResolution:
         """Resolve traceable responsibility candidates without asserting liability."""
         return self._deps.responsibility_capability.resolve(request)
 
-    def resolve_obligation(
-        self,
-        request: ObligationResolutionRequest,
-    ) -> ObligationResolution:
-        """Resolve source-backed obligations for an already identified authority."""
+    def resolve_obligation(self, request: ObligationResolutionRequest) -> ObligationResolution:
+        """Resolve source-backed obligations for an identified authority."""
         return self._deps.obligation_capability.resolve(request)
 
-    def discover_external_channels(
-        self,
-        query: ExternalChannelQuery | None = None,
-    ) -> tuple[ExternalChannel, ...]:
-        """Expose only source-backed, currently verified external destinations."""
+    def discover_external_channels(self, query: ExternalChannelQuery | None = None) -> tuple[ExternalChannel, ...]:
+        """Expose only source-backed, verified external destinations."""
         return self._deps.external_channel_capability.discover(query)
 
     def get_verified_external_channel(self, channel_id: str) -> ExternalChannel:
         """Select one verified external destination through the shared channel boundary."""
         return self._deps.external_channel_capability.get_verified(channel_id)
 
-    def recommend_follow_up(
-        self,
-        context: FollowUpContext,
-    ) -> FollowUpRecommendation:
-        """Recommend a user-controlled next step from canonical Case state and history."""
+    def recommend_follow_up(self, context: FollowUpContext) -> FollowUpRecommendation:
+        """Recommend a user-controlled follow-up from canonical Case state."""
         capability = self._deps.follow_up_capability or FollowUpCapability()
         return capability.recommend(context)
 
-    def recommend_escalation(
-        self,
-        context: EscalationContext,
-    ) -> EscalationRecommendation:
-        """Recommend a user-controlled escalation step from canonical Case state and history."""
+    def recommend_escalation(self, context: EscalationContext) -> EscalationRecommendation:
+        """Recommend a user-controlled escalation from canonical Case state."""
         capability = self._deps.escalation_capability or EscalationCapability()
         return capability.recommend(context)
 
