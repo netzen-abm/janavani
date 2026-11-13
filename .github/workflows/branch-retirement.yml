@@ -202,6 +202,15 @@ jobs:
             exit 2
           fi
 
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_author="${{ github.event.pull_request.user.login }}"
+          review_rows="$(gh api --paginate "repos/$REPO/pulls/$pr_number/reviews?per_page=100" --jq '.[] | [.user.login, .state, .submitted_at] | @tsv')"
+          approved_count="$(printf '%s\\n' "$review_rows" | sort -t "$(printf '\\t')" -k1,1 -k3,3 | awk -F '\\t' -v author="$pr_author" 'NF == 3 { latest[$1]=$2 } END { for (login in latest) if (login != author && latest[login] == "APPROVED") count++; print count + 0 }')"
+          if [ "$approved_count" -lt 1 ]; then
+            echo "::error::Retirement held: PR #$pr_number has no current approval from a reviewer other than its author."
+            exit 2
+          fi
+
           head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
           git fetch --no-tags origin "refs/heads/$branch:$git_ref"
           if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
