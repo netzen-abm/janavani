@@ -73,7 +73,7 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         else:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
             await message.reply_text(
-                "Paste an existing draft to improve, or send a single dash (-) to skip this step."
+                "Paste your existing draft or notice to include in the structured preview, or send a single dash (-) to skip."
             )
         set_ephemeral_civic_draft(user.id, current)
         return
@@ -93,7 +93,7 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         else:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
             await message.reply_text(
-                "Paste the notice or your existing reply to improve, or send a single dash (-) to use the reusable starter format."
+                "Paste the notice or your existing reply to include in the structured preview, or send a single dash (-) to use the reusable starter format."
             )
         return
 
@@ -106,7 +106,7 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
         set_ephemeral_civic_draft(user.id, current)
         set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
         await message.reply_text(
-            "Paste an existing RTI draft to improve, or send a single dash (-) to skip this step."
+            "Paste your existing RTI draft to include in the structured preview, or send a single dash (-) to skip."
         )
         return
 
