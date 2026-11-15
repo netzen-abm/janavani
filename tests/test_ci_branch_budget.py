@@ -193,6 +193,9 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
     assert "github.event.pull_request.merged == true" in section
     assert "docs/environmental-civic-evidence-contract" in section
     assert "PR #243 consent-governance integration must merge first" in section
+    assert 'consent_tag="archive/branches/feat/capability-activation-governance"' in section
+    assert 'consent_archive" != "$consent_head"' in section
+    assert "exact-head archive tag is missing" in section
     assert "archive/branches/" in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" != "$expected" ]' in section

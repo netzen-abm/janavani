@@ -400,6 +400,16 @@ jobs:
             echo "::error::Retirement held: PR #243 branch has not completed archive-first retirement."
             exit 2
           fi
+          consent_head="$(jq -r '.head.sha' <<<"$consent_pr")"
+          consent_tag="archive/branches/feat/capability-activation-governance"
+          if ! consent_archive="$(gh api "repos/$REPO/git/ref/tags/$consent_tag" --jq '.object.sha' 2>/dev/null)"; then
+            echo "::error::Retirement held: PR #243 exact-head archive tag is missing."
+            exit 2
+          fi
+          if [ "$consent_archive" != "$consent_head" ]; then
+            echo "::error::Retirement held: PR #243 archive tag does not match its merged pull-request head."
+            exit 2
+          fi
           open_prs="$(count_open_prs_for_branch "$branch")"
           if [ "$open_prs" != "0" ]; then
             echo "::error::Retirement held: another open PR references $branch."
