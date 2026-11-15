@@ -189,10 +189,11 @@ def test_cross_surface_case_evidence_and_consent_converge_on_shared_provider_sta
     assert "evidence:shared-vertical" in telegram_view.evidence_refs
     assert web.case_capability.get_owned(case_id, identity=citizen_b) is None
 
-    consented = web.consent_capability.record_submission_consent(
+    consent_result = web.consent_capability.record_submission_consent(
         case_id, scope="case_submission", identity=citizen_a_web,
-    ).case
-    assert "consent:shared-vertical" in consented.case.consent_refs
+    )
+    consented = consent_result.case
+    assert consent_result.consent.consent_id in consented.case.consent_refs
     assert "consent:shared-vertical" in telegram.case_capability.get_owned(
         case_id, identity=citizen_a
     ).consent_refs
