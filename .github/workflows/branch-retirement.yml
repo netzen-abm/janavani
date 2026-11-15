@@ -187,6 +187,17 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          expected_sanctioned_branches() {
+            printf '%s\n' \
+              main \
+              integration/canonical-platform \
+              feat/canonical-case-kernel \
+              feat/canonical-civic-action-vertical-slice \
+              feat/canonical-sos-contract \
+              feat/capability-scoped-consent-agent-enforcement \
+              audit/postgres-provider-production-gates \
+              chore/ecosystem-shared-capability-infrastructure
+          }
           branch="feat/capability-activation-governance"
           tag="archive/branches/$branch"
           git_ref="refs/remotes/origin/retirement-candidate"
@@ -305,7 +316,7 @@ jobs:
               exit 2
             fi
             remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
-            expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure | sort)"
+            expected="$(expected_sanctioned_branches | sort)"
             if [ "$remaining" != "$expected" ]; then
               echo "::error::Expected exactly the eight sanctioned refs after both retirements."
               printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
@@ -318,7 +329,7 @@ jobs:
               exit 2
             fi
             remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
-            expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure docs/environmental-civic-evidence-contract | sort)"
+            expected="$({ expected_sanctioned_branches; printf '%s\n' docs/environmental-civic-evidence-contract; } | sort)"
             if [ "$remaining" != "$expected" ]; then
               echo "::error::Expected eight sanctioned refs plus the one open PR #247 ref after PR #243 retirement."
               printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
@@ -351,6 +362,17 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          expected_sanctioned_branches() {
+            printf '%s\n' \
+              main \
+              integration/canonical-platform \
+              feat/canonical-case-kernel \
+              feat/canonical-civic-action-vertical-slice \
+              feat/canonical-sos-contract \
+              feat/capability-scoped-consent-agent-enforcement \
+              audit/postgres-provider-production-gates \
+              chore/ecosystem-shared-capability-infrastructure
+          }
           branch="docs/environmental-civic-evidence-contract"
           tag="archive/branches/$branch"
           git_ref="refs/remotes/origin/evidence-retirement"
@@ -408,7 +430,7 @@ jobs:
             exit 2
           fi
           remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
-          expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure | sort)"
+          expected="$(expected_sanctioned_branches | sort)"
           if [ "$remaining" != "$expected" ]; then
             echo "::error::Expected exactly the eight sanctioned refs after evidence-contract retirement."
             printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
