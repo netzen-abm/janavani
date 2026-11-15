@@ -50,10 +50,15 @@ A branch fully contained in `main`, or with a tree identical to `main`, may be a
 
 The former temporary transition branch `feat/canonical-capability-execution-envelope` is no longer a physical branch. Its exact historical head is preserved by tag `archive/branches/feat/canonical-capability-execution-envelope` at commit `d036839730968771e0db6d043eb2c85ad9531a88`. It is historical evidence only and must not be recreated as an active role.
 
-## Enforcement status — 13 November 2026
+## Enforcement status — 15 November 2026
 
-CI allows the eight active branch roles plus the narrowly scoped PR #243 integration exception. The canonical `main` push gate requires exactly eight physical remote branch refs and waits briefly for the post-merge retirement workflow.
+The eight sanctioned long-lived branch roles remain the intended policy. Two temporary, PR-scoped integration refs are currently open in addition to those roles:
 
-The latest live inventory still reports nine physical refs: the eight sanctioned long-lived roles plus `feat/capability-activation-governance`. The exact-eight physical target is not yet met. The seven other development branches have unique deltas relative to `main`; no safe archive-and-delete-only candidate was found in the latest comparison.
+- `feat/capability-activation-governance` — PR #243, a time-limited security/consent integration branch. Its exception expires on 17 November 2026 and its post-merge workflow archives the exact head before deleting the ref.
+- `docs/environmental-civic-evidence-contract` — PR #247, a one-off documentation-only product-mapping proposal. It is not a ninth long-lived role and must remain until its unique document is either integrated or explicitly archived.
 
-A green PR alone does not establish physical branch-budget compliance. After the retirement workflow, independently query the branch list and verify the eight sanctioned refs. The eventual product-release end state is a single `main` branch after all useful work is integrated and release/recovery gates pass.
+**Latest GitHub physical inventory: 10 refs (8 sanctioned roles + 2 open PR refs). The exact-eight physical target is NOT met.** A successful PR #243 branch-budget job validates its scoped PR exception; it does not prove physical branch-count compliance.
+
+Do not delete either PR ref before its unique work is incorporated or archived. After each merge, archive the exact head, verify the archive, delete the corresponding ref through a guarded retirement process, and query GitHub again. Do not claim the eight-ref target until a fresh physical inventory returns exactly the eight sanctioned names.
+
+The eventual product-release end state remains a single `main` branch, after all useful work is integrated and product, recovery, security and operational acceptance gates pass.
