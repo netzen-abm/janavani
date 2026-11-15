@@ -33,7 +33,7 @@ def _prepared() -> tuple[CivicCaseCapability, InMemoryConsentRepository, InMemor
     cases = CivicCaseCapability(InMemoryCivicCaseRepository())
     consents = InMemoryConsentRepository()
     identity = _identity()
-     case = cases.create(
+    case = cases.create(
         CivicCaseCreateRequest(case_type=CaseType.COMPLAINT, subject="Road repair", narrative="Road remains damaged."),
         identity=identity,
     ).case
