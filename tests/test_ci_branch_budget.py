@@ -155,6 +155,17 @@ def test_consent_governance_is_a_time_limited_integration_exception() -> None:
     assert "Temporary consent-governance integration exception expired" in source
 
 
+def test_manual_retirement_uses_real_newlines_for_exact_inventory() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split("  retire:", 1)[1].split(
+        "  retire-consent-capability-governance:", 1
+    )[0]
+    assert 'expected="$(printf \'%s\\n\' "${sanctioned[@]}" | sort)"' in section
+    assert "printf 'Actual refs:\\n%s\\nExpected refs:\\n%s\\n'" in section
+
+
 def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> None:
     source = (
         ROOT / ".github" / "workflows" / "branch-retirement.yml"

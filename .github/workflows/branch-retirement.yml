@@ -159,13 +159,13 @@ jobs:
           done
 
           remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | sort)"
-          expected="$(printf '%s\\n' "${sanctioned[@]}" | sort)"
+          expected="$(printf '%s\n' "${sanctioned[@]}" | sort)"
           remaining_count="$(printf '%s\\n' "$remaining" | wc -l | tr -d ' ')"
           echo "Remaining physical branch refs: $remaining_count"
 
           if [ "$EXECUTE" = "true" ] && [ "$remaining" != "$expected" ]; then
             echo "Retirement incomplete: physical refs do not match the exact sanctioned inventory."
-            printf 'Actual refs:\\n%s\\nExpected refs:\\n%s\\n' "$remaining" "$expected"
+            printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
             exit 2
           fi
 
