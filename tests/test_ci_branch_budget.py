@@ -159,7 +159,7 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert "github.event.pull_request.merged == true" in section
     assert "feat/capability-activation-governance" in section
     assert "archive/branches/" in section
-    assert "Archive/head verification failed" in section
+    assert "Consent archive/head verification failed" in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" -ne 8 ]' not in section
     assert 'docs/environmental-civic-evidence-contract' in section
