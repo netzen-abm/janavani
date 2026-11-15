@@ -10,7 +10,6 @@ from src.capabilities.external_channel import ExternalChannelCapability, Externa
 from src.capabilities.follow_up import FollowUpAction, FollowUpContext, FollowUpStatus
 from src.capabilities.submission import SubmissionCapability, SubmissionReceipt, SubmissionRequest
 from src.core.authority import AuthorityContact, AuthorityRecord
-from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.civic_case import CaseType
 from src.core.delivery_channel import ExternalChannel
 from src.core.evidence import EvidenceSource
