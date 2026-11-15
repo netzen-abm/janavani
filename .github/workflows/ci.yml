@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   branch-budget:
@@ -20,13 +21,31 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
           REF_BRANCH: ${{ github.ref_name }}
           EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
           branch="${HEAD_BRANCH:-${REF_BRANCH}}"
           case "$branch" in
             feat/capability-activation-governance)
-              if [ "$EVENT_NAME" != "pull_request" ] || [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
-                echo "::error::Consent governance branch is permitted only for its integration PR to main."
+              if [ "$EVENT_NAME" = "pull_request" ]; then
+                if [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
+                  echo "::error::Consent governance PR must target main."
+                  exit 1
+                fi
+              elif [ "$EVENT_NAME" = "push" ]; then
+                open_prs="$(
+                  BRANCH="$branch" REPO="$REPOSITORY" \
+                    gh api --paginate "repos/$REPOSITORY/pulls?state=open&per_page=100" \
+                      --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO and .base.ref == "main") | .number' \
+                    | wc -l | tr -d ' '
+                )"
+                if [ "$open_prs" != "1" ]; then
+                  echo "::error::Consent governance branch pushes require exactly one open PR to main."
+                  exit 1
+                fi
+              else
+                echo "::error::Consent governance branch is permitted only while its main integration PR is open."
                 exit 1
               fi
               expiry="2026-11-17"

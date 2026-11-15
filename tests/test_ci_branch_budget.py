@@ -138,8 +138,12 @@ def test_consent_governance_is_a_time_limited_integration_exception() -> None:
     source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "feat/capability-activation-governance)" in source
-    assert 'EVENT_NAME" != "pull_request"' in source
-    assert 'github.event.pull_request.base.ref' in source
+    assert 'EVENT_NAME" = "pull_request"' in source
+    assert 'EVENT_NAME" = "push"' in source
+    assert 'pulls?state=open&per_page=100' in source
+    assert '.head.ref == env.BRANCH' in source
+    assert '.head.repo.full_name == env.REPO' in source
+    assert '.base.ref == "main"' in source
     assert 'expiry="2026-11-17"' in source
     assert "Temporary consent-governance integration exception expired" in source
 
