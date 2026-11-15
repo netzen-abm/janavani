@@ -181,7 +181,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Archive exact consent-governance head, verify merge, then retire ref
+      - name: Archive and retire consent governance; preserve the independent evidence-contract PR
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -191,12 +191,15 @@ jobs:
           tag="archive/branches/$branch"
           git_ref="refs/remotes/origin/retirement-candidate"
 
-          open_prs="$(
-            BRANCH="$branch" REPO="$REPO" \
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$REPO" \
               gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
                 --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
               | wc -l | tr -d ' '
-          )"
+          }
+
+          open_prs="$(count_open_prs_for_branch "$branch")"
           if [ "$open_prs" != "0" ]; then
             echo "::error::Retirement held: open PRs still reference $branch."
             exit 2
@@ -230,9 +233,10 @@ jobs:
             echo "::error::Retirement held: PR #$pr_number has no current-head approval from a reviewer other than its author."
             exit 2
           fi
-          git fetch --no-tags origin "refs/heads/$branch:$git_ref"
+
+          git fetch --no-tags origin "refs/heads/$branch:$git_ref" "+refs/heads/main:refs/remotes/origin/main"
           if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
-            echo "::error::Fetched branch head does not match GitHub ref."
+            echo "::error::Fetched consent branch head does not match GitHub ref."
             exit 2
           fi
           if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
@@ -249,27 +253,168 @@ jobs:
           else
             gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$head_sha"
           fi
-
           archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
           current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
           if [ "$archive_sha" != "$head_sha" ] || [ "$current_sha" != "$head_sha" ]; then
-            echo "::error::Archive/head verification failed; branch will not be deleted."
+            echo "::error::Consent archive/head verification failed."
             exit 2
           fi
-
           gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
           if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
-            echo "::error::Branch still exists after deletion."
+            echo "::error::Consent branch still exists after deletion."
             exit 2
           fi
 
-          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | wc -l | tr -d ' ')"
-          echo "Remaining physical branch refs: $remaining"
-          if [ "$remaining" -ne 8 ]; then
-            echo "::error::Expected exactly eight physical branch refs after retirement; found $remaining."
+          # PR #247 is the only other approved temporary ref. Retire it here
+          # too when it was merged before PR #243; otherwise preserve it until
+          # its own merge event after this workflow is present on main.
+          evidence_pr="$(gh api "repos/$REPO/pulls/247")"
+          evidence_state="$(jq -r '.state' <<<"$evidence_pr")"
+          evidence_merged_at="$(jq -r '.merged_at // empty' <<<"$evidence_pr")"
+          evidence_branch="$(jq -r '.head.ref' <<<"$evidence_pr")"
+          if [ "$evidence_branch" != "docs/environmental-civic-evidence-contract" ]; then
+            echo "::error::PR #247 head branch differs from the expected one-off evidence-contract ref."
             exit 2
           fi
-          echo "RETIREMENT VERIFIED: exact head archived, branch deleted, and exactly eight refs remain."
+          evidence_tag="archive/branches/docs/environmental-civic-evidence-contract"
+          if [ -n "$evidence_merged_at" ]; then
+            evidence_head="$(jq -r '.head.sha' <<<"$evidence_pr")"
+            evidence_open_prs="$(count_open_prs_for_branch "$evidence_branch")"
+            if [ "$evidence_open_prs" != "0" ]; then
+              echo "::error::Evidence-contract retirement held: another open PR references its branch."
+              exit 2
+            fi
+            git fetch --no-tags origin "refs/heads/$evidence_branch:refs/remotes/origin/evidence-retirement"
+            if [ "$(git rev-parse refs/remotes/origin/evidence-retirement)" != "$evidence_head" ] ||
+               ! git diff --quiet refs/remotes/origin/main refs/remotes/origin/evidence-retirement; then
+              echo "::error::Evidence-contract ref/head or merged-tree verification failed."
+              exit 2
+            fi
+            if gh api "repos/$REPO/git/ref/tags/$evidence_tag" >/dev/null 2>&1; then
+              evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha')"
+              if [ "$evidence_archive" != "$evidence_head" ]; then
+                echo "::error::Evidence-contract archive tag points to a different SHA."
+                exit 2
+              fi
+            else
+              gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$evidence_tag" -f "sha=$evidence_head"
+            fi
+            gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"
+            if gh api "repos/$REPO/git/ref/heads/$evidence_branch" >/dev/null 2>&1; then
+              echo "::error::Evidence-contract ref still exists after deletion."
+              exit 2
+            fi
+            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+            expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure | sort)"
+            if [ "$remaining" != "$expected" ]; then
+              echo "::error::Expected exactly the eight sanctioned refs after both retirements."
+              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
+              exit 2
+            fi
+            echo "RETIREMENT VERIFIED: both temporary PR refs archived and deleted; exactly eight refs remain."
+          elif [ "$evidence_state" = "open" ]; then
+            if ! gh api "repos/$REPO/git/ref/heads/$evidence_branch" >/dev/null 2>&1; then
+              echo "::error::Open PR #247 branch ref is unexpectedly missing."
+              exit 2
+            fi
+            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+            expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure docs/environmental-civic-evidence-contract | sort)"
+            if [ "$remaining" != "$expected" ]; then
+              echo "::error::Expected eight sanctioned refs plus the one open PR #247 ref after PR #243 retirement."
+              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
+              exit 2
+            fi
+            echo "CONSENT BRANCH RETIRED: exactly eight sanctioned refs and PR #247's one documented temporary ref remain."
+          else
+            echo "::error::PR #247 was closed without merge. Preserve its unique documentation branch; manual archive-first disposition is required."
+            exit 2
+          fi
+
+  retire-environmental-civic-evidence-contract:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'docs/environmental-civic-evidence-contract' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Archive and retire environmental evidence contract after consent governance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="docs/environmental-civic-evidence-contract"
+          tag="archive/branches/$branch"
+          git_ref="refs/remotes/origin/evidence-retirement"
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+                --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          }
+          consent_pr="$(gh api "repos/$REPO/pulls/243")"
+          consent_merged_at="$(jq -r '.merged_at // empty' <<<"$consent_pr")"
+          if [ -z "$consent_merged_at" ]; then
+            echo "::error::Retirement held: PR #243 consent-governance integration must merge first."
+            exit 2
+          fi
+          consent_branch_exists=true
+          if ! gh api "repos/$REPO/git/ref/heads/feat/capability-activation-governance" >/dev/null 2>&1; then
+            consent_branch_exists=false
+          fi
+          if [ "$consent_branch_exists" = true ]; then
+            echo "::error::Retirement held: PR #243 branch has not completed archive-first retirement."
+            exit 2
+          fi
+          open_prs="$(count_open_prs_for_branch "$branch")"
+          if [ "$open_prs" != "0" ]; then
+            echo "::error::Retirement held: another open PR references $branch."
+            exit 2
+          fi
+          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          git fetch --no-tags origin "refs/heads/$branch:$git_ref"
+          if [ "$(git rev-parse "$git_ref")" != "$head_sha" ] ||
+             ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
+            echo "::error::Evidence-contract head/tree differs from merged main."
+            exit 2
+          fi
+          if gh api "repos/$REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+            if [ "$archive_sha" != "$head_sha" ]; then
+              echo "::error::Evidence-contract archive tag points to a different SHA."
+              exit 2
+            fi
+          else
+            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$head_sha"
+          fi
+          archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$archive_sha" != "$head_sha" ] || [ "$current_sha" != "$head_sha" ]; then
+            echo "::error::Evidence-contract archive/head verification failed."
+            exit 2
+          fi
+          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            echo "::error::Evidence-contract branch still exists after deletion."
+            exit 2
+          fi
+          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+          expected="$(printf '%s\n' main integration/canonical-platform feat/canonical-case-kernel feat/canonical-civic-action-vertical-slice feat/canonical-sos-contract feat/capability-scoped-consent-agent-enforcement audit/postgres-provider-production-gates chore/ecosystem-shared-capability-infrastructure | sort)"
+          if [ "$remaining" != "$expected" ]; then
+            echo "::error::Expected exactly the eight sanctioned refs after evidence-contract retirement."
+            printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
+            exit 2
+          fi
+          echo "RETIREMENT VERIFIED: evidence-contract branch archived, deleted and exactly eight refs remain."
 
   retire-canonical-capability-envelope:
     if: >-

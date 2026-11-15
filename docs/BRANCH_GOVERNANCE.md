@@ -59,6 +59,17 @@ The eight sanctioned long-lived branch roles remain the intended policy. Two tem
 
 **Latest GitHub physical inventory: 10 refs (8 sanctioned roles + 2 open PR refs). The exact-eight physical target is NOT met.** A successful PR #243 branch-budget job validates its scoped PR exception; it does not prove physical branch-count compliance.
 
+### Two-stage temporary-ref retirement
+
+The two one-off PR refs are not interchangeable and must not be deleted simply to meet the count.
+
+- When PR #243 merges first, its post-merge job archives/deletes `feat/capability-activation-governance`. If PR #247 remains open, the job verifies that the remaining inventory is exactly the eight sanctioned roles plus `docs/environmental-civic-evidence-contract` (nine refs), then reports that the final retirement is pending.
+- When PR #247 subsequently merges, its dedicated post-merge job first verifies that PR #243's ref has been retired, then archives/deletes the evidence-contract ref and asserts the exact eight sanctioned branch names.
+- If PR #247 merged before PR #243, the PR #243 retirement job verifies and retires both temporary refs after the consent branch is archived.
+- If PR #247 closes without merge, preserve its unique document branch and halt automatic deletion; make an explicit archive-first disposition before any manual retirement.
+
+This avoids a false failing "exactly eight" assertion after the first merge and prevents either unique PR payload from being discarded.
+
 Do not delete either PR ref before its unique work is incorporated or archived. After each merge, archive the exact head, verify the archive, delete the corresponding ref through a guarded retirement process, and query GitHub again. Do not claim the eight-ref target until a fresh physical inventory returns exactly the eight sanctioned names.
 
 The eventual product-release end state remains a single `main` branch, after all useful work is integrated and product, recovery, security and operational acceptance gates pass.

@@ -161,10 +161,32 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert "archive/branches/" in section
     assert "Archive/head verification failed" in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
-    assert 'if [ "$remaining" -ne 8 ]' in section
+    assert 'if [ "$remaining" -ne 8 ]' not in section
+    assert 'docs/environmental-civic-evidence-contract' in section
+    assert 'if [ "$evidence_state" = "open" ]' in section
+    assert 'exactly eight sanctioned refs and PR #247' in section
+    assert 'retire-environmental-civic-evidence-contract:' in source
+    assert 'Retirement held: PR #243 consent-governance integration must merge first.' in source
+    assert 'if [ "$remaining" != "$expected" ]' in section
     assert 'pulls/$pr_number/reviews?per_page=100' in section
     assert '.commit_id' in section
     assert 'latest_state[login] == "APPROVED"' in section
     assert 'latest_commit[login] == expected' in section
     assert 'login != author' in section
     assert 'no current-head approval from a reviewer other than its author' in section
+
+def test_environmental_evidence_retirement_waits_for_consent_governance_and_verifies_eight_refs() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split("retire-environmental-civic-evidence-contract:", 1)[1].split(
+        "retire-canonical-capability-envelope:", 1
+    )[0]
+
+    assert "github.event.pull_request.merged == true" in section
+    assert "docs/environmental-civic-evidence-contract" in section
+    assert "PR #243 consent-governance integration must merge first" in section
+    assert "archive/branches/" in section
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert 'if [ "$remaining" != "$expected" ]' in section
+    assert "RETIREMENT VERIFIED" in section
