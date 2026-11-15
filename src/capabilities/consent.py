@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
+from uuid import uuid4
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
@@ -67,7 +68,7 @@ class ConsentCapability:
         if consent.grant_type is not ConsentGrantType.EXPLICIT or not consent.is_authorized:
             raise PermissionError("Consent grant is not active and explicit")
         if not any(
-            self._consent_id(case_id, consent.purpose, scope) == consent.consent_id
+            self._matches_consent_id(consent.consent_id, case_id, consent.purpose, scope)
             for scope in consent.scope
         ):
             raise LookupError("Consent grant not found")
@@ -99,13 +100,8 @@ class ConsentCapability:
             )
             attached = CivicCaseResult(case, AuthorizationDecision.ALLOW)
         else:
-            attached = self._cases.add_consent(
-                case_id,
-                consent.consent_id,
-                identity=identity,
-                purpose=consent.purpose,
-                proof_ref=consent.proof_ref,
-                occurred_at=consent.created_at,
+            attached = self._cases._record_verified_consent(
+                case_id, consent, identity=identity
             )
         return ConsentResult(consent=consent, case=attached)
 
@@ -117,19 +113,51 @@ class ConsentCapability:
         if case is None:
             raise LookupError("Case not found")
         self._authorize_case_consent(identity, case_id, "record consent")
-        consent_id = self._consent_id(case_id, purpose, scope)
-        consent = self._repository.get(consent_id, principal_id=identity.principal.principal_id)
-        if consent is None:
-            now = datetime.now(timezone.utc).isoformat()
+        base_consent_id = self._consent_id(case_id, purpose, scope)
+        prior_grants = [
+            item
+            for item in self._repository.list_for_subject(
+                identity.principal.principal_id,
+                principal_id=identity.principal.principal_id,
+            )
+            if item.subject_id == identity.principal.principal_id
+            and item.purpose == purpose
+            and scope in item.scope
+            and self._matches_consent_id(item.consent_id, case_id, purpose, scope)
+        ]
+        active_grant = max(
+            (
+                item for item in prior_grants
+                if item.grant_type is ConsentGrantType.EXPLICIT
+                and item.authorizes(purpose, scope)
+            ),
+            key=lambda item: (item.created_at, item.consent_id),
+            default=None,
+        )
+        if active_grant is not None:
+            consent = active_grant
+        else:
+            # Preserve expired, denied and revoked grants as immutable history.
+            # A fresh explicit citizen action creates a distinct grant version.
+            consent_id = (
+                base_consent_id
+                if not prior_grants
+                else f"{base_consent_id}:v:{uuid4().hex}"
+            )
             consent = Consent(
-                consent_id=consent_id, subject_id=identity.principal.principal_id,
-                purpose=purpose, scope=(scope,), grant_type=ConsentGrantType.EXPLICIT,
-                status=ConsentStatus.GRANTED, created_at=now, proof_ref=proof_ref,
+                consent_id=consent_id,
+                subject_id=identity.principal.principal_id,
+                purpose=purpose,
+                scope=(scope,),
+                grant_type=ConsentGrantType.EXPLICIT,
+                status=ConsentStatus.GRANTED,
+                created_at=datetime.now(timezone.utc).isoformat(),
+                proof_ref=proof_ref,
             )
             if self._atomic_repository is None:
-                self._repository.save(consent, principal_id=identity.principal.principal_id)
-        elif consent.subject_id != identity.principal.principal_id or not consent.authorizes(purpose, scope):
-            raise PermissionError("Existing consent does not authorize this identity and scope")
+                self._repository.save(
+                    consent, principal_id=identity.principal.principal_id
+                )
         event_id = f"consent-{consent.consent_id}"
         existing_event = next(
             (event for event in case.events if event.event_id == event_id),
@@ -159,15 +187,23 @@ class ConsentCapability:
                 consent=consent,
                 case=CivicCaseResult(case, AuthorizationDecision.ALLOW),
             )
-        attached = self._cases.add_consent(
-            case_id,
-            consent.consent_id,
-            identity=identity,
-            purpose=purpose,
-            proof_ref=consent.proof_ref,
-            occurred_at=consent.created_at,
+        attached = self._cases._record_verified_consent(
+            case_id, consent, identity=identity
         )
         return ConsentResult(consent=consent, case=attached)
+
+    @classmethod
+    def _matches_consent_id(
+        cls, consent_id: str, case_id: str, purpose: str, scope: str
+    ) -> bool:
+        base = cls._consent_id(case_id, purpose, scope)
+        if consent_id == base:
+            return True
+        prefix = f"{base}:v:"
+        version = consent_id[len(prefix):] if consent_id.startswith(prefix) else ""
+        return len(version) == 32 and all(
+            character in "0123456789abcdef" for character in version
+        )
 
     @staticmethod
     def _consent_id(case_id: str, purpose: str, scope: str) -> str:

@@ -3,6 +3,7 @@ import pytest
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability, EvidenceCreateRequest
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
@@ -46,11 +47,21 @@ def identity() -> IdentityContext:
             principal_id="citizen-1",
             interface="test",
             capabilities=frozenset({
-                "JNV-CIVIC-COMPLAINT", "case:write", "case:review",
+                "JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:consent",
                 "case:evidence", "evidence:register", "evidence:read",
                 "document:review", "case:submit",
             }),
         )
+    )
+
+
+def _record_submission_consent(slice_, repository, case_id: str, actor: IdentityContext):
+    consent_capability = ConsentCapability(
+        repository=repository,
+        case_capability=slice_._deps.case_capability,
+    )
+    return consent_capability.record_submission_consent(
+        case_id, scope="office:office-1", identity=actor
     )
 
 
@@ -131,17 +142,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
     ), identity=actor)
     slice_.attach_evidence(case.case_id, evidence.evidence_id, identity=actor)
 
-    consent = Consent(
-        consent_id="consent-1",
-        subject_id="citizen-1",
-        purpose="case_submission",
-        scope=("office:office-1",),
-        grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED,
-        created_at="2026-09-09T10:01:00Z",
-    )
-    consents.save(consent)
-    slice_.add_consent(case.case_id, consent.consent_id, identity=actor)
+    _record_submission_consent(slice_, consents, case.case_id, actor)
 
     prepared = slice_.prepare_document(case.case_id, identity=actor, document_id="doc-1")
     edited = slice_.review_document(
@@ -177,12 +178,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
 def test_vertical_slice_cannot_submit_without_explicit_approval():
     slice_, _, consents, _, case = build_slice()
     actor = identity()
-    consents.save(Consent(
-        consent_id="consent-1", subject_id="citizen-1", purpose="case_submission",
-        scope=("office:office-1",), grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED, created_at="2026-09-09T10:00:00Z",
-    ))
-    slice_.add_consent(case.case_id, "consent-1", identity=actor)
+    _record_submission_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-1")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
@@ -242,12 +238,7 @@ def test_vertical_slice_rejects_submission_for_different_principal():
     other = IdentityContext(principal=Principal(
         principal_id="citizen-2", interface="test", capabilities=owner.principal.capabilities
     ))
-    consents.save(Consent(
-        consent_id="consent-owner", subject_id="citizen-1", purpose="case_submission",
-        scope=("office:office-1",), grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED, created_at="2026-09-09T10:00:00Z",
-    ))
-    slice_.add_consent(case.case_id, "consent-owner", identity=owner)
+    _record_submission_consent(slice_, consents, case.case_id, owner)
     slice_.prepare_document(case.case_id, identity=owner, document_id="doc-owner")
     slice_.start_review(case.case_id, identity=owner)
     slice_.approve(case.case_id, identity=owner)
@@ -263,12 +254,7 @@ def test_vertical_slice_rejects_forged_execution_context():
     from src.core.execution import CapabilityExecutionContext
     slice_, _, consents, _, case = build_slice()
     actor = identity()
-    consents.save(Consent(
-        consent_id="consent-context", subject_id="citizen-1", purpose="case_submission",
-        scope=("office:office-1",), grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED, created_at="2026-09-09T10:00:00Z",
-    ))
-    slice_.add_consent(case.case_id, "consent-context", identity=actor)
+    _record_submission_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-context")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
@@ -308,22 +294,7 @@ def test_direct_vertical_slice_construction_cannot_bypass_activation():
 def test_submission_rechecks_process_runtime_immediately_before_transport(monkeypatch):
     slice_, _, consents, transport, case = build_slice()
     actor = identity()
-    consents.save(Consent(
-        consent_id="consent-runtime-change",
-        subject_id="citizen-1",
-        purpose="case_submission",
-        scope=("office:office-1",),
-        grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED,
-        created_at="2026-09-09T10:00:00Z",
-    ))
-    slice_.add_consent(
-        case.case_id,
-        "consent-runtime-change",
-        identity=actor,
-        purpose="case_submission",
-        occurred_at="2026-09-09T10:00:00Z",
-    )
+    _record_submission_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-runtime-change")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
@@ -343,3 +314,9 @@ def test_submission_rechecks_process_runtime_immediately_before_transport(monkey
         )
 
     assert transport.calls == []
+
+
+def test_vertical_slice_does_not_expose_unverified_consent_attachment():
+    slice_, _, _, _, _ = build_slice()
+
+    assert not hasattr(slice_, "add_consent")

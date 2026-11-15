@@ -229,3 +229,104 @@ def test_attaching_existing_consent_requires_case_consent_capability():
     assert current is not None
     assert consent.consent_id not in current.consent_refs
     assert all(event.event_id != f"consent-{consent.consent_id}" for event in current.events)
+
+ 
+
+def test_case_capability_does_not_expose_unverified_consent_id_mutation():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+
+    assert not hasattr(case_capability, "add_consent")
+    assert hasattr(case_capability, "_record_verified_consent")
+
+
+def test_expired_consent_can_be_replaced_by_a_new_version_without_overwriting_history():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    owner = _identity(
+        "telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"
+    )
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Consent renewal",
+            narrative="Synthetic consent renewal case.",
+        ),
+        identity=owner,
+    ).case
+    repository = InMemoryConsentRepository()
+    scope = "office:office-renewal"
+    base_id = ConsentCapability._consent_id(case.case_id, PURPOSE_SUBMISSION, scope)
+    expired = Consent(
+        consent_id=base_id,
+        subject_id=owner.principal.principal_id,
+        purpose=PURPOSE_SUBMISSION,
+        scope=(scope,),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-01-01T00:00:00+00:00",
+        expires_at="2026-01-02T00:00:00+00:00",
+        proof_ref="proof:expired",
+    )
+    repository.save(expired)
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+
+    renewed = capability.record_submission_consent(
+        case.case_id, scope=scope, identity=owner, proof_ref="proof:renewed"
+    )
+
+    assert renewed.consent.consent_id != expired.consent_id
+    assert renewed.consent.consent_id.startswith(f"{base_id}:v:")
+    assert renewed.consent.is_authorized
+    assert repository.get(base_id) == expired
+    assert repository.get(base_id).is_authorized is False
+
+    repeated = capability.record_submission_consent(
+        case.case_id, scope=scope, identity=owner, proof_ref="proof:renewed"
+    )
+    assert repeated.consent.consent_id == renewed.consent.consent_id
+    assert len(repository.list_for_subject(owner.principal.principal_id)) == 2
+    current = case_capability.get_owned(case.case_id, identity=owner)
+    assert current is not None
+    assert current.consent_refs.count(renewed.consent.consent_id) == 1
+
+
+def test_new_explicit_consent_does_not_overwrite_a_revoked_grant():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    owner = _identity(
+        "telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write", "case:review"
+    )
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Revoked consent",
+            narrative="Synthetic revoked consent case.",
+        ),
+        identity=owner,
+    ).case
+    repository = InMemoryConsentRepository()
+    scope = "office:office-revocation"
+    base_id = ConsentCapability._consent_id(case.case_id, PURPOSE_SUBMISSION, scope)
+    revoked = Consent(
+        consent_id=base_id,
+        subject_id=owner.principal.principal_id,
+        purpose=PURPOSE_SUBMISSION,
+        scope=(scope,),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.REVOKED,
+        created_at="2026-01-01T00:00:00+00:00",
+        revoked_at="2026-01-02T00:00:00+00:00",
+        proof_ref="proof:revoked",
+    )
+    repository.save(revoked)
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+
+    fresh = capability.record_submission_consent(
+        case.case_id, scope=scope, identity=owner, proof_ref="proof:new-explicit-choice"
+    )
+
+    assert fresh.consent.consent_id != revoked.consent_id
+    assert fresh.consent.is_authorized
+    assert repository.get(base_id) == revoked
+    assert repository.get(base_id).status is ConsentStatus.REVOKED

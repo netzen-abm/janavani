@@ -132,15 +132,6 @@ class CivicActionVerticalSlice:
             source_channel=source_channel or "shared",
         )
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext,
-                    purpose: str | None = None, proof_ref: str | None = None,
-                    occurred_at: str | None = None) -> CivicCaseResult:
-        """Attach consent and record the corresponding audit event on the Case."""
-        return self._deps.case_capability.add_consent(
-            case_id, consent_id, identity=identity, purpose=purpose,
-            proof_ref=proof_ref, occurred_at=occurred_at,
-        )
-
     def prepare_document(self, case_id: str, *, identity: IdentityContext, document_id=None):
         draft = self._documents.prepare(case_id, identity=identity, document_id=document_id)
         return PreparedDocument(case_id=case_id, document_id=draft.document_id, draft=draft)

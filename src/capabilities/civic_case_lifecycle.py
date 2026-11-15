@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
+from src.core.consent import Consent, ConsentGrantType
 from src.core.execution import CapabilityExecutionContext
 from src.capabilities.civic_case_contract import CivicCaseResult
 from src.identity.context import IdentityContext
@@ -18,19 +19,30 @@ class CivicCaseLifecycleMixin:
                 execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         return self.transition(case_id, action="case:mark_ready", identity=identity, execution_context=execution_context)
 
-    def add_consent(
+    def _record_verified_consent(
         self,
         case_id: str,
-        consent_id: str,
+        consent: Consent,
         *,
         identity: IdentityContext,
-        purpose: str | None = None,
-        proof_ref: str | None = None,
-        occurred_at: str | None = None,
-        execution_context: CapabilityExecutionContext | None = None,
     ) -> CivicCaseResult:
-        self._validate_execution_context(execution_context, identity, action="case:consent", resource_id=case_id)
+        """Internal mutation for a grant already validated by ConsentCapability.
+
+        Access surfaces must use ConsentCapability for grant lookup, ownership,
+        purpose, scope, persistence and expiry checks.
+        """
+        if (
+            consent.subject_id != identity.principal.principal_id
+            or consent.grant_type is not ConsentGrantType.EXPLICIT
+            or not consent.is_authorized
+        ):
+            raise PermissionError("Only an active, principal-owned explicit grant can be recorded")
+        consent_id = consent.consent_id
+        purpose = consent.purpose
+        proof_ref = consent.proof_ref
+        occurred_at = consent.created_at
         case = self._owned(case_id, identity)
+        self._require(identity, "case:consent", "case:consent")
         self._require(identity, "case:write", "case:consent")
         event_id = f"consent-{consent_id}"
         existing_event = next(
@@ -54,7 +66,7 @@ class CivicCaseLifecycleMixin:
             event_id=event_id,
             case_id=case.case_id,
             event_type=CaseEventType.CONSENT_RECORDED,
-            occurred_at=occurred_at or datetime.now(timezone.utc).isoformat(),
+            occurred_at=occurred_at,
             actor_id=identity.principal.principal_id,
             source_ref=proof_ref,
             notes=purpose,
