@@ -57,6 +57,13 @@ def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> N
     assert "head=$owner:$branch" not in source
     assert "head=$REPO:$branch" not in source
 
+    manual = source.split("  retire:", 1)[1].split(
+        "  retire-consent-capability-governance:", 1
+    )[0]
+    assert 'remaining" != "$expected"' in manual
+    assert 'printf \'%s\\\\n\' "${sanctioned[@]}"' in manual
+    assert "exact sanctioned inventory" in manual
+
 
 def test_legacy_retirement_helper_does_not_interpolate_branch_names_into_url() -> None:
     source = (
