@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Collect explicit consent before document generation/submission readiness."""
+    """Collect explicit consent for document preparation; Janavani does not submit the document."""
     user_id = update.effective_user.id
     text = update.message.text.strip().lower()
 
@@ -61,7 +61,7 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
             subject=str(session.get("category") or "Citizen civic issue"),
             narrative=issue,
         )
-        dependencies.consent_capability.record_submission_consent(
+        dependencies.consent_capability.record_document_preparation_consent(
             case_id,
             scope=f"office:{office_id}",
             identity=identity,

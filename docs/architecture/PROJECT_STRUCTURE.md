@@ -83,9 +83,12 @@ document_service.py    RETIRED — archived after fail-closed legacy boundary ha
 
 CODE MAINTAINABILITY RULE
 -------------------------
-Active Python/Rust source files must remain <= 180 lines where a coherent responsibility boundary permits.
-Enforcement: scripts/check_code_line_limits.py + CI.
-Historical archive content is excluded from this ceiling.
+Active Python/Rust source files should remain <= 180 lines where a coherent responsibility boundary permits.
+The line count is a maintainability signal, not permission to split tightly coupled invariants.
+A narrowly scoped exception may be recorded in DOCUMENTED_OVERRIDES in
+scripts/check_code_line_limits.py, with the architectural reason and a regression test.
+Exceptions are visible in CI output and must not become a general size exemption.
+Historical archive content is excluded from this guideline.
 
 BRANCH RULE
 -----------

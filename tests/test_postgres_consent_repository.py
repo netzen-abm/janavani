@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.storage.repositories.postgres_consent import PostgresConsentRepository
 
@@ -83,3 +85,48 @@ def test_postgres_consent_round_trip_and_subject_listing():
     repository.save(consent)
     assert repository.get("consent-1") == consent
     assert repository.list_for_subject("citizen-1") == [consent]
+
+
+def test_postgres_hydrates_datetime_timestamps_as_iso8601():
+    created_at = datetime(2026, 11, 15, 12, 30, tzinfo=timezone.utc)
+    expires_at = datetime(2026, 11, 16, 12, 30, tzinfo=timezone.utc)
+    revoked_at = datetime(2026, 11, 15, 13, 0, tzinfo=timezone.utc)
+
+    consent = PostgresConsentRepository._hydrate((
+        "consent-datetime",
+        "citizen-1",
+        "case_submission",
+        ["office:office-1"],
+        "explicit",
+        "revoked",
+        created_at,
+        expires_at,
+        revoked_at,
+        "proof:revocation",
+    ))
+
+    assert consent.created_at == created_at.isoformat()
+    assert consent.expires_at == expires_at.isoformat()
+    assert consent.revoked_at == revoked_at.isoformat()
+    assert consent.status is ConsentStatus.REVOKED
+
+
+def test_postgres_hydrates_nullable_consent_timestamps():
+    created_at = datetime(2026, 11, 15, 12, 30, tzinfo=timezone.utc)
+
+    consent = PostgresConsentRepository._hydrate((
+        "consent-no-expiry",
+        "citizen-1",
+        "case_submission",
+        ["office:office-1"],
+        "explicit",
+        "granted",
+        created_at,
+        None,
+        None,
+        None,
+    ))
+
+    assert consent.created_at == created_at.isoformat()
+    assert consent.expires_at is None
+    assert consent.revoked_at is None

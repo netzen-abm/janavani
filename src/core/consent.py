@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -47,11 +48,29 @@ class Consent:
 
     @property
     def is_authorized(self) -> bool:
-        return self.status is ConsentStatus.GRANTED
+        """Return whether this grant is currently active; malformed expiry fails closed."""
+        return self.is_authorized_at()
 
-    def authorizes(self, purpose: str, scope: str) -> bool:
+    def is_authorized_at(self, now: datetime | None = None) -> bool:
+        """Evaluate grant status and expiry against an injectable UTC instant."""
+        if self.status is not ConsentStatus.GRANTED:
+            return False
+        if self.expires_at is None:
+            return True
+        try:
+            expiry = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
+            instant = now or datetime.now(timezone.utc)
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            if instant.tzinfo is None:
+                instant = instant.replace(tzinfo=timezone.utc)
+            return instant < expiry
+        except (TypeError, ValueError, AttributeError):
+            return False
+
+    def authorizes(self, purpose: str, scope: str, *, now: datetime | None = None) -> bool:
         return (
-            self.is_authorized
+            self.is_authorized_at(now)
             and self.purpose == purpose
             and scope in self.scope
         )
