@@ -1,3 +1,6 @@
+import asyncio
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -169,3 +172,87 @@ def test_inbox_worker_shutdown_does_not_mask_worker_failure(caplog):
     assert "Telegram inbox shutdown worker failure type=RuntimeError" in caplog.text
     assert "sensitive detail" not in caplog.text
 
+
+
+class RetryingStartupInbox(FakeInbox):
+    def __init__(self) -> None:
+        super().__init__()
+        self.migration_attempts = 0
+        self.first_attempt = threading.Event()
+
+    def secure_legacy_payloads(self) -> int:
+        self.migration_attempts += 1
+        self.first_attempt.set()
+        if self.migration_attempts == 1:
+            raise OSError("synthetic database DNS outage")
+        return 0
+
+
+def test_production_startup_retries_database_and_keeps_ingress_unready(monkeypatch):
+    from src.web import telegram_webhook_app as webhook_module
+    from src.web import telegram_webhook_lifecycle as lifecycle_module
+
+    inbox = RetryingStartupInbox()
+    application = MagicMock()
+    application.initialize = AsyncMock()
+    application.start = AsyncMock()
+    application.stop = AsyncMock()
+    application.shutdown = AsyncMock()
+    application.bot.set_my_commands = AsyncMock()
+    application.bot.set_webhook = AsyncMock()
+    settings = SimpleNamespace(
+        bot_token="synthetic-token",
+        webhook_url="https://example.test/telegram/webhook",
+        secret="test-secret",
+        inbox_dsn="postgresql://synthetic",
+        encryption_keys=("x" * 32,),
+    )
+
+    async def idle_worker(*_args):
+        await asyncio.Future()
+
+    monkeypatch.setattr(webhook_module, "load_telegram_webhook_settings", lambda: settings)
+    monkeypatch.setattr(webhook_module, "build_application", lambda **_kwargs: application)
+    monkeypatch.setattr(webhook_module, "PostgresTelegramInbox", lambda **_kwargs: inbox)
+    monkeypatch.setattr(
+        webhook_module.Update,
+        "de_json",
+        lambda payload, _bot: SimpleNamespace(update_id=payload["update_id"]),
+    )
+    monkeypatch.setattr(lifecycle_module, "run_inbox_worker", idle_worker)
+    monkeypatch.setattr(lifecycle_module, "_start_ephemeral_issue_cleanup", lambda _app: None)
+    monkeypatch.setattr(
+        lifecycle_module, "_stop_ephemeral_issue_cleanup", AsyncMock()
+    )
+    monkeypatch.setattr(lifecycle_module, "STARTUP_RETRY_INITIAL_SECONDS", 0.05)
+    monkeypatch.setattr(lifecycle_module, "STARTUP_RETRY_MAX_SECONDS", 0.05)
+
+    app = webhook_module.create_webhook_app()
+    with TestClient(app) as client:
+        assert inbox.first_attempt.wait(2)
+        assert client.get("/liveness").status_code == 200
+        assert client.get("/readiness").status_code == 503
+        rejected = client.post(
+            "/telegram/webhook", json=_payload(), headers=_headers()
+        )
+        assert rejected.status_code == 503
+
+        deadline = time.monotonic() + 3
+        while not app.state.runtime_ready and time.monotonic() < deadline:
+            time.sleep(0.01)
+
+        assert app.state.runtime_ready is True
+        assert client.get("/readiness").status_code == 200
+        assert inbox.migration_attempts == 2
+        assert application.initialize.await_count == 1
+        assert application.start.await_count == 1
+        application.bot.set_webhook.assert_awaited_once()
+
+        accepted = client.post(
+            "/telegram/webhook", json=_payload(), headers=_headers()
+        )
+        assert accepted.status_code == 202
+        assert inbox.accepted == [(123, _payload())]
+
+    assert application.stop.await_count == 1
+    assert application.shutdown.await_count == 1

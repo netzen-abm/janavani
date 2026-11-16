@@ -18,25 +18,16 @@ from src.bot_telegram import (
     _stop_ephemeral_issue_cleanup,
     build_application,
 )
-from src.commands.catalogue import telegram_bot_commands
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
-from src.web.telegram_inbox_worker import run_inbox_worker
 from src.web.telegram_webhook_config import load_telegram_webhook_settings
+from src.web.telegram_webhook_lifecycle import (
+    start_webhook_runtime,
+    stop_task as _stop_inbox_worker,
+    stop_webhook_runtime,
+)
 
 logger = logging.getLogger(__name__)
 MAX_WEBHOOK_BODY_BYTES = 1_048_576
-
-async def _stop_inbox_worker(worker: asyncio.Task[Any] | None) -> None:
-    if worker is None:
-        return
-    worker.cancel()
-    try:
-        await worker
-    except asyncio.CancelledError:
-        pass
-    except Exception as exc:
-        logger.error("Telegram inbox shutdown worker failure type=%s", type(exc).__name__)
-
 
 def create_webhook_app(*, application: Application | None = None, inbox: Any | None = None) -> FastAPI:
     """Create an endpoint that acknowledges only updates durably encrypted in PostgreSQL."""
@@ -63,33 +54,26 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         dsn = settings.inbox_dsn
         encryption_keys = list(settings.encryption_keys)
 
-        # build_application validates the shared runtime configuration before composition.
+        # Compose once; the lifecycle task keeps delivery retryable while dependencies recover.
         bot_app = build_application(token=token)
         durable_inbox = PostgresTelegramInbox(dsn=dsn, encryption_keys=encryption_keys)
-        # Migrate any historical plaintext rows to ciphertext before registering the webhook.
-        await asyncio.to_thread(durable_inbox.secure_legacy_payloads)
-        await bot_app.initialize()
-        await bot_app.start()
-        await bot_app.bot.set_my_commands(telegram_bot_commands())
-        await bot_app.bot.set_webhook(
-            url=webhook_url,
-            secret_token=secret,
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=False,
-        )
-        _start_ephemeral_issue_cleanup(bot_app)
         app.state.telegram_application = bot_app
         app.state.telegram_inbox = durable_inbox
         app.state.webhook_secret = secret
-        worker = asyncio.create_task(run_inbox_worker(bot_app, durable_inbox))
-        app.state.inbox_worker = worker
+        app.state.runtime_ready = False
+        app.state.telegram_initialized = False
+        app.state.telegram_started = False
+        app.state.inbox_worker = None
+        bootstrap = asyncio.create_task(
+            start_webhook_runtime(
+                app, bot_app=bot_app, inbox=durable_inbox, webhook_url=webhook_url, secret=secret
+            )
+        )
         try:
             yield
         finally:
-            await _stop_inbox_worker(worker)
-            await _stop_ephemeral_issue_cleanup(bot_app)
-            await bot_app.stop()
-            await bot_app.shutdown()
+            await _stop_inbox_worker(bootstrap, purpose="startup bootstrap shutdown")
+            await stop_webhook_runtime(app, bot_app)
 
     app = FastAPI(
         title="Janavani Telegram Webhook",
@@ -98,15 +82,23 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         redoc_url=None,
         lifespan=lifespan,
     )
+    app.state.runtime_ready = False
     if injected_application:
         app.state.telegram_application = application
         app.state.webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+        app.state.runtime_ready = injected_inbox
         if injected_inbox:
             app.state.telegram_inbox = inbox
 
     @app.get("/liveness")
     async def liveness() -> dict[str, str]:
         return {"status": "alive", "surface": "telegram-webhook"}
+
+    @app.get("/readiness")
+    async def readiness(request: Request) -> dict[str, str]:
+        if not getattr(request.app.state, "runtime_ready", False):
+            raise HTTPException(status_code=503, detail="Telegram runtime is not ready")
+        return {"status": "ready", "surface": "telegram-webhook"}
 
     @app.post("/telegram/webhook", status_code=202)
     async def telegram_webhook(
@@ -118,6 +110,17 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
         expected = getattr(request.app.state, "webhook_secret", None)
         if not expected or not telegram_secret or not hmac.compare_digest(expected, telegram_secret):
             raise HTTPException(status_code=403, detail="Invalid webhook secret")
+        durable_inbox = getattr(request.app.state, "telegram_inbox", None)
+        if durable_inbox is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram durable inbox is unavailable; retry delivery",
+            )
+        if not getattr(request.app.state, "runtime_ready", False):
+            raise HTTPException(
+                status_code=503,
+                detail="Telegram webhook runtime is not ready; retry delivery",
+            )
         declared = request.headers.get("content-length")
         if declared is not None:
             try:
@@ -149,16 +152,6 @@ def create_webhook_app(*, application: Application | None = None, inbox: Any | N
             raise HTTPException(status_code=400, detail="Invalid Telegram update") from exc
         if update is None or update.update_id != update_id:
             raise HTTPException(status_code=400, detail="Invalid Telegram update")
-
-        durable_inbox = getattr(request.app.state, "telegram_inbox", None)
-        if durable_inbox is None:
-            # Never acknowledge an update that has not been durably accepted.
-            # Test fixtures may omit the inbox for liveness-only checks, but a
-            # webhook delivery without durable storage must remain retryable.
-            raise HTTPException(
-                status_code=503,
-                detail="Telegram durable inbox is unavailable; retry delivery",
-            )
 
         try:
             await asyncio.to_thread(durable_inbox.accept_encrypted, update_id, payload)
