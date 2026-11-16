@@ -61,7 +61,7 @@ def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> N
         "  retire-consent-capability-governance:", 1
     )[0]
     assert 'remaining" != "$expected"' in manual
-    assert 'printf \'%s\\\\n\' "${sanctioned[@]}"' in manual
+    assert 'printf \'%s\\n\' "${sanctioned[@]}"' in manual
     assert "exact sanctioned inventory" in manual
 
 
