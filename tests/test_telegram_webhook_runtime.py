@@ -271,7 +271,9 @@ def test_unexpected_inbox_worker_exit_marks_runtime_unready(caplog):
     async def exercise():
         worker = asyncio.create_task(failed_worker())
         watch_worker_exit(app, worker)
-        await worker
+        result = await asyncio.gather(worker, return_exceptions=True)
+        await asyncio.sleep(0)
+        assert isinstance(result[0], OSError)
 
     asyncio.run(exercise())
 
