@@ -13,12 +13,9 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import Update
 from telegram.ext import Application
 
-from src.bot_telegram import (
-    _start_ephemeral_issue_cleanup,
-    _stop_ephemeral_issue_cleanup,
-    build_application,
-)
+from src.bot_telegram import build_application
 from src.storage.repositories.postgres_telegram_inbox import PostgresTelegramInbox
+from src.web.telegram_inbox_worker import run_inbox_worker
 from src.web.telegram_webhook_config import load_telegram_webhook_settings
 from src.web.telegram_webhook_lifecycle import (
     start_webhook_runtime,
