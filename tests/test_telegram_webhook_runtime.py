@@ -256,3 +256,25 @@ def test_production_startup_retries_database_and_keeps_ingress_unready(monkeypat
 
     assert application.stop.await_count == 1
     assert application.shutdown.await_count == 1
+
+
+def test_unexpected_inbox_worker_exit_marks_runtime_unready(caplog):
+    from types import SimpleNamespace
+
+    from src.web.telegram_webhook_lifecycle import watch_worker_exit
+
+    app = SimpleNamespace(state=SimpleNamespace(runtime_ready=True))
+
+    async def failed_worker():
+        raise OSError("synthetic database failure with sensitive connection details")
+
+    async def exercise():
+        worker = asyncio.create_task(failed_worker())
+        watch_worker_exit(app, worker)
+        await worker
+
+    asyncio.run(exercise())
+
+    assert app.state.runtime_ready is False
+    assert "Telegram inbox worker exited unexpectedly reason=OSError" in caplog.text
+    assert "sensitive connection details" not in caplog.text

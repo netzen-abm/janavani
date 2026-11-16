@@ -27,6 +27,19 @@ async def stop_task(task: asyncio.Task[Any] | None, *, purpose: str = "inbox shu
         logger.error("Telegram %s failure type=%s", purpose, type(exc).__name__)
 
 
+def watch_worker_exit(app: Any, worker: asyncio.Task[Any]) -> None:
+    """Stop accepting new deliveries if the inbox worker unexpectedly exits."""
+    def mark_unready(task: asyncio.Task[Any]) -> None:
+        if task.cancelled():
+            return
+        error = task.exception()
+        app.state.runtime_ready = False
+        reason = type(error).__name__ if error is not None else "normal_exit"
+        logger.error("Telegram inbox worker exited unexpectedly reason=%s", reason)
+
+    worker.add_done_callback(mark_unready)
+
+
 async def start_webhook_runtime(
     app: Any, *, bot_app: Any, inbox: Any, webhook_url: str, secret: str
 ) -> None:
@@ -51,6 +64,7 @@ async def start_webhook_runtime(
             )
             _start_ephemeral_issue_cleanup(bot_app)
             app.state.inbox_worker = asyncio.create_task(run_inbox_worker(bot_app, inbox))
+            watch_worker_exit(app, app.state.inbox_worker)
             app.state.runtime_ready = True
             logger.info("Telegram webhook runtime ready")
             return
