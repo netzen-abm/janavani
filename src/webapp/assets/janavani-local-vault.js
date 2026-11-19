@@ -41,7 +41,7 @@
   }
 
   async function resolveScope() {
-    const response = await fetch("/local-vault/scope", {
+    const response = await fetch("/civic/cases/local-vault/scope", {
       method: "GET",
       credentials: "same-origin",
       cache: "no-store",
