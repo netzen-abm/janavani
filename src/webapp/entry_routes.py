@@ -63,9 +63,8 @@ def register_webapp_entry_routes(
                 Div(
                     H3("📝 Create a Civic Case"),
                     P(
-                        "Describe the civic issue. The canonical API owns case, "
-                        "identity, authorization, evidence, consent, document "
-                        "and lifecycle state."
+                        "Your narrative is saved in this browser first. Creating a Case sends "
+                        "only minimal lifecycle metadata to the canonical API."
                     ),
                     Form(id="local-case-draft-form", action="/submit-issue", method="post")(
                         Input(type="hidden", name="case_type", value="complaint"),
