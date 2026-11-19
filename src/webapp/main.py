@@ -1,4 +1,7 @@
-from fasthtml.common import Link, Style, fast_app
+from pathlib import Path
+
+from fasthtml.common import Link, Script, Style, fast_app
+from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.ui.brand_assets import register_brand_assets
@@ -22,8 +25,20 @@ app, rt = fast_app(
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
         """),
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
+        Script(src="/assets/janavani-local-vault.js"),
     )
 )
+
+@rt("/assets/janavani-local-vault.js")
+def serve_local_vault_adapter():
+    """Serve the versioned first-party browser-local draft adapter."""
+    asset = Path(__file__).parent / "assets" / "janavani-local-vault.js"
+    return FileResponse(
+        asset,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
 
 register_webapp_entry_routes(
     rt, client_factory=lambda request: client_for_request(request)
