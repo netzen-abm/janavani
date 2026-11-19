@@ -12,11 +12,34 @@ _EVIDENCE_REPOSITORY = getattr(_CAPABILITY, "evidence_repository", None)
 from src.web.composition import create_web_civic_action_composition
 from src.web.civic_case_document_router import router as document_router
 from src.web.civic_case_lifecycle_router import router as lifecycle_router
-from src.web.civic_case_models import CaseCreateRequest, ConsentRequest, ExplicitConsentRequest, EvidenceRequest, event_result, serialize_case
+from src.web.civic_case_models import CaseCreateRequest, CaseShellCreateRequest, ConsentRequest, ExplicitConsentRequest, EvidenceRequest, event_result, serialize_case
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 router.include_router(document_router)
 router.include_router(lifecycle_router)
+
+@router.post("/shell")
+async def create_case_shell(
+    request: CaseShellCreateRequest,
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, object]:
+    """Create an owner-scoped metadata shell; citizen narrative is not accepted."""
+    try:
+        result = _CAPABILITY.create_shell(
+            CivicCaseCreateRequest(
+                case_type=request.case_type,
+                subject=request.case_type.value,
+                narrative="",
+            ),
+            identity=context,
+            source_channel="webapp",
+        )
+        return {"case_id": result.case.case_id, "status": result.case.status.value}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
 
 @router.post("")
 async def create_case(request: CaseCreateRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
