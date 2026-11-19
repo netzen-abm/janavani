@@ -130,7 +130,6 @@ def register_webapp_entry_routes(
                       });
                     })();
                     """),
-                    ),
                     cls="card",
                 ),
                 cls="container",
