@@ -1,12 +1,14 @@
 """HTTP request/response models for the canonical civic-case adapter."""
 from __future__ import annotations
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from src.core.civic_case import CaseType, CivicCase
 from src.documents.document_contract import DocumentFormat
 
 class CaseShellCreateRequest(BaseModel):
     """Create a Case lifecycle shell without transmitting citizen-authored content."""
+
+    model_config = ConfigDict(extra="forbid")
 
     case_type: CaseType
 
