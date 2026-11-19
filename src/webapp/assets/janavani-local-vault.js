@@ -126,11 +126,21 @@
 
   async function clearScope(scope) {
     validScope(scope);
-    return withStore(scope, "readwrite", async store => {
-      const records = await requestResult(store.index("by_scope").getAllKeys(scope));
-      for (const key of records) store.delete(key);
-      return records.length;
-    });
+    return withStore(scope, "readwrite", store => new Promise((resolve, reject) => {
+      const request = store.index("by_scope").openKeyCursor(IDBKeyRange.only(scope));
+      let removed = 0;
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(removed);
+          return;
+        }
+        store.delete(cursor.primaryKey);
+        removed += 1;
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error("Could not clear local drafts."));
+    }));
   }
 
   window.JanavaniLocalVault = Object.freeze({
