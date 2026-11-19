@@ -87,6 +87,8 @@ def register_webapp_entry_routes(
                       if (!form || !field || !window.JanavaniLocalVault) return;
                       let scope = null;
                       let caseId = null;
+                      let pendingSave = Promise.resolve();
+                      field.disabled = true;
                       const setStatus = (message) => { status.textContent = message; };
                       const save = async () => {
                         if (!scope || !caseId) return;
@@ -109,18 +111,23 @@ def register_webapp_entry_routes(
                           } else {
                             setStatus("Drafts stay in this browser until you choose to create a Case.");
                           }
+                          field.disabled = false;
                         } catch (error) {
                           field.disabled = true;
                           setStatus("Local draft storage is unavailable. No content will be sent. " + error.message);
                         }
                       })();
                       field.addEventListener("input", () => {
-                        save().catch(error => setStatus("Local save failed. Do not navigate away. " + error.message));
+                        pendingSave = pendingSave.then(save).catch(error => {
+                          setStatus("Local save failed. Do not navigate away. " + error.message);
+                          throw error;
+                        });
                       });
                       form.addEventListener("submit", async (event) => {
                         event.preventDefault();
                         try {
                           if (!scope) throw new Error("Sign in and verify local storage before continuing.");
+                          await pendingSave;
                           await save();
                           const response = await fetch("/submit-issue", {
                             method: "POST",
