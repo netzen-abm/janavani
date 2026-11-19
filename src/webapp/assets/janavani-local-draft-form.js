@@ -8,6 +8,25 @@
   let pendingSave = Promise.resolve();
   field.disabled = true;
   const setStatus = (message) => { status.textContent = message; };
+  const draftList = document.getElementById("local-draft-list");
+  const refreshDraftList = async (selectedId = caseId) => {
+    const drafts = await window.JanavaniLocalVault.listDrafts(scope);
+    draftList.replaceChildren();
+    drafts.sort((a, b) => b.updated_at.localeCompare(a.updated_at)).forEach(draft => {
+      const option = document.createElement("option");
+      option.value = draft.case_id;
+      option.textContent = (draft.server_case_id ? draft.server_case_id + " — " : "") +
+        new Date(draft.updated_at).toLocaleString();
+      option.selected = draft.case_id === selectedId;
+      draftList.appendChild(option);
+    });
+    if (!draftList.options.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No saved drafts";
+      draftList.appendChild(option);
+    }
+  };
   const save = async () => {
     if (!scope || !caseId) return;
     await window.JanavaniLocalVault.saveDraft(scope, {
@@ -29,6 +48,7 @@
       } else {
         setStatus("Drafts stay in this browser until you choose to create a Case.");
       }
+      await refreshDraftList(caseId);
       field.disabled = false;
     } catch (error) {
       field.disabled = true;
@@ -39,6 +59,60 @@
     pendingSave = pendingSave.then(save).catch(error => {
       setStatus("Local save failed. Do not navigate away. " + error.message);
     });
+  });
+  document.getElementById("open-local-draft").addEventListener("click", async () => {
+    try {
+      await pendingSave;
+      const selected = await window.JanavaniLocalVault.getDraft(scope, draftList.value);
+      if (!selected) throw new Error("Selected draft was not found.");
+      caseId = selected.case_id;
+      field.value = selected.narrative || "";
+      setStatus("Opened local draft. Changes save automatically in this browser.");
+    } catch (error) {
+      setStatus("Could not open draft. " + error.message);
+    }
+  });
+  document.getElementById("delete-local-draft").addEventListener("click", async () => {
+    const selectedId = draftList.value;
+    if (!selectedId || !window.confirm("Delete this local draft from this browser? This cannot be undone.")) return;
+    try {
+      await window.JanavaniLocalVault.deleteDraft(scope, selectedId);
+      if (caseId === selectedId) {
+        caseId = "local-" + crypto.randomUUID();
+        field.value = "";
+      }
+      await refreshDraftList();
+      setStatus("Selected local draft deleted.");
+    } catch (error) {
+      setStatus("Could not delete draft. " + error.message);
+    }
+  });
+  document.getElementById("import-local-draft").addEventListener("change", async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      const draft = payload && payload.draft;
+      if (payload.schema !== "janavani.local-draft.v1" || !draft ||
+          typeof draft.narrative !== "string" || typeof draft.case_id !== "string") {
+        throw new Error("This file is not a supported JANAVANI local draft.");
+      }
+      const importedId = "local-" + crypto.randomUUID();
+      await window.JanavaniLocalVault.saveDraft(scope, {
+        case_id: importedId,
+        server_case_id: "",
+        subject: String(draft.subject || "Imported civic draft"),
+        narrative: draft.narrative
+      });
+      caseId = importedId;
+      field.value = draft.narrative;
+      await refreshDraftList(importedId);
+      setStatus("Draft imported into this browser. Review it before creating a Case.");
+    } catch (error) {
+      setStatus("Import failed. " + error.message);
+    } finally {
+      event.target.value = "";
+    }
   });
   document.getElementById("export-local-draft").addEventListener("click", async () => {
     try {
