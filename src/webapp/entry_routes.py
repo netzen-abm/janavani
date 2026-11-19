@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fasthtml.common import (
-    A, Button, Div, Form, H1, H2, H3, Img, Input, Label, P, Textarea, Title,
+    A, Button, Div, Form, H1, H2, H3, Img, Input, Label, P, Script, Textarea, Title,
 )
 from starlette.requests import Request
 
@@ -55,33 +55,81 @@ def register_webapp_entry_routes(
                         "identity, authorization, evidence, consent, document "
                         "and lifecycle state."
                     ),
-                    Form(action="/submit-issue", method="post")(
+                    Form(id="local-case-draft-form", action="/submit-issue", method="post")(
+                        Input(type="hidden", name="case_type", value="complaint"),
                         Textarea(
                             name="citizen_input",
+                            id="citizen-input",
                             placeholder="Describe the civic issue...",
                             rows=6,
                             required=True,
-                            maxlength=5000,
+                            maxlength=20000,
                         ),
-                        Div(
-                            Label(
-                                Input(
-                                    type="checkbox",
-                                    name="case_processing_consent",
-                                    value="yes",
-                                    required=True,
-                                ),
-                                " I agree to send these details to JanaVani's API "
-                                "to create a case record.",
-                            ),
-                            P(
-                                "This creates a JanaVani case record; it is not "
-                                "a saved draft preview and does not file anything "
-                                "with a government authority. Separate consent "
-                                "is required before any later external submission."
-                            ),
-                        ),
+                        P(id="local-vault-status", role="status"),
                         Button("Create Case", type="submit", cls="button-primary"),
+                    ),
+                    Script("""
+                    (() => {
+                      const form = document.getElementById("local-case-draft-form");
+                      const field = document.getElementById("citizen-input");
+                      const status = document.getElementById("local-vault-status");
+                      if (!form || !field || !window.JanavaniLocalVault) return;
+                      let scope = null;
+                      let caseId = null;
+                      const setStatus = (message) => { status.textContent = message; };
+                      const save = async () => {
+                        if (!scope || !caseId) return;
+                        await window.JanavaniLocalVault.saveDraft(scope, {
+                          case_id: caseId, subject: "Civic complaint", narrative: field.value
+                        });
+                        setStatus("Draft saved in this browser. It is not a server backup.");
+                      };
+                      (async () => {
+                        try {
+                          scope = await window.JanavaniLocalVault.resolveScope();
+                          caseId = "local-" + (window.crypto && crypto.randomUUID
+                            ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+                          const drafts = await window.JanavaniLocalVault.listDrafts(scope);
+                          const latest = drafts.sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+                          if (latest) {
+                            caseId = latest.case_id;
+                            field.value = latest.narrative || "";
+                            setStatus("Your latest local draft was restored in this browser.");
+                          } else {
+                            setStatus("Drafts stay in this browser until you choose to create a Case.");
+                          }
+                        } catch (error) {
+                          field.disabled = true;
+                          setStatus("Local draft storage is unavailable. No content will be sent. " + error.message);
+                        }
+                      })();
+                      field.addEventListener("input", () => {
+                        save().catch(error => setStatus("Local save failed. Do not navigate away. " + error.message));
+                      });
+                      form.addEventListener("submit", async (event) => {
+                        event.preventDefault();
+                        try {
+                          if (!scope) throw new Error("Sign in and verify local storage before continuing.");
+                          await save();
+                          const response = await fetch("/submit-issue", {
+                            method: "POST",
+                            credentials: "same-origin",
+                            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                            body: new URLSearchParams({
+                              case_type: "complaint",
+                              local_draft_id: caseId
+                            })
+                          });
+                          if (!response.ok) throw new Error("Could not create the Case shell.");
+                          document.open();
+                          document.write(await response.text());
+                          document.close();
+                        } catch (error) {
+                          setStatus("Case not created. Your local draft remains in this browser. " + error.message);
+                        }
+                      });
+                    })();
+                    """),
                     ),
                     cls="card",
                 ),
@@ -91,72 +139,32 @@ def register_webapp_entry_routes(
 
     @rt("/submit-issue")
     def post(
-        citizen_input: str,
         request: Request,
-        case_processing_consent: str = "",
+        local_draft_id: str = "",
+        case_type: str = "complaint",
     ):
-        """Fail closed before any API call if case-processing consent is absent."""
-        consent_given = case_processing_consent.strip().lower() in {
-            "yes", "true", "1", "on"
-        }
-        if not consent_given:
+        """Create only a metadata shell; citizen narrative stays in browser storage."""
+        import re
+        if not re.fullmatch(r"local-[a-zA-Z0-9-]{8,80}", local_draft_id):
             return Div(
-                Div(
-                    H3("Consent required"),
-                    P("No case was created and no issue details were sent to the API."),
-                    A("Return to dashboard", href="/"),
-                    cls="card",
-                )
+                Div(H3("Local draft required"), P("No Case was created. Save a draft in your browser first."), A("Return", href="/"), cls="card")
             )
-        if not citizen_input.strip():
-            return Div(
-                Div(
-                    H3("Issue description required"),
-                    P("Describe the civic issue before creating a case."),
-                    A("Return to dashboard", href="/"),
-                    cls="card",
-                )
-            )
-
         try:
-            result = client_factory(request).submit_complaint_draft(citizen_input)
+            result = client_factory(request).create_case_shell(case_type=case_type)
         except (RuntimeError, ValueError):
-            return Div(
-                Div(
-                    H3("Sign-in required"),
-                    P(
-                        "Authenticate through the JanaVani identity gateway "
-                        "before creating a case."
-                    ),
-                    A("Return to dashboard", href="/"),
-                    cls="card",
-                )
-            )
-
+            return Div(Div(H3("Sign-in required"), P("Authenticate before creating a Case shell. Your draft remains in this browser."), A("Return", href="/"), cls="card"))
+        except Exception:
+            return Div(Div(H3("Case creation unavailable"), P("No Case was created. Your local draft remains in this browser."), A("Return", href="/"), cls="card"))
         if "error" in result:
-            return Div(
-                Div(
-                    H3("⚠️ Request Processing Failure"),
-                    P(result["error"]),
-                    A("Return to dashboard", href="/"),
-                    cls="card",
-                )
-            )
-
+            return Div(Div(H3("Case creation failed"), P(result["error"]), A("Return", href="/"), cls="card"))
         return Div(
             Div(
-                H2("📁 JanaVani Case Created"),
+                H2("Civic Case shell created"),
                 P(f"Case ID: {result.get('case_id')}"),
                 P(f"Status: {result.get('status')}"),
-                P(
-                    "This creates a JanaVani case record only. Continue through "
-                    "the case workspace to review a document and manage any later "
-                    "consent. No government filing was performed."
-                ),
-                Form(action=f"/cases/{result.get('case_id')}/prepare", method="get")(
-                    Button("Open Case Workspace", type="submit"),
-                ),
-                A("Return to home dashboard", href="/"),
+                P("Your narrative remains in this browser. The server received Case metadata only. This Case shell does not contain your complaint text."),
+                P("Do not clear this browser's site data if you need the local draft. Cross-device recovery is not available in device-first mode."),
+                A("Return to dashboard", href="/"),
                 cls="card",
             )
         )
