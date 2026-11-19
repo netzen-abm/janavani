@@ -9,6 +9,7 @@
   field.disabled = true;
   const setStatus = (message) => { status.textContent = message; };
   const draftList = document.getElementById("local-draft-list");
+  const newLocalId = () => "local-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
   const refreshDraftList = async (selectedId = caseId) => {
     const drafts = await window.JanavaniLocalVault.listDrafts(scope);
     draftList.replaceChildren();
@@ -76,9 +77,10 @@
     const selectedId = draftList.value;
     if (!selectedId || !window.confirm("Delete this local draft from this browser? This cannot be undone.")) return;
     try {
+      await pendingSave;
       await window.JanavaniLocalVault.deleteDraft(scope, selectedId);
       if (caseId === selectedId) {
-        caseId = "local-" + crypto.randomUUID();
+        caseId = newLocalId();
         field.value = "";
       }
       await refreshDraftList();
@@ -97,7 +99,7 @@
           typeof draft.narrative !== "string" || typeof draft.case_id !== "string") {
         throw new Error("This file is not a supported JANAVANI local draft.");
       }
-      const importedId = "local-" + crypto.randomUUID();
+      const importedId = newLocalId();
       await window.JanavaniLocalVault.saveDraft(scope, {
         case_id: importedId,
         server_case_id: "",
@@ -142,6 +144,7 @@
       field.value = "";
       caseId = "local-" + (window.crypto && crypto.randomUUID
         ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+      await refreshDraftList();
       setStatus("Local drafts for this account were cleared from this browser.");
     } catch (error) {
       setStatus("Could not clear local drafts. " + error.message);
