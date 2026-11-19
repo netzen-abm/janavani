@@ -5,6 +5,12 @@ from pydantic import BaseModel, Field
 from src.core.civic_case import CaseType, CivicCase
 from src.documents.document_contract import DocumentFormat
 
+class CaseShellCreateRequest(BaseModel):
+    """Create a Case lifecycle shell without transmitting citizen-authored content."""
+
+    case_type: CaseType
+
+
 class CaseCreateRequest(BaseModel):
     case_type: CaseType
     subject: str = Field(min_length=1)
