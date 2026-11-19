@@ -173,3 +173,21 @@ The bounded search and inspected files in this pass did not establish that narra
 - Production assurance: not established.
 
 **Decision:** Keep Issue #212 open. Do not claim JANAVANI is already device-first. Implement the client-local WebApp boundary and explicit Telegram expiry disclosure before reconsidering production readiness.
+
+
+## 10. Phase 2 implementation increment — browser vault foundation (19 November 2026)
+
+A first browser-local storage foundation has been added on the implementation branch:
+
+- `src/webapp/assets/janavani-local-vault.js`: IndexedDB database `janavani-device-vault`, schema version 1, with account-scope-partitioned draft create/read/list/delete/clear operations and basic field-size validation.
+- `GET /civic/cases/local-vault/scope`: authenticated endpoint returning an HMAC-SHA256 pseudonymous namespace derived from the verified principal and a dedicated `JANAVANI_LOCAL_VAULT_SCOPE_SECRET`.
+- The WebApp serves the first-party script at `/assets/janavani-local-vault.js` and includes it in the page head.
+- Regression tests were added for authenticated scope stability, cross-principal scope separation, missing-secret fail-closed behaviour and script delivery.
+
+**Security semantics:** the scope is a storage namespace, not an authentication token, encryption key or proof that local data is encrypted. IndexedDB records are readable by scripts executing in the same origin and by a person with access to the browser profile. XSS, malicious extensions, shared OS accounts and device compromise remain relevant threats. The vault is not yet wired to the Case creation or lifecycle UI, and its presence does not mean narratives are now stored locally instead of being transmitted to the API.
+
+**Configuration gate:** deployment must provision a high-entropy, private `JANAVANI_LOCAL_VAULT_SCOPE_SECRET` consistently across canonical API instances. The endpoint returns 503 when it is absent. Secret rotation changes derived scopes; a rotation/migration strategy must be decided before production.
+
+**Verification:** latest recorded commit is `11f373ce17a93ba4b995aa1d0cd6883e3bdfbc6f`. At the time of this ADR update, CI, security, architecture, dependency review, Docker, decentralised verification and preview acceptance workflows were queued/pending; WebApp Vercel status was pending. No passing test result is claimed.
+
+**Remaining blockers:** wire IndexedDB into the actual user journey; ensure create-shell API call replaces the current `submit_complaint_draft()` narrative transmission; provide safe local draft rendering/edit/export and explicit user-initiated transient processing; add browser-level account-switch/logout handling; test IndexedDB transaction abort/quota/unsupported-browser behaviour; configure the dedicated scope secret; run all checks on the exact head; and review XSS/CSP implications. Do not claim device-first end-to-end behaviour until these gates pass.
