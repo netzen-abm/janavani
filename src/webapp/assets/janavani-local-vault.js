@@ -95,6 +95,7 @@
       id: scope + ":" + caseId,
       scope,
       case_id: caseId,
+      server_case_id: String(draft.server_case_id || ""),
       subject,
       narrative,
       updated_at: new Date().toISOString(),
