@@ -20,6 +20,18 @@ def register_webapp_entry_routes(
 ) -> None:
     """Register the WebApp home page and explicitly consented case creation."""
 
+    @rt("/local-vault/scope")
+    def get_local_vault_scope(request: Request):
+        """Proxy the authenticated account namespace without exposing identity data."""
+        try:
+            return client_factory(request).get_local_vault_scope()
+        except (RuntimeError, ValueError):
+            from starlette.responses import JSONResponse
+            return JSONResponse({"error": "Sign-in required"}, status_code=401)
+        except Exception:
+            from starlette.responses import JSONResponse
+            return JSONResponse({"error": "Local vault scope unavailable"}, status_code=503)
+
     @rt("/")
     def get_home():
         """Render the case-workspace entry point."""
