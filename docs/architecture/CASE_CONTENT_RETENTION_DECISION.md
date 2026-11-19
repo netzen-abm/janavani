@@ -119,3 +119,57 @@ This ADR does not select a specific local-vault library, object store, KMS, clou
 7. Obtain independent privacy/security review before production enablement.
 
 **Governing principle:** JANAVANI must not retain citizen information merely because it can. Retention requires a defined purpose, explicit choice, bounded duration, enforceable access controls and demonstrable deletion.
+
+
+## 10. Main-branch content-flow audit — 19 November 2026
+
+This is a read-only source review of the inspected `main` branch. It supplements the policy decision; it does not establish runtime behaviour in a deployed environment.
+
+### WebApp/API path
+
+- `src/web/civic_case_router.py` accepts citizen subject, narrative, claims and jurisdiction in the create request and calls `CivicCaseCapability.create()`.
+- `CivicCaseCapability.create()` first saves the metadata aggregate, then writes the citizen content to the injected content repository. In the inspected shared surface composition, that repository defaults to `InMemoryCaseContentRepository`.
+- The HTTP create response returns only `case_id` and `status`; it does not return the content for client-side persistence.
+- `src/webapp/services/api_client.py` sends the narrative in the HTTPS request but the inspected client exposes no local/IndexedDB content repository or client-side recovery contract.
+- `GET /civic/cases/{case_id}` serializes the result of `get_owned()`, which rehydrates content from the process-local adapter when it is present. Therefore, the current path is transient server-side content handling, not device-first storage. Process restart, worker changes or routing to another process can make content unavailable.
+- The review/ready endpoints accept subject and narrative again and call `hydrate_transient_content()`, which writes into the same process-local adapter. This is a re-supply mechanism, not proof of device-local persistence.
+
+### Telegram path
+
+- `src/commands/shared_case_capability.py` creates a metadata-only Case shell; the raw narrative is not passed to `create()` and is not written to the Case metadata record.
+- The narrative is held in the Telegram conversation/session flow as ephemeral content and re-supplied to the document-generation path. Existing tests assert hydration and subsequent clearing around generation.
+- This is transport/session-transient handling, not durable device-local storage. Exact session backend, TTL, persistence, logging and provider behaviour must be verified separately in runtime configuration.
+
+### Document and artifact path
+
+- `src/documents/artifact_service.py` contains `render_artifact_payload()`, which renders to a temporary directory and returns bytes without using the artifact blob store or document artifact repository. This is the preferred ephemeral WebApp download path.
+- The same module also contains `generate_artifact()`, which writes rendered bytes to an artifact blob store and returns a persistent reference. Every route and runtime composition must be traced to ensure the non-durable flow cannot silently use this persistent path for citizen narrative without an approved purpose and retention disclosure.
+- `DocumentDraft` contains subject and body fields; these are citizen-content-bearing values. Any durable DocumentReview or artifact repository use must be checked for content retention, not assumed safe because the Case table itself is redacted.
+
+### Logging, telemetry and external-provider boundary
+
+The bounded search and inspected files in this pass did not establish that narrative values are logged or sent to analytics/LLM providers, but did not prove their absence across the entire repository or deployed infrastructure. Treat this as **NOT VERIFIED**, not as a clean bill of health. Complete a repository-wide sink review for application logs, request/error middleware, tracing, analytics, crash reports, prompt/provider calls, object storage, database child tables, backups and support tooling.
+
+### Required implementation corrections before claiming device-first
+
+1. WebApp must retain the citizen's working narrative locally (prefer an explicit IndexedDB adapter with owner/session partitioning, versioning and clear lifecycle controls) before submitting it transiently to the API.
+2. WebApp Case creation must use a metadata-shell path or otherwise prove that no default durable content write occurs; current `create()` writes into a server process-local adapter and is not an acceptable device-first contract.
+3. Return only opaque Case metadata from create; client retains and re-supplies content for authorised actions. Do not serialize transient narrative from a process-local repository as if it were durable Case content.
+4. Verify logout/account switch, shared-device isolation, local-data clearing, browser storage denial/quota failure and explicit export/recovery warnings.
+5. Telegram must disclose that its content is held in the Telegram interaction/session workflow and can expire; do not represent Telegram session state as citizen-controlled device storage.
+6. Trace every document draft/review/artifact route to establish whether content is ephemeral or stored. Disable or gate persistent artifact/review paths until their content retention contract is explicit.
+7. Add redaction tests for logs, traces, telemetry and provider payloads; inspect middleware and deployed observability configuration, not only direct logger calls.
+8. Test multi-worker/process-restart behaviour: a metadata Case must remain valid while narrative availability is honestly reported as local/transient. No API may imply recovery that the storage layer cannot provide.
+
+### Updated evidence status
+
+- Device-first policy: approved.
+- WebApp device-local implementation: not evidenced in inspected main.
+- WebApp current handling: transient server-side in-memory repository, with narrative sent in API requests.
+- Telegram handling: metadata shell plus transient conversation content; runtime TTL/storage verification pending.
+- Ephemeral artifact rendering: implementation path present; route-level exclusive use not fully verified.
+- Persistent artifact/document-review retention: route/provider mapping pending.
+- Repository-wide log/telemetry/provider leakage audit: not verified.
+- Production assurance: not established.
+
+**Decision:** Keep Issue #212 open. Do not claim JANAVANI is already device-first. Implement the client-local WebApp boundary and explicit Telegram expiry disclosure before reconsidering production readiness.
