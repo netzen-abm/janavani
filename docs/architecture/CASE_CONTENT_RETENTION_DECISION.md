@@ -191,3 +191,18 @@ A first browser-local storage foundation has been added on the implementation br
 **Verification:** latest recorded commit is `11f373ce17a93ba4b995aa1d0cd6883e3bdfbc6f`. At the time of this ADR update, CI, security, architecture, dependency review, Docker, decentralised verification and preview acceptance workflows were queued/pending; WebApp Vercel status was pending. No passing test result is claimed.
 
 **Remaining blockers:** wire IndexedDB into the actual user journey; ensure create-shell API call replaces the current `submit_complaint_draft()` narrative transmission; provide safe local draft rendering/edit/export and explicit user-initiated transient processing; add browser-level account-switch/logout handling; test IndexedDB transaction abort/quota/unsupported-browser behaviour; configure the dedicated scope secret; run all checks on the exact head; and review XSS/CSP implications. Do not claim device-first end-to-end behaviour until these gates pass.
+
+
+## 11. WebApp local-first Case creation increment — 19 November 2026
+
+The WebApp home-form creation path now has a limited integration with the browser vault:
+
+- The browser resolves its authenticated pseudonymous scope through same-origin `GET /local-vault/scope`; the WebApp proxies this using its request-scoped API client.
+- The narrative input remains disabled until scope resolution succeeds. The browser stores the draft in IndexedDB before any Case creation request; autosaves are serialized and submission waits for pending writes.
+- The browser posts only a local draft reference and Case type to the WebApp. The WebApp adapter calls the canonical metadata-only `POST /civic/cases/shell` with only Case type. No citizen narrative or subject is included in either request.
+- The WebApp responds with no-store JSON containing Case ID, status and `content_transmitted: false`. The browser associates the server Case ID with its local draft record.
+- The UI supports JSON export and explicit clearing of the current account-scoped local drafts.
+
+This is a limited creation-path increment, not end-to-end device-first lifecycle completion. Existing Case prepare/review/artifact routes still interact with canonical document endpoints that may return or persist content. There is not yet a local draft list/reopen/import workspace, a transient document-processing path, or browser-tested logout/account-switch clearing. The local-draft reference check is not proof to the server that a draft exists; the server receives only Case type and returns metadata.
+
+**Security and verification:** IndexedDB is not encrypted by this change; the HMAC scope is a namespace only. XSS, same-origin script execution, browser-profile access, malicious extensions and shared-device exposure remain threats. Tests have been authored for the new request contracts and proxy behaviour, but no exact-head passing CI or browser end-to-end result is claimed. Keep the ADR status at implementation pending until the full acceptance gates in Issue #212 pass.
