@@ -160,3 +160,34 @@ def test_case_shell_endpoint_never_accepts_citizen_content_and_persists_metadata
         headers=_auth_header("principal-other"),
     )
     assert other_view.status_code == 404
+
+
+def test_local_vault_scope_is_authenticated_stable_and_account_scoped(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "test-local-vault-secret")
+    first = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    repeated = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    other = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-b"),
+    )
+    assert first.status_code == 200
+    assert repeated.status_code == 200
+    assert first.json()["scope"] == repeated.json()["scope"]
+    assert first.json()["scope"] != other.json()["scope"]
+    assert len(first.json()["scope"]) == 64
+    assert client.get("/civic/cases/local-vault/scope").status_code == 401
+
+
+def test_local_vault_scope_fails_closed_without_dedicated_secret(monkeypatch) -> None:
+    monkeypatch.delenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", raising=False)
+    response = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    assert response.status_code == 503
