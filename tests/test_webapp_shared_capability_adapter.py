@@ -115,3 +115,29 @@ def test_web_client_create_case_shell_sends_metadata_only(monkeypatch):
     assert calls[0]["url"] == "https://api.example.test/civic/cases/shell"
     assert calls[0]["json"] == {"case_type": "complaint"}
     assert calls[0]["headers"] == {"Authorization": "Bearer verified-user-assertion"}
+
+
+def test_web_client_fetches_authenticated_local_vault_scope(monkeypatch):
+    import src.webapp.services.api_client as api_module
+
+    calls = []
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"scope": "b" * 64}
+
+    def fake_get(url, *, headers, timeout):
+        calls.append({"url": url, "headers": headers, "timeout": timeout})
+        return Response()
+
+    monkeypatch.setattr(api_module.httpx, "get", fake_get)
+    client = JanavaniWebAPIClient(
+        base_url="https://api.example.test",
+        identity_assertion="verified-user-assertion",
+    )
+    assert client.get_local_vault_scope() == {"scope": "b" * 64}
+    assert calls[0]["url"] == "https://api.example.test/civic/cases/local-vault/scope"
+    assert calls[0]["headers"] == {"Authorization": "Bearer verified-user-assertion"}
