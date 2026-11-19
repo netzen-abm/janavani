@@ -77,6 +77,8 @@ def register_webapp_entry_routes(
                             maxlength=20000,
                         ),
                         P(id="local-vault-status", role="status"),
+                        Button("Export local draft (JSON)", id="export-local-draft", type="button"),
+                        Button("Clear local drafts on this browser", id="clear-local-drafts", type="button"),
                         Button("Create Case", type="submit", cls="button-primary"),
                     ),
                     Script("""
@@ -121,6 +123,39 @@ def register_webapp_entry_routes(
                         pendingSave = pendingSave.then(save).catch(error => {
                           setStatus("Local save failed. Do not navigate away. " + error.message);
                         });
+                      });
+                      document.getElementById("export-local-draft").addEventListener("click", async () => {
+                        try {
+                          await pendingSave;
+                          await save();
+                          const draft = await window.JanavaniLocalVault.getDraft(scope, caseId);
+                          const blob = new Blob([JSON.stringify({
+                            schema: "janavani.local-draft.v1",
+                            exported_at: new Date().toISOString(),
+                            draft
+                          }, null, 2)], {type: "application/json"});
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = "janavani-local-draft-" + caseId + ".json";
+                          link.click();
+                          URL.revokeObjectURL(url);
+                          setStatus("A copy of your local draft was exported. Keep it somewhere safe.");
+                        } catch (error) {
+                          setStatus("Export failed. Your local draft remains unchanged. " + error.message);
+                        }
+                      });
+                      document.getElementById("clear-local-drafts").addEventListener("click", async () => {
+                        if (!window.confirm("Permanently clear all JANAVANI local drafts for this signed-in account from this browser? This cannot be undone.")) return;
+                        try {
+                          await window.JanavaniLocalVault.clearScope(scope);
+                          field.value = "";
+                          caseId = "local-" + (window.crypto && crypto.randomUUID
+                            ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+                          setStatus("Local drafts for this account were cleared from this browser.");
+                        } catch (error) {
+                          setStatus("Could not clear local drafts. " + error.message);
+                        }
                       });
                       form.addEventListener("submit", async (event) => {
                         event.preventDefault();
