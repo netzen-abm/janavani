@@ -7,6 +7,7 @@ def test_webapp_registers_case_workspace_routes():
     paths = {getattr(route, "path", "") for route in app.routes}
     assert "/" in paths
     assert "/submit-issue" in paths
+    assert "/local-vault/scope" in paths
     assert "/cases/{case_id}/prepare" in paths
     assert "/cases/{case_id}/review" in paths
     assert "/cases/{case_id}/consent" in paths
@@ -28,8 +29,8 @@ def test_case_creation_requires_explicit_consent_before_calling_api(monkeypatch)
     )
 
     assert response.status_code == 200
-    assert "Consent required" in response.text
-    assert "No case was created" in response.text
+    assert "Local draft required" in response.text
+    assert "No Case was created" in response.text
     assert api_calls == []
 
 
@@ -40,8 +41,8 @@ def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
     response = TestClient(app).post(
         "/submit-issue",
         data={
+            "local_draft_id": "local-12345678-abcd",
             "citizen_input": "The public streetlight has been out for three nights.",
-            "case_processing_consent": "yes",
         },
     )
     assert response.status_code == 200
