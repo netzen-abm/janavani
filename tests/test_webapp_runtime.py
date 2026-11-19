@@ -142,3 +142,45 @@ def test_webapp_serves_the_first_party_local_vault_adapter():
     assert "indexedDB.open" in response.text
     assert "JanavaniLocalVault" in response.text
     assert "local-vault/scope" in response.text
+
+
+def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkeypatch):
+    import src.webapp.main as webapp
+
+    calls = []
+
+    class Client:
+        def create_case_shell(self, *, case_type):
+            calls.append({"case_type": case_type})
+            return {"case_id": "case-shell-test", "status": "draft"}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={
+            "local_draft_id": "local-12345678-abcd",
+            "case_type": "complaint",
+            "citizen_input": "This private narrative must not be sent to the server.",
+        },
+    )
+    assert response.status_code == 200
+    assert "Civic Case shell created" in response.text
+    assert calls == [{"case_type": "complaint"}]
+
+
+def test_submit_issue_rejects_missing_local_draft_reference_before_api_call(monkeypatch):
+    import src.webapp.main as webapp
+
+    calls = []
+    monkeypatch.setattr(
+        webapp,
+        "client_for_request",
+        lambda request: calls.append(request),
+    )
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={"case_type": "complaint", "citizen_input": "Private narrative"},
+    )
+    assert response.status_code == 200
+    assert "Local draft required" in response.text
+    assert calls == []
