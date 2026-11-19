@@ -1,5 +1,8 @@
 """HTTP adapter for the shared civic case and civic action capabilities."""
 from __future__ import annotations
+import hashlib
+import hmac
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
@@ -17,6 +20,25 @@ from src.web.civic_case_models import CaseCreateRequest, CaseShellCreateRequest,
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 router.include_router(document_router)
 router.include_router(lifecycle_router)
+
+@router.get("/local-vault/scope")
+async def get_local_vault_scope(
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, str]:
+    """Return a pseudonymous, stable browser-vault namespace for this principal."""
+    secret = os.getenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Local vault scope service is not configured",
+        )
+    scope = hmac.new(
+        secret.encode("utf-8"),
+        context.principal.principal_id.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return {"scope": scope}
+
 
 @router.post("/shell")
 async def create_case_shell(
