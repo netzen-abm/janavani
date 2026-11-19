@@ -120,7 +120,6 @@ def register_webapp_entry_routes(
                       field.addEventListener("input", () => {
                         pendingSave = pendingSave.then(save).catch(error => {
                           setStatus("Local save failed. Do not navigate away. " + error.message);
-                          throw error;
                         });
                       });
                       form.addEventListener("submit", async (event) => {
