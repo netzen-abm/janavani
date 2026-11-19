@@ -87,3 +87,31 @@ def test_lifecycle_requests_forward_transient_citizen_content(monkeypatch):
         call["headers"] == {"Authorization": "Bearer signed-user-assertion"}
         for call in calls
     )
+
+
+def test_web_client_create_case_shell_sends_metadata_only(monkeypatch):
+    import src.webapp.services.api_client as api_module
+
+    calls = []
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"case_id": "case-shell-123", "status": "draft"}
+
+    def fake_post(url, *, json, headers, timeout):
+        calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+        return Response()
+
+    monkeypatch.setattr(api_module.httpx, "post", fake_post)
+    client = JanavaniWebAPIClient(
+        base_url="https://api.example.test",
+        identity_assertion="verified-user-assertion",
+    )
+    result = client.create_case_shell(case_type="complaint")
+    assert result["case_id"] == "case-shell-123"
+    assert calls[0]["url"] == "https://api.example.test/civic/cases/shell"
+    assert calls[0]["json"] == {"case_type": "complaint"}
+    assert calls[0]["headers"] == {"Authorization": "Bearer verified-user-assertion"}
