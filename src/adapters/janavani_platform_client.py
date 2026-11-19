@@ -25,6 +25,17 @@ class JanavaniWebAPIClient:
             raise RuntimeError("Authenticated Web identity is not configured")
         return {"Authorization": f"Bearer {self.identity_assertion}"}
 
+    def create_case_shell(self, *, case_type: str = "complaint") -> dict[str, Any]:
+        """Create lifecycle metadata only; never accept citizen-authored content."""
+        response = httpx.post(
+            f"{self.base_url}/civic/cases/shell",
+            json={"case_type": case_type},
+            headers=self._headers(),
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
         response = httpx.post(
             f"{self.base_url}/civic/cases",
