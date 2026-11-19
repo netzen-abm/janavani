@@ -138,9 +138,12 @@ def register_webapp_entry_routes(
                             })
                           });
                           if (!response.ok) throw new Error("Could not create the Case shell.");
-                          document.open();
-                          document.write(await response.text());
-                          document.close();
+                          const created = await response.json();
+                          await window.JanavaniLocalVault.saveDraft(scope, {
+                            case_id: caseId, server_case_id: created.case_id,
+                            subject: "Civic complaint", narrative: field.value
+                          });
+                          setStatus("Case " + created.case_id + " created. Your complaint remains in this browser; only Case metadata was sent.");
                         } catch (error) {
                           setStatus("Case not created. Your local draft remains in this browser. " + error.message);
                         }
@@ -173,14 +176,12 @@ def register_webapp_entry_routes(
             return Div(Div(H3("Case creation unavailable"), P("No Case was created. Your local draft remains in this browser."), A("Return", href="/"), cls="card"))
         if "error" in result:
             return Div(Div(H3("Case creation failed"), P(result["error"]), A("Return", href="/"), cls="card"))
-        return Div(
-            Div(
-                H2("Civic Case shell created"),
-                P(f"Case ID: {result.get('case_id')}"),
-                P(f"Status: {result.get('status')}"),
-                P("Your narrative remains in this browser. The server received Case metadata only. This Case shell does not contain your complaint text."),
-                P("Do not clear this browser's site data if you need the local draft. Cross-device recovery is not available in device-first mode."),
-                A("Return to dashboard", href="/"),
-                cls="card",
-            )
+        from starlette.responses import JSONResponse
+        return JSONResponse(
+            {
+                "case_id": result.get("case_id"),
+                "status": result.get("status"),
+                "content_transmitted": False,
+            },
+            headers={"Cache-Control": "no-store, private"},
         )
