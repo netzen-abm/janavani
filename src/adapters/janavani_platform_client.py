@@ -25,6 +25,16 @@ class JanavaniWebAPIClient:
             raise RuntimeError("Authenticated Web identity is not configured")
         return {"Authorization": f"Bearer {self.identity_assertion}"}
 
+    def get_local_vault_scope(self) -> dict[str, Any]:
+        """Fetch the authenticated pseudonymous namespace for browser-local drafts."""
+        response = httpx.get(
+            f"{self.base_url}/civic/cases/local-vault/scope",
+            headers=self._headers(),
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def create_case_shell(self, *, case_type: str = "complaint") -> dict[str, Any]:
         """Create lifecycle metadata only; never accept citizen-authored content."""
         response = httpx.post(
