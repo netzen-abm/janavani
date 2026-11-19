@@ -165,7 +165,11 @@ def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkey
         },
     )
     assert response.status_code == 200
-    assert "Civic Case shell created" in response.text
+    assert response.json() == {
+        "case_id": "case-shell-test",
+        "status": "draft",
+        "content_transmitted": False,
+    }
     assert calls == [{"case_type": "complaint"}]
 
 
