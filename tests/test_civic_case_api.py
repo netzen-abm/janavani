@@ -125,3 +125,38 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     assert consent.json()["consent_recorded"] is True
     assert consent.json()["status"] == "ready"
     assert consent.json()["delivery"] == "citizen_download_and_self_send"
+
+
+
+def test_case_shell_endpoint_never_accepts_citizen_content_and_persists_metadata_only() -> None:
+    rejected = client.post(
+        "/civic/cases/shell",
+        headers=_auth_header("principal-shell"),
+        json={
+            "case_type": "complaint",
+            "narrative": "This must never be accepted by the metadata-shell endpoint.",
+        },
+    )
+    assert rejected.status_code == 422
+
+    created = client.post(
+        "/civic/cases/shell",
+        headers=_auth_header("principal-shell"),
+        json={"case_type": "complaint"},
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    owner_view = client.get(
+        f"/civic/cases/{case_id}",
+        headers=_auth_header("principal-shell"),
+    )
+    assert owner_view.status_code == 200
+    assert owner_view.json()["narrative"] == ""
+    assert owner_view.json()["subject"] == "complaint"
+
+    other_view = client.get(
+        f"/civic/cases/{case_id}",
+        headers=_auth_header("principal-other"),
+    )
+    assert other_view.status_code == 404
