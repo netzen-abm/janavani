@@ -185,3 +185,16 @@ def test_submit_issue_rejects_missing_local_draft_reference_before_api_call(monk
     assert response.status_code == 200
     assert "Local draft required" in response.text
     assert calls == []
+
+
+def test_local_vault_scope_route_proxies_authenticated_scope(monkeypatch):
+    import src.webapp.main as webapp
+
+    class Client:
+        def get_local_vault_scope(self):
+            return {"scope": "a" * 64}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).get("/local-vault/scope")
+    assert response.status_code == 200
+    assert response.json() == {"scope": "a" * 64}
