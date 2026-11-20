@@ -137,14 +137,14 @@ def test_webapp_owns_the_canonical_drafting_and_saved_format_ui():
 def test_webapp_serves_the_first_party_local_vault_adapter():
     from src.webapp.main import app
 
-    response = TestClient(app).get("/assets/janavani-local-vault.js")
+    response = TestClient(app).get("/assets/janavani-local-vault")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/javascript")
     assert "indexedDB.open" in response.text
     assert "JanavaniLocalVault" in response.text
     assert "local-vault/scope" in response.text
 
-    controller = TestClient(app).get("/assets/janavani-local-draft-form.js")
+    controller = TestClient(app).get("/assets/janavani-local-draft-form")
     assert controller.status_code == 200
     assert controller.headers["content-type"].startswith("application/javascript")
     assert "checkAccountScope" in controller.text

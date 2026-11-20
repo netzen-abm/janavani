@@ -95,7 +95,7 @@ def register_webapp_entry_routes(
                         Button("Clear local drafts on this browser", id="clear-local-drafts", type="button"),
                         Button("Create Case", type="submit", cls="button-primary"),
                     ),
-                    Script(src="/assets/janavani-local-draft-form.js"),
+                    Script(src="/assets/janavani-local-draft-form"),
                     cls="card",
                 ),
                 cls="container",

@@ -25,11 +25,11 @@ app, rt = fast_app(
             .triangle-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background-color: #ffe6e6; color: #cc0000; }
         """),
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
-        Script(src="/assets/janavani-local-vault.js"),
+        Script(src="/assets/janavani-local-vault"),
     )
 )
 
-@rt("/assets/janavani-local-draft-form.js")
+@rt("/assets/janavani-local-draft-form")
 def serve_local_draft_form_controller():
     """Serve the first-party browser workspace controller."""
     asset = Path(__file__).parent / "assets" / "janavani-local-draft-form.js"
@@ -40,7 +40,7 @@ def serve_local_draft_form_controller():
     )
 
 
-@rt("/assets/janavani-local-vault.js")
+@rt("/assets/janavani-local-vault")
 def serve_local_vault_adapter():
     """Serve the versioned first-party browser-local draft adapter."""
     asset = Path(__file__).parent / "assets" / "janavani-local-vault.js"
