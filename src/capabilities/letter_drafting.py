@@ -12,7 +12,7 @@ from src.capabilities.document_review import DocumentReviewCapability
 from src.documents.document_contract import DocumentDraft
 from src.identity.context import IdentityContext
 from src.capabilities.letter_body import compose_letter_body, compose_template_body
-from src.documents.template_catalogue import get_template
+from src.documents.template_catalogue import CivicDocumentTemplate, get_template
 
 
 @dataclass(frozen=True)
@@ -69,6 +69,52 @@ class LetterDraftingCapability:
         self._civic_action = civic_action
         self._document_review = document_review
 
+    @staticmethod
+    def compose(
+        request: LetterDraftRequest,
+        *,
+        template: CivicDocumentTemplate | None = None,
+    ) -> tuple[CivicDocumentTemplate | None, str]:
+        """Validate and compose via the canonical catalogue without persistence."""
+        if not request.subject.strip() or not request.issue.strip():
+            raise ValueError("A subject and issue are required")
+        if request.template_id is None:
+            if request.template_version is not None or template is not None:
+                raise ValueError("A template ID is required when a template is supplied")
+        else:
+            canonical = get_template(
+                request.template_id, version=request.template_version, language=request.language
+            )
+            if template is not None and (
+                template.template_id != canonical.template_id
+                or template.version != canonical.version
+                or template.language != canonical.language
+            ):
+                raise ValueError("The selected template does not match the approved catalogue version")
+            template = template or canonical
+        if template is not None:
+            missing = [
+                name for name in template.required_fields
+                if not getattr(request, name, None)
+                or (isinstance(getattr(request, name), str) and not getattr(request, name).strip())
+            ]
+            if missing:
+                raise ValueError("Template requires: " + ", ".join(missing))
+        if request.legal_framework and not (request.jurisdiction or "").strip():
+            raise ValueError("Jurisdiction is required when legal framework is supplied")
+        if request.response_period is not None and not request.response_period.strip():
+            raise ValueError("Response period cannot be blank")
+        if request.deadline_date is not None and not request.deadline_date.strip():
+            raise ValueError("Deadline date cannot be blank")
+        for name in ("evidence_refs", "provenance_refs"):
+            if any(not value.strip() for value in getattr(request, name)):
+                raise ValueError(f"{name} cannot contain blank references")
+        source = "\n".join((request.subject, request.issue, request.proposal_or_notice))
+        if any(token.lower() in source.lower() for token in ("[Insert ", "{{", "Dear X", "<recipient>")):
+            raise ValueError("Draft contains unresolved placeholder text")
+        body = compose_template_body(request, template) if template else compose_letter_body(request)
+        return template, body
+
     def create_draft(
         self,
         case_id: str,
@@ -78,21 +124,7 @@ class LetterDraftingCapability:
         document_id: str | None = None,
         date: str | None = None,
     ) -> LetterDraftResult:
-        if not request.subject.strip():
-            raise ValueError("A subject is required")
-        if not request.issue.strip():
-            raise ValueError("An issue is required")
-
-        template = None
-        if request.template_id is not None:
-            template = get_template(
-                request.template_id,
-                version=request.template_version,
-                language=request.language,
-            )
-        elif request.template_version is not None:
-            raise ValueError("A template ID is required when a template version is supplied")
-
+        template, body = self.compose(request)
         built = self._civic_action.build_document(
             case_id,
             identity=identity,
@@ -104,7 +136,7 @@ class LetterDraftingCapability:
             built.draft,
             document_type=template.document_type if template else request.document_type,
             subject=request.subject.strip(),
-            body=compose_template_body(request, template) if template else compose_letter_body(request),
+            body=body,
             template_id=template.template_id if template else None,
             template_version=template.version if template else None,
         )
@@ -128,25 +160,6 @@ class LetterDraftingCapability:
                 raise ValueError(
                     f"Template {template.template_id} is not compatible with case type {case_type}"
                 )
-            missing = []
-            for field_name in template.required_fields:
-                value = getattr(request, field_name, None)
-                if not value or (isinstance(value, str) and not value.strip()):
-                    missing.append(field_name)
-            if missing:
-                raise ValueError("Template requires: " + ", ".join(missing))
-        if request.legal_framework and not (request.jurisdiction or "").strip():
-            raise ValueError("Jurisdiction is required when legal framework is supplied")
-        if request.response_period is not None and not request.response_period.strip():
-            raise ValueError("Response period cannot be blank")
-        if request.deadline_date is not None and not request.deadline_date.strip():
-            raise ValueError("Deadline date cannot be blank")
-        for field_name, values in (
-            ("evidence_refs", request.evidence_refs),
-            ("provenance_refs", request.provenance_refs),
-        ):
-            if any(not value.strip() for value in values):
-                raise ValueError(f"{field_name} cannot contain blank references")
         missing_evidence = [
             ref for ref in request.evidence_refs if ref not in case.evidence_refs
         ]
@@ -155,8 +168,4 @@ class LetterDraftingCapability:
                 "Letter evidence references are not attached to the case: "
                 + ", ".join(missing_evidence)
             )
-        content = "\n".join((request.subject, request.issue, request.proposal_or_notice))
-        forbidden_placeholders = ("[Insert ", "{{", "Dear X", "<recipient>")
-        if any(token.lower() in content.lower() for token in forbidden_placeholders):
-            raise ValueError("Draft contains unresolved placeholder text")
 

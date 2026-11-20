@@ -9,8 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-from src.capabilities.letter_body import compose_template_body
-from src.capabilities.letter_drafting import LetterDraftRequest
+from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.documents.template_catalogue import get_template
 from src.documents.citizen_document_format import canonical_section_fields
 from src.identity.context import IdentityContext
@@ -85,11 +84,6 @@ class CivicDraftPreviewWorkflow:
             ):
                 raise ValueError("Specify the existing records requested in the RTI draft")
 
-        required_values = {"subject": subject, "issue": issue, "jurisdiction": request.jurisdiction.strip(), "requested_documents": request.requested_documents}
-        missing = [name for name in template.required_fields if not required_values.get(name)]
-        if missing:
-            raise ValueError("Template requires: " + ", ".join(missing))
-
         proposal = existing
         interrogatories = request.part_i_interrogatories
         conditions = request.requested_conditions
@@ -140,13 +134,16 @@ class CivicDraftPreviewWorkflow:
             template_id=template.template_id,
             template_version=template.version,
         )
+        template, draft_body = LetterDraftingCapability.compose(
+            draft_request, template=template
+        )
         return {
             "status": "preview",
             "template_id": template.template_id,
             "template_version": template.version,
             "document_type": template.document_type,
             "subject": subject,
-            "draft_body": compose_template_body(draft_request, template),
+            "draft_body": draft_body,
             "ai_used": ai_used,
             "ai_status": ai_status,
             "message": message,

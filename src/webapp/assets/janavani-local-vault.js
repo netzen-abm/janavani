@@ -74,9 +74,14 @@
         tx.onerror = () => reject(tx.error || new Error("Local draft transaction failed."));
         tx.onabort = () => reject(tx.error || new Error("Local draft transaction was aborted."));
       });
-      const result = await operation(store);
-      await completed;
-      return result;
+      try {
+        const result = await operation(store);
+        await completed;
+        return result;
+      } catch (error) {
+        await completed.catch(() => undefined);
+        throw error;
+      }
     } finally {
       db.close();
     }

@@ -233,3 +233,28 @@ def test_administrative_evidence_demand_requires_jurisdiction_and_uses_saved_def
     assert "self-executing instrument" not in body
     assert result["persistence"] == "not_persisted"
     assert result["submission"] == "not_submitted"
+
+
+
+def test_transient_preview_uses_the_canonical_letter_drafting_composer():
+    from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
+    from src.documents.template_catalogue import get_template
+
+    request = LetterDraftRequest(
+        subject="Broken streetlight",
+        issue="The public streetlight has not worked for three nights.",
+        template_id="complaint.general",
+    )
+    _, canonical_body = LetterDraftingCapability.compose(
+        request, template=get_template("complaint.general")
+    )
+    preview = CivicDraftPreviewWorkflow(agent=FakeAgent()).preview(
+        CivicDraftPreviewRequest(
+            template_id="complaint.general",
+            subject=request.subject,
+            issue=request.issue,
+        )
+    )
+    assert preview["draft_body"] == canonical_body
+    assert preview["persistence"] == "not_persisted"
+    assert preview["submission"] == "not_submitted"
