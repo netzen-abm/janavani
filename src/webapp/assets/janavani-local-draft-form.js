@@ -213,28 +213,40 @@
       if (!(await checkAccountScope())) throw new Error("Sign in again before creating a Case.");
       await pendingSave;
       await save();
-      if (!(await checkAccountScope())) {
-        setStatus("The account changed while the Case request was running. Your local draft remains under the previous account; verify Case creation after signing back in.");
-        return;
-      }
+      const requestScope = scope;
+      const requestCaseId = caseId;
+      const requestNarrative = field.value;
       const response = await fetch("/submit-issue", {
         method: "POST",
         credentials: "same-origin",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: new URLSearchParams({
           case_type: "complaint",
-          local_draft_id: caseId
+          local_draft_id: requestCaseId
         })
       });
       if (!response.ok) throw new Error("Could not create the Case shell.");
       const created = await response.json();
-      await window.JanavaniLocalVault.saveDraft(scope, {
-        case_id: caseId, server_case_id: created.case_id,
-        subject: "Civic complaint", narrative: field.value
+      // Associate the metadata shell only with the exact local account/draft
+      // that initiated this request, even if the browser account changed in flight.
+      await window.JanavaniLocalVault.saveDraft(requestScope, {
+        case_id: requestCaseId, server_case_id: created.case_id,
+        subject: "Civic complaint", narrative: requestNarrative
       });
+      const currentScope = await window.JanavaniLocalVault.resolveScope().catch(() => null);
+      if (currentScope !== requestScope) {
+        await checkAccountScope();
+        setStatus("A Case shell was created for the account active when you requested it. Sign into that account to see its local association; no draft was copied into this account.");
+        return;
+      }
+      if (scope !== requestScope || caseId !== requestCaseId) {
+        await restoreForScope(currentScope);
+        setStatus("Case shell created for the earlier draft. Reopen that draft to see its Case association.");
+        return;
+      }
       setStatus("Case " + created.case_id + " created. Your complaint remains in this browser; only Case metadata was sent.");
     } catch (error) {
-      setStatus("Case not created. Your local draft remains in this browser. " + error.message);
+      setStatus("Case not created or linked. Your local draft remains in this browser. " + error.message);
     }
   });
 })();
