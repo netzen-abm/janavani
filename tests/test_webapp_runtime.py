@@ -216,7 +216,7 @@ def test_home_page_renders_local_draft_workspace_and_storage_disclosure():
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert "local-case-draft-form" in response.text
-    assert "janavani-local-draft-form.js" in response.text
+    assert "/assets/janavani-local-draft-form" in response.text
     assert "not encrypted by Janavani" in response.text
 
 
