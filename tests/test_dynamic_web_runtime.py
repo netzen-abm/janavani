@@ -1,0 +1,224 @@
+from fastapi.testclient import TestClient
+
+from src.dynamic_web.main import app
+from src.dynamic_web.pathways import PATHWAYS as _PATHWAYS
+from src.documents.template_catalogue import get_template
+
+
+def test_dynamic_root_redirects_to_the_canonical_wordpress_portal(monkeypatch):
+    monkeypatch.setenv("JANAVANI_WORDPRESS_PORTAL_URL", "https://janavani7.wordpress.com")
+    response = TestClient(app, follow_redirects=False).get("/")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://janavani7.wordpress.com/"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert "WE, THE PEOPLE OF INDIA" not in response.text
+
+
+def test_dynamic_privacy_route_redirects_to_the_authoritative_wordpress_page(monkeypatch):
+    monkeypatch.setenv("JANAVANI_WORDPRESS_PORTAL_URL", "https://janavani7.wordpress.com")
+    response = TestClient(app, follow_redirects=False).get("/privacy")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://janavani7.wordpress.com/privacy-safety/"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_dynamic_public_routes_fail_closed_without_portal_configuration(monkeypatch):
+    monkeypatch.delenv("JANAVANI_WORDPRESS_PORTAL_URL", raising=False)
+    client = TestClient(app, follow_redirects=False)
+
+    assert client.get("/").status_code == 503
+    assert client.get("/privacy").status_code == 503
+
+
+def test_dynamic_site_pathway_registry_resolves_only_canonical_templates():
+    for pathway in _PATHWAYS.values():
+        template = get_template(pathway["template_id"])
+        assert template.template_id == pathway["template_id"]
+
+
+def test_existing_records_pathway_recommends_rti_without_conflating_explanations():
+    response = TestClient(app).post("/pathway", data={"purpose": "existing_records"})
+    assert response.status_code == 200
+    assert "RTI application" in response.text
+    assert "existing records" in response.text.lower()
+    assert "newly written explanation" in response.text
+    assert "/ai-drafting?template_id=rti.records" in response.text
+
+
+def test_fee_notice_pathway_reuses_administrative_evidence_demand_template():
+    response = TestClient(app).post("/pathway", data={"purpose": "challenge_notice"})
+    assert response.status_code == 200
+    assert "Administrative notice reply" in response.text
+    assert "does not establish that the fee is invalid" in response.text
+    assert "/ai-drafting?template_id=administrative.evidence-demand" in response.text
+
+
+def test_unknown_pathway_fails_closed_to_supported_selector():
+    response = TestClient(app).post("/pathway", data={"purpose": "invented-pathway"})
+    assert response.status_code == 200
+    assert "Select one of the listed tasks" in response.text
+    assert "Continue to this document format" not in response.text
+
+
+def test_dynamic_site_redirects_drafting_to_the_canonical_webapp(monkeypatch):
+    monkeypatch.setenv("JANAVANI_CANONICAL_WEBAPP_URL", "https://webapp.example.test")
+    client = TestClient(app, follow_redirects=False)
+    response = client.get("/ai-drafting?template_id=rti.records&ignored=discard")
+
+    assert response.status_code == 307
+    assert response.headers["location"] == (
+        "https://webapp.example.test/ai-drafting?template_id=rti.records"
+    )
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_dynamic_site_redirects_saved_formats_to_the_canonical_webapp(monkeypatch):
+    monkeypatch.setenv("JANAVANI_CANONICAL_WEBAPP_URL", "https://webapp.example.test")
+    client = TestClient(app, follow_redirects=False)
+
+    listed = client.get("/citizen-formats")
+    assert listed.status_code == 307
+    assert listed.headers["location"] == "https://webapp.example.test/citizen-formats"
+
+    confirm = client.get(
+        "/citizen-formats/confirm?template_id=complaint.general"
+        "&template_version=1&tracking=discard"
+    )
+    assert confirm.status_code == 307
+    assert confirm.headers["location"] == (
+        "https://webapp.example.test/citizen-formats/confirm"
+        "?template_id=complaint.general&template_version=1"
+    )
+
+
+
+def test_canonical_webapp_forwards_administrative_fields_to_the_canonical_preview(monkeypatch):
+    from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+    from src.webapp.main import app as webapp_app
+
+    received = {}
+
+    def fake_preview(self, payload):
+        received.update(payload)
+        return {
+            "status": "preview",
+            "template_id": payload["template_id"],
+            "template_version": 1,
+            "ai_used": False,
+            "ai_status": "not_requested",
+            "message": "Deterministic preview generated for review.",
+            "draft_body": "Review this editable administrative draft.",
+            "persistence": "not_persisted",
+            "submission": "not_submitted",
+        }
+
+    monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", fake_preview)
+    response = TestClient(webapp_app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "administrative.evidence-demand",
+            "issue": "The local authority has imposed a recurring fee.",
+            "preview_processing_consent": "yes",
+            "jurisdiction": "Relevant municipal authority",
+            "requested_documents": "Copy of the enabling order\nCopy of the calculation record",
+            "part_i_interrogatories": "Identify the enabling law\nExplain the calculation method",
+            "requested_conditions": "Provide a point-by-point response",
+            "remedies_reserved": "Any lawful remedy available on the facts",
+            "response_period": "14 days requested; verify applicable law",
+            "deadline_date": "15 November 2026",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert received["requested_documents"] == [
+        "Copy of the enabling order",
+        "Copy of the calculation record",
+    ]
+    assert received["part_i_interrogatories"] == [
+        "Identify the enabling law",
+        "Explain the calculation method",
+    ]
+    assert received["requested_conditions"] == ["Provide a point-by-point response"]
+    assert received["remedies_reserved"] == ["Any lawful remedy available on the facts"]
+    assert received["response_period"] == "14 days requested; verify applicable law"
+    assert received["deadline_date"] == "15 November 2026"
+    assert received["preview_processing_consent"] is True
+    assert received["use_ai"] is False
+    assert received["remote_processing_consent"] is False
+
+
+def test_canonical_webapp_does_not_call_preview_api_without_processing_consent(monkeypatch):
+    from src.adapters.janavani_platform_client import JanavaniWebAPIClient
+    from src.webapp.main import app as webapp_app
+
+    def forbidden_preview(self, payload):
+        raise AssertionError("Preview API must not be called without consent")
+
+    monkeypatch.setattr(JanavaniWebAPIClient, "preview_civic_draft", forbidden_preview)
+    response = TestClient(webapp_app).post(
+        "/ai-drafting/preview",
+        data={
+            "template_id": "complaint.general",
+            "issue": "Sensitive test narrative that must not be forwarded.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Processing consent required" in response.text
+    assert "No request was forwarded to the canonical preview API" in response.text
+
+
+def test_dynamic_site_serves_packaged_brand_mark_with_cache_headers():
+    response = TestClient(app).get("/brand-assets/brand/janavani-mark")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    assert '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="702" height="694">' in response.text
+
+
+def test_dynamic_site_serves_selected_favicon():
+    response = TestClient(app).get("/favicon.svg")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert len(response.content) > 100_000
+
+
+def test_dynamic_site_serves_imported_webp_illustrations_with_cache_headers():
+    for path in (
+        "/brand-assets/illustrations/preamble-of-india",
+        "/brand-assets/illustrations/civic-action-pathway",
+    ):
+        response = TestClient(app).get(path)
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/webp")
+        assert response.headers["cache-control"] == "public, max-age=86400"
+        assert len(response.content) > 1000
+
+
+def test_dynamic_site_liveness_is_independent_of_api_and_telegram():
+    response = TestClient(app).get("/liveness")
+    assert response.status_code == 200
+    assert response.json() == {"status": "alive", "surface": "dynamic-web"}
+
+
+def test_dynamic_site_marks_post_responses_no_store():
+    response = TestClient(app).post("/pathway", data={"purpose": "report_issue"})
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["pragma"] == "no-cache"
+
+
+def test_render_declares_dynamic_pathway_runtime_and_canonical_portal():
+    from pathlib import Path
+
+    manifest = (Path(__file__).resolve().parents[1] / "render.yaml").read_text(encoding="utf-8")
+    assert "name: janavani-dynamic-web" in manifest
+    assert "uvicorn src.dynamic_web.main:app" in manifest
+    assert "healthCheckPath: /liveness" in manifest
+    assert "JANAVANI_WORDPRESS_PORTAL_URL" in manifest
+    assert "JANAVANI_CANONICAL_WEBAPP_URL" in manifest
