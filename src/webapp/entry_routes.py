@@ -87,6 +87,7 @@ def register_webapp_entry_routes(
                         P(id="local-vault-status", role="status"),
                         Label("Saved drafts in this browser"),
                         Select(id="local-draft-list"),
+                        Button("New local draft", id="new-local-draft", type="button"),
                         Button("Open selected draft", id="open-local-draft", type="button"),
                         Button("Delete selected draft", id="delete-local-draft", type="button"),
                         Label("Import a JANAVANI JSON draft"),

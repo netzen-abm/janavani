@@ -225,6 +225,8 @@ def test_home_page_renders_local_draft_workspace_and_storage_disclosure():
     assert response.status_code == 200
     assert "local-case-draft-form" in response.text
     assert "/assets/janavani-local-draft-form" in response.text
+    assert 'New local draft' in response.text
+    assert 'new-local-draft' in response.text
     assert "not encrypted by Janavani" in response.text
 
 

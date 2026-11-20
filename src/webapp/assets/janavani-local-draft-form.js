@@ -23,7 +23,13 @@
       option.selected = draft.case_id === selectedId;
       draftList.appendChild(option);
     });
-    if (!draftList.options.length) {
+    if (selectedId && !drafts.some(draft => draft.case_id === selectedId)) {
+      const option = document.createElement("option");
+      option.value = selectedId;
+      option.textContent = "New local draft (not saved yet)";
+      option.selected = true;
+      draftList.appendChild(option);
+    } else if (!draftList.options.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "No saved drafts";
@@ -104,6 +110,20 @@
   window.addEventListener("focus", () => { checkAccountScope(); });
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) checkAccountScope();
+  });
+  document.getElementById("new-local-draft").addEventListener("click", async () => {
+    try {
+      if (!(await checkAccountScope())) return;
+      await pendingSave;
+      await save();
+      caseId = newLocalId();
+      field.value = "";
+      await refreshDraftList(caseId);
+      setStatus("New local draft started. Your previous draft remains saved in this browser.");
+      field.focus();
+    } catch (error) {
+      setStatus("Could not start a new local draft. " + error.message);
+    }
   });
   document.getElementById("open-local-draft").addEventListener("click", async () => {
     try {
