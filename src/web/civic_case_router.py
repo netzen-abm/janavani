@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
@@ -23,9 +23,15 @@ router.include_router(lifecycle_router)
 
 @router.get("/local-vault/scope")
 async def get_local_vault_scope(
+    response: Response,
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, str]:
     """Return a pseudonymous, stable browser-vault namespace for this principal."""
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Vary"] = "Authorization"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
     secret = os.getenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "").strip()
     if not secret:
         raise HTTPException(

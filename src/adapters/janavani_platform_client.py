@@ -46,16 +46,6 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
-    def create_case(self, *, subject: str, narrative: str, case_type: str = "complaint") -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/civic/cases",
-            json={"case_type": case_type, "subject": subject, "narrative": narrative},
-            headers=self._headers(),
-            timeout=20.0,
-        )
-        response.raise_for_status()
-        return response.json()
-
     def get_case(self, case_id: str) -> dict[str, Any]:
         response = httpx.get(
             f"{self.base_url}/civic/cases/{case_id}",
@@ -172,22 +162,6 @@ class JanavaniWebAPIClient:
         )
         response.raise_for_status()
         return response.json()
-
-    def submit_complaint_draft(self, citizen_input: str) -> dict[str, Any]:
-        """Deprecated compatibility adapter; submission is never performed by Janavani."""
-        narrative = citizen_input.strip()
-        if not narrative:
-            raise ValueError("Describe the civic issue before creating a Case")
-        subject = " ".join(narrative.splitlines()[0].split())[:120] or "Citizen civic issue"
-        result = self.create_case(subject=subject, narrative=narrative)
-        return {"case_id": result["case_id"], "status": result["status"], "delivery": "citizen_download_and_self_send"}
-
-    def download_constitutional_objection(
-        self, bill_code: str, comments: str, format_choice: str
-    ) -> bytes | None:
-        """Legacy UI hook retained without reviving the retired dispatch path."""
-        del bill_code, comments, format_choice
-        return None
 
 def client_for_request(request: object) -> JanavaniWebAPIClient:
     """Build a citizen-scoped API client from a trusted gateway assertion cookie.

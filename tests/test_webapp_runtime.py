@@ -144,6 +144,11 @@ def test_webapp_serves_the_first_party_local_vault_adapter():
     assert "JanavaniLocalVault" in response.text
     assert "local-vault/scope" in response.text
 
+    controller = TestClient(app).get("/assets/janavani-local-draft-form.js")
+    assert controller.status_code == 200
+    assert controller.headers["content-type"].startswith("application/javascript")
+    assert "checkAccountScope" in controller.text
+
 
 def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkeypatch):
     import src.webapp.main as webapp
@@ -202,3 +207,29 @@ def test_local_vault_scope_route_proxies_authenticated_scope(monkeypatch):
     response = TestClient(webapp.app).get("/local-vault/scope")
     assert response.status_code == 200
     assert response.json() == {"scope": "a" * 64}
+
+
+
+def test_home_page_renders_local_draft_workspace_and_storage_disclosure():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/")
+    assert response.status_code == 200
+    assert "local-case-draft-form" in response.text
+    assert "janavani-local-draft-form.js" in response.text
+    assert "not encrypted by Janavani" in response.text
+
+
+def test_local_vault_scope_proxy_is_private_and_uncached(monkeypatch):
+    import src.webapp.main as webapp
+
+    class Client:
+        def get_local_vault_scope(self):
+            return {"scope": "b" * 64}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).get("/local-vault/scope")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["pragma"] == "no-cache"

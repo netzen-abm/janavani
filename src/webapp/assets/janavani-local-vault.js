@@ -69,12 +69,13 @@
     try {
       const tx = db.transaction(STORE, mode);
       const store = tx.objectStore(STORE);
-      const result = await operation(store);
-      await new Promise((resolve, reject) => {
+      const completed = new Promise((resolve, reject) => {
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error || new Error("Local draft transaction failed."));
         tx.onabort = () => reject(tx.error || new Error("Local draft transaction was aborted."));
       });
+      const result = await operation(store);
+      await completed;
       return result;
     } finally {
       db.close();

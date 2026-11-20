@@ -178,6 +178,8 @@ def test_local_vault_scope_is_authenticated_stable_and_account_scoped(monkeypatc
     )
     assert first.status_code == 200
     assert repeated.status_code == 200
+    assert first.headers["cache-control"] == "no-store, private"
+    assert first.headers["pragma"] == "no-cache"
     assert first.json()["scope"] == repeated.json()["scope"]
     assert first.json()["scope"] != other.json()["scope"]
     assert len(first.json()["scope"]) == 64

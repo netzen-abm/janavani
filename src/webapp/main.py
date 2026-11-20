@@ -29,6 +29,17 @@ app, rt = fast_app(
     )
 )
 
+@rt("/assets/janavani-local-draft-form.js")
+def serve_local_draft_form_controller():
+    """Serve the first-party browser workspace controller."""
+    asset = Path(__file__).parent / "assets" / "janavani-local-draft-form.js"
+    return FileResponse(
+        asset,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 @rt("/assets/janavani-local-vault.js")
 def serve_local_vault_adapter():
     """Serve the versioned first-party browser-local draft adapter."""

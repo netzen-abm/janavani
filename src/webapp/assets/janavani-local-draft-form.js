@@ -6,6 +6,8 @@
   let scope = null;
   let caseId = null;
   let pendingSave = Promise.resolve();
+  let scopeCheck = null;
+  const MAX_IMPORT_BYTES = 256 * 1024;
   field.disabled = true;
   const setStatus = (message) => { status.textContent = message; };
   const draftList = document.getElementById("local-draft-list");
@@ -28,41 +30,84 @@
       draftList.appendChild(option);
     }
   };
+  const restoreForScope = async (nextScope) => {
+    scope = nextScope;
+    caseId = newLocalId();
+    field.value = "";
+    const drafts = await window.JanavaniLocalVault.listDrafts(scope);
+    const latest = drafts.sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+    if (latest) {
+      caseId = latest.case_id;
+      field.value = latest.narrative || "";
+      setStatus("Your latest local draft was restored in this browser.");
+    } else {
+      setStatus("Drafts stay in this browser until you choose to create a Case.");
+    }
+    await refreshDraftList(caseId);
+    field.disabled = false;
+  };
+  const checkAccountScope = () => {
+    if (scopeCheck) return scopeCheck;
+    scopeCheck = (async () => {
+      try {
+        const currentScope = await window.JanavaniLocalVault.resolveScope();
+        if (currentScope === scope) return true;
+        await pendingSave;
+        await restoreForScope(currentScope);
+        setStatus("The signed-in account changed. Drafts remain isolated by account.");
+        return false;
+      } catch (_error) {
+        await pendingSave;
+        scope = null;
+        caseId = null;
+        field.value = "";
+        field.disabled = true;
+        draftList.replaceChildren();
+        setStatus("Sign in again to access local drafts. Previous account drafts remain in this browser.");
+        return false;
+      }
+    })();
+    return scopeCheck.finally(() => { scopeCheck = null; });
+  };
   const save = async () => {
-    if (!scope || !caseId) return;
-    await window.JanavaniLocalVault.saveDraft(scope, {
-      case_id: caseId, subject: "Civic complaint", narrative: field.value
+    const writeScope = scope;
+    const writeCaseId = caseId;
+    const narrative = field.value;
+    if (!writeScope || !writeCaseId) return;
+    await window.JanavaniLocalVault.saveDraft(writeScope, {
+      case_id: writeCaseId, subject: "Civic complaint", narrative
     });
     setStatus("Draft saved in this browser. It is not a server backup.");
   };
   (async () => {
     try {
-      scope = await window.JanavaniLocalVault.resolveScope();
-      caseId = "local-" + (window.crypto && crypto.randomUUID
-        ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
-      const drafts = await window.JanavaniLocalVault.listDrafts(scope);
-      const latest = drafts.sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
-      if (latest) {
-        caseId = latest.case_id;
-        field.value = latest.narrative || "";
-        setStatus("Your latest local draft was restored in this browser.");
-      } else {
-        setStatus("Drafts stay in this browser until you choose to create a Case.");
-      }
-      await refreshDraftList(caseId);
-      field.disabled = false;
+      await restoreForScope(await window.JanavaniLocalVault.resolveScope());
     } catch (error) {
       field.disabled = true;
       setStatus("Local draft storage is unavailable. No content will be sent. " + error.message);
     }
   })();
   field.addEventListener("input", () => {
-    pendingSave = pendingSave.then(save).catch(error => {
+    const writeScope = scope;
+    const writeCaseId = caseId;
+    const narrative = field.value;
+    pendingSave = pendingSave.then(async () => {
+      if (!writeScope || !writeCaseId) return;
+      await window.JanavaniLocalVault.saveDraft(writeScope, {
+        case_id: writeCaseId, subject: "Civic complaint", narrative
+      });
+      setStatus("Draft saved in this browser. It is not a server backup.");
+    }).catch(error => {
       setStatus("Local save failed. Do not navigate away. " + error.message);
     });
   });
+  window.addEventListener("focus", () => { checkAccountScope(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkAccountScope();
+  });
   document.getElementById("open-local-draft").addEventListener("click", async () => {
     try {
+      if (!(await checkAccountScope())) return;
       await pendingSave;
       const selected = await window.JanavaniLocalVault.getDraft(scope, draftList.value);
       if (!selected) throw new Error("Selected draft was not found.");
@@ -74,6 +119,7 @@
     }
   });
   document.getElementById("delete-local-draft").addEventListener("click", async () => {
+    if (!(await checkAccountScope())) return;
     const selectedId = draftList.value;
     if (!selectedId || !window.confirm("Delete this local draft from this browser? This cannot be undone.")) return;
     try {
@@ -93,10 +139,14 @@
     const file = event.target.files && event.target.files[0];
     if (!file) return;
     try {
+      if (!(await checkAccountScope())) return;
+      if (file.size > MAX_IMPORT_BYTES) throw new Error("Import file exceeds the 256 KB limit.");
+      await pendingSave;
       const payload = JSON.parse(await file.text());
       const draft = payload && payload.draft;
       if (payload.schema !== "janavani.local-draft.v1" || !draft ||
-          typeof draft.narrative !== "string" || typeof draft.case_id !== "string") {
+          typeof draft.narrative !== "string" || draft.narrative.length > 20000 ||
+          typeof draft.case_id !== "string") {
         throw new Error("This file is not a supported JANAVANI local draft.");
       }
       const importedId = newLocalId();
@@ -118,28 +168,35 @@
   });
   document.getElementById("export-local-draft").addEventListener("click", async () => {
     try {
+      if (!(await checkAccountScope())) return;
       await pendingSave;
       await save();
       const draft = await window.JanavaniLocalVault.getDraft(scope, caseId);
       const blob = new Blob([JSON.stringify({
         schema: "janavani.local-draft.v1",
         exported_at: new Date().toISOString(),
-        draft
+        draft: {
+          case_id: draft.case_id,
+          subject: draft.subject,
+          narrative: draft.narrative
+        }
       }, null, 2)], {type: "application/json"});
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = "janavani-local-draft-" + caseId + ".json";
       link.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
       setStatus("A copy of your local draft was exported. Keep it somewhere safe.");
     } catch (error) {
       setStatus("Export failed. Your local draft remains unchanged. " + error.message);
     }
   });
   document.getElementById("clear-local-drafts").addEventListener("click", async () => {
+    if (!(await checkAccountScope())) return;
     if (!window.confirm("Permanently clear all JANAVANI local drafts for this signed-in account from this browser? This cannot be undone.")) return;
     try {
+      await pendingSave;
       await window.JanavaniLocalVault.clearScope(scope);
       field.value = "";
       caseId = "local-" + (window.crypto && crypto.randomUUID
@@ -153,9 +210,13 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      if (!scope) throw new Error("Sign in and verify local storage before continuing.");
+      if (!(await checkAccountScope())) throw new Error("Sign in again before creating a Case.");
       await pendingSave;
       await save();
+      if (!(await checkAccountScope())) {
+        setStatus("The account changed while the Case request was running. Your local draft remains under the previous account; verify Case creation after signing back in.");
+        return;
+      }
       const response = await fetch("/submit-issue", {
         method: "POST",
         credentials: "same-origin",

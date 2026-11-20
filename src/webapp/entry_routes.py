@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fasthtml.common import (
-    A, Button, Div, Form, H1, H2, H3, Img, Input, Label, P, Script, Textarea, Title,
+    A, Button, Div, Form, H1, H2, H3, Img, Input, Label, P, Script, Select, Textarea, Title,
 )
 from starlette.requests import Request
 
@@ -23,14 +23,20 @@ def register_webapp_entry_routes(
     @rt("/local-vault/scope")
     def get_local_vault_scope(request: Request):
         """Proxy the authenticated account namespace without exposing identity data."""
+        from starlette.responses import JSONResponse
+        private_headers = {
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+            "Vary": "Cookie",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+        }
         try:
-            return client_factory(request).get_local_vault_scope()
+            return JSONResponse(client_factory(request).get_local_vault_scope(), headers=private_headers)
         except (RuntimeError, ValueError):
-            from starlette.responses import JSONResponse
-            return JSONResponse({"error": "Sign-in required"}, status_code=401)
+            return JSONResponse({"error": "Sign-in required"}, status_code=401, headers=private_headers)
         except Exception:
-            from starlette.responses import JSONResponse
-            return JSONResponse({"error": "Local vault scope unavailable"}, status_code=503)
+            return JSONResponse({"error": "Local vault scope unavailable"}, status_code=503, headers=private_headers)
 
     @rt("/")
     def get_home():
@@ -63,8 +69,10 @@ def register_webapp_entry_routes(
                 Div(
                     H3("📝 Create a Civic Case"),
                     P(
-                        "Your narrative is saved in this browser first. Creating a Case sends "
-                        "only minimal lifecycle metadata to the canonical API."
+                        "Your draft is saved in this browser first. IndexedDB storage is not "
+                        "encrypted by Janavani; anyone with access to this browser profile may "
+                        "be able to inspect it. This is not a server backup. Avoid shared devices "
+                        "and clear local drafts when you no longer need them."
                     ),
                     Form(id="local-case-draft-form", action="/submit-issue", method="post")(
                         Input(type="hidden", name="case_type", value="complaint"),
