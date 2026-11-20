@@ -21,6 +21,19 @@ router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 router.include_router(document_router)
 router.include_router(lifecycle_router)
 
+def _local_vault_scope(principal_id: str) -> str:
+    """Derive the account namespace; this is not an encryption or auth key."""
+    secret = os.getenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Local vault scope service is not configured",
+        )
+    return hmac.new(
+        secret.encode("utf-8"), principal_id.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
 @router.get("/local-vault/scope")
 async def get_local_vault_scope(
     response: Response,
@@ -32,18 +45,7 @@ async def get_local_vault_scope(
     response.headers["Vary"] = "Authorization"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
-    secret = os.getenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "").strip()
-    if not secret:
-        raise HTTPException(
-            status_code=503,
-            detail="Local vault scope service is not configured",
-        )
-    scope = hmac.new(
-        secret.encode("utf-8"),
-        context.principal.principal_id.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
-    return {"scope": scope}
+    return {"scope": _local_vault_scope(context.principal.principal_id)}
 
 
 @router.post("/shell")
@@ -51,7 +53,13 @@ async def create_case_shell(
     request: CaseShellCreateRequest,
     context: IdentityContext = Depends(require_authenticated_identity),
 ) -> dict[str, object]:
-    """Create an owner-scoped metadata shell; citizen narrative is not accepted."""
+    """Create an owner-scoped metadata shell bound to this authenticated browser scope."""
+    expected_scope = _local_vault_scope(context.principal.principal_id)
+    if not hmac.compare_digest(request.expected_vault_scope, expected_scope):
+        raise HTTPException(
+            status_code=409,
+            detail="The signed-in account changed. Refresh the local workspace and retry.",
+        )
     try:
         result = _CAPABILITY.create_shell(
             CivicCaseCreateRequest(

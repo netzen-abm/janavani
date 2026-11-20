@@ -110,10 +110,15 @@ def test_web_client_create_case_shell_sends_metadata_only(monkeypatch):
         base_url="https://api.example.test",
         identity_assertion="verified-user-assertion",
     )
-    result = client.create_case_shell(case_type="complaint")
+    result = client.create_case_shell(
+        case_type="complaint", expected_vault_scope="a" * 64
+    )
     assert result["case_id"] == "case-shell-123"
     assert calls[0]["url"] == "https://api.example.test/civic/cases/shell"
-    assert calls[0]["json"] == {"case_type": "complaint"}
+    assert calls[0]["json"] == {
+        "case_type": "complaint",
+        "expected_vault_scope": "a" * 64,
+    }
     assert calls[0]["headers"] == {"Authorization": "Bearer verified-user-assertion"}
 
 

@@ -11,6 +11,9 @@ class CaseShellCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     case_type: CaseType
+    expected_vault_scope: str = Field(
+        min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$"
+    )
 
 
 class CaseCreateRequest(BaseModel):

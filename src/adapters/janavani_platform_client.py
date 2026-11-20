@@ -35,11 +35,16 @@ class JanavaniWebAPIClient:
         response.raise_for_status()
         return response.json()
 
-    def create_case_shell(self, *, case_type: str = "complaint") -> dict[str, Any]:
-        """Create lifecycle metadata only; never accept citizen-authored content."""
+    def create_case_shell(
+        self, *, case_type: str, expected_vault_scope: str
+    ) -> dict[str, Any]:
+        """Create metadata only when the API confirms the initiating account scope."""
         response = httpx.post(
             f"{self.base_url}/civic/cases/shell",
-            json={"case_type": case_type},
+            json={
+                "case_type": case_type,
+                "expected_vault_scope": expected_vault_scope,
+            },
             headers=self._headers(),
             timeout=20.0,
         )

@@ -156,8 +156,11 @@ def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkey
     calls = []
 
     class Client:
-        def create_case_shell(self, *, case_type):
-            calls.append({"case_type": case_type})
+        def create_case_shell(self, *, case_type, expected_vault_scope):
+            calls.append({
+                "case_type": case_type,
+                "expected_vault_scope": expected_vault_scope,
+            })
             return {"case_id": "case-shell-test", "status": "draft"}
 
     monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
@@ -165,6 +168,7 @@ def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkey
         "/submit-issue",
         data={
             "local_draft_id": "local-12345678-abcd",
+            "local_vault_scope": "a" * 64,
             "case_type": "complaint",
             "citizen_input": "This private narrative must not be sent to the server.",
         },
@@ -175,7 +179,10 @@ def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkey
         "status": "draft",
         "content_transmitted": False,
     }
-    assert calls == [{"case_type": "complaint"}]
+    assert calls == [{
+        "case_type": "complaint",
+        "expected_vault_scope": "a" * 64,
+    }]
 
 
 def test_submit_issue_rejects_missing_local_draft_reference_before_api_call(monkeypatch):

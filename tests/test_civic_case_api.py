@@ -128,21 +128,38 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
 
 
 
-def test_case_shell_endpoint_never_accepts_citizen_content_and_persists_metadata_only() -> None:
-    rejected = client.post(
+def test_case_shell_requires_matching_account_scope_and_never_accepts_citizen_content(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "test-local-vault-secret")
+    owner_headers = _auth_header("principal-shell")
+    owner_scope = client.get(
+        "/civic/cases/local-vault/scope", headers=owner_headers
+    ).json()["scope"]
+    other_scope = client.get(
+        "/civic/cases/local-vault/scope", headers=_auth_header("principal-other")
+    ).json()["scope"]
+
+    rejected_content = client.post(
         "/civic/cases/shell",
-        headers=_auth_header("principal-shell"),
+        headers=owner_headers,
         json={
             "case_type": "complaint",
+            "expected_vault_scope": owner_scope,
             "narrative": "This must never be accepted by the metadata-shell endpoint.",
         },
     )
-    assert rejected.status_code == 422
+    assert rejected_content.status_code == 422
+
+    rejected_scope = client.post(
+        "/civic/cases/shell",
+        headers=owner_headers,
+        json={"case_type": "complaint", "expected_vault_scope": other_scope},
+    )
+    assert rejected_scope.status_code == 409
 
     created = client.post(
         "/civic/cases/shell",
-        headers=_auth_header("principal-shell"),
-        json={"case_type": "complaint"},
+        headers=owner_headers,
+        json={"case_type": "complaint", "expected_vault_scope": owner_scope},
     )
     assert created.status_code == 200, created.json()
     case_id = created.json()["case_id"]

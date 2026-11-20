@@ -106,6 +106,7 @@ def register_webapp_entry_routes(
     def post(
         request: Request,
         local_draft_id: str = "",
+        local_vault_scope: str = "",
         case_type: str = "complaint",
     ):
         """Create only a metadata shell; citizen narrative stays in browser storage."""
@@ -114,8 +115,14 @@ def register_webapp_entry_routes(
             return Div(
                 Div(H3("Local draft required"), P("No Case was created. Save a draft in your browser first."), A("Return", href="/"), cls="card")
             )
+        if not re.fullmatch(r"[a-f0-9]{64}", local_vault_scope):
+            return Div(
+                Div(H3("Local session expired"), P("No Case was created. Refresh the signed-in local workspace and try again."), A("Return", href="/"), cls="card")
+            )
         try:
-            result = client_factory(request).create_case_shell(case_type=case_type)
+            result = client_factory(request).create_case_shell(
+                case_type=case_type, expected_vault_scope=local_vault_scope
+            )
         except (RuntimeError, ValueError):
             return Div(Div(H3("Sign-in required"), P("Authenticate before creating a Case shell. Your draft remains in this browser."), A("Return", href="/"), cls="card"))
         except Exception:

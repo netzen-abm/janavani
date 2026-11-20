@@ -222,7 +222,8 @@
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: new URLSearchParams({
           case_type: "complaint",
-          local_draft_id: requestCaseId
+          local_draft_id: requestCaseId,
+          local_vault_scope: requestScope
         })
       });
       if (!response.ok) throw new Error("Could not create the Case shell.");
