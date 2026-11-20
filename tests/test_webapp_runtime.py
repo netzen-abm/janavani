@@ -42,6 +42,7 @@ def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
         "/submit-issue",
         data={
             "local_draft_id": "local-12345678-abcd",
+            "local_vault_scope": "a" * 64,
             "citizen_input": "The public streetlight has been out for three nights.",
         },
     )
