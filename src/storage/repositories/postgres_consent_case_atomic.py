@@ -106,11 +106,6 @@ class PostgresConsentCaseAtomicRepository:
                 if current[0] != principal_id:
                     raise PermissionError("Case owner does not match transaction principal")
                 current_version = int(current[1])
-                if case.version != current_version:
-                    raise RuntimeError(
-                        f"Expected Case version {case.version}, found {current_version}"
-                    )
-
                 if action_fingerprint:
                     existing, existing_case_id = self._select_action(
                         cursor, principal_id, action_fingerprint
@@ -122,6 +117,12 @@ class PostgresConsentCaseAtomicRepository:
                             )
                         self._verify_event(cursor, existing, case.case_id, principal_id)
                         return existing
+                if case.version != current_version:
+                    raise RuntimeError(
+                        f"Expected Case version {case.version}, found {current_version}"
+                    )
+
+                if action_fingerprint:
                     inserted = insert_action_consent(
                         cursor, consent, case.case_id, principal_id, action_fingerprint
                     )
