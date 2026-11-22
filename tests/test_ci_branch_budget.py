@@ -203,7 +203,10 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
 
     assert "github.event.pull_request.merged == true" in section
     assert "docs/environmental-civic-evidence-contract" in section
-    assert "PR #243 consent-governance integration must merge first" in section
+    assert "Waiting for PR #243 merge and exact-head archive-first retirement" in section
+    assert "for attempt in $(seq 1 60)" in section
+    assert 'sleep 10' in section
+    assert "did not complete merge and exact-head archive retirement within 10 minutes" in section
     assert 'consent_tag="archive/branches/feat/capability-activation-governance"' in section
     assert 'consent_archive" != "$consent_head"' in section
     assert "exact-head archive tag is missing" in section
