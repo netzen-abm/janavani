@@ -148,7 +148,9 @@ def test_consent_governance_is_a_time_limited_integration_exception() -> None:
 
     assert "feat/capability-activation-governance)" in source
     assert 'EVENT_NAME" = "pull_request"' in source
+    assert 'github.event.pull_request.number }}" != "243"' in source
     assert 'EVENT_NAME" = "push"' in source
+    assert '.number == 243' in source
     assert 'pulls?state=open&per_page=100' in source
     assert '.head.ref == env.BRANCH' in source
     assert '.head.repo.full_name == env.REPO' in source
@@ -256,6 +258,9 @@ def test_environmental_evidence_branch_is_a_narrow_documentation_transition() ->
     assert '"247"' in section
     assert 'github.event.pull_request.base.ref' in section
     assert '"main"' in section
+    assert 'EVENT_NAME" = "push"' in section
+    assert '.number == 247' in section
+    assert 'git diff --no-renames --name-only' in section
     assert 'expiry="2026-11-24"' in section
     assert 'docs/architecture/ENVIRONMENTAL_CIVIC_EVIDENCE_PRODUCT_MAPPING.md' in section
     assert "Documentation-only transition" in section
