@@ -37,6 +37,50 @@ def create_consent_repository(*, provider_composition: ProviderComposition | Non
     composition = provider_composition or create_provider_composition()
     return create_consent_repository_for_provider(provider=composition.provider_for("consent"))
 
+
+def create_consent_case_atomic_repository(
+    *,
+    provider_composition: ProviderComposition,
+    consent_repository: ConsentRepository,
+    case_repository: CivicCaseRepository,
+):
+    """Select the transaction adapter for the existing consent + Case stores.
+
+    Atomicity belongs to the persistence boundary shared by these two
+    aggregates. A mixed provider pair is rejected rather than emulated.
+    """
+    consent_provider = provider_composition.provider_for("consent")
+    case_provider = provider_composition.provider_for("civic_case")
+    if consent_provider != case_provider:
+        raise ValueError(
+            "Consent and Civic Case must use the same provider for atomic consent persistence"
+        )
+    if consent_provider == "memory":
+        from src.storage.repositories.consent import InMemoryConsentRepository
+        from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+        from src.storage.repositories.consent_case_atomic import (
+            InMemoryConsentCaseAtomicRepository,
+        )
+
+        if not isinstance(consent_repository, InMemoryConsentRepository) or not isinstance(
+            case_repository, InMemoryCivicCaseRepository
+        ):
+            raise ValueError("Memory consent atomicity requires the canonical in-memory repositories")
+        return InMemoryConsentCaseAtomicRepository(
+            consent_repository=consent_repository,
+            case_repository=case_repository,
+        )
+    if consent_provider == "postgres":
+        from src.storage.repositories.postgres_consent_case_atomic import (
+            PostgresConsentCaseAtomicRepository,
+        )
+
+        dsn = os.getenv("JANAVANI_POSTGRES_DSN", "").strip()
+        if not dsn:
+            raise ValueError("JANAVANI_POSTGRES_DSN is required for atomic PostgreSQL consent")
+        return PostgresConsentCaseAtomicRepository(dsn=dsn)
+    raise ValueError(f"Unsupported atomic consent provider: {consent_provider}")
+
 def create_submission_repository(*, provider_composition: ProviderComposition | None = None) -> SubmissionRepository:
     composition = provider_composition or create_provider_composition()
     return create_submission_repository_for_provider(provider=composition.provider_for("submission"))
