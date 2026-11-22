@@ -190,7 +190,7 @@ def test_cross_surface_case_evidence_and_consent_converge_on_shared_provider_sta
     assert web.case_capability.get_owned(case_id, identity=citizen_b) is None
 
     consent_result = web.consent_capability.record_submission_consent(
-        case_id, scope="case_submission", identity=citizen_a_web,
+        case_id, scope="case_submission", identity=citizen_a_web, action_id="cross-surface-submission-consent-1",
     )
     consented = consent_result.case
     assert consent_result.consent.consent_id in consented.case.consent_refs
