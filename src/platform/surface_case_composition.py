@@ -21,6 +21,7 @@ from src.platform.composition_capabilities import create_civic_action_vertical_s
 from src.storage.artifact_blob_factory import create_artifact_blob_store
 from src.storage.repositories.case_content import InMemoryCaseContentRepository
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.platform.composition_repositories import create_consent_case_atomic_repository
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
@@ -135,8 +136,12 @@ def create_surface_case_composition(
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
     consent_capability = create_consent_capability(
-        consent_repository=consent_repository,
-        case_capability=case_capability,
+        consent_repository=consent_repository, case_capability=case_capability,
+        atomic_repository=runtime_graph.setdefault("consent_case_atomic",
+            create_consent_case_atomic_repository(
+                provider_composition=provider_composition,
+                consent_repository=consent_repository, case_repository=case_repository,
+            )),
     )
     review_repository = document_review_repository or runtime_graph.setdefault(
         "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
