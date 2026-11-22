@@ -211,3 +211,29 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" != "$expected" ]' in section
     assert "RETIREMENT VERIFIED" in section
+
+
+def test_manual_retirement_never_bypasses_specialized_transition_gates():
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    manual = source.split("  retire:", 1)[1].split(
+        "  retire-consent-capability-governance:", 1
+    )[0]
+
+    assert "transition_only=(" in manual
+    assert '"feat/capability-activation-governance"' in manual
+    assert '"docs/environmental-civic-evidence-contract"' in manual
+    assert "is_transition_only \"$branch\"" in manual
+    assert "deleted only by its dedicated approval- and archive-gated workflow" in manual
+
+
+def test_branch_retirement_uses_independent_pull_request_concurrency_slots():
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number)" in source
+    assert "janavani-branch-retirement-manual" in source
+    assert "group: janavani-branch-retirement\n" not in source
+    assert "cancel-in-progress: false" in source
