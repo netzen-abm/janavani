@@ -63,6 +63,7 @@ def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> N
     )[0]
     assert 'remaining" != "$expected"' in manual
     assert 'printf \'%s\\n\' "${sanctioned[@]}"' in manual
+    assert 'remaining_count="$(printf \'%s\\n\' "$remaining" | wc -l | tr -d \' \')"' in manual
     assert "exact sanctioned inventory" in manual
 
 
