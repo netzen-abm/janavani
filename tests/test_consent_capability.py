@@ -152,6 +152,7 @@ def test_repeated_preparation_consent_reuses_one_atomic_action():
         for event in second.case.case.events
     ) == 1
     assert second.case.case.status.value == "draft"
+    assert second.case.case.version == 2
 
 
 def test_distinct_explicit_actions_create_distinct_historical_grants():
