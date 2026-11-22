@@ -241,3 +241,18 @@ def test_branch_retirement_uses_independent_pull_request_concurrency_slots():
     assert "github.event.pull_request.number" in source
     assert "'manual'" in source
     assert "cancel-in-progress: false" in source
+
+
+def test_environmental_evidence_branch_is_a_narrow_documentation_transition() -> None:
+    source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    section = source.split("docs/environmental-civic-evidence-contract)", 1)[1].split(
+        "main|integration/canonical-platform|feat/canonical-case-kernel)", 1
+    )[0]
+
+    assert 'github.event.pull_request.number' in section
+    assert '"247"' in section
+    assert 'github.event.pull_request.base.ref' in section
+    assert '"main"' in section
+    assert 'expiry="2026-11-24"' in section
+    assert 'docs/architecture/ENVIRONMENTAL_CIVIC_EVIDENCE_PRODUCT_MAPPING.md' in section
+    assert "Documentation-only transition" in section
