@@ -50,7 +50,8 @@ def test_branch_retirement_serializes_mutations_and_scopes_open_pr_lookup() -> N
         ROOT / ".github" / "workflows" / "branch-retirement.yml"
     ).read_text(encoding="utf-8")
 
-    assert "group: janavani-branch-retirement" in source
+    assert "group: janavani-branch-retirement-" in source
+    assert "github.event.pull_request.number" in source
     assert "count_open_prs_for_branch" in source
     assert "env.BRANCH" in source
     assert "env.REPO" in source
@@ -184,7 +185,7 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'if [ "$evidence_state" = "open" ]' in section
     assert 'exactly eight sanctioned refs and PR #247' in section
     assert 'retire-environmental-civic-evidence-contract:' in source
-    assert 'Retirement held: PR #243 consent-governance integration must merge first.' in source
+    assert 'consent_archive" != "$consent_head"' in source
     assert 'if [ "$remaining" != "$expected" ]' in section
     assert 'pulls/$pr_number/reviews?per_page=100' in section
     assert '.commit_id' in section
