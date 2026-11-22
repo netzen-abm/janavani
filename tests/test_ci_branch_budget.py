@@ -210,7 +210,7 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
     assert "did not complete merge and exact-head archive retirement within 10 minutes" in section
     assert 'consent_tag="archive/branches/feat/capability-activation-governance"' in section
     assert 'consent_archive" != "$consent_head"' in section
-    assert "exact-head archive tag is missing" in section
+    assert 'Retirement held: PR #243 archive is missing or does not match its merged head.' in section
     assert "archive/branches/" in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" != "$expected" ]' in section
@@ -237,7 +237,7 @@ def test_branch_retirement_uses_independent_pull_request_concurrency_slots():
         ROOT / ".github" / "workflows" / "branch-retirement.yml"
     ).read_text(encoding="utf-8")
 
-    assert "janavani-branch-retirement-pr-{0}" in source
-    assert "janavani-branch-retirement-manual" in source
-    assert "group: janavani-branch-retirement\n" not in source
+    assert "group: janavani-branch-retirement-${{ github.event_name" in source
+    assert "github.event.pull_request.number" in source
+    assert "'manual'" in source
     assert "cancel-in-progress: false" in source
