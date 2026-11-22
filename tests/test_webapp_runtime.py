@@ -95,7 +95,12 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     )
     assert consented.status_code == 200
     assert "Explicit consent recorded" in consented.text
-    assert fake_client.recorded_action_ids == [action_id]
+    retry = client.post(
+        "/cases/case-test/consent",
+        data={"action_id": action_id, "explicit_confirmation": "yes"},
+    )
+    assert retry.status_code == 200
+    assert fake_client.recorded_action_ids == [action_id, action_id]
 
     artifact = client.post(
         "/cases/case-test/artifact", data={"document_format": "pdf"}
