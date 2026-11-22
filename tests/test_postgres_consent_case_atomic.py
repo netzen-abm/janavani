@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
-from src.core.civic_case import CaseStatus, CaseType, CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CaseStatus, CaseType, CivicCase
 from src.storage.repositories.postgres_consent_case_atomic import PostgresConsentCaseAtomicRepository
 
 
@@ -86,6 +86,19 @@ def consent():
     )
 
 
+
+def add_consent_event(case: CivicCase, grant: Consent) -> CivicCase:
+    case.events.append(CaseEvent(
+        event_id=f"consent-{grant.consent_id}",
+        case_id=case.case_id,
+        event_type=CaseEventType.CONSENT_RECORDED,
+        occurred_at=grant.created_at,
+        actor_id=grant.subject_id,
+        source_ref=grant.proof_ref,
+        notes=grant.purpose,
+    ))
+    return case
+
 def test_atomic_consent_case_commits_all_writes():
     conn = FakeConnection()
     case = CivicCase(
@@ -98,11 +111,13 @@ def test_atomic_consent_case_commits_all_writes():
         version=1,
         consent_refs=["consent-1"],
     )
+    grant = consent()
+    add_consent_event(case, grant)
     repo = PostgresConsentCaseAtomicRepository(
         connection_factory=lambda: conn,
         principal_id="citizen-1",
     )
-    repo.save_consent_and_case(consent(), case, principal_id="citizen-1")
+    repo.save_consent_and_case(grant, case, principal_id="citizen-1")
     assert "BEGIN" in conn.events
     assert "COMMIT" in conn.events
     assert "ROLLBACK" not in conn.events
@@ -121,9 +136,11 @@ def test_atomic_consent_case_rolls_back_when_case_update_fails():
         version=1,
         consent_refs=["consent-1"],
     )
+    grant = consent()
+    add_consent_event(case, grant)
     repo = PostgresConsentCaseAtomicRepository(connection_factory=lambda: conn)
     try:
-        repo.save_consent_and_case(consent(), case, principal_id="citizen-1")
+        repo.save_consent_and_case(grant, case, principal_id="citizen-1")
     except RuntimeError:
         pass
     else:
@@ -206,8 +223,10 @@ def test_atomic_consent_keeps_draft_lifecycle_and_syncs_event_projection():
         version=1,
         consent_refs=["consent-1"],
     )
+    grant = consent()
+    add_consent_event(case, grant)
     repo = PostgresConsentCaseAtomicRepository(connection_factory=lambda: conn)
-    repo.save_consent_and_case(consent(), case, principal_id="citizen-1")
+    repo.save_consent_and_case(grant, case, principal_id="citizen-1")
 
     assert case.status is CaseStatus.DRAFT
     assert case.version == 2
@@ -309,6 +328,7 @@ def test_postgres_consent_action_is_concurrent_idempotent_and_conflict_safe():
             version=1,
             consent_refs=[first_consent.consent_id],
         )
+        add_consent_event(current_case, first_consent)
         return repository.save_consent_and_case(
             first_consent, current_case,
             principal_id="citizen-1", action_fingerprint=fingerprint,
@@ -339,6 +359,7 @@ def test_postgres_consent_action_is_concurrent_idempotent_and_conflict_safe():
             version=2,
             consent_refs=["consent-concurrent-1", "consent-concurrent-2"],
         )
+        add_consent_event(second_case, second_consent)
         repository.save_consent_and_case(
             second_consent, second_case,
             principal_id="citizen-1",
@@ -368,6 +389,15 @@ def test_postgres_consent_action_is_concurrent_idempotent_and_conflict_safe():
                     version=3,
                     consent_refs=["consent-concurrent-1", "consent-concurrent-2",
                                   "consent-concurrent-conflict"],
+                    events=[CaseEvent(
+                        event_id="consent-consent-concurrent-conflict",
+                        case_id="case-concurrent",
+                        event_type=CaseEventType.CONSENT_RECORDED,
+                        occurred_at=conflicting.created_at,
+                        actor_id="citizen-1",
+                        source_ref=conflicting.proof_ref,
+                        notes=conflicting.purpose,
+                    )],
                 ),
                 principal_id="citizen-1",
                 action_fingerprint=fingerprint,
