@@ -1,7 +1,6 @@
 """PostgreSQL transaction boundary for consent grants and Case audit events."""
 from __future__ import annotations
 
-import json
 from typing import Any, Callable
 
 from src.core.consent import Consent
@@ -9,6 +8,11 @@ from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.repositories.consent_case_atomic import ConsentIdempotencyConflictError
 from src.storage.repositories.postgres_consent import PostgresConsentRepository
+from src.storage.repositories.postgres_consent_case_atomic_sql import (
+    attach_existing_consent_to_case, insert_action_consent, insert_attached_consent,
+    insert_consent_event, lock_case, select_action, select_consent, select_event,
+    update_case,
+)
 from src.storage.unit_of_work import UnitOfWorkFactory
 
 
@@ -35,20 +39,13 @@ class PostgresConsentCaseAtomicRepository:
         return psycopg.connect(self._dsn)
 
     @staticmethod
-    def _select_action(cur, principal_id: str, fingerprint: str):
-        cur.execute(
-            """SELECT consent_id, subject_id, purpose, scope, grant_type, status,
-                      created_at, expires_at, revoked_at, proof_ref, case_id
-                 FROM civic_case_consents
-                WHERE subject_id=%s AND action_fingerprint=%s
-                FOR UPDATE""",
-            (principal_id, fingerprint),
-        )
-        row = cur.fetchone()
+    def _select_action(cursor, principal_id: str, fingerprint: str):
+        row = select_action(cursor, principal_id, fingerprint)
         return (PostgresConsentRepository._hydrate(row[:10]), row[10]) if row else (None, None)
 
     @staticmethod
-    def _matches(existing: Consent, incoming: Consent, case_id: str, existing_case_id: str | None) -> bool:
+    def _matches(existing: Consent, incoming: Consent, case_id: str,
+                 existing_case_id: str | None) -> bool:
         return (
             existing_case_id == case_id
             and existing.consent_id == incoming.consent_id
@@ -63,17 +60,12 @@ class PostgresConsentCaseAtomicRepository:
         )
 
     @staticmethod
-    def _verify_event(cur, consent: Consent, case_id: str, principal_id: str) -> None:
-        cur.execute(
-            """SELECT event_type, actor_id, source_ref, notes
-                 FROM civic_case_events WHERE event_id=%s AND case_id=%s""",
-            (f"consent-{consent.consent_id}", case_id),
-        )
-        row = cur.fetchone()
-        if row is None or row != (
+    def _verify_event(cursor, consent: Consent, case_id: str, principal_id: str) -> None:
+        expected = (
             CaseEventType.CONSENT_RECORDED.value, principal_id,
             consent.proof_ref, consent.purpose,
-        ):
+        )
+        if select_event(cursor, f"consent-{consent.consent_id}", case_id) != expected:
             raise RuntimeError("Existing consent action has no matching immutable Case event")
 
     def save_consent_and_case(
@@ -95,24 +87,20 @@ class PostgresConsentCaseAtomicRepository:
         with self._unit_of_work_factory() as uow:
             conn = uow.connection
             bind_postgres_principal(conn, principal_id)
-            with conn.cursor() as cur:
+            with conn.cursor() as cursor:
                 if action_fingerprint:
                     existing, existing_case_id = self._select_action(
-                        cur, principal_id, action_fingerprint
+                        cursor, principal_id, action_fingerprint
                     )
                     if existing is not None:
                         if not self._matches(existing, consent, case.case_id, existing_case_id):
                             raise ConsentIdempotencyConflictError(
                                 "Consent action key was reused with different content"
                             )
-                        self._verify_event(cur, existing, case.case_id, principal_id)
+                        self._verify_event(cursor, existing, case.case_id, principal_id)
                         return existing
 
-                cur.execute(
-                    "SELECT created_by, version FROM civic_cases WHERE case_id=%s FOR UPDATE",
-                    (case.case_id,),
-                )
-                current = cur.fetchone()
+                current = lock_case(cursor, case.case_id)
                 if current is None:
                     raise LookupError("Case not found")
                 if current[0] != principal_id:
@@ -125,32 +113,21 @@ class PostgresConsentCaseAtomicRepository:
 
                 if action_fingerprint:
                     existing, existing_case_id = self._select_action(
-                        cur, principal_id, action_fingerprint
+                        cursor, principal_id, action_fingerprint
                     )
                     if existing is not None:
                         if not self._matches(existing, consent, case.case_id, existing_case_id):
                             raise ConsentIdempotencyConflictError(
                                 "Consent action key was reused with different content"
                             )
-                        self._verify_event(cur, existing, case.case_id, principal_id)
+                        self._verify_event(cursor, existing, case.case_id, principal_id)
                         return existing
-                    cur.execute(
-                        """INSERT INTO civic_case_consents (
-                            consent_id, case_id, purpose, scope, grant_type, status,
-                            granted_by, subject_id, created_at, expires_at, revoked_at,
-                            proof_ref, action_fingerprint
-                        ) VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT DO NOTHING RETURNING consent_id""",
-                        (consent.consent_id, case.case_id, consent.purpose,
-                         json.dumps(list(consent.scope)), consent.grant_type.value,
-                         consent.status.value, principal_id, consent.subject_id,
-                         consent.created_at, consent.expires_at, consent.revoked_at,
-                         consent.proof_ref, action_fingerprint),
+                    inserted = insert_action_consent(
+                        cursor, consent, case.case_id, principal_id, action_fingerprint
                     )
-                    inserted = cur.fetchone()
                     if inserted is None:
                         existing, existing_case_id = self._select_action(
-                            cur, principal_id, action_fingerprint
+                            cursor, principal_id, action_fingerprint
                         )
                         if existing is None or not self._matches(
                             existing, consent, case.case_id, existing_case_id
@@ -158,64 +135,39 @@ class PostgresConsentCaseAtomicRepository:
                             raise ConsentIdempotencyConflictError(
                                 "Consent action identifier conflicts with another persisted grant"
                             )
-                        self._verify_event(cur, existing, case.case_id, principal_id)
+                        self._verify_event(cursor, existing, case.case_id, principal_id)
                         return existing
                 else:
-                    cur.execute(
-                        """SELECT consent_id, subject_id, purpose, scope, grant_type,
-                                  status, created_at, expires_at, revoked_at, proof_ref, case_id
-                             FROM civic_case_consents WHERE consent_id=%s FOR UPDATE""",
-                        (consent.consent_id,),
-                    )
-                    row = cur.fetchone()
+                    row = select_consent(cursor, consent.consent_id)
                     if row is not None:
                         existing = PostgresConsentRepository._hydrate(row[:10])
-                        if not self._matches(existing, consent, case.case_id, row[10]):
+                        if row[10] not in (None, case.case_id) or not self._matches(
+                            existing, consent, case.case_id, row[10] or case.case_id
+                        ):
                             raise PermissionError("Persisted consent does not match this Case")
+                        if row[10] is None:
+                            attach_existing_consent_to_case(
+                                cursor, consent.consent_id, case.case_id, principal_id
+                            )
                     else:
-                        cur.execute(
-                            """INSERT INTO civic_case_consents (
-                                consent_id, case_id, purpose, scope, grant_type, status,
-                                granted_by, subject_id, created_at, expires_at, revoked_at, proof_ref
-                            ) VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                            (consent.consent_id, case.case_id, consent.purpose,
-                             json.dumps(list(consent.scope)), consent.grant_type.value,
-                             consent.status.value, principal_id, consent.subject_id,
-                             consent.created_at, consent.expires_at, consent.revoked_at,
-                             consent.proof_ref),
-                        )
+                        insert_attached_consent(cursor, consent, case.case_id, principal_id)
 
-                cur.execute(
-                    "SELECT event_type, actor_id, source_ref, notes FROM civic_case_events "
-                    "WHERE event_id=%s AND case_id=%s",
-                    (event_id, case.case_id),
+                existing_event = select_event(cursor, event_id, case.case_id)
+                expected_event = (
+                    CaseEventType.CONSENT_RECORDED.value, principal_id,
+                    consent.proof_ref, consent.purpose,
                 )
-                existing_event = cur.fetchone()
                 if existing_event is not None:
-                    if existing_event != (
-                        CaseEventType.CONSENT_RECORDED.value, principal_id,
-                        consent.proof_ref, consent.purpose,
-                    ):
+                    if existing_event != expected_event:
                         raise RuntimeError("Existing consent event conflicts with its grant")
                     return consent
 
                 new_version = current_version + 1
-                cur.execute(
-                    """UPDATE civic_cases SET status=%s, updated_at=%s, version=%s
-                       WHERE case_id=%s AND version=%s""",
-                    (case.status.value, case.updated_at, new_version,
-                     case.case_id, current_version),
-                )
-                if cur.rowcount != 1:
+                update_case(cursor, case, current_version, new_version)
+                if cursor.rowcount != 1:
                     raise RuntimeError("Case optimistic concurrency check failed")
-                cur.execute(
-                    """INSERT INTO civic_case_events (
-                        event_id, case_id, event_type, occurred_at, actor_id,
-                        source_channel, source_ref, notes, event_version, created_at
-                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (event_id, case.case_id, CaseEventType.CONSENT_RECORDED.value,
-                     consent.created_at, principal_id, None, consent.proof_ref,
-                     consent.purpose, new_version, consent.created_at),
+                insert_consent_event(
+                    cursor, event_id, case.case_id, consent, principal_id, new_version
                 )
 
         case.events.append(CaseEvent(
