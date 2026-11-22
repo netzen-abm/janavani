@@ -42,7 +42,7 @@ ACTION_IDEMPOTENCY = (
 
 
 def test_consent_action_idempotency_migration_is_additive_and_unique():
-    normalized = ACTION_IDEMPOTENCY.upper()
+    normalized = _sql_without_leading_comments(ACTION_IDEMPOTENCY).upper()
     assert normalized.startswith("BEGIN;")
     assert normalized.rstrip().endswith("COMMIT;")
     assert "ADD COLUMN IF NOT EXISTS ACTION_FINGERPRINT TEXT" in normalized
