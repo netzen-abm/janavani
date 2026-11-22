@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from src.core.consent import Consent
-from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
+from src.core.civic_case import CaseEventType, CivicCase
 from src.storage.postgres_unit_of_work import bind_postgres_principal, postgres_unit_of_work_factory
 from src.storage.repositories.consent_case_atomic import ConsentIdempotencyConflictError
 from src.storage.repositories.postgres_consent import PostgresConsentRepository
@@ -77,10 +77,16 @@ class PostgresConsentCaseAtomicRepository:
             raise ValueError("principal_id is required")
         if consent.subject_id != principal_id or case.created_by != principal_id:
             raise PermissionError("Consent and Case must belong to the transaction principal")
-        if consent.consent_id not in case.consent_refs:
-            raise ValueError("Case must reference consent before atomic persistence")
-
         event_id = f"consent-{consent.consent_id}"
+        event = next((item for item in case.events if item.event_id == event_id), None)
+        if (
+            event is None or event.case_id != case.case_id
+            or event.event_type is not CaseEventType.CONSENT_RECORDED
+            or event.actor_id != principal_id or event.notes != consent.purpose
+            or event.source_ref != consent.proof_ref
+            or consent.consent_id not in case.consent_refs
+        ):
+            raise ValueError("Case projection must contain the verified consent event")
         with self._unit_of_work_factory() as uow:
             conn = uow.connection
             bind_postgres_principal(conn, principal_id)
@@ -152,8 +158,8 @@ class PostgresConsentCaseAtomicRepository:
 
                 existing_event = select_event(cursor, event_id, case.case_id)
                 expected_event = (
-                    CaseEventType.CONSENT_RECORDED.value, principal_id,
-                    consent.proof_ref, consent.purpose,
+                    event.event_type.value, event.actor_id,
+                    event.source_ref, event.notes,
                 )
                 if existing_event is not None:
                     if existing_event != expected_event:
@@ -165,15 +171,8 @@ class PostgresConsentCaseAtomicRepository:
                 update_case(cursor, case, current_version, new_version)
                 if cursor.rowcount != 1:
                     raise RuntimeError("Case optimistic concurrency check failed")
-                insert_consent_event(
-                    cursor, event_id, case.case_id, consent, principal_id, new_version
-                )
+                insert_consent_event(cursor, event, new_version)
 
-        case.events.append(CaseEvent(
-            event_id=event_id, case_id=case.case_id,
-            event_type=CaseEventType.CONSENT_RECORDED,
-            occurred_at=consent.created_at, actor_id=principal_id,
-            source_ref=consent.proof_ref, notes=consent.purpose,
-        ))
         case.version = new_version
+        case.updated_at = event.occurred_at
         return consent
