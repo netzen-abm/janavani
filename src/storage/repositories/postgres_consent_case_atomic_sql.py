@@ -101,14 +101,13 @@ def update_case(cursor, case, expected_version: int, new_version: int) -> None:
     )
 
 
-def insert_consent_event(cursor, event_id: str, case_id: str, consent: Consent,
-                         principal_id: str, new_version: int) -> None:
+def insert_consent_event(cursor, event, new_version: int) -> None:
     cursor.execute(
         """INSERT INTO civic_case_events (
             event_id, case_id, event_type, occurred_at, actor_id,
             source_channel, source_ref, notes, event_version, created_at
         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-        (event_id, case_id, "consent_recorded", consent.created_at,
-         principal_id, None, consent.proof_ref, consent.purpose,
-         new_version, consent.created_at),
+        (event.event_id, event.case_id, event.event_type.value, event.occurred_at,
+         event.actor_id, event.source_channel, event.source_ref, event.notes,
+         new_version, event.occurred_at),
     )
