@@ -133,6 +133,7 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         case_id,
         scope="office:office-e2e",
         identity=consent_identity,
+        action_id="web-e2e-submission-consent-1",
         proof_ref="proof:web-e2e",
     )
     consent = client.post(
