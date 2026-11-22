@@ -19,6 +19,41 @@ class CivicCaseLifecycleMixin:
                 execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         return self.transition(case_id, action="case:mark_ready", identity=identity, execution_context=execution_context)
 
+    def _apply_verified_consent(
+        self, case: CivicCase, consent: Consent, *, identity: IdentityContext
+    ) -> CivicCase:
+        """Apply the validated consent reference/event to an owned Case projection."""
+        principal_id = identity.principal.principal_id
+        if (
+            consent.subject_id != principal_id
+            or case.created_by != principal_id
+            or consent.grant_type is not ConsentGrantType.EXPLICIT
+            or not consent.is_authorized
+        ):
+            raise PermissionError("Only an active, principal-owned explicit grant can be recorded")
+        event_id = f"consent-{consent.consent_id}"
+        existing = next((event for event in case.events if event.event_id == event_id), None)
+        if existing is not None:
+            if (
+                existing.event_type is not CaseEventType.CONSENT_RECORDED
+                or existing.actor_id != principal_id
+                or existing.notes != consent.purpose
+                or existing.source_ref != consent.proof_ref
+                or consent.consent_id not in case.consent_refs
+            ):
+                raise RuntimeError("Existing consent event does not match its consent reference")
+            return case
+        if consent.consent_id not in case.consent_refs:
+            case.consent_refs.append(consent.consent_id)
+        case.updated_at = consent.created_at
+        case.events.append(CaseEvent(
+            event_id=event_id, case_id=case.case_id,
+            event_type=CaseEventType.CONSENT_RECORDED,
+            occurred_at=consent.created_at, actor_id=principal_id,
+            source_ref=consent.proof_ref, notes=consent.purpose,
+        ))
+        return case
+
     def _record_verified_consent(
         self,
         case_id: str,
@@ -26,51 +61,11 @@ class CivicCaseLifecycleMixin:
         *,
         identity: IdentityContext,
     ) -> CivicCaseResult:
-        """Internal mutation for a grant already validated by ConsentCapability.
-
-        Access surfaces must use ConsentCapability for grant lookup, ownership,
-        purpose, scope, persistence and expiry checks.
-        """
-        if (
-            consent.subject_id != identity.principal.principal_id
-            or consent.grant_type is not ConsentGrantType.EXPLICIT
-            or not consent.is_authorized
-        ):
-            raise PermissionError("Only an active, principal-owned explicit grant can be recorded")
-        consent_id = consent.consent_id
-        purpose = consent.purpose
-        proof_ref = consent.proof_ref
-        occurred_at = consent.created_at
+        """Persist an active consent grant through the canonical Case lifecycle."""
         case = self._owned(case_id, identity)
         self._require(identity, "case:consent", "case:consent")
         self._require(identity, "case:write", "case:consent")
-        event_id = f"consent-{consent_id}"
-        existing_event = next(
-            (event for event in case.events if event.event_id == event_id),
-            None,
-        )
-        if existing_event is not None:
-            if (
-                existing_event.event_type is not CaseEventType.CONSENT_RECORDED
-                or existing_event.actor_id != identity.principal.principal_id
-                or existing_event.notes != purpose
-                or existing_event.source_ref != proof_ref
-                or consent_id not in case.consent_refs
-            ):
-                raise RuntimeError("Existing consent event does not match its consent reference")
-            return CivicCaseResult(case, AuthorizationDecision.ALLOW)
-
-        if consent_id not in case.consent_refs:
-            case.consent_refs.append(consent_id)
-        case.events.append(CaseEvent(
-            event_id=event_id,
-            case_id=case.case_id,
-            event_type=CaseEventType.CONSENT_RECORDED,
-            occurred_at=occurred_at,
-            actor_id=identity.principal.principal_id,
-            source_ref=proof_ref,
-            notes=purpose,
-        ))
+        case = self._apply_verified_consent(case, consent, identity=identity)
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
