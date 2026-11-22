@@ -19,11 +19,9 @@ from src.storage.unit_of_work import UnitOfWorkFactory
 class PostgresConsentCaseAtomicRepository:
     """Commit a consent grant and its Case event in one owner-scoped transaction."""
 
-    def __init__(
-        self, connection_factory: Callable[[], Any] | None = None,
-        dsn: str | None = None, unit_of_work_factory: UnitOfWorkFactory | None = None,
-        principal_id: str | None = None,
-    ) -> None:
+    def __init__(self, connection_factory: Callable[[], Any] | None = None,
+                 dsn: str | None = None, unit_of_work_factory: UnitOfWorkFactory | None = None,
+                 principal_id: str | None = None) -> None:
         self._connection_factory = connection_factory
         self._dsn = dsn
         if connection_factory is None and not dsn:
