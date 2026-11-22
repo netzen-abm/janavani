@@ -70,7 +70,7 @@ async def record_explicit_consent(
         raise HTTPException(status_code=400, detail="Explicit citizen confirmation is required")
     try:
         result = CONSENT.record_document_preparation_consent(
-            case_id, scope=request.scope, identity=context
+            case_id, scope=request.scope, identity=context, action_id=request.action_id
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
