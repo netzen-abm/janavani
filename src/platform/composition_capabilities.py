@@ -38,8 +38,14 @@ def create_case_capability(repository: CivicCaseRepository, content_repository: 
     return CivicCaseCapability(repository, content_repository=content_repository)
 
 
-def create_consent_capability(*, consent_repository: ConsentRepository, case_capability: CivicCaseCapability) -> ConsentCapability:
-    return ConsentCapability(repository=consent_repository, case_capability=case_capability)
+def create_consent_capability(
+    *, consent_repository: ConsentRepository, case_capability: CivicCaseCapability,
+    atomic_repository=None,
+) -> ConsentCapability:
+    return ConsentCapability(
+        repository=consent_repository, case_capability=case_capability,
+        atomic_repository=atomic_repository,
+    )
 
 
 def create_authority_capability(repository: AuthorityRepository) -> AuthorityCapability:
