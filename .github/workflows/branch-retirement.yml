@@ -21,9 +21,11 @@ permissions:
   contents: write
   pull-requests: read
 
-# Serialize manual retirement and both narrowly scoped post-merge transition retirements.
+# Give each PR-close retirement its own durable concurrency slot. GitHub retains only
+# one pending run per group; a single global group can silently replace a queued PR event.
+# Manual runs are serialized separately and never own the two transition-only refs.
 concurrency:
-  group: janavani-branch-retirement
+  group: ${{ github.event_name == 'pull_request' && format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && 'janavani-branch-retirement-manual' || format('janavani-branch-retirement-run-{0}', github.run_id)) }}
   cancel-in-progress: false
 
 jobs:
@@ -62,6 +64,10 @@ jobs:
             "chore/ecosystem-shared-capability-infrastructure"
           )
           retirement_only=("feat/canonical-capability-execution-envelope")
+          transition_only=(
+            "feat/capability-activation-governance"
+            "docs/environmental-civic-evidence-contract"
+          )
 
           is_sanctioned() {
             local branch="$1"
@@ -74,6 +80,14 @@ jobs:
           is_retirement_only() {
             local branch="$1"
             for candidate in "${retirement_only[@]}"; do
+              [ "$branch" = "$candidate" ] && return 0
+            done
+            return 1
+          }
+
+          is_transition_only() {
+            local branch="$1"
+            for candidate in "${transition_only[@]}"; do
               [ "$branch" = "$candidate" ] && return 0
             done
             return 1
@@ -95,6 +109,10 @@ jobs:
             is_sanctioned "$branch" && continue
             if is_retirement_only "$branch"; then
               echo "Retirement-only branch: $branch is deleted only by the post-merge controlled workflow."
+              continue
+            fi
+            if is_transition_only "$branch"; then
+              echo "Transition-only branch: $branch is deleted only by its dedicated approval- and archive-gated workflow."
               continue
             fi
 
