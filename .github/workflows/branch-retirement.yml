@@ -25,7 +25,14 @@ permissions:
 # one pending run per group; a single global group can silently replace a queued PR event.
 # Manual runs are serialized separately and never own the two transition-only refs.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && 'janavani-branch-retirement-manual' || format('janavani-branch-retirement-run-{0}', github.run_id)) }}
+  group: >-
+    ${{
+      github.event_name == 'pull_request' &&
+      format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number) ||
+      (github.event_name == 'workflow_dispatch' &&
+        'janavani-branch-retirement-manual' ||
+        format('janavani-branch-retirement-run-{0}', github.run_id))
+    }}
   cancel-in-progress: false
 
 jobs:
