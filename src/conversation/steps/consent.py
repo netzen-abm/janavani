@@ -65,6 +65,7 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
             case_id,
             scope=f"office:{office_id}",
             identity=identity,
+            action_id=f"telegram-update:{update.update_id}",
         )
     except (LookupError, PermissionError, ValueError) as exc:
         logger.info(
