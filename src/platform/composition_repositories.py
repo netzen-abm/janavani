@@ -62,14 +62,16 @@ def create_consent_case_atomic_repository(
             InMemoryConsentCaseAtomicRepository,
         )
 
-        if not isinstance(consent_repository, InMemoryConsentRepository) or not isinstance(
+        if isinstance(consent_repository, InMemoryConsentRepository) and isinstance(
             case_repository, InMemoryCivicCaseRepository
         ):
-            raise ValueError("Memory consent atomicity requires the canonical in-memory repositories")
-        return InMemoryConsentCaseAtomicRepository(
-            consent_repository=consent_repository,
-            case_repository=case_repository,
-        )
+            return InMemoryConsentCaseAtomicRepository(
+                consent_repository=consent_repository,
+                case_repository=case_repository,
+            )
+        # Custom test/deployment repositories may not share an atomic contract.
+        # Keep unrelated Case features composable, but fail closed on consent writes.
+        return None
     if consent_provider == "postgres":
         from src.storage.repositories.postgres_consent_case_atomic import (
             PostgresConsentCaseAtomicRepository,
