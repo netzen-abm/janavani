@@ -8,6 +8,7 @@ def test_surface_case_composition_uses_shared_capability_graph():
     assert composition.evidence_capability is not None
     assert composition.authority_capability is not None
     assert composition.consent_capability is not None
+    assert composition.consent_capability._atomic_repository is not None
     assert composition.civic_action_capability is not None
 
     # Evidence and consent must point at the same canonical Case capability.
