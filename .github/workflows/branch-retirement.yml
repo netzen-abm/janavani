@@ -25,14 +25,7 @@ permissions:
 # one pending run per group; a single global group can silently replace a queued PR event.
 # Manual runs are serialized separately and never own the two transition-only refs.
 concurrency:
-  group: >-
-    ${{
-      github.event_name == 'pull_request' &&
-      format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number) ||
-      (github.event_name == 'workflow_dispatch' &&
-        'janavani-branch-retirement-manual' ||
-        format('janavani-branch-retirement-run-{0}', github.run_id))
-    }}
+  group: janavani-branch-retirement-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'workflow_dispatch' && 'manual' || github.run_id) }}
   cancel-in-progress: false
 
 jobs:
@@ -422,6 +415,12 @@ jobs:
               consent_branch_exists=false
             fi
             consent_archive="$(gh api "repos/$REPO/git/ref/tags/$consent_tag" --jq '.object.sha' 2>/dev/null || true)"
+            if [ -n "$consent_merged_at" ] &&
+               [ "$consent_branch_exists" = false ] &&
+               [ "$consent_archive" != "$consent_head" ]; then
+              echo "::error::Retirement held: PR #243 archive is missing or does not match its merged head."
+              exit 2
+            fi
             if [ -n "$consent_merged_at" ] &&
                [ "$consent_branch_exists" = false ] &&
                [ "$consent_archive" = "$consent_head" ]; then
