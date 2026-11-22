@@ -13,7 +13,6 @@ from hashlib import sha256
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
-from src.core.civic_case import CaseEventType
 from src.identity.context import IdentityContext
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.storage.repositories.consent import ConsentRepository, InMemoryConsentRepository
@@ -118,19 +117,11 @@ class ConsentCapability:
         ):
             raise LookupError("Consent grant not found")
 
-        event_id = f"consent-{consent.consent_id}"
-        existing_event = next(
-            (event for event in case.events if event.event_id == event_id),
-            None,
-        )
-        if existing_event is not None:
-            self._verify_existing_event(case, consent, identity, existing_event)
-            return ConsentResult(consent, CivicCaseResult(case, AuthorizationDecision.ALLOW))
         if self._atomic_repository is None:
             raise RuntimeError("Atomic consent persistence is required; no Case mutation was attempted")
-        case_for_write = deepcopy(case)
-        if consent.consent_id not in case_for_write.consent_refs:
-            case_for_write.consent_refs.append(consent.consent_id)
+        case_for_write = self._cases._apply_verified_consent(
+            deepcopy(case), consent, identity=identity
+        )
         persisted = self._atomic_repository.save_consent_and_case(
             consent, case_for_write, principal_id=identity.principal.principal_id
         )
@@ -176,30 +167,17 @@ class ConsentCapability:
             created_at=datetime.now(timezone.utc).isoformat(),
             proof_ref=proof_ref,
         )
-        case_for_write = deepcopy(case)
-        if consent_id not in case_for_write.consent_refs:
-            case_for_write.consent_refs.append(consent_id)
+        case_for_write = self._cases._apply_verified_consent(
+            deepcopy(case), consent, identity=identity
+        )
         persisted = self._atomic_repository.save_consent_and_case(
-            consent,
-            case_for_write,
-            principal_id=identity.principal.principal_id,
+            consent, case_for_write, principal_id=identity.principal.principal_id,
             action_fingerprint=action_fingerprint,
         )
         refreshed = self._cases.get_owned(case_id, identity=identity)
         if refreshed is None:
             raise RuntimeError("Case disappeared after atomic consent recording")
         return ConsentResult(persisted, CivicCaseResult(refreshed, AuthorizationDecision.ALLOW))
-
-    @staticmethod
-    def _verify_existing_event(case, consent, identity, event) -> None:
-        if (
-            event.event_type is not CaseEventType.CONSENT_RECORDED
-            or event.actor_id != identity.principal.principal_id
-            or event.notes != consent.purpose
-            or event.source_ref != consent.proof_ref
-            or consent.consent_id not in case.consent_refs
-        ):
-            raise RuntimeError("Existing consent event does not match its persisted grant")
 
     @classmethod
     def _matches_consent_id(
