@@ -183,7 +183,7 @@ jobs:
 
           if [ "$EXECUTE" = "true" ] && [ "$remaining" != "$expected" ]; then
             echo "Retirement incomplete: physical refs do not match the exact sanctioned inventory."
-            printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
+              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
             exit 2
           fi
 
@@ -452,14 +452,14 @@ jobs:
             expected="$(expected_sanctioned_branches | sort)"
             if [ "$remaining" != "$expected" ]; then
               echo "::error::Evidence-contract ref is already absent but the eight-ref inventory is not exact."
-              printf 'Actual refs:\\n%s\\nExpected refs:\\n%s\\n' "$remaining" "$expected"
+              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
               exit 2
             fi
             echo "RETIREMENT VERIFIED: PR #243 workflow already archived and retired this merged evidence-contract ref; exactly eight refs remain."
             exit 0
           fi
 
-                    head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
           git fetch --no-tags origin "refs/heads/$branch:$git_ref"
           if [ "$(git rev-parse "$git_ref")" != "$head_sha" ] ||
              ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
@@ -490,7 +490,7 @@ jobs:
           expected="$(expected_sanctioned_branches | sort)"
           if [ "$remaining" != "$expected" ]; then
             echo "::error::Expected exactly the eight sanctioned refs after evidence-contract retirement."
-            printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
+              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
             exit 2
           fi
           echo "RETIREMENT VERIFIED: evidence-contract branch archived, deleted and exactly eight refs remain."
