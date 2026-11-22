@@ -178,7 +178,7 @@ jobs:
 
           remaining="$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | sort)"
           expected="$(printf '%s\n' "${sanctioned[@]}" | sort)"
-          remaining_count="$(printf '%s\\n' "$remaining" | wc -l | tr -d ' ')"
+          remaining_count="$(printf '%s\n' "$remaining" | wc -l | tr -d ' ')"
           echo "Remaining physical branch refs: $remaining_count"
 
           if [ "$EXECUTE" = "true" ] && [ "$remaining" != "$expected" ]; then
