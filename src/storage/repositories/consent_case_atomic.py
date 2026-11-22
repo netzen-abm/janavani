@@ -129,6 +129,8 @@ class InMemoryConsentCaseAtomicRepository:
                 try:
                     if existing.consent_id not in current_case.consent_refs:
                         current_case.consent_refs.append(existing.consent_id)
+                    current_case.updated_at = existing.created_at
+                    current_case.version += 1
                     current_case.events.append(CaseEvent(
                         event_id=event_id, case_id=current_case.case_id,
                         event_type=CaseEventType.CONSENT_RECORDED,
@@ -155,6 +157,8 @@ class InMemoryConsentCaseAtomicRepository:
                 if consent.consent_id not in current_case.consent_refs:
                     current_case.consent_refs.append(consent.consent_id)
                 self._consents.save(consent, principal_id=principal_id)
+                current_case.updated_at = consent.created_at
+                current_case.version += 1
                 current_case.events.append(CaseEvent(
                     event_id=f"consent-{consent.consent_id}",
                     case_id=current_case.case_id,
