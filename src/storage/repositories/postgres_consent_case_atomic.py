@@ -44,8 +44,7 @@ class PostgresConsentCaseAtomicRepository:
         return (PostgresConsentRepository._hydrate(row[:10]), row[10]) if row else (None, None)
 
     @staticmethod
-    def _matches(existing: Consent, incoming: Consent, case_id: str,
-                 existing_case_id: str | None) -> bool:
+    def _matches(existing: Consent, incoming: Consent, case_id: str, existing_case_id: str | None) -> bool:
         return (
             existing_case_id == case_id
             and existing.consent_id == incoming.consent_id
