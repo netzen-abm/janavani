@@ -93,12 +93,7 @@ def create_surface_case_composition(
     blob_store=None,
     case_content_repository=None,
 ) -> SurfaceCaseComposition:
-    """Compose one provider graph for an access surface.
-
-    A single ProviderComposition is resolved first and all omitted repositories
-    are derived from that same provider graph. Explicit repository injection is
-    retained for deterministic tests and deployments with pre-built providers.
-    """
+    """Compose one provider graph; injected providers remain shared across surfaces."""
     provider_composition = provider_composition or create_provider_composition()
     runtime_graph = _provider_runtime_graph(provider_composition)
     case_repository = case_repository or runtime_graph.setdefault(
@@ -124,13 +119,9 @@ def create_surface_case_composition(
         create_identity_link_repository(provider_composition=provider_composition),
     )
 
-    # Citizen-authored content is surface-local by design; durable Case state is shared,
-    # but sensitive narrative/claims never become shared provider state.
+    # Citizen-authored content stays surface-local until a durable provider
+    # with its own retention and RLS contract is explicitly selected.
     if case_content_repository is None:
-        # Content remains an explicit privacy/persistence boundary. Do not silently
-        # promote citizen-authored narrative into the shared provider graph until a
-        # durable content provider with its own retention/RLS contract is deliberately
-        # selected by the runtime.
         case_content_repository = InMemoryCaseContentRepository()
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
