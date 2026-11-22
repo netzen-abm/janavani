@@ -163,6 +163,7 @@ class PostgresConsentCaseAtomicRepository:
                     return consent
 
                 new_version = current_version + 1
+                case.updated_at = consent.created_at
                 update_case(cursor, case, current_version, new_version)
                 if cursor.rowcount != 1:
                     raise RuntimeError("Case optimistic concurrency check failed")
