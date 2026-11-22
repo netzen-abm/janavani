@@ -31,6 +31,7 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
         with connection.transaction():
             with connection.cursor() as cursor:
                 cursor.execute(BASE_SCHEMA)
+                cursor.execute((ROOT / "db/migrations/20261122120000_consent_action_fingerprint.sql").read_text(encoding="utf-8"))
                 cursor.execute(IDENTITY_SCHEMA)
                 cursor.execute(RLS_POLICY)
 
