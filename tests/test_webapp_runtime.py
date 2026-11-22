@@ -82,7 +82,7 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     assert reviewed.status_code == 200
     assert "Draft saved for review" in reviewed.text
     action_input = next(
-        tag for tag in re.findall(r"<input\\b[^>]*>", reviewed.text)
+        tag for tag in re.findall(r"<input[^>]*>", reviewed.text)
         if re.search(r'name="action_id"', tag)
     )
     action_match = re.search(r'value="([a-f0-9]{32})"', action_input)
