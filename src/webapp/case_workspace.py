@@ -1,6 +1,8 @@
 """Citizen case-workspace routes; canonical API owns lifecycle and authorization."""
 from __future__ import annotations
 
+from uuid import uuid4
+
 from fastapi.responses import Response
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Select, Option, Textarea, Titled
 from starlette.requests import Request
@@ -73,6 +75,7 @@ def register_case_workspace_routes(rt) -> None:
                 P(f"Case {case_id}: {result.get('status', 'review')}"),
                 P("Before marking this case ready, confirm that you intend to download the document and submit it yourself. Janavani will not transmit it."),
                 Form(action=f"/cases/{case_id}/consent", method="post")(
+                    Input(type="hidden", name="action_id", value=uuid4().hex),
                     Label(
                         Input(type="checkbox", name="explicit_confirmation", value="yes", required=True),
                         " I have reviewed this document and consent to prepare it for my own download and submission.",
@@ -84,7 +87,18 @@ def register_case_workspace_routes(rt) -> None:
         )
 
     @rt("/cases/{case_id}/consent")
-    def post_case_consent(case_id: str, request: Request, explicit_confirmation: str = ""):
+    def post_case_consent(
+        case_id: str, request: Request, action_id: str = "", explicit_confirmation: str = ""
+    ):
+        if not action_id.strip() or len(action_id) > 200:
+            return Titled(
+                "Consent action expired",
+                Div(
+                    H2("Please review the document again"),
+                    P("The confirmation identifier is missing or invalid. No consent was recorded."),
+                    A("Return to document review", href=f"/cases/{case_id}/prepare"),
+                ),
+            )
         if explicit_confirmation != "yes":
             return Titled(
                 "Consent required",
@@ -97,7 +111,7 @@ def register_case_workspace_routes(rt) -> None:
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
-        result = client.record_explicit_consent(case_id)
+        result = client.record_explicit_consent(case_id, action_id=action_id)
         return Titled(
             "Consent recorded",
             Div(
