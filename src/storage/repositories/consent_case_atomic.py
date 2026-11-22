@@ -111,12 +111,35 @@ class InMemoryConsentCaseAtomicRepository:
                             "Consent action key was reused with different content"
                         )
                     raise ValueError("Consent identifier already has different content")
-                current_case = self._cases.get(case.case_id, principal_id=principal_id)
-                if current_case is None:
+                current_case = deepcopy(
+                    self._cases.get(case.case_id, principal_id=principal_id)
+                )
+                if current_case is None or current_case.created_by != principal_id:
                     raise LookupError("Case not found")
-                self._verify_event(current_case, existing, principal_id)
+                event_id = f"consent-{existing.consent_id}"
+                event = next((item for item in current_case.events if item.event_id == event_id), None)
+                if event is not None:
+                    self._verify_event(current_case, existing, principal_id)
+                    if action_key:
+                        self._actions[action_key] = existing
+                    return existing
                 if action_key:
-                    self._actions[action_key] = existing
+                    raise RuntimeError("Persisted consent action is missing its Case audit event")
+                case_snapshot = deepcopy(self._cases._cases)
+                try:
+                    if existing.consent_id not in current_case.consent_refs:
+                        current_case.consent_refs.append(existing.consent_id)
+                    current_case.events.append(CaseEvent(
+                        event_id=event_id, case_id=current_case.case_id,
+                        event_type=CaseEventType.CONSENT_RECORDED,
+                        occurred_at=existing.created_at, actor_id=principal_id,
+                        source_ref=existing.proof_ref, notes=existing.purpose,
+                    ))
+                    self._cases.save(current_case, principal_id=principal_id)
+                except Exception:
+                    self._cases._cases.clear()
+                    self._cases._cases.update(case_snapshot)
+                    raise
                 return existing
 
             consent_snapshot = deepcopy(self._consents._items)
