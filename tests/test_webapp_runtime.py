@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 
@@ -49,7 +51,11 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
         def start_review(self, case_id, **kwargs):
             return {"status": "review"}
 
-        def record_explicit_consent(self, case_id):
+        recorded_action_ids = []
+
+        def record_explicit_consent(self, case_id, *, action_id):
+            assert 1 <= len(action_id) <= 200
+            self.recorded_action_ids.append(action_id)
             return {"status": "ready"}
 
         def generate_artifact(self, case_id, **kwargs):
@@ -58,6 +64,8 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
             return b"%PDF-test-payload"
 
     monkeypatch.setattr(workspace, "client_for_request", lambda request: Client())
+    fake_client = Client()
+    monkeypatch.setattr(workspace, "client_for_request", lambda request: fake_client)
     client = TestClient(app)
 
     prepared = client.get("/cases/case-test/prepare")
@@ -74,13 +82,17 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     )
     assert reviewed.status_code == 200
     assert "Draft saved for review" in reviewed.text
+    action_match = re.search(r'name="action_id"[^>]*value="([a-f0-9]{32})"', reviewed.text)
+    assert action_match is not None
+    action_id = action_match.group(1)
 
     consented = client.post(
         "/cases/case-test/consent",
-        data={"explicit_confirmation": "yes"},
+        data={"action_id": action_id, "explicit_confirmation": "yes"},
     )
     assert consented.status_code == 200
     assert "Explicit consent recorded" in consented.text
+    assert fake_client.recorded_action_ids == [action_id]
 
     artifact = client.post(
         "/cases/case-test/artifact", data={"document_format": "pdf"}
