@@ -126,13 +126,16 @@ def create_surface_case_composition(
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
+    atomic_consent = runtime_graph.get("consent_case_atomic")
+    if atomic_consent is None:
+        atomic_consent = create_consent_case_atomic_repository(
+            provider_composition=provider_composition,
+            consent_repository=consent_repository, case_repository=case_repository,
+        )
+        runtime_graph["consent_case_atomic"] = atomic_consent
     consent_capability = create_consent_capability(
         consent_repository=consent_repository, case_capability=case_capability,
-        atomic_repository=runtime_graph.setdefault("consent_case_atomic",
-            create_consent_case_atomic_repository(
-                provider_composition=provider_composition,
-                consent_repository=consent_repository, case_repository=case_repository,
-            )),
+        atomic_repository=atomic_consent,
     )
     review_repository = document_review_repository or runtime_graph.setdefault(
         "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
