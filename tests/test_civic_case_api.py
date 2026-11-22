@@ -68,6 +68,13 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
+    replay = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=_auth_header(),
+        json={"action_id": "web-consent-prepare-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert replay.status_code == 200, replay.json()
+    assert replay.json()["consent_id"] == consent.json()["consent_id"]
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
     submitting = client.post(f"/civic/cases/{case_id}/submitting", headers=_auth_header(), json={})
