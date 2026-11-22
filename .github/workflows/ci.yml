@@ -29,23 +29,23 @@ jobs:
           case "$branch" in
             feat/capability-activation-governance)
               if [ "$EVENT_NAME" = "pull_request" ]; then
-                if [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
-                  echo "::error::Consent governance PR must target main."
+                if [ "${{ github.event.pull_request.number }}" != "243" ] ||
+                   [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
+                  echo "::error::Consent governance exception is restricted to PR #243 targeting main."
                   exit 1
                 fi
               elif [ "$EVENT_NAME" = "push" ]; then
-                open_prs="$(
+                mapfile -t branch_prs < <(
                   BRANCH="$branch" REPO="$REPOSITORY" \
                     gh api --paginate "repos/$REPOSITORY/pulls?state=open&per_page=100" \
-                      --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO and .base.ref == "main") | .number' \
-                    | wc -l | tr -d ' '
-                )"
-                if [ "$open_prs" != "1" ]; then
-                  echo "::error::Consent governance branch pushes require exactly one open PR to main."
+                      --jq '.[] | select(.number == 243 and .head.ref == env.BRANCH and .head.repo.full_name == env.REPO and .base.ref == "main") | .number'
+                )
+                if [ "${#branch_prs[@]}" -ne 1 ] || [ "${branch_prs[0]}" != "243" ]; then
+                  echo "::error::Consent governance pushes require the sole matching open PR #243 to main."
                   exit 1
                 fi
               else
-                echo "::error::Consent governance branch is permitted only while its main integration PR is open."
+                echo "::error::Consent governance branch is permitted only for PR #243."
                 exit 1
               fi
               expiry="2026-11-24"
@@ -57,10 +57,24 @@ jobs:
               echo "Temporary integration-only exception through $expiry; post-merge retirement must reduce physical refs to eight."
               ;;
             docs/environmental-civic-evidence-contract)
-              if [ "$EVENT_NAME" != "pull_request" ] ||
-                 [ "${{ github.event.pull_request.number }}" != "247" ] ||
-                 [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
-                echo "::error::Environmental evidence ref is a PR #247-only documentation transition."
+              if [ "$EVENT_NAME" = "pull_request" ]; then
+                if [ "${{ github.event.pull_request.number }}" != "247" ] ||
+                   [ "${{ github.event.pull_request.base.ref }}" != "main" ]; then
+                  echo "::error::Environmental evidence transition is restricted to PR #247 targeting main."
+                  exit 1
+                fi
+              elif [ "$EVENT_NAME" = "push" ]; then
+                mapfile -t branch_prs < <(
+                  BRANCH="$branch" REPO="$REPOSITORY" \
+                    gh api --paginate "repos/$REPOSITORY/pulls?state=open&per_page=100" \
+                      --jq '.[] | select(.number == 247 and .head.ref == env.BRANCH and .head.repo.full_name == env.REPO and .base.ref == "main") | .number'
+                )
+                if [ "${#branch_prs[@]}" -ne 1 ] || [ "${branch_prs[0]}" != "247" ]; then
+                  echo "::error::Environmental evidence pushes require the sole matching open PR #247 to main."
+                  exit 1
+                fi
+              else
+                echo "::error::Environmental evidence transition is restricted to PR #247."
                 exit 1
               fi
               expiry="2026-11-24"
@@ -70,11 +84,11 @@ jobs:
                 exit 1
               fi
               git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
-              mapfile -t changed < <(git diff --name-only refs/remotes/origin/main HEAD | sed '/^$/d' | sort -u)
+              mapfile -t changed < <(git diff --no-renames --name-only refs/remotes/origin/main HEAD | sed '/^$/d' | sort -u)
               if [ "${#changed[@]}" -ne 1 ] ||
                  [ "${changed[0]}" != "docs/architecture/ENVIRONMENTAL_CIVIC_EVIDENCE_PRODUCT_MAPPING.md" ]; then
                 echo "::error::PR #247 transition may change only its approved product-mapping document."
-                printf 'Observed changed paths:\\n%s\\n' "${changed[*]}"
+                printf 'Observed changed paths:\n%s\n' "${changed[*]}"
                 exit 1
               fi
               echo "Documentation-only transition through $expiry; merge workflow must archive and retire this ref."
