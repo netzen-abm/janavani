@@ -32,7 +32,7 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     capability = ConsentCapability(repository=repository, case_capability=case_capability)
     actor = _identity("telegram:12345", "case:consent", "case:write", "case:review")
     result = capability.record_submission_consent(
-        case.case_id, scope="office:office-1", identity=actor, proof_ref="proof:submission"
+        case.case_id, scope="office:office-1", identity=actor, action_id="webhook-update-101", proof_ref="proof:submission"
     )
     assert result.consent.subject_id == "telegram:12345"
     assert result.consent.purpose == PURPOSE_SUBMISSION
@@ -47,7 +47,7 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     assert audit_events[0].notes == PURPOSE_SUBMISSION
     assert audit_events[0].source_ref == "proof:submission"
     repeated = capability.record_submission_consent(
-        case.case_id, scope="office:office-1", identity=actor, proof_ref="proof:submission"
+        case.case_id, scope="office:office-1", identity=actor, action_id="webhook-update-101", proof_ref="proof:submission"
     )
     assert repeated.consent == result.consent
     assert len([event for event in repeated.case.case.events if event.event_id == event_id]) == 1
@@ -60,7 +60,8 @@ def test_record_submission_consent_denies_cross_principal_case():
     capability = ConsentCapability(repository=InMemoryConsentRepository(), case_capability=CivicCaseCapability(cases))
     try:
         capability.record_submission_consent("JV-001", scope="office:office-1",
-            identity=_identity("telegram:99999", "case:consent", "case:write", "case:review"))
+            identity=_identity("telegram:99999", "case:consent", "case:write", "case:review"),
+            action_id="unauthorized-update")
     except LookupError:
         pass
     else:
@@ -72,7 +73,8 @@ def test_record_submission_consent_requires_scope():
     capability = ConsentCapability(repository=InMemoryConsentRepository(), case_capability=CivicCaseCapability(cases))
     try:
         capability.record_submission_consent("JV-001", scope=" ",
-            identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"))
+            identity=_identity("telegram:12345", "case:consent", "case:write", "case:review"),
+            action_id="empty-scope-update")
     except ValueError:
         pass
     else:
@@ -97,6 +99,7 @@ def test_document_preparation_consent_is_not_external_submission_consent():
         case.case_id,
         scope="citizen_download_and_self_send",
         identity=actor,
+        action_id="web-preparation-1",
         proof_ref="proof:preparation",
     )
 
@@ -115,9 +118,7 @@ def test_document_preparation_consent_is_not_external_submission_consent():
     assert result.case.case.status.value == "draft"
 
 
-def test_repeated_atomic_preparation_consent_is_idempotent():
-    from src.core.civic_case import CaseEvent
-
+def test_repeated_preparation_consent_reuses_one_atomic_action():
     cases = InMemoryCivicCaseRepository()
     case_capability = CivicCaseCapability(cases)
     case = case_capability.create(
@@ -131,50 +132,122 @@ def test_repeated_atomic_preparation_consent_is_idempotent():
         ),
     ).case
     consents = InMemoryConsentRepository()
-
-    class AtomicRecorder:
-        calls = 0
-
-        def save_consent_and_case(self, consent, current_case, *, principal_id):
-            self.calls += 1
-            consents.save(consent, principal_id=principal_id)
-            current_case.events.append(CaseEvent(
-                event_id=f"consent-{consent.consent_id}",
-                case_id=current_case.case_id,
-                event_type=CaseEventType.CONSENT_RECORDED,
-                occurred_at=consent.created_at,
-                actor_id=principal_id,
-                source_ref=consent.proof_ref,
-                notes=consent.purpose,
-            ))
-            current_case.version += 1
-            cases.save(current_case, principal_id=principal_id)
-
-    atomic = AtomicRecorder()
-    capability = ConsentCapability(
-        repository=consents,
-        case_capability=case_capability,
-        atomic_repository=atomic,
-    )
-    actor = _identity(
-        "telegram:12345", "case:consent", "case:write", "case:review"
-    )
+    capability = ConsentCapability(repository=consents, case_capability=case_capability)
+    actor = _identity("telegram:12345", "case:consent", "case:write", "case:review")
 
     first = capability.record_document_preparation_consent(
-        case.case_id, scope="citizen_download_and_self_send", identity=actor
+        case.case_id, scope="citizen_download_and_self_send",
+        identity=actor, action_id="same-explicit-action",
     )
     second = capability.record_document_preparation_consent(
-        case.case_id, scope="citizen_download_and_self_send", identity=actor
+        case.case_id, scope="citizen_download_and_self_send",
+        identity=actor, action_id="same-explicit-action",
     )
 
     assert first.consent == second.consent
-    assert atomic.calls == 1
+    assert len(consents.list_for_subject("telegram:12345")) == 1
     assert second.case.case.consent_refs.count(first.consent.consent_id) == 1
     assert sum(
         event.event_id == f"consent-{first.consent.consent_id}"
         for event in second.case.case.events
     ) == 1
     assert second.case.case.status.value == "draft"
+
+
+def test_distinct_explicit_actions_create_distinct_historical_grants():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Streetlight",
+            narrative="A streetlight is broken.",
+        ),
+        identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write"),
+    ).case
+    repository = InMemoryConsentRepository()
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+    actor = _identity("telegram:12345", "case:consent", "case:write")
+
+    first = capability.record_document_preparation_consent(
+        case.case_id, scope="citizen_download_and_self_send",
+        identity=actor, action_id="citizen-confirmation-1",
+    )
+    second = capability.record_document_preparation_consent(
+        case.case_id, scope="citizen_download_and_self_send",
+        identity=actor, action_id="citizen-confirmation-2",
+    )
+
+    assert first.consent.consent_id != second.consent.consent_id
+    assert len(repository.list_for_subject("telegram:12345")) == 2
+    assert len([
+        event for event in second.case.case.events
+        if event.event_type is CaseEventType.CONSENT_RECORDED
+    ]) == 2
+
+
+def test_concurrent_retries_of_one_consent_action_create_one_grant_and_event():
+    from concurrent.futures import ThreadPoolExecutor
+
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Road damage",
+            narrative="The road is damaged.",
+        ),
+        identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write"),
+    ).case
+    repository = InMemoryConsentRepository()
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+    actor = _identity("telegram:12345", "case:consent", "case:write")
+
+    def record():
+        return capability.record_document_preparation_consent(
+            case.case_id, scope="citizen_download_and_self_send",
+            identity=actor, action_id="telegram-update:concurrent-1",
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: record(), range(24)))
+
+    grant_ids = {result.consent.consent_id for result in results}
+    assert len(grant_ids) == 1
+    assert len(repository.list_for_subject("telegram:12345")) == 1
+    current = case_capability.get_owned(case.case_id, identity=actor)
+    assert current is not None
+    assert current.consent_refs.count(next(iter(grant_ids))) == 1
+    assert sum(event.event_id == f"consent-{next(iter(grant_ids))}" for event in current.events) == 1
+
+
+def test_reused_action_id_with_changed_scope_fails_closed():
+    from src.storage.repositories.consent_case_atomic import ConsentIdempotencyConflictError
+
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Road damage",
+            narrative="The road is damaged.",
+        ),
+        identity=_identity("telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write"),
+    ).case
+    repository = InMemoryConsentRepository()
+    capability = ConsentCapability(repository=repository, case_capability=case_capability)
+    actor = _identity("telegram:12345", "case:consent", "case:write")
+    capability.record_document_preparation_consent(
+        case.case_id, scope="office:one", identity=actor, action_id="same-action-key"
+    )
+    try:
+        capability.record_document_preparation_consent(
+            case.case_id, scope="office:two", identity=actor, action_id="same-action-key"
+        )
+    except ConsentIdempotencyConflictError:
+        pass
+    else:
+        raise AssertionError("Reusing an action key with another scope must fail")
 
 
 def test_attaching_existing_consent_requires_case_consent_capability():
@@ -272,11 +345,11 @@ def test_expired_consent_can_be_replaced_by_a_new_version_without_overwriting_hi
     capability = ConsentCapability(repository=repository, case_capability=case_capability)
 
     renewed = capability.record_submission_consent(
-        case.case_id, scope=scope, identity=owner, proof_ref="proof:renewed"
+        case.case_id, scope=scope, identity=owner, action_id="renewal-action-1", proof_ref="proof:renewed"
     )
 
     assert renewed.consent.consent_id != expired.consent_id
-    assert renewed.consent.consent_id.startswith(f"{base_id}:v:")
+    assert renewed.consent.consent_id.startswith(f"{base_id}:a:")
     assert renewed.consent.is_authorized
     assert repository.get(base_id) == expired
     assert repository.get(base_id).is_authorized is False
@@ -323,7 +396,7 @@ def test_new_explicit_consent_does_not_overwrite_a_revoked_grant():
     capability = ConsentCapability(repository=repository, case_capability=case_capability)
 
     fresh = capability.record_submission_consent(
-        case.case_id, scope=scope, identity=owner, proof_ref="proof:new-explicit-choice"
+        case.case_id, scope=scope, identity=owner, action_id="new-explicit-choice-1", proof_ref="proof:new-explicit-choice"
     )
 
     assert fresh.consent.consent_id != revoked.consent_id
