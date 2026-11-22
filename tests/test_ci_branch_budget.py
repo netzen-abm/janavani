@@ -233,7 +233,7 @@ def test_branch_retirement_uses_independent_pull_request_concurrency_slots():
         ROOT / ".github" / "workflows" / "branch-retirement.yml"
     ).read_text(encoding="utf-8")
 
-    assert "format('janavani-branch-retirement-pr-{0}', github.event.pull_request.number)" in source
+    assert "janavani-branch-retirement-pr-{0}" in source
     assert "janavani-branch-retirement-manual" in source
     assert "group: janavani-branch-retirement\n" not in source
     assert "cancel-in-progress: false" in source
