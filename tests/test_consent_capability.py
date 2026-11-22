@@ -355,7 +355,7 @@ def test_expired_consent_can_be_replaced_by_a_new_version_without_overwriting_hi
     assert repository.get(base_id).is_authorized is False
 
     repeated = capability.record_submission_consent(
-        case.case_id, scope=scope, identity=owner, proof_ref="proof:renewed"
+        case.case_id, scope=scope, identity=owner, action_id="renewal-action-1", proof_ref="proof:renewed"
     )
     assert repeated.consent.consent_id == renewed.consent.consent_id
     assert len(repository.list_for_subject(owner.principal.principal_id)) == 2
