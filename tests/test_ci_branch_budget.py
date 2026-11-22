@@ -151,7 +151,7 @@ def test_consent_governance_is_a_time_limited_integration_exception() -> None:
     assert '.head.ref == env.BRANCH' in source
     assert '.head.repo.full_name == env.REPO' in source
     assert '.base.ref == "main"' in source
-    assert 'expiry="2026-11-17"' in source
+    assert 'expiry="2026-11-24"' in source
     assert "Temporary consent-governance integration exception expired" in source
 
 
