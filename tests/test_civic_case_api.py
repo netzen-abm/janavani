@@ -64,7 +64,7 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     consent = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
         headers=_auth_header(),
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+        json={"action_id": "web-consent-prepare-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
@@ -123,14 +123,14 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     denied = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
         headers=headers,
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": False},
+        json={"action_id": "web-consent-denied-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": False},
     )
     assert denied.status_code == 400
 
     consent = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
         headers=headers,
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+        json={"action_id": "web-consent-prep-2", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
@@ -164,7 +164,7 @@ def test_legacy_consent_attachment_requires_persisted_case_owned_grant():
     grant = client.post(
         f"/civic/cases/{first_case_id}/explicit-consent",
         headers=headers,
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+        json={"action_id": "web-consent-owner-grant-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert grant.status_code == 200, grant.json()
     consent_id = grant.json()["consent_id"]
