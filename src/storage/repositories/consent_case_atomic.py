@@ -12,7 +12,7 @@ from threading import RLock
 from typing import Protocol
 
 from src.core.consent import Consent
-from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
+from src.core.civic_case import CaseEventType, CivicCase
 
 
 class ConsentIdempotencyConflictError(RuntimeError):
@@ -84,25 +84,25 @@ class InMemoryConsentCaseAtomicRepository:
             raise RuntimeError("Persisted consent event does not match its grant")
 
     def save_consent_and_case(
-        self,
-        consent: Consent,
-        case: CivicCase,
-        *,
-        principal_id: str,
+        self, consent: Consent, case: CivicCase, *, principal_id: str,
         action_fingerprint: str | None = None,
     ) -> Consent:
         if not principal_id.strip():
             raise ValueError("principal_id is required")
         if consent.subject_id != principal_id or case.created_by != principal_id:
             raise PermissionError("Consent and Case must belong to the transaction principal")
-        if consent.consent_id not in case.consent_refs:
-            raise ValueError("Case must reference consent before atomic persistence")
+        self._verify_event(case, consent, principal_id)
 
         with self._lock:
             action_key = (principal_id, action_fingerprint) if action_fingerprint else None
             mapped = self._actions.get(action_key) if action_key else None
-            existing = mapped or self._consents.get(
-                consent.consent_id, principal_id=principal_id
+            existing = mapped or self._consents.get(consent.consent_id, principal_id=principal_id)
+            current_case = deepcopy(self._cases.get(case.case_id, principal_id=principal_id))
+            if current_case is None or current_case.created_by != principal_id:
+                raise LookupError("Case not found")
+            stored_event = next(
+                (event for event in current_case.events if event.event_id == f"consent-{consent.consent_id}"),
+                None,
             )
             if existing is not None:
                 if not self._same_payload(existing, consent):
@@ -111,64 +111,29 @@ class InMemoryConsentCaseAtomicRepository:
                             "Consent action key was reused with different content"
                         )
                     raise ValueError("Consent identifier already has different content")
-                current_case = deepcopy(
-                    self._cases.get(case.case_id, principal_id=principal_id)
-                )
-                if current_case is None or current_case.created_by != principal_id:
-                    raise LookupError("Case not found")
-                event_id = f"consent-{existing.consent_id}"
-                event = next((item for item in current_case.events if item.event_id == event_id), None)
-                if event is not None:
+                if stored_event is not None:
                     self._verify_event(current_case, existing, principal_id)
                     if action_key:
                         self._actions[action_key] = existing
                     return existing
                 if action_key:
                     raise RuntimeError("Persisted consent action is missing its Case audit event")
-                case_snapshot = deepcopy(self._cases._cases)
-                try:
-                    if existing.consent_id not in current_case.consent_refs:
-                        current_case.consent_refs.append(existing.consent_id)
-                    current_case.updated_at = existing.created_at
-                    current_case.version += 1
-                    current_case.events.append(CaseEvent(
-                        event_id=event_id, case_id=current_case.case_id,
-                        event_type=CaseEventType.CONSENT_RECORDED,
-                        occurred_at=existing.created_at, actor_id=principal_id,
-                        source_ref=existing.proof_ref, notes=existing.purpose,
-                    ))
-                    self._cases.save(current_case, principal_id=principal_id)
-                except Exception:
-                    self._cases._cases.clear()
-                    self._cases._cases.update(case_snapshot)
-                    raise
-                return existing
+            if case.version != current_case.version:
+                raise RuntimeError(
+                    f"Expected Case version {case.version}, found {current_case.version}"
+                )
 
             consent_snapshot = deepcopy(self._consents._items)
             case_snapshot = deepcopy(self._cases._cases)
             try:
-                current_case = deepcopy(
-                    self._cases.get(case.case_id, principal_id=principal_id)
+                if existing is None:
+                    self._consents.save(consent, principal_id=principal_id)
+                event = next(
+                    item for item in case.events if item.event_id == f"consent-{consent.consent_id}"
                 )
-                if current_case is None:
-                    raise LookupError("Case not found")
-                if current_case.created_by != principal_id:
-                    raise PermissionError("Case owner does not match transaction principal")
-                if consent.consent_id not in current_case.consent_refs:
-                    current_case.consent_refs.append(consent.consent_id)
-                self._consents.save(consent, principal_id=principal_id)
-                current_case.updated_at = consent.created_at
-                current_case.version += 1
-                current_case.events.append(CaseEvent(
-                    event_id=f"consent-{consent.consent_id}",
-                    case_id=current_case.case_id,
-                    event_type=CaseEventType.CONSENT_RECORDED,
-                    occurred_at=consent.created_at,
-                    actor_id=principal_id,
-                    source_ref=consent.proof_ref,
-                    notes=consent.purpose,
-                ))
-                self._cases.save(current_case, principal_id=principal_id)
+                case.version = current_case.version + 1
+                case.updated_at = event.occurred_at
+                self._cases.save(case, principal_id=principal_id)
             except Exception:
                 self._consents._items.clear()
                 self._consents._items.update(consent_snapshot)
@@ -177,5 +142,5 @@ class InMemoryConsentCaseAtomicRepository:
                 raise
 
             if action_key:
-                self._actions[action_key] = consent
-            return consent
+                self._actions[action_key] = existing or consent
+            return existing or consent
