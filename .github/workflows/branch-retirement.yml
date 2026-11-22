@@ -439,7 +439,27 @@ jobs:
             echo "::error::Retirement held: another open PR references $branch."
             exit 2
           fi
-          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if ! gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            evidence_pr="$(gh api "repos/$REPO/pulls/247")"
+            evidence_merged_at="$(jq -r '.merged_at // empty' <<<"$evidence_pr")"
+            evidence_head="$(jq -r '.head.sha' <<<"$evidence_pr")"
+            evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+            if [ -z "$evidence_merged_at" ] || [ "$evidence_archive" != "$evidence_head" ]; then
+              echo "::error::Evidence-contract ref is absent without a verified merged-head archive."
+              exit 2
+            fi
+            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+            expected="$(expected_sanctioned_branches | sort)"
+            if [ "$remaining" != "$expected" ]; then
+              echo "::error::Evidence-contract ref is already absent but the eight-ref inventory is not exact."
+              printf 'Actual refs:\\n%s\\nExpected refs:\\n%s\\n' "$remaining" "$expected"
+              exit 2
+            fi
+            echo "RETIREMENT VERIFIED: PR #243 workflow already archived and retired this merged evidence-contract ref; exactly eight refs remain."
+            exit 0
+          fi
+
+                    head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
           git fetch --no-tags origin "refs/heads/$branch:$git_ref"
           if [ "$(git rev-parse "$git_ref")" != "$head_sha" ] ||
              ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
