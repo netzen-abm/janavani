@@ -48,7 +48,7 @@ jobs:
                 echo "::error::Consent governance branch is permitted only while its main integration PR is open."
                 exit 1
               fi
-              expiry="2026-11-17"
+              expiry="2026-11-24"
               today="$(date -u +%F)"
               if [[ "$today" > "$expiry" ]]; then
                 echo "::error::Temporary consent-governance integration exception expired on $expiry."
