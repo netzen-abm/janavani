@@ -192,6 +192,29 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'retire-environmental-civic-evidence-contract:' in source
     assert 'consent_archive" != "$consent_head"' in source
     assert 'if [ "$remaining" != "$expected" ]' in section
+
+
+def test_consent_retirement_rechecks_evidence_archive_and_live_head_before_delete() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    consent = source.split("retire-consent-capability-governance:", 1)[1].split(
+        "retire-canonical-capability-envelope:", 1
+    )[0]
+    evidence = consent.split('if [ -n "$evidence_merged_at" ]; then', 1)[1].split(
+        'elif [ "$evidence_state" = "open" ]', 1
+    )[0]
+
+    archive_recheck = 'evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq \' .object.sha\')"' 
+    live_head_recheck = 'current_evidence_sha="$(gh api "repos/$REPO/git/ref/heads/$evidence_branch" --jq \' .object.sha\')"' 
+    assert archive_recheck.strip() in evidence
+    assert live_head_recheck.strip() in evidence
+    assert evidence.index(archive_recheck.strip()) < evidence.index(
+        'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"'
+    )
+    assert evidence.index(live_head_recheck.strip()) < evidence.index(
+        'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"'
+    )
     assert 'pulls/$pr_number/reviews?per_page=100' in section
     assert '.commit_id' in section
     assert 'latest_state[login] == "APPROVED"' in section
