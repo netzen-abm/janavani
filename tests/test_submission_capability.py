@@ -63,7 +63,10 @@ def _prepared_case() -> tuple[CivicCaseCapability, InMemoryConsentRepository, Id
     ConsentCapability(
         repository=consent_repo, case_capability=case_capability
     ).record_submission_consent(
-        case.case_id, scope="email:government", identity=identity
+        case.case_id,
+        scope="email:government",
+        identity=identity,
+        action_id=f"submission-test-setup:{case.case_id}",
     )
     case_capability.approve(case.case_id, identity=identity)
     prepared = case_capability.get_owned(case.case_id, identity=identity)
