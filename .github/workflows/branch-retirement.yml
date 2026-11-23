@@ -331,6 +331,16 @@ jobs:
             else
               gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$evidence_tag" -f "sha=$evidence_head"
             fi
+            # Re-read both mutable refs immediately before deletion. The archive
+            # must preserve the exact PR head, and the live branch must not have
+            # advanced since the initial fetch/archive verification.
+            evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha')"
+            current_evidence_sha="$(gh api "repos/$REPO/git/ref/heads/$evidence_branch" --jq '.object.sha')"
+            if [ "$evidence_archive" != "$evidence_head" ] ||
+               [ "$current_evidence_sha" != "$evidence_head" ]; then
+              echo "::error::Evidence-contract archive or branch head changed before deletion."
+              exit 2
+            fi
             gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"
             if gh api "repos/$REPO/git/ref/heads/$evidence_branch" >/dev/null 2>&1; then
               echo "::error::Evidence-contract ref still exists after deletion."
