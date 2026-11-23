@@ -60,7 +60,10 @@ def _record_submission_consent(slice_, repository, case_id: str, actor: Identity
         case_capability=slice_._deps.case_capability,
     )
     return consent_capability.record_submission_consent(
-        case_id, scope="office:office-1", identity=actor
+        case_id,
+        scope="office:office-1",
+        identity=actor,
+        action_id=f"slice-submission-setup:{case_id}",
     )
 
 
