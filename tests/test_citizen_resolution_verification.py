@@ -37,7 +37,10 @@ def _resolved_case() -> tuple[CivicCaseCapability, IdentityContext, str]:
     ConsentCapability(
         repository=InMemoryConsentRepository(), case_capability=capability
     ).record_submission_consent(
-        case.case_id, scope="resolution-verification", identity=identity
+        case.case_id,
+        scope="resolution-verification",
+        identity=identity,
+        action_id=f"resolution-verification-setup:{case.case_id}",
     )
     capability.approve(case.case_id, identity=identity)
     capability.transition(case.case_id, action="case:begin_submission", identity=identity)
