@@ -27,9 +27,13 @@ def _schema() -> None:
     identity = (ROOT / "db/migrations/20260920100000_external_identity_links.sql").read_text(
         encoding="utf-8"
     )
+    consent_actions = (ROOT / "db/migrations/20261122120000_consent_action_fingerprint.sql").read_text(
+        encoding="utf-8"
+    )
     with psycopg.connect(DSN) as connection:
         connection.execute(base)
         connection.execute(identity)
+        connection.execute(consent_actions)
 
 
 def _identity(principal_id: str, interface: str) -> IdentityContext:
@@ -51,6 +55,7 @@ def test_web_and_telegram_share_durable_identity_and_case_state(monkeypatch):
     providers = (
         ProviderComposition.memory_first()
         .with_provider("civic_case", "postgres")
+        .with_provider("consent", "postgres")
         .with_provider("external_identity_links", "postgres")
     )
 
