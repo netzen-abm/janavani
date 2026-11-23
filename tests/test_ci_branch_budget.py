@@ -216,7 +216,7 @@ def test_consent_retirement_rechecks_evidence_archive_and_live_head_before_delet
     assert archive_recheck in evidence
     assert live_head_recheck in evidence
     delete = 'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"'
-    assert evidence.index(archive_recheck) < evidence.index(delete)
+    assert evidence.rindex(archive_recheck) < evidence.index(delete)
     assert evidence.index(live_head_recheck) < evidence.index(delete)
 
 
