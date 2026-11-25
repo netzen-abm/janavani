@@ -80,7 +80,7 @@ def register_case_workspace_routes(rt) -> None:
                         Input(type="checkbox", name="explicit_confirmation", value="yes", required=True),
                         " I have reviewed this document and consent to prepare it for my own download and submission.",
                     ),
-                    Button("Confirm consent and mark case ready"),
+                    Button("Record preparation consent"),
                 ),
                 A("Continue case review", href=f"/cases/{case_id}/prepare"),
             ),
@@ -113,19 +113,22 @@ def register_case_workspace_routes(rt) -> None:
             return _sign_in_required()
         result = client.record_explicit_consent(case_id, action_id=action_id)
         return Titled(
-            "Consent recorded",
+            "Preparation consent recorded",
             Div(
-                H2("Explicit consent recorded"),
-                P(f"Case {case_id}: {result.get('status', 'ready')}"),
-                P("No document has been transmitted. You remain responsible for reviewing and sending it."),
-                Form(action=f"/cases/{case_id}/artifact", method="post")(
-                    Select(name="document_format")(
-                        Option("PDF", value="pdf", selected=True),
-                        Option("Word document", value="docx"),
-                    ),
-                    Button("Download reviewed document"),
+                H2("Preparation consent recorded"),
+                P(f"Case {case_id}: {result.get('status', 'review')}"),
+                P(
+                    "This records permission to prepare the document. The case is not marked ready yet. "
+                    "Review the final document, then confirm readiness in the next step. Janavani will not transmit it."
                 ),
-                A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
+                Form(action=f"/cases/{case_id}/ready", method="post")(
+                    Label(
+                        Input(type="checkbox", name="ready_confirmation", value="yes", required=True),
+                        " I have checked the final document and approve it as ready for download.",
+                    ),
+                    Button("Confirm final review and mark ready"),
+                ),
+                A("Return to document review", href=f"/cases/{case_id}/prepare"),
             ),
         )
 
@@ -152,7 +155,18 @@ def register_case_workspace_routes(rt) -> None:
         )
 
     @rt("/cases/{case_id}/ready")
-    def post_case_ready(case_id: str, request: Request):
+    def post_case_ready(
+        case_id: str, request: Request, ready_confirmation: str = ""
+    ):
+        if ready_confirmation != "yes":
+            return Titled(
+                "Final confirmation required",
+                Div(
+                    H2("Case not marked ready"),
+                    P("No readiness change was made. Review the final document and tick the confirmation box first."),
+                    A("Return to document review", href=f"/cases/{case_id}/prepare"),
+                ),
+            )
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
@@ -160,12 +174,30 @@ def register_case_workspace_routes(rt) -> None:
         result = client.mark_ready(
             case_id, subject=draft.get("subject"), narrative=draft.get("body")
         )
+        status = result.get("status", "unknown")
+        if status != "ready":
+            return Titled(
+                "Case not ready",
+                Div(
+                    H2("The case has not reached ready status"),
+                    P(f"Case {case_id}: {status}"),
+                    P("No download is offered until the canonical case service confirms readiness."),
+                    A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
+                ),
+            )
         return Titled(
-            "Case ready",
+            "Case ready for download",
             Div(
-                H2("Case lifecycle updated"),
-                P(f"Case {case_id}: {result.get('status', 'ready')}"),
-                P("Download the document and send it yourself. Janavani does not transmit submissions."),
+                H2("Final review confirmed"),
+                P(f"Case {case_id}: ready"),
+                P("The document is ready for download. You must send it yourself; Janavani does not transmit submissions."),
+                Form(action=f"/cases/{case_id}/artifact", method="post")(
+                    Select(name="document_format")(
+                        Option("PDF", value="pdf", selected=True),
+                        Option("Word document", value="docx"),
+                    ),
+                    Button("Download reviewed document"),
+                ),
                 A("Open case workspace", href=f"/cases/{case_id}/prepare"),
             ),
         )
