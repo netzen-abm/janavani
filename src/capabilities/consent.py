@@ -130,6 +130,35 @@ class ConsentCapability:
             raise RuntimeError("Case disappeared after atomic consent attachment")
         return ConsentResult(persisted, CivicCaseResult(refreshed, AuthorizationDecision.ALLOW))
 
+    def require_active_document_preparation_consent(
+        self, case_id: str, *, identity: IdentityContext
+    ) -> Consent:
+        """Require an active, explicit, principal- and Case-bound preparation grant."""
+        case = self._cases.get_owned(case_id, identity=identity)
+        if case is None:
+            raise LookupError("Case not found")
+        self._authorize_case_consent(identity, case_id, "approve document preparation")
+        principal_id = identity.principal.principal_id
+        for consent_id in case.consent_refs:
+            consent = self._repository.get(consent_id, principal_id=principal_id)
+            if (
+                consent is None
+                or consent.subject_id != principal_id
+                or consent.grant_type is not ConsentGrantType.EXPLICIT
+            ):
+                continue
+            if any(
+                consent.authorizes(PURPOSE_DOCUMENT_PREPARATION, scope)
+                and self._matches_consent_id(
+                    consent.consent_id, case_id, PURPOSE_DOCUMENT_PREPARATION, scope
+                )
+                for scope in consent.scope
+            ):
+                return consent
+        raise PermissionError(
+            "Active explicit document-preparation consent bound to this Case is required"
+        )
+
     def _record_consent(
         self,
         case_id: str,
