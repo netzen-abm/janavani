@@ -115,5 +115,32 @@ _TEMPLATES = (
             "filing requirements, facts and supporting material before submission."
         ),
     ),
+    CivicDocumentTemplate(
+        template_id="contract.general",
+        version=1,
+        title="Contract draft — terms for review by the parties",
+        document_type="Contract draft — legal review required",
+        purpose="Structure proposed agreement terms for review; this is not legal advice.",
+        jurisdiction_scope="Confirm governing law, applicable formalities and competent jurisdiction.",
+        language="en",
+        compatible_case_types=("other", "representation", "petition"),
+        required_fields=("subject", "issue", "requested_conditions", "jurisdiction"),
+        optional_fields=("legal_framework", "references", "deadline_date", "remedies_reserved"),
+        sections=(
+            TemplateSection("issue", "Purpose and background"),
+            TemplateSection("requested_conditions", "Proposed scope, obligations and conditions"),
+            TemplateSection("proposal_or_notice", "Additional proposed terms"),
+            TemplateSection("legal_framework", "Governing law or legal framework supplied for review"),
+            TemplateSection("deadline_date", "Proposed commencement or completion date"),
+            TemplateSection("remedies_reserved", "Termination, remedies and rights reserved"),
+            TemplateSection("references", "Supporting references"),
+            TemplateSection("jurisdiction", "Governing jurisdiction supplied by the parties"),
+        ),
+        introduction=(
+            "This is a preliminary structure for discussion between the parties. "
+            "It does not establish enforceability, replace negotiation or legal review, "
+            "or verify statutory requirements. Obtain qualified legal review before signing."
+        ),
+    ),
     _ADMINISTRATIVE_EVIDENCE_DEMAND,
 )
