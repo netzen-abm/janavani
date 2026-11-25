@@ -1,6 +1,7 @@
 """Review and approval lifecycle HTTP routes; external document submission is not a Janavani capability."""
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
+from src.capabilities.civic_case_content import CaseContentReadinessConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
@@ -13,6 +14,8 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
     try:
         CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
         result = CIVIC_ACTION.start_review(case_id, identity=context)
+    except CaseContentReadinessConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
@@ -26,6 +29,8 @@ async def mark_ready(case_id: str, request: EventRequest, context: IdentityConte
     try:
         CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
         result = CIVIC_ACTION.approve(case_id, identity=context)
+    except CaseContentReadinessConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
