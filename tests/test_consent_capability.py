@@ -1,11 +1,12 @@
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
 from src.capabilities.consent import ConsentCapability, PURPOSE_DOCUMENT_PREPARATION, PURPOSE_SUBMISSION
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
-from src.core.civic_case import CaseEventType, CaseType, CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CaseType, CivicCase
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
 from src.storage.repositories.consent import InMemoryConsentRepository
+from src.storage.repositories.consent_case_atomic import InMemoryConsentCaseAtomicRepository
 
 
 def _identity(principal_id: str = "telegram:12345", *capabilities: str) -> IdentityContext:
@@ -53,6 +54,80 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     assert len([event for event in repeated.case.case.events if event.event_id == event_id]) == 1
     assert repeated.case.case.consent_refs.count(result.consent.consent_id) == 1
     assert repeated.case.case.status.value == "draft"
+
+
+
+def test_atomic_consent_rejects_case_snapshot_staled_by_normal_case_save():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    actor = _identity(
+        "telegram:concurrency",
+        "JNV-CIVIC-COMPLAINT",
+        "case:consent",
+        "case:write",
+    )
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Concurrent Case update",
+            narrative="A synthetic case used to test stale consent projections.",
+        ),
+        identity=actor,
+    ).case
+    stale = case_capability.get_owned(case.case_id, identity=actor)
+    assert stale is not None
+
+    consent_repository = InMemoryConsentRepository()
+    consent = Consent(
+        consent_id="consent-concurrency-test",
+        subject_id=actor.principal.principal_id,
+        purpose=PURPOSE_DOCUMENT_PREPARATION,
+        scope=("citizen_download_and_self_send",),
+        grant_type=ConsentGrantType.EXPLICIT,
+        status=ConsentStatus.GRANTED,
+        created_at="2026-11-25T00:00:00+00:00",
+        proof_ref="proof:concurrency",
+    )
+    stale.consent_refs.append(consent.consent_id)
+    stale.events.append(CaseEvent(
+        event_id=f"consent-{consent.consent_id}",
+        case_id=case.case_id,
+        event_type=CaseEventType.CONSENT_RECORDED,
+        occurred_at=consent.created_at,
+        actor_id=actor.principal.principal_id,
+        source_ref=consent.proof_ref,
+        notes=consent.purpose,
+    ))
+
+    normal_writer = case_capability.get_owned(case.case_id, identity=actor)
+    assert normal_writer is not None
+    normal_writer.add_evidence(
+        "evidence-newer",
+        event_id="event-evidence-newer",
+        occurred_at="2026-11-25T00:00:01+00:00",
+        actor_id=actor.principal.principal_id,
+    )
+    cases.save(normal_writer, principal_id=actor.principal.principal_id)
+
+    atomic = InMemoryConsentCaseAtomicRepository(
+        consent_repository=consent_repository,
+        case_repository=cases,
+    )
+    import pytest
+    with pytest.raises(RuntimeError, match="Expected Case version"):
+        atomic.save_consent_and_case(
+            consent,
+            stale,
+            principal_id=actor.principal.principal_id,
+            action_fingerprint="stale-consent-action",
+        )
+
+    current = case_capability.get_owned(case.case_id, identity=actor)
+    assert current is not None
+    assert current.version == normal_writer.version
+    assert "evidence-newer" in current.evidence_refs
+    assert consent.consent_id not in current.consent_refs
+    assert consent_repository.get(consent.consent_id) is None
 
 
 def test_record_submission_consent_denies_cross_principal_case():
