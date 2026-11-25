@@ -5,6 +5,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.submission import SubmissionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -33,6 +34,7 @@ def create_civic_action_vertical_slice(
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
     case_capability: CivicCaseCapability | None = None,
+    consent_capability: ConsentCapability | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
     artifact_repository=None,
@@ -49,7 +51,7 @@ def create_civic_action_vertical_slice(
     provider_composition: ProviderComposition | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
-        create_case_capability, create_authority_capability,
+        create_case_capability, create_authority_capability, create_consent_capability,
         create_responsibility_capability, create_obligation_capability,
         create_external_channel_capability, create_follow_up_capability,
         create_escalation_capability,
@@ -58,6 +60,10 @@ def create_civic_action_vertical_slice(
     case_capability = case_capability or create_case_capability(
         case_repository,
         content_repository=getattr(case_repository, "content_repository", None),
+    )
+    consent_capability = consent_capability or create_consent_capability(
+        consent_repository=consent_repository,
+        case_capability=case_capability,
     )
     authority_capability = create_authority_capability(authority_repository)
     if evidence_repository is None:
@@ -89,6 +95,7 @@ def create_civic_action_vertical_slice(
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
             case_capability=case_capability,
+            consent_capability=consent_capability,
             civic_action_capability=civic_action_capability,
             evidence_capability=evidence_capability,
             document_review_capability=document_review_capability,
