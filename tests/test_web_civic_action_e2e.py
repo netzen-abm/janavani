@@ -129,11 +129,11 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         interface="webapp",
         capabilities=frozenset({"case:consent", "case:write", "case:review"}),
     ))
-    consent_grant = civic_case_dependencies._COMPOSITION.consent_capability.record_submission_consent(
+    consent_grant = civic_case_dependencies._COMPOSITION.consent_capability.record_document_preparation_consent(
         case_id,
-        scope="office:office-e2e",
+        scope="citizen_download_and_self_send",
         identity=consent_identity,
-        action_id="web-e2e-submission-consent-1",
+        action_id="web-e2e-document-preparation-1",
         proof_ref="proof:web-e2e",
     )
     consent = client.post(
