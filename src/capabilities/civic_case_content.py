@@ -96,13 +96,20 @@ class CivicCaseContentMixin:
 
     def _save_content(self, case: CivicCase, *, identity: IdentityContext) -> None:
         existing = self._content.get(case.case_id, principal_id=identity.principal.principal_id)
+        candidate = CaseContent(
+            subject=existing.subject if existing is not None else case.subject,
+            narrative=case.narrative,
+            claims=tuple(dict(claim) for claim in case.claims),
+            jurisdiction=dict(case.jurisdiction),
+        )
+        if case.status is not CaseStatus.DRAFT:
+            if existing is None or candidate != existing:
+                raise CaseContentReadinessConflictError(
+                    "Citizen-authored Case content is locked after review begins"
+                )
+            return
         self._content.save(
             case.case_id,
-            CaseContent(
-                subject=existing.subject if existing is not None else case.subject,
-                narrative=case.narrative,
-                claims=tuple(dict(claim) for claim in case.claims),
-                jurisdiction=dict(case.jurisdiction),
-            ),
+            candidate,
             principal_id=identity.principal.principal_id,
         )
