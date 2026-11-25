@@ -84,7 +84,7 @@ def web_state(monkeypatch):
     monkeypatch.setattr(civic_case_dependencies, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_dependencies, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_lifecycle_router, "CAPABILITY", composition.case_capability)
-    monkeypatch.setattr(civic_case_lifecycle_router, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_lifecycle_router, "_CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_document_router, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "DOCUMENT_REVIEW", composition.document_review_capability)
