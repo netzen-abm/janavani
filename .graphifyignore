@@ -1,0 +1,35 @@
+# Graphify is a local engineering aid. Exclude historical generations so
+# duplicate symbols from archived implementations do not distort the active map.
+/archive/
+/docs/archive/
+
+# Exclude local/private runtime material.
+.env
+.env.*
+!/.env.example
+**/.env
+**/.env.*
+!**/.env.example
+**/secrets/**
+**/credentials/**
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/*.dump
+/database/**
+/uploads/**
+/user-data/**
+/tmp/**
+/var/**
+
+# Test fixtures may contain realistic personal details; test code remains indexed.
+/tests/fixtures/**
+**/fixtures/**
+
+# Generated Graphify output must remain local.
+/.graphify/
+/graphify-out/
