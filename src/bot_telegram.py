@@ -101,7 +101,6 @@ def build_application(*, token: str | None = None) -> Application:
         create_telegram_generation_dependencies(
             case_repository=case_repository,
             case_capability=case_capability,
-            civic_action_capability=composition.civic_action_capability,
             consent_capability=composition.consent_capability,
             letter_drafting_capability=composition.letter_drafting_capability,
             identity_link_repository=composition.identity_link_repository,
