@@ -144,6 +144,10 @@ def test_telegram_application_composition_registers_handlers_without_polling(mon
     assert application.bot_data["civic_case_capability"] is application.bot_data[
         "surface_case_composition"
     ].case_capability
+    assert (
+        application.bot_data["telegram_generation_dependencies"].letter_drafting_capability
+        is application.bot_data["surface_case_composition"].letter_drafting_capability
+    )
     assert application.bot_data["telegram_generation_dependencies"].identity_link_repository is (
         application.bot_data["identity_link_repository"]
     )
