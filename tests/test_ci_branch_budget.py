@@ -184,12 +184,17 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert "expected_pr_head_sha=\"\u0024{{ github.event.pull_request.head.sha }}\"" in section
     assert 'if [ "$head_sha" != "$expected_pr_head_sha" ]' in section
     assert "archive/branches/" in section
-    assert "Consent archive/head verification failed against the merged PR event head." in section
-    assert 'if ! gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then' in section
+    assert "Consent archive does not preserve the exact merged PR event head." in section
+    assert 'branch_http="$(curl -sS' in section
+    assert 'case "$branch_http" in' in section
+    assert '            404)' in section
+    assert 'refs/pull/$pr_number/head:$git_ref' in section
     assert 'if [ "$(git rev-parse "$git_ref")" != "$expected_pr_head_sha" ]; then' in section
     assert '-v expected="$expected_pr_head_sha"' in section
     assert 'if [ "$archive_sha" != "$expected_pr_head_sha" ]' in section
     assert '[ "$current_sha" != "$expected_pr_head_sha" ]' in section
+    assert "Consent branch was already absent after exact-head archive verification" in section
+    assert "Consent branch moved or was recreated after archive verification." in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" -ne 8 ]' not in section
     assert 'docs/environmental-civic-evidence-contract' in section
