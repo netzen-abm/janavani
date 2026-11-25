@@ -2,6 +2,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
+from src.storage.repositories.consent_case_atomic import ConsentIdempotencyConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, CONSENT, _COMPOSITION
@@ -74,6 +75,8 @@ async def record_explicit_consent(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
+    except ConsentIdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
