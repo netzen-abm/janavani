@@ -13,7 +13,7 @@ Janavani maintains exactly eight intentional long-lived development branch roles
 7. `audit/postgres-provider-production-gates` — durable-provider readiness.
 8. `chore/ecosystem-shared-capability-infrastructure` — ecosystem infrastructure convergence.
 
-The branch `feat/capability-activation-governance` is a separate, time-bounded integration exception for PR #243 only. It is not a ninth long-lived development role and must receive no unrelated work. The exception is extended once, solely to complete the already-open security review and archive-first integration; it expires on 24 November 2026 and will not be extended again. This does not waive the eight-ref physical target.
+The branch `feat/capability-activation-governance` is a separate, time-bounded integration exception for PR #243 only. It is not a ninth long-lived development role and must receive no unrelated work. The exception is extended once, solely to complete the already-open security review and archive-first integration; it expires on 30 November 2026 and will not be extended again. This does not waive the eight-ref physical target.
 
 ### PR #243 merge prerequisites
 
@@ -54,7 +54,7 @@ The former temporary transition branch `feat/canonical-capability-execution-enve
 
 The eight sanctioned long-lived branch roles remain the intended policy. Two temporary, PR-scoped integration refs are currently open in addition to those roles:
 
-- `feat/capability-activation-governance` — PR #243, a time-limited security/consent integration branch. Its exception expires on 24 November 2026 and its post-merge workflow archives the exact head before deleting the ref.
+- `feat/capability-activation-governance` — PR #243, a time-limited security/consent integration branch. Its exception expires on 30 November 2026 and its post-merge workflow archives the exact head before deleting the ref.
 - `docs/environmental-civic-evidence-contract` — PR #247, a one-off documentation-only product-mapping proposal. It is not a ninth long-lived role and must remain until its unique document is either integrated or explicitly archived.
 
 **Latest GitHub physical inventory: 10 refs (8 sanctioned roles + 2 open PR refs). The exact-eight physical target is NOT met.** A successful PR #243 branch-budget job validates its scoped PR exception; it does not prove physical branch-count compliance.
