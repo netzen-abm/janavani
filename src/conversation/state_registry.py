@@ -9,6 +9,7 @@ from __future__ import annotations
 from conversation.constants import (
     WAITING_FOR_ADDRESS,
     WAITING_FOR_CONSENT,
+    WAITING_FOR_READY,
     WAITING_FOR_DISTRICT,
     WAITING_FOR_FORMAT,
     WAITING_FOR_GENERATE,
@@ -23,7 +24,7 @@ from conversation.constants import (
     WAITING_FOR_DOCUMENT,
 )
 from conversation.steps.address import handle_address
-from conversation.steps.consent import handle_consent
+from conversation.steps.consent import handle_consent, handle_ready_confirmation
 from conversation.steps.district import handle_district
 from conversation.steps.document import handle_document
 from conversation.steps.format import handle_format
@@ -51,7 +52,8 @@ STATE_HANDLERS = {
     WAITING_FOR_ADDRESS: handle_address,
     WAITING_FOR_FORMAT: handle_format,
     WAITING_FOR_CONSENT: handle_consent,
-    WAITING_FOR_GENERATE: handle_generate,
+    WAITING_FOR_READY: handle_ready_confirmation,
+    WAITING_FOR_GENERATE: handle_ready_confirmation,
 }
 
 def get_handler(state: str):
