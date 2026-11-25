@@ -1,11 +1,13 @@
 """Document preparation, review and artifact helpers for the civic-action slice."""
 from __future__ import annotations
+
 from pathlib import Path
+
 from src.capabilities.document_review import DocumentReviewRequest
 from src.capabilities.letter_drafting import LetterDraftRequest
+from src.documents.artifact_ref import ArtifactState
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentFormat
-from src.documents.artifact_ref import ArtifactState
 from src.identity.context import IdentityContext
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 
