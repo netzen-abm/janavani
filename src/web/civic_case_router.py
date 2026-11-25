@@ -2,7 +2,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
-from src.storage.repositories.consent_case_atomic import ConsentIdempotencyConflictError
+from src.core.consent import ConsentIdempotencyConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, CONSENT, _COMPOSITION
