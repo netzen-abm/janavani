@@ -8,7 +8,6 @@ returning the original grant.
 from __future__ import annotations
 
 from copy import deepcopy
-from threading import RLock
 from typing import Protocol
 
 from src.core.consent import Consent, ConsentIdempotencyConflictError
@@ -42,12 +41,21 @@ class InMemoryConsentCaseAtomicRepository:
     """
 
     def __init__(self, *, consent_repository, case_repository) -> None:
-        if not hasattr(consent_repository, "_items") or not hasattr(case_repository, "_cases"):
-            raise TypeError("In-memory atomic consent requires the reference in-memory repositories")
+        if (
+            not hasattr(consent_repository, "_items")
+            or not hasattr(consent_repository, "_atomic_lock")
+            or not hasattr(consent_repository, "_actions")
+            or not hasattr(case_repository, "_cases")
+        ):
+            raise TypeError(
+                "In-memory atomic consent requires the reference in-memory repositories"
+            )
         self._consents = consent_repository
         self._cases = case_repository
-        self._lock = RLock()
-        self._actions: dict[tuple[str, str], Consent] = {}
+        # The shared Consent repository owns idempotency state. Creating more
+        # than one capability/adapter must not create a new action namespace.
+        self._lock = consent_repository._atomic_lock
+        self._actions = consent_repository._actions
 
     @staticmethod
     def _same_payload(existing: Consent, incoming: Consent) -> bool:
