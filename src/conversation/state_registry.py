@@ -28,7 +28,6 @@ from conversation.steps.consent import handle_consent, handle_ready_confirmation
 from conversation.steps.district import handle_district
 from conversation.steps.document import handle_document
 from conversation.steps.format import handle_format
-from conversation.steps.generate import handle_generate
 from conversation.steps.identity import handle_identity
 from conversation.steps.issue import handle_issue
 from conversation.steps.name import handle_name
