@@ -256,6 +256,7 @@ jobs:
             "$api_root/git/ref/heads/$branch")"
           case "$branch_http" in
             200)
+              branch_present_at_start=true
               head_sha="$(jq -r '.object.sha' "$branch_response")"
               if [ "$head_sha" != "$expected_pr_head_sha" ]; then
                 echo "::error::Consent branch head no longer matches the merged PR event head."
@@ -264,6 +265,7 @@ jobs:
               git fetch --no-tags origin "refs/heads/$branch:$git_ref"
               ;;
             404)
+              branch_present_at_start=false
               head_sha="$expected_pr_head_sha"
               echo "PR head branch is already absent; archive will be created from the immutable PR head ref."
               git fetch --no-tags origin "refs/pull/$pr_number/head:$git_ref"
@@ -342,9 +344,13 @@ jobs:
             "$api_root/git/ref/heads/$branch")"
           case "$branch_http" in
             200)
+              if [ "$branch_present_at_start" != true ]; then
+                echo "::error::Consent branch was recreated after the initial absence check; preserving it for manual review."
+                exit 2
+              fi
               current_sha="$(jq -r '.object.sha' "$branch_response")"
               if [ "$current_sha" != "$expected_pr_head_sha" ]; then
-                echo "::error::Consent branch moved or was recreated after archive verification."
+                echo "::error::Consent branch moved after archive verification; preserving it."
                 exit 2
               fi
               gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
@@ -361,7 +367,11 @@ jobs:
               fi
               ;;
             404)
-              echo "Consent branch was already absent after exact-head archive verification; no deletion was needed."
+              if [ "$branch_present_at_start" = true ]; then
+                echo "Consent branch was auto-deleted after initial verification; exact-head archive is preserved."
+              else
+                echo "Consent branch was already absent after exact-head archive verification; no deletion was needed."
+              fi
               ;;
             *)
               cat "$branch_response"
