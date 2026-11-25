@@ -5,6 +5,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.submission import SubmissionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -33,7 +34,7 @@ def create_civic_action_vertical_slice(
     case_capability: CivicCaseCapability | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
-    letter_drafting_capability=None,
+    letter_drafting_capability: LetterDraftingCapability | None = None,
     artifact_repository=None,
     blob_store=None,
     responsibility_resolver: ResponsibilityResolver | None = None,
