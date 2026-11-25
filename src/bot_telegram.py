@@ -55,6 +55,7 @@ def build_application(*, token: str | None = None) -> Application:
             identity_link_repository=composition.identity_link_repository,
             letter_drafting_capability=composition.letter_drafting_capability,
             document_review_capability=composition.document_review_capability,
+            civic_action_vertical_slice=composition.civic_action_vertical_slice,
         )
     )
 
