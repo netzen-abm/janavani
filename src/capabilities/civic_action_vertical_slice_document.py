@@ -1,15 +1,15 @@
 """Document preparation, review and artifact helpers for the civic-action slice."""
 from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from pathlib import Path
+
 from src.capabilities.document_review import DocumentReviewRequest
-from src.core.execution import CapabilityExecutionContext
+from src.core.case_types import CaseStatus
+from src.documents.artifact_ref import ArtifactState
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
-from src.documents.artifact_ref import ArtifactState
 from src.identity.context import IdentityContext
-from src.core.case_types import CaseStatus
-from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 
 @dataclass(frozen=True)
