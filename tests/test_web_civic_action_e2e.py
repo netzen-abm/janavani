@@ -267,6 +267,15 @@ def test_web_contract_draft_uses_same_civic_drafting_capability(web_state):
     assert prepared.json()["submission"] == "not_submitted"
 
 
+def test_retired_document_package_endpoint_returns_410_without_body():
+    response = client.post(
+        "/civic/cases/case-retired/document/package",
+        headers=_auth_header(),
+    )
+    assert response.status_code == 410
+    assert "retired" in response.json()["detail"].lower()
+
+
 def test_web_ready_fails_closed_without_submission_consent(web_state):
     cases, _, _, _, _ = web_state
     created = client.post(
