@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
+from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.identity.context import IdentityContext
-from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.storage.repositories.consent import ConsentRepository, InMemoryConsentRepository
 from src.storage.repositories.consent_case_atomic import (
     ConsentCaseAtomicRepository,
@@ -193,7 +193,7 @@ class ConsentCapability:
             scope=(scope,),
             grant_type=ConsentGrantType.EXPLICIT,
             status=ConsentStatus.GRANTED,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
             proof_ref=proof_ref,
         )
         case_for_write = self._cases._apply_verified_consent(
