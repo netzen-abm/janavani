@@ -30,6 +30,7 @@ def test_preparation_consent_persists_preview_without_generating_file(monkeypatc
         def get_owned(self, case_id, *, identity):
             return SimpleNamespace(status=SimpleNamespace(value="draft"))
 
+    class CivicActionSpy:
         def start_review(self, case_id, *, identity):
             calls["review"] += 1
 
@@ -62,6 +63,7 @@ def test_preparation_consent_persists_preview_without_generating_file(monkeypatc
         identity_link_repository=object(),
         letter_drafting_capability=DraftingCapability(),
         document_review_capability=None,
+        civic_action_vertical_slice=CivicActionSpy(),
     )
     monkeypatch.setattr(consent_step, "_identity", lambda *_args, **_kwargs: identity)
 
