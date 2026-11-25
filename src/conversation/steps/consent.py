@@ -56,8 +56,13 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     authority: AuthorityCapability | None = context.application.bot_data.get("authority_capability")
     try:
-        if authority is None or dependencies.letter_drafting_capability is None:
+        if (
+            authority is None
+            or dependencies.letter_drafting_capability is None
+            or dependencies.civic_action_vertical_slice is None
+        ):
             raise LookupError("Required capability is unavailable")
+        _CIVIC_ACTION = dependencies.civic_action_vertical_slice
         authority.require_verified_destination(str(office_id))
         identity = _identity(user_id, links=dependencies.identity_link_repository)
         issue = get_ephemeral_issue(user_id)
@@ -84,7 +89,7 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise LookupError("Case not found")
         status = getattr(current.status, "value", current.status)
         if status == "draft":
-            dependencies.case_capability.start_review(case_id, identity=identity)
+            _CIVIC_ACTION.start_review(case_id, identity=identity)
         elif status != "review":
             raise ValueError("Case is not in a reviewable state")
     except (LookupError, PermissionError, ValueError) as exc:
@@ -141,7 +146,10 @@ async def handle_ready_confirmation(update: Update, context: ContextTypes.DEFAUL
             raise LookupError("Case not found")
         status = getattr(case.status, "value", case.status)
         if status == "review":
-            dependencies.case_capability.approve(case_id, identity=identity)
+            _CIVIC_ACTION = dependencies.civic_action_vertical_slice
+            if _CIVIC_ACTION is None:
+                raise LookupError("Canonical civic-action lifecycle is unavailable")
+            _CIVIC_ACTION.approve(case_id, identity=identity)
         elif status != "ready":
             raise ValueError("Case is not awaiting final review approval")
     except (LookupError, PermissionError, ValueError) as exc:
