@@ -139,6 +139,9 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert draft.status_code == 200
     document_id = draft.json()["document_id"]
     assert draft.json()["to"]["name"] == "District Officer"
+    assert draft.json()["template_id"] == "complaint.general"
+    assert draft.json()["template_version"] == 1
+    assert "not legal advice" in draft.json()["body"].lower()
 
     reviewed = client.post(
         f"/civic/cases/{case_id}/document/review", headers=_auth_header(),
@@ -176,6 +179,92 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
 
     direct_submit = client.post(f"/civic/cases/{case_id}/submit", headers=_auth_header(), json={})
     assert direct_submit.status_code == 409
+
+
+def test_web_rti_drafting_requires_records_and_uses_shared_template(web_state):
+    created = client.post(
+        "/civic/cases",
+        headers=_auth_header(),
+        json={
+            "case_type": "rti",
+            "subject": "Road maintenance records",
+            "narrative": "I seek existing records about the road maintenance work.",
+            "jurisdiction": {"district": "Bengaluru Urban", "state": "Karnataka"},
+            "related_office_id": "office-e2e",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    incomplete = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "rti.records",
+            "subject": "Road maintenance records",
+            "issue": "I seek existing records about the road maintenance work.",
+            "jurisdiction": "Bengaluru Urban, Karnataka",
+        },
+    )
+    assert incomplete.status_code == 422
+    assert "requested_documents" in incomplete.json()["detail"]
+
+    prepared = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "rti.records",
+            "subject": "Road maintenance records",
+            "issue": "I seek existing records about the road maintenance work.",
+            "requested_documents": (
+                "Copies of the work order and completion certificate",
+                "Measurement book entries for the relevant road work",
+            ),
+            "jurisdiction": "Bengaluru Urban, Karnataka",
+        },
+    )
+    assert prepared.status_code == 200, prepared.json()
+    assert prepared.json()["template_id"] == "rti.records"
+    assert prepared.json()["template_version"] == 1
+    assert "Existing records requested" in prepared.json()["body"]
+    assert "completion certificate" in prepared.json()["body"]
+
+
+def test_web_contract_draft_uses_same_civic_drafting_capability(web_state):
+    created = client.post(
+        "/civic/cases",
+        headers=_auth_header(),
+        json={
+            "case_type": "other",
+            "subject": "Service agreement",
+            "narrative": "The parties want a written agreement for the proposed service.",
+            "jurisdiction": {"city": "Bengaluru", "state": "Karnataka"},
+            "related_office_id": "office-e2e",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    prepared = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "contract.general",
+            "subject": "Service agreement",
+            "issue": "The parties want a written agreement for the proposed service.",
+            "requested_conditions": (
+                "Define the services and deliverables",
+                "Set out payment timing and acceptance criteria",
+            ),
+            "jurisdiction": "Bengaluru, Karnataka",
+        },
+    )
+    assert prepared.status_code == 200, prepared.json()
+    assert prepared.json()["template_id"] == "contract.general"
+    assert prepared.json()["template_version"] == 1
+    assert "legal review required" in prepared.json()["document_type"].lower()
+    assert "qualified legal review before signing" in prepared.json()["body"].lower()
+    assert prepared.json()["submission"] == "not_submitted"
 
 
 def test_web_ready_fails_closed_without_submission_consent(web_state):
