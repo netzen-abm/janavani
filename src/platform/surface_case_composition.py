@@ -153,6 +153,7 @@ def create_surface_case_composition(
         authority_repository=authority_repository,
         consent_repository=consent_repository,
         case_capability=case_capability,
+        consent_capability=consent_capability,
         evidence_repository=evidence_repository,
         document_review_repository=review_repository,
         provider_composition=provider_composition,
