@@ -42,6 +42,7 @@ class TelegramGenerationDependencies:
     identity_link_repository: ExternalIdentityLinkRepository | None = None
     letter_drafting_capability: LetterDraftingCapability | None = None
     document_review_capability: DocumentReviewCapability | None = None
+    civic_action_vertical_slice: object | None = None
 
 
 def create_telegram_generation_dependencies(
@@ -55,6 +56,7 @@ def create_telegram_generation_dependencies(
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
     letter_drafting_capability: LetterDraftingCapability | None = None,
     document_review_capability: DocumentReviewCapability | None = None,
+    civic_action_vertical_slice: object | None = None,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
@@ -67,6 +69,7 @@ def create_telegram_generation_dependencies(
         identity_link_repository=identity_link_repository or _MissingIdentityLinkRepository(),
         letter_drafting_capability=letter_drafting_capability,
         document_review_capability=document_review_capability,
+        civic_action_vertical_slice=civic_action_vertical_slice,
     )
 
 
