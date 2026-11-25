@@ -4,9 +4,14 @@ from __future__ import annotations
 from src.access.authorization import AuthorizationDecision
 from src.capabilities.civic_case_contract import CivicCaseResult
 from src.core.civic_case import CivicCase
+from src.core.case_types import CaseStatus
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.case_content import CaseContent
+
+
+class CaseContentReadinessConflictError(ValueError):
+    """A reviewed Case cannot accept changed citizen-authored content."""
 
 
 class CivicCaseContentMixin:
@@ -26,14 +31,21 @@ class CivicCaseContentMixin:
         if case is None or case.created_by != identity.principal.principal_id:
             raise LookupError("Case not found")
         existing = self._content.get(case_id, principal_id=identity.principal.principal_id)
+        candidate = CaseContent(
+            subject=subject.strip() if subject is not None else (existing.subject if existing else ""),
+            narrative=narrative.strip() if narrative is not None else (existing.narrative if existing else ""),
+            claims=tuple(dict(claim) for claim in claims) if claims else (existing.claims if existing else ()),
+            jurisdiction=dict(jurisdiction) if jurisdiction is not None else (existing.jurisdiction if existing else {}),
+        )
+        if case.status is not CaseStatus.DRAFT:
+            if existing is None or candidate != existing:
+                raise CaseContentReadinessConflictError(
+                    "Citizen-authored Case content is locked after review begins"
+                )
+            return
         self._content.save(
             case_id,
-            CaseContent(
-                subject=subject.strip() if subject is not None else (existing.subject if existing else ""),
-                narrative=narrative.strip() if narrative is not None else (existing.narrative if existing else ""),
-                claims=tuple(dict(claim) for claim in claims) if claims else (existing.claims if existing else ()),
-                jurisdiction=dict(jurisdiction) if jurisdiction is not None else (existing.jurisdiction if existing else {}),
-            ),
+            candidate,
             principal_id=identity.principal.principal_id,
         )
 
