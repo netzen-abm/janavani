@@ -10,7 +10,6 @@ from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, DOCUMENT_REVIEW
 from src.web.civic_case_models import (
     ArtifactRequest,
-    DocumentPackageRequest,
     DocumentReviewRequestModel,
     LetterDraftRequestModel,
     serialize_draft,
@@ -95,7 +94,7 @@ async def generate_document_artifact(case_id: str, request: ArtifactRequest, con
 
 
 @router.post("/{case_id}/document/package")
-async def prepare_document_package(case_id: str, request: DocumentPackageRequest, context: IdentityContext = Depends(require_authenticated_identity)):
+async def prepare_document_package(case_id: str):
     """Retired server-side package path; package generation must not create durable document payloads."""
     raise HTTPException(
         status_code=410,
