@@ -193,8 +193,11 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert '-v expected="$expected_pr_head_sha"' in section
     assert 'if [ "$archive_sha" != "$expected_pr_head_sha" ]' in section
     assert '[ "$current_sha" != "$expected_pr_head_sha" ]' in section
+    assert "branch_present_at_start=true" in section
+    assert "branch_present_at_start=false" in section
     assert "Consent branch was already absent after exact-head archive verification" in section
-    assert "Consent branch moved or was recreated after archive verification." in section
+    assert "Consent branch was recreated after the initial absence check" in section
+    assert "Consent branch moved after archive verification; preserving it." in section
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
     assert 'if [ "$remaining" -ne 8 ]' not in section
     assert 'docs/environmental-civic-evidence-contract' in section
