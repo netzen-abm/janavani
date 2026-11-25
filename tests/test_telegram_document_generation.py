@@ -129,7 +129,6 @@ def test_telegram_runtime_and_readiness_states_import_cleanly():
 
 
 def test_ready_confirmation_is_required_before_generation(monkeypatch):
-    from conversation import steps as _steps
     from conversation.steps import consent
 
     user_id = 775503
@@ -140,7 +139,10 @@ def test_ready_confirmation_is_required_before_generation(monkeypatch):
     identity = object()
     called = []
     monkeypatch.setattr(consent, "_identity", lambda *_args, **_kwargs: identity)
-    monkeypatch.setattr(consent, "handle_generate", lambda *_args: called.append("generated"))
+    async def fake_generate(*_args, **_kwargs):
+        called.append("generated")
+
+    monkeypatch.setattr(consent, "handle_generate", fake_generate)
 
     class Message:
         text = "READY"
