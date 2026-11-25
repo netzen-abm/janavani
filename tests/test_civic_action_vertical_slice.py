@@ -67,6 +67,19 @@ def _record_submission_consent(slice_, repository, case_id: str, actor: Identity
     )
 
 
+def _record_document_preparation_consent(slice_, repository, case_id: str, actor: IdentityContext):
+    consent_capability = ConsentCapability(
+        repository=repository,
+        case_capability=slice_._deps.case_capability,
+    )
+    return consent_capability.record_document_preparation_consent(
+        case_id,
+        scope="citizen_download_and_self_send",
+        identity=actor,
+        action_id=f"slice-preparation-setup:{case_id}",
+    )
+
+
 def build_slice(external_channel_capability: ExternalChannelCapability | None = None):
     cases = InMemoryCivicCaseRepository()
     authorities = InMemoryAuthorityRepository([
@@ -145,6 +158,7 @@ def test_complete_civic_action_path_uses_shared_boundaries():
     slice_.attach_evidence(case.case_id, evidence.evidence_id, identity=actor)
 
     _record_submission_consent(slice_, consents, case.case_id, actor)
+    _record_document_preparation_consent(slice_, consents, case.case_id, actor)
 
     prepared = slice_.prepare_document(case.case_id, identity=actor, document_id="doc-1")
     edited = slice_.review_document(
@@ -181,6 +195,7 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
     slice_, _, consents, _, case = build_slice()
     actor = identity()
     _record_submission_consent(slice_, consents, case.case_id, actor)
+    _record_document_preparation_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-1")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
@@ -191,6 +206,33 @@ def test_vertical_slice_cannot_submit_without_explicit_approval():
             channel_id="channel-verified",
             identity=actor,
             explicit_user_approval=False,
+        )
+
+
+def test_ready_requires_document_preparation_consent_not_submission_consent():
+    slice_, _, consents, _, case = build_slice()
+    actor = identity()
+    _record_submission_consent(slice_, consents, case.case_id, actor)
+    slice_.prepare_document(case.case_id, identity=actor, document_id="doc-purpose-check")
+    slice_.start_review(case.case_id, identity=actor)
+
+    with pytest.raises(PermissionError, match="document-preparation consent"):
+        slice_.approve(case.case_id, identity=actor)
+
+    current = slice_._deps.case_capability.get_owned(case.case_id, identity=actor)
+    assert current is not None
+    assert current.status.value == "review"
+
+
+def test_document_generation_requires_ready_case():
+    slice_, _, _, _, case = build_slice()
+    actor = identity()
+    slice_.prepare_document(case.case_id, identity=actor, document_id="doc-not-ready")
+    slice_.start_review(case.case_id, identity=actor)
+
+    with pytest.raises(PermissionError, match="Final Case readiness"):
+        slice_.generate_artifact(
+            "doc-not-ready", identity=actor, case_id=case.case_id
         )
 
 
@@ -257,6 +299,7 @@ def test_vertical_slice_rejects_forged_execution_context():
     slice_, _, consents, _, case = build_slice()
     actor = identity()
     _record_submission_consent(slice_, consents, case.case_id, actor)
+    _record_document_preparation_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-context")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
@@ -297,6 +340,7 @@ def test_submission_rechecks_process_runtime_immediately_before_transport(monkey
     slice_, _, consents, transport, case = build_slice()
     actor = identity()
     _record_submission_consent(slice_, consents, case.case_id, actor)
+    _record_document_preparation_consent(slice_, consents, case.case_id, actor)
     slice_.prepare_document(case.case_id, identity=actor, document_id="doc-runtime-change")
     slice_.start_review(case.case_id, identity=actor)
     slice_.approve(case.case_id, identity=actor)
