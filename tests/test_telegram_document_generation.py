@@ -38,7 +38,16 @@ class DocumentReviewSpy:
         return self.draft if document_id == self.draft.document_id else None
 
 
-def _dependencies(case_capability, *, links=None, review=None):
+class CivicActionLifecycleSpy:
+    def __init__(self, case_capability):
+        self.case_capability = case_capability
+
+    def approve(self, case_id, *, identity):
+        self.case_capability.approved += 1
+        self.case_capability.status = "ready"
+
+
+def _dependencies(case_capability, *, links=None, review=None, lifecycle=None):
     return generate.TelegramGenerationDependencies(
         case_repository=None,
         case_capability=case_capability,
@@ -48,6 +57,7 @@ def _dependencies(case_capability, *, links=None, review=None):
         blob_store=None,
         identity_link_repository=links,
         document_review_capability=review or DocumentReviewSpy(),
+        civic_action_vertical_slice=lifecycle or CivicActionLifecycleSpy(case_capability),
     )
 
 
