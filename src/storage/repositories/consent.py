@@ -29,18 +29,21 @@ class InMemoryConsentRepository:
         self._actions: dict[tuple[str, str], Consent] = {}
 
     def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
-        existing = self._items.get(consent.consent_id)
-        if existing is not None and existing != consent:
-            raise ValueError("Consent identifier already has different content")
-        self._items[consent.consent_id] = consent
+        with self._atomic_lock:
+            existing = self._items.get(consent.consent_id)
+            if existing is not None and existing != consent:
+                raise ValueError("Consent identifier already has different content")
+            self._items[consent.consent_id] = consent
 
     def get(self, consent_id: str, *, principal_id: str | None = None) -> Consent | None:
-        return self._items.get(consent_id)
+        with self._atomic_lock:
+            return self._items.get(consent_id)
 
     def list_for_subject(self, subject_id: str, *, principal_id: str | None = None) -> list[Consent]:
-        return [
-            item for item in self._items.values() if item.subject_id == subject_id
-        ]
+        with self._atomic_lock:
+            return [
+                item for item in self._items.values() if item.subject_id == subject_id
+            ]
 
     def clear(self) -> None:
         """Clear consent records and their shared idempotency state."""
