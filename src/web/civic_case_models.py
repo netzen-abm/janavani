@@ -74,10 +74,6 @@ class ArtifactRequest(BaseModel):
     document_id: str = Field(min_length=1)
     document_format: DocumentFormat = DocumentFormat.PDF
 
-class DocumentPackageRequest(BaseModel):
-    document_types: tuple[str, ...] = ("petition",)
-    formats: tuple[DocumentFormat, ...] = (DocumentFormat.PDF, DocumentFormat.DOCX)
-
 class EventRequest(BaseModel):
     source_channel: str | None = None
     subject: str | None = None
