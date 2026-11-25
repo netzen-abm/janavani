@@ -222,3 +222,9 @@ __marimo__/
 
 sample.docx
 database/*.jsonl
+
+# Local Graphify code-intelligence output (never commit generated graphs)
+.graphify/
+graphify-out/
+.graphify_*.json
+.graphify_python
