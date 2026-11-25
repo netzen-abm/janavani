@@ -19,6 +19,10 @@ class ConsentStatus(str, Enum):
     EXPIRED = "expired"
 
 
+class ConsentIdempotencyConflictError(RuntimeError):
+    """One citizen action identifier was reused for a different consent payload."""
+
+
 @dataclass(frozen=True)
 class Consent:
     consent_id: str
