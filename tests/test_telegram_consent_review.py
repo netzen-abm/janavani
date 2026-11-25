@@ -101,5 +101,5 @@ def test_preparation_consent_persists_preview_without_generating_file(monkeypatc
     assert calls == {"consent": 1, "draft": 1, "review": 1, "generated": 0}
     assert get_state(user_id) == WAITING_FOR_READY
     assert message.documents
-    assert any("reply READY" in reply for reply in message.replies)
+    assert any("Reply READY" in reply for reply in message.replies)
     clear_session(user_id)
