@@ -10,7 +10,6 @@ from telegram.ext import ContextTypes
 from conversation.constants import COMPLETED
 from conversation.session import clear_ephemeral_issue, get_ephemeral_issue, get_session
 from conversation.state import set_state
-from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
@@ -34,7 +33,6 @@ class TelegramGenerationDependencies:
 
     case_repository: CivicCaseRepository
     case_capability: CivicCaseCapability
-    civic_action_capability: CivicActionCapability
     consent_capability: ConsentCapability
     letter_drafting_capability: LetterDraftingCapability
     artifact_repository: DocumentArtifactRepository | None
@@ -46,7 +44,6 @@ def create_telegram_generation_dependencies(
     *,
     case_repository: CivicCaseRepository,
     case_capability: CivicCaseCapability,
-    civic_action_capability: CivicActionCapability,
     consent_capability: ConsentCapability,
     letter_drafting_capability: LetterDraftingCapability,
     artifact_repository: DocumentArtifactRepository | None = None,
@@ -57,7 +54,6 @@ def create_telegram_generation_dependencies(
     return TelegramGenerationDependencies(
         case_repository=case_repository,
         case_capability=case_capability,
-        civic_action_capability=civic_action_capability,
         consent_capability=consent_capability,
         letter_drafting_capability=letter_drafting_capability,
         artifact_repository=artifact_repository,
