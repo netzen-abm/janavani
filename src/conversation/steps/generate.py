@@ -11,6 +11,7 @@ from conversation.constants import COMPLETED
 from conversation.session import clear_ephemeral_issue, get_ephemeral_issue, get_session
 from conversation.state import set_state
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
 from src.documents.document_contract import DocumentFormat
@@ -35,6 +36,7 @@ class TelegramGenerationDependencies:
     case_capability: CivicCaseCapability
     civic_action_capability: CivicActionCapability
     consent_capability: ConsentCapability
+    letter_drafting_capability: LetterDraftingCapability
     artifact_repository: DocumentArtifactRepository | None
     blob_store: ArtifactBlobStore | None
     identity_link_repository: ExternalIdentityLinkRepository | None = None
@@ -46,6 +48,7 @@ def create_telegram_generation_dependencies(
     case_capability: CivicCaseCapability,
     civic_action_capability: CivicActionCapability,
     consent_capability: ConsentCapability,
+    letter_drafting_capability: LetterDraftingCapability,
     artifact_repository: DocumentArtifactRepository | None = None,
     blob_store: ArtifactBlobStore | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
@@ -56,6 +59,7 @@ def create_telegram_generation_dependencies(
         case_capability=case_capability,
         civic_action_capability=civic_action_capability,
         consent_capability=consent_capability,
+        letter_drafting_capability=letter_drafting_capability,
         artifact_repository=artifact_repository,
         blob_store=blob_store,
         identity_link_repository=identity_link_repository or _MissingIdentityLinkRepository(),
@@ -101,11 +105,23 @@ def build_canonical_complaint_artifact(
         subject=str(session.get("category") or "Citizen civic issue"),
         narrative=issue,
     )
-    draft = dependencies.civic_action_capability.build_document(
+    case = dependencies.case_capability.get_owned(case_id, identity=identity)
+    if case is None:
+        raise LookupError("Case not found")
+    draft_result = dependencies.letter_drafting_capability.create_draft(
         case_id,
+        LetterDraftRequest(
+            subject=str(session.get("category") or case.subject),
+            issue=issue,
+            evidence_refs=tuple(case.evidence_refs),
+            template_id="complaint.general",
+        ),
         identity=identity,
-        document_id=str(session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"),
-    ).draft
+        document_id=str(
+            session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"
+        ),
+    )
+    draft = draft_result.document
     return render_artifact_payload(
         draft,
         _document_format(str(session.get("format", "pdf"))),
