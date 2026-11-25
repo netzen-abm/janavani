@@ -283,6 +283,7 @@ def test_vertical_slice_rejects_submission_for_different_principal():
         principal_id="citizen-2", interface="test", capabilities=owner.principal.capabilities
     ))
     _record_submission_consent(slice_, consents, case.case_id, owner)
+    _record_document_preparation_consent(slice_, consents, case.case_id, owner)
     slice_.prepare_document(case.case_id, identity=owner, document_id="doc-owner")
     slice_.start_review(case.case_id, identity=owner)
     slice_.approve(case.case_id, identity=owner)
