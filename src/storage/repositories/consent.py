@@ -1,6 +1,7 @@
 """Provider-neutral durable consent repository boundary."""
 from __future__ import annotations
 
+from threading import RLock
 from typing import Protocol
 
 from src.core.consent import Consent
@@ -22,6 +23,10 @@ class InMemoryConsentRepository:
 
     def __init__(self) -> None:
         self._items: dict[str, Consent] = {}
+        # Every in-memory atomic adapter over this repository must share the
+        # same action map and lock; capability instances are not the boundary.
+        self._atomic_lock = RLock()
+        self._actions: dict[tuple[str, str], Consent] = {}
 
     def save(self, consent: Consent, *, principal_id: str | None = None) -> None:
         existing = self._items.get(consent.consent_id)
@@ -38,5 +43,7 @@ class InMemoryConsentRepository:
         ]
 
     def clear(self) -> None:
-        """Clear the in-memory test/development repository."""
-        self._items.clear()
+        """Clear consent records and their shared idempotency state."""
+        with self._atomic_lock:
+            self._items.clear()
+            self._actions.clear()
