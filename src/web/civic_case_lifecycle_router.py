@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case_content import CaseContentReadinessConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION as _CIVIC_ACTION
 from src.web.civic_case_models import EventRequest, event_result
 
 router = APIRouter(tags=["Civic Cases"])
@@ -15,7 +15,7 @@ router = APIRouter(tags=["Civic Cases"])
 async def start_review(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
-        result = CIVIC_ACTION.start_review(case_id, identity=context)
+        result = _CIVIC_ACTION.start_review(case_id, identity=context)
     except CaseContentReadinessConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
@@ -30,7 +30,7 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
 async def mark_ready(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
-        result = CIVIC_ACTION.approve(case_id, identity=context)
+        result = _CIVIC_ACTION.approve(case_id, identity=context)
     except CaseContentReadinessConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
