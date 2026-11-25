@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from pathlib import Path
 from src.capabilities.document_review import DocumentReviewRequest
+from src.capabilities.letter_drafting import LetterDraftRequest
 from src.core.execution import CapabilityExecutionContext
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
@@ -30,15 +31,59 @@ class DocumentPackage:
 class CivicActionDocuments:
     def __init__(self, deps): self._deps = deps
 
-    def prepare(self, case_id: str, *, identity: IdentityContext, document_id=None):
-        result = self._deps.civic_action_capability.build_document(
-            case_id, identity=identity, document_id=document_id
+    @staticmethod
+    def _jurisdiction_label(jurisdiction: dict[str, object]) -> str | None:
+        values = [
+            str(value).strip()
+            for value in jurisdiction.values()
+            if value is not None and str(value).strip()
+        ]
+        return ", ".join(values) or None
+
+    def prepare(
+        self,
+        case_id: str,
+        *,
+        identity: IdentityContext,
+        document_id=None,
+        draft_request: LetterDraftRequest | None = None,
+    ):
+        case = self._deps.case_capability.get_owned(case_id, identity=identity)
+        if case is None:
+            raise LookupError("Case not found")
+        if draft_request is None:
+            case_type = getattr(case.case_type, "value", case.case_type)
+            template_ids = {
+                "complaint": "complaint.general",
+                "corruption": "complaint.general",
+                "misbehaviour": "complaint.general",
+                "transfer_concern": "complaint.general",
+                "other": "complaint.general",
+                "grievance": "grievance.service",
+                "rti": "rti.records",
+                "petition": "petition.general",
+                "appeal": "petition.general",
+                "representation": "representation.general",
+                "objection": "representation.general",
+                "non_consent": "representation.general",
+            }
+            template_id = template_ids.get(str(case_type))
+            if template_id is None:
+                raise ValueError("No approved drafting template is mapped to this Case type")
+            draft_request = LetterDraftRequest(
+                subject=case.subject,
+                issue=case.narrative,
+                evidence_refs=tuple(case.evidence_refs),
+                jurisdiction=self._jurisdiction_label(case.jurisdiction),
+                template_id=template_id,
+            )
+        result = self._deps.letter_drafting_capability.create_draft(
+            case_id,
+            draft_request,
+            identity=identity,
+            document_id=document_id,
         )
-        self._deps.document_review_repository.save(result.draft)
-        self._deps.case_capability.add_document(
-            case_id, result.draft.document_id, identity=identity, source_channel="shared"
-        )
-        return result.draft
+        return result.document
 
     def review(self, request: DocumentReviewRequest, *, identity: IdentityContext):
         return self._deps.document_review_capability.edit(request, identity=identity)
