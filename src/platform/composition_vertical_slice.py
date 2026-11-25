@@ -1,31 +1,33 @@
 from __future__ import annotations
 
-from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.submission import SubmissionCapability
-from src.capabilities.evidence import EvidenceCapability
-from src.capabilities.document_review import DocumentReviewCapability
-from src.capabilities.consent import ConsentCapability
+from src.capabilities.civic_action_vertical_slice import (
+    CivicActionVerticalSlice,
+    CivicActionVerticalSliceDependencies,
+)
 from src.capabilities.civic_case import CivicCaseCapability
-from src.capabilities.authority import AuthorityCapability
-from src.capabilities.responsibility import ResponsibilityCapability
-from src.capabilities.obligation import ObligationCapability
+from src.capabilities.consent import ConsentCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.escalation import EscalationCapability
+from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.external_channel import ExternalChannelCapability
 from src.capabilities.follow_up import FollowUpCapability
-from src.capabilities.escalation import EscalationCapability
-from src.storage.provider_composition import ProviderComposition
-from src.storage.repositories.consent import ConsentRepository
-from src.storage.repositories.obligation import AuthorityBackedObligationResolver
-from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
-from src.storage.repositories.civic_case import CivicCaseRepository
-from src.storage.repositories.document_review import DocumentReviewRepository
-from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
-from src.core.responsibility import ResponsibilityResolver
+from src.capabilities.submission import SubmissionCapability
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.core.obligation import ObligationResolver
-from .composition_repositories import create_document_review_repository_for_platform, create_provider_composition
+from src.core.responsibility import ResponsibilityResolver
+from src.storage.provider_composition import ProviderComposition
+from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.consent import ConsentRepository
+from src.storage.repositories.document_review import DocumentReviewRepository
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
+from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
 from .capability_activation_policy import CapabilityActivationPolicy
+from .composition_repositories import (
+    create_document_review_repository_for_platform,
+    create_provider_composition,
+)
 
 
 def create_civic_action_vertical_slice(
@@ -51,10 +53,14 @@ def create_civic_action_vertical_slice(
     provider_composition: ProviderComposition | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
-        create_case_capability, create_authority_capability, create_consent_capability,
-        create_responsibility_capability, create_obligation_capability,
-        create_external_channel_capability, create_follow_up_capability,
+        create_authority_capability,
+        create_case_capability,
+        create_consent_capability,
         create_escalation_capability,
+        create_external_channel_capability,
+        create_follow_up_capability,
+        create_obligation_capability,
+        create_responsibility_capability,
     )
     composition = provider_composition or create_provider_composition()
     case_capability = case_capability or create_case_capability(
