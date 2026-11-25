@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from src.access.authorization import AuthorizationDecision
 from src.capabilities.civic_case_contract import CivicCaseResult
-from src.core.civic_case import CivicCase
 from src.core.case_types import CaseStatus
+from src.core.civic_case import CivicCase
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.storage.repositories.case_content import CaseContent
