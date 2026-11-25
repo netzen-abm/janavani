@@ -3,11 +3,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from src.capabilities.document_review import DocumentReviewRequest
+from src.capabilities.letter_drafting import LetterDraftRequest
 from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, DOCUMENT_REVIEW
-from src.web.civic_case_models import ArtifactRequest, DocumentPackageRequest, DocumentReviewRequestModel, serialize_draft
+from src.web.civic_case_models import (
+    ArtifactRequest,
+    DocumentPackageRequest,
+    DocumentReviewRequestModel,
+    LetterDraftRequestModel,
+    serialize_draft,
+)
 
 router = APIRouter(tags=["Civic Cases"])
 
@@ -20,6 +27,33 @@ async def build_document_draft(case_id: str, context: IdentityContext = Depends(
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return serialize_draft(prepared.draft, case_id=prepared.case_id, submission="not_submitted")
+
+@router.post("/{case_id}/document/draft")
+async def prepare_structured_document_draft(
+    case_id: str,
+    request: LetterDraftRequestModel,
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, object]:
+    """Compose one template-backed draft and persist it for citizen review."""
+    try:
+        draft_request = LetterDraftRequest(**request.model_dump())
+        prepared = CIVIC_ACTION.prepare_document(
+            case_id,
+            identity=context,
+            draft_request=draft_request,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Case not found") from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return serialize_draft(
+        prepared.draft,
+        case_id=prepared.case_id,
+        submission="not_submitted",
+    )
+
 
 @router.post("/{case_id}/document/review")
 async def review_document(request: DocumentReviewRequestModel, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
