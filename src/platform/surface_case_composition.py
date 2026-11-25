@@ -9,23 +9,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.authority import AuthorityCapability
-from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
-from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
-from src.platform.composition_capabilities import create_civic_action_vertical_slice
-from src.storage.artifact_blob_factory import create_artifact_blob_store
-from src.storage.repositories.case_content import InMemoryCaseContentRepository
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.identity.linking import ExternalIdentityLinkRepository
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
-    create_consent_repository,
     create_consent_case_atomic_repository,
+    create_consent_repository,
     create_evidence_repository,
     create_identity_link_repository,
     create_provider_composition,
@@ -34,10 +30,14 @@ from src.platform.composition_capabilities import (
     create_authority_capability,
     create_case_capability,
     create_civic_action_capability,
-    create_letter_drafting_capability,
+    create_civic_action_vertical_slice,
     create_consent_capability,
     create_document_review_repository_for_platform,
+    create_letter_drafting_capability,
 )
+from src.storage.artifact_blob_factory import create_artifact_blob_store
+from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.storage.repositories.case_content import InMemoryCaseContentRepository
 
 _PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
 
