@@ -214,24 +214,27 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'no current-head approval from a reviewer other than its author' in section
 
 
-def test_consent_retirement_rechecks_evidence_archive_and_live_head_before_delete() -> None:
+def test_consent_retirement_leaves_pr247_ref_to_its_own_workflow() -> None:
     source = (
         ROOT / ".github" / "workflows" / "branch-retirement.yml"
     ).read_text(encoding="utf-8")
     consent = source.split("retire-consent-capability-governance:", 1)[1].split(
+        "retire-environmental-civic-evidence-contract:", 1
+    )[0]
+    evidence = source.split("retire-environmental-civic-evidence-contract:", 1)[1].split(
         "retire-canonical-capability-envelope:", 1
     )[0]
-    evidence = consent.split('if [ -n "$evidence_merged_at" ]; then', 1)[1].split(
-        'elif [ "$evidence_state" = "open" ]', 1
-    )[0]
 
-    archive_recheck = "evidence_archive=\"$(gh api \"repos/$REPO/git/ref/tags/$evidence_tag\" --jq '.object.sha')\""
-    live_head_recheck = "current_evidence_sha=\"$(gh api \"repos/$REPO/git/ref/heads/$evidence_branch\" --jq '.object.sha')\""
-    assert archive_recheck in evidence
-    assert live_head_recheck in evidence
-    delete = 'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"'
-    assert evidence.rindex(archive_recheck) < evidence.index(delete)
-    assert evidence.index(live_head_recheck) < evidence.index(delete)
+    assert "PR #247's own close-event workflow is the sole owner of its ref." in consent
+    assert "current_evidence_sha=" in consent
+    assert "archive/branches/docs/environmental-civic-evidence-contract" in consent
+    assert "expected_nine=" in consent
+    assert "expected_eight=" in consent
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"' not in consent
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in consent
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in evidence
+    assert 'consent_ready=true' in evidence
+    assert 'if [ "$remaining" != "$expected" ]' in evidence
 
 
 def test_environmental_evidence_retirement_waits_for_consent_governance_and_verifies_eight_refs() -> None:
