@@ -23,15 +23,6 @@ class CaseContentSpy:
         self.cleared = (case_id, identity)
 
 
-class CivicActionSpy:
-    def __init__(self):
-        self.called = None
-
-    def build_document(self, case_id, *, identity, document_id):
-        self.called = (case_id, identity, document_id)
-        return SimpleNamespace(draft="draft")
-
-
 class LetterDraftingSpy:
     def __init__(self):
         self.called = None
@@ -41,13 +32,10 @@ class LetterDraftingSpy:
         return SimpleNamespace(document="draft")
 
 
-def _dependencies(
-    case_capability, civic_action_capability, letter_drafting_capability, links=None
-):
+def _dependencies(case_capability, letter_drafting_capability, links=None):
     return generate.TelegramGenerationDependencies(
         case_repository=None,
         case_capability=case_capability,
-        civic_action_capability=civic_action_capability,
         consent_capability=None,
         letter_drafting_capability=letter_drafting_capability,
         artifact_repository=None,
@@ -67,7 +55,6 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
         "document_id": "doc-test",
     }
     case_content = CaseContentSpy()
-    civic_action = CivicActionSpy()
     letter_drafting = LetterDraftingSpy()
     identity = object()
     monkeypatch.setattr(generate, "_identity", lambda user_id, *, links: identity)
@@ -76,7 +63,7 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
 
     result = generate.build_canonical_complaint_artifact(
         session,
-        dependencies=_dependencies(case_content, civic_action, letter_drafting, links=object()),
+        dependencies=_dependencies(case_content, letter_drafting, links=object()),
         user_id=user_id,
     )
 
@@ -91,7 +78,6 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
     assert isinstance(request, LetterDraftRequest)
     assert request.template_id == "complaint.general"
     assert request.issue == "The streetlight has been out for three nights."
-    assert civic_action.called is None
     clear_ephemeral_issue(user_id)
     clear_session(user_id)
 
@@ -104,7 +90,7 @@ def test_generate_handler_sends_document_then_clears_transient_content(monkeypat
     session["case_id"] = "case-test"
     case_content = CaseContentSpy()
     dependencies = _dependencies(
-        case_content, CivicActionSpy(), LetterDraftingSpy(), links=object()
+        case_content, LetterDraftingSpy(), links=object()
     )
     identity = SimpleNamespace(principal=SimpleNamespace(principal_id="citizen-test"))
     payload = SimpleNamespace(content=b"PDF bytes", filename="doc-test.pdf")
