@@ -251,6 +251,71 @@ def test_reused_action_id_with_changed_scope_fails_closed():
         raise AssertionError("Reusing an action key with another scope must fail")
 
 
+
+def test_action_idempotency_is_shared_across_capability_instances():
+    from src.core.consent import ConsentIdempotencyConflictError
+
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    owner = _identity(
+        "telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write"
+    )
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Cross-instance idempotency",
+            narrative="Synthetic case for shared action state.",
+        ),
+        identity=owner,
+    ).case
+    repository = InMemoryConsentRepository()
+
+    # Each capability constructs its own atomic adapter by default. The
+    # adapters must still share the idempotency map owned by the repository.
+    first_capability = ConsentCapability(
+        repository=repository, case_capability=case_capability
+    )
+    second_capability = ConsentCapability(
+        repository=repository, case_capability=case_capability
+    )
+
+    first = first_capability.record_document_preparation_consent(
+        case.case_id,
+        scope="office:one",
+        identity=owner,
+        action_id="shared-action-key",
+    )
+    replay = second_capability.record_document_preparation_consent(
+        case.case_id,
+        scope="office:one",
+        identity=owner,
+        action_id="shared-action-key",
+    )
+    assert replay.consent == first.consent
+
+    try:
+        second_capability.record_document_preparation_consent(
+            case.case_id,
+            scope="office:two",
+            identity=owner,
+            action_id="shared-action-key",
+        )
+    except ConsentIdempotencyConflictError:
+        pass
+    else:
+        raise AssertionError(
+            "A second capability instance must reject action-key reuse with a changed scope"
+        )
+
+    assert len(repository.list_for_subject(owner.principal.principal_id)) == 1
+    current = case_capability.get_owned(case.case_id, identity=owner)
+    assert current is not None
+    assert len([
+        event for event in current.events
+        if event.event_type is CaseEventType.CONSENT_RECORDED
+    ]) == 1
+
+
 def test_attaching_existing_consent_requires_case_consent_capability():
     cases = InMemoryCivicCaseRepository()
     case_capability = CivicCaseCapability(cases)
