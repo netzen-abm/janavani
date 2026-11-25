@@ -202,7 +202,11 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert 'if [ "$remaining" -ne 8 ]' not in section
     assert 'docs/environmental-civic-evidence-contract' in section
     assert 'if [ "$evidence_state" = "open" ]' in section
-    assert 'exactly eight sanctioned refs and PR #247' in section
+    assert "PR #247's own close-event workflow is the sole owner of its ref." in section
+    assert "expected_nine=" in section
+    assert "expected_eight=" in section
+    assert "PR #247 remains open and its branch is preserved." in section
+    assert "PR #247's workflow has retired its own ref" in section
     assert 'retire-environmental-civic-evidence-contract:' in source
     assert 'consent_archive" != "$consent_head"' in source
     assert 'if [ "$remaining" != "$expected" ]' in section
