@@ -12,6 +12,7 @@ def test_webapp_registers_case_workspace_routes():
     assert "/cases/{case_id}/prepare" in paths
     assert "/cases/{case_id}/review" in paths
     assert "/cases/{case_id}/consent" in paths
+    assert "/cases/{case_id}/ready" in paths
     assert "/cases/{case_id}/artifact" in paths
 
 
@@ -56,6 +57,14 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
         def record_explicit_consent(self, case_id, *, action_id):
             assert 1 <= len(action_id) <= 200
             self.recorded_action_ids.append(action_id)
+            return {"status": "review"}
+
+        ready_calls = 0
+
+        def mark_ready(self, case_id, **kwargs):
+            self.ready_calls += 1
+            assert kwargs["subject"] == "Streetlight outage"
+            assert kwargs["narrative"] == "The streetlight has been out for three nights."
             return {"status": "ready"}
 
         def generate_artifact(self, case_id, **kwargs):
@@ -94,13 +103,30 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
         data={"action_id": action_id, "explicit_confirmation": "yes"},
     )
     assert consented.status_code == 200
-    assert "Explicit consent recorded" in consented.text
+    assert "Preparation consent recorded" in consented.text
+    assert "Case case-test: review" in consented.text
+    assert "Confirm final review and mark ready" in consented.text
+    assert "Download reviewed document" not in consented.text
     retry = client.post(
         "/cases/case-test/consent",
         data={"action_id": action_id, "explicit_confirmation": "yes"},
     )
     assert retry.status_code == 200
     assert fake_client.recorded_action_ids == [action_id, action_id]
+
+    missing_ready_confirmation = client.post("/cases/case-test/ready")
+    assert missing_ready_confirmation.status_code == 200
+    assert "Final confirmation required" in missing_ready_confirmation.text
+    assert fake_client.ready_calls == 0
+
+    ready = client.post(
+        "/cases/case-test/ready",
+        data={"ready_confirmation": "yes"},
+    )
+    assert ready.status_code == 200
+    assert "Case case-test: ready" in ready.text
+    assert "Download reviewed document" in ready.text
+    assert fake_client.ready_calls == 1
 
     artifact = client.post(
         "/cases/case-test/artifact", data={"document_format": "pdf"}
