@@ -239,12 +239,21 @@ jobs:
 
           pr_number="${{ github.event.pull_request.number }}"
           pr_author="${{ github.event.pull_request.user.login }}"
+          expected_pr_head_sha="${{ github.event.pull_request.head.sha }}"
+          if [ -z "$expected_pr_head_sha" ]; then
+            echo "::error::Merged PR event does not contain its recorded head SHA."
+            exit 2
+          fi
           head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$head_sha" != "$expected_pr_head_sha" ]; then
+            echo "::error::Consent branch head no longer matches the merged PR event head."
+            exit 2
+          fi
           review_rows="$(gh api --paginate "repos/$REPO/pulls/$pr_number/reviews?per_page=100" --jq '.[] | [.user.login, .state, .submitted_at, .commit_id] | @tsv')"
           approved_count="$(
             printf '%s\n' "$review_rows" |
               sort -s -t "$(printf '\t')" -k1,1 -k3,3 |
-              awk -F '\t' -v author="$pr_author" -v expected="$head_sha" '
+              awk -F '\t' -v author="$pr_author" -v expected="$expected_pr_head_sha" '
                 NF == 4 {
                   latest_state[$1] = $2
                   latest_commit[$1] = $4
@@ -267,8 +276,8 @@ jobs:
           fi
 
           git fetch --no-tags origin "refs/heads/$branch:$git_ref" "+refs/heads/main:refs/remotes/origin/main"
-          if [ "$(git rev-parse "$git_ref")" != "$head_sha" ]; then
-            echo "::error::Fetched consent branch head does not match GitHub ref."
+          if [ "$(git rev-parse "$git_ref")" != "$expected_pr_head_sha" ]; then
+            echo "::error::Fetched consent branch head does not match the merged PR event head."
             exit 2
           fi
           if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
@@ -287,8 +296,9 @@ jobs:
           fi
           archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
           current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
-          if [ "$archive_sha" != "$head_sha" ] || [ "$current_sha" != "$head_sha" ]; then
-            echo "::error::Consent archive/head verification failed."
+          if [ "$archive_sha" != "$expected_pr_head_sha" ] ||
+             [ "$current_sha" != "$expected_pr_head_sha" ]; then
+            echo "::error::Consent archive/head verification failed against the merged PR event head."
             exit 2
           fi
           gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
