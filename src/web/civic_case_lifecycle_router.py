@@ -14,7 +14,24 @@ router = APIRouter(tags=["Civic Cases"])
 @router.post("/{case_id}/review")
 async def start_review(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
+        existing = CAPABILITY.get_owned(case_id, identity=context)
+        if existing is None:
+            raise LookupError("Case not found")
+        status = getattr(existing.status, "value", existing.status)
+        if status != "draft" and (
+            request.subject.strip() != existing.subject
+            or request.narrative.strip() != existing.narrative
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Reviewed Case content is immutable; create a new review cycle before changing it",
+            )
+        CAPABILITY.hydrate_transient_content(
+            case_id,
+            identity=context,
+            subject=request.subject,
+            narrative=request.narrative,
+        )
         result = _CIVIC_ACTION.start_review(case_id, identity=context)
     except CaseContentReadinessConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
