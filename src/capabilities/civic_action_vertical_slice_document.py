@@ -56,7 +56,14 @@ class CivicActionDocuments:
     ) -> DocumentPackage:
         """Prepare one or both citizen-delivery document types; never transmit."""
         selected_types = tuple(dict.fromkeys(document_types))
-        if not selected_types or any(item not in {"complaint", "objection", "non_consent", "grievance", "representation", "appeal", "petition", "rti", "follow_up_letter", "escalation_letter"} for item in selected_types):
+        supported_types = {
+            "complaint", "objection", "non_consent", "grievance",
+            "representation", "appeal", "petition", "rti",
+            "follow_up_letter", "escalation_letter",
+        }
+        if not selected_types or any(
+            item not in supported_types for item in selected_types
+        ):
             raise ValueError("Unsupported civic document type")
         case = self._deps.civic_action_capability.build_document(case_id, identity=identity).case
         if case.status is not CaseStatus.READY:
