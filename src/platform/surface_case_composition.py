@@ -1,9 +1,4 @@
-"""Shared Case composition for independent access surfaces.
-
-WebApp and Telegram are adapters over the same provider-neutral Case,
-Evidence, Authority and Consent capabilities. This module contains no
-surface-specific behavior and does not make one surface depend on another.
-"""
+"""Compose the shared Case capability graph for independent access surfaces."""
 from __future__ import annotations
 
 from dataclasses import dataclass
