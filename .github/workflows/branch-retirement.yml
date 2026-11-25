@@ -381,79 +381,82 @@ jobs:
           esac
           rm -f "$branch_response"
 
-          # PR #247 is the only other approved temporary ref. Retire it here
-          # too when it was merged before PR #243; otherwise preserve it until
-          # its own merge event after this workflow is present on main.
+          # PR #247's own close-event workflow is the sole owner of its ref.
+          # This job must never delete it: PR #247 may already be waiting for this
+          # PR #243 retirement, and duplicate delete requests can race.
           evidence_pr="$(gh api "repos/$REPO/pulls/247")"
           evidence_state="$(jq -r '.state' <<<"$evidence_pr")"
           evidence_merged_at="$(jq -r '.merged_at // empty' <<<"$evidence_pr")"
           evidence_branch="$(jq -r '.head.ref' <<<"$evidence_pr")"
-          if [ "$evidence_branch" != "docs/environmental-civic-evidence-contract" ]; then
-            echo "::error::PR #247 head branch differs from the expected one-off evidence-contract ref."
+          evidence_head="$(jq -r '.head.sha' <<<"$evidence_pr")"
+          evidence_tag="archive/branches/docs/environmental-civic-evidence-contract"
+          if [ "$evidence_branch" != "docs/environmental-civic-evidence-contract" ] ||
+             [ -z "$evidence_head" ]; then
+            echo "::error::PR #247 head identity differs from the expected one-off evidence-contract ref."
             exit 2
           fi
-          evidence_tag="archive/branches/docs/environmental-civic-evidence-contract"
           if [ -n "$evidence_merged_at" ]; then
-            evidence_head="$(jq -r '.head.sha' <<<"$evidence_pr")"
             evidence_open_prs="$(count_open_prs_for_branch "$evidence_branch")"
             if [ "$evidence_open_prs" != "0" ]; then
               echo "::error::Evidence-contract retirement held: another open PR references its branch."
               exit 2
             fi
-            git fetch --no-tags origin "refs/heads/$evidence_branch:refs/remotes/origin/evidence-retirement"
-            if [ "$(git rev-parse refs/remotes/origin/evidence-retirement)" != "$evidence_head" ] ||
-               ! git diff --quiet refs/remotes/origin/main refs/remotes/origin/evidence-retirement; then
-              echo "::error::Evidence-contract ref/head or merged-tree verification failed."
-              exit 2
-            fi
-            if gh api "repos/$REPO/git/ref/tags/$evidence_tag" >/dev/null 2>&1; then
-              evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha')"
+            # The #247 workflow alone archives and deletes this ref. Here we
+            # verify a coherent inventory whether that job has not started,
+            # is finishing concurrently, or has already completed.
+            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+            expected_eight="$(expected_sanctioned_branches | sort)"
+            expected_nine="$({ expected_sanctioned_branches; printf '%s\n' "$evidence_branch"; } | sort)"
+            if [ "$remaining" = "$expected_eight" ]; then
+              evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha' 2>/dev/null || true)"
               if [ "$evidence_archive" != "$evidence_head" ]; then
-                echo "::error::Evidence-contract archive tag points to a different SHA."
+                echo "::error::Evidence-contract ref is absent without an archive of the exact merged PR #247 head."
                 exit 2
               fi
+              echo "PR #247's workflow has retired its own ref; exactly eight sanctioned refs remain."
+            elif [ "$remaining" = "$expected_nine" ]; then
+              current_evidence_sha="$(gh api "repos/$REPO/git/ref/heads/$evidence_branch" --jq '.object.sha' 2>/dev/null || true)"
+              if [ "$current_evidence_sha" != "$evidence_head" ]; then
+                # Re-read in case the owning PR #247 workflow deleted it between
+                # the inventory snapshot and this ref lookup.
+                remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+                evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha' 2>/dev/null || true)"
+                if [ "$remaining" != "$expected_eight" ] ||
+                   [ "$evidence_archive" != "$evidence_head" ]; then
+                  echo "::error::PR #247 ref moved or disappeared without exact-head archive verification."
+                  exit 2
+                fi
+                echo "PR #247's workflow completed its own retirement during verification; exactly eight sanctioned refs remain."
+              else
+                echo "PR #243 ref retired. PR #247's exact head remains for its own archive-first retirement workflow."
+              fi
             else
-              gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$evidence_tag" -f "sha=$evidence_head"
-            fi
-            # Re-read both mutable refs immediately before deletion. The archive
-            # must preserve the exact PR head, and the live branch must not have
-            # advanced since the initial fetch/archive verification.
-            evidence_archive="$(gh api "repos/$REPO/git/ref/tags/$evidence_tag" --jq '.object.sha')"
-            current_evidence_sha="$(gh api "repos/$REPO/git/ref/heads/$evidence_branch" --jq '.object.sha')"
-            if [ "$evidence_archive" != "$evidence_head" ] ||
-               [ "$current_evidence_sha" != "$evidence_head" ]; then
-              echo "::error::Evidence-contract archive or branch head changed before deletion."
+              echo "::error::Unexpected physical branch inventory after PR #243 retirement."
+              printf 'Actual refs:\n%s\nExpected eight:\n%s\nExpected nine:\n%s\n' "$remaining" "$expected_eight" "$expected_nine"
               exit 2
             fi
-            gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"
-            if gh api "repos/$REPO/git/ref/heads/$evidence_branch" >/dev/null 2>&1; then
-              echo "::error::Evidence-contract ref still exists after deletion."
-              exit 2
-            fi
-            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
-            expected="$(expected_sanctioned_branches | sort)"
-            if [ "$remaining" != "$expected" ]; then
-              echo "::error::Expected exactly the eight sanctioned refs after both retirements."
-              printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
-              exit 2
-            fi
-            echo "RETIREMENT VERIFIED: both temporary PR refs archived and deleted; exactly eight refs remain."
           elif [ "$evidence_state" = "open" ]; then
-            if ! gh api "repos/$REPO/git/ref/heads/$evidence_branch" >/dev/null 2>&1; then
-              echo "::error::Open PR #247 branch ref is unexpectedly missing."
+            current_evidence_sha="$(gh api "repos/$REPO/git/ref/heads/$evidence_branch" --jq '.object.sha' 2>/dev/null || true)"
+            if [ "$current_evidence_sha" != "$evidence_head" ]; then
+              echo "::error::Open PR #247 branch does not match its recorded head."
               exit 2
             fi
             remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
-            expected="$({ expected_sanctioned_branches; printf '%s\n' docs/environmental-civic-evidence-contract; } | sort)"
+            expected="$({ expected_sanctioned_branches; printf '%s\n' "$evidence_branch"; } | sort)"
             if [ "$remaining" != "$expected" ]; then
               echo "::error::Expected eight sanctioned refs plus the one open PR #247 ref after PR #243 retirement."
               printf 'Actual refs:\n%s\nExpected refs:\n%s\n' "$remaining" "$expected"
               exit 2
             fi
-            echo "CONSENT BRANCH RETIRED: exactly eight sanctioned refs and PR #247's one documented temporary ref remain."
+            echo "PR #243 ref retired. PR #247 remains open and its branch is preserved."
           else
-            echo "::error::PR #247 was closed without merge. Preserve its unique documentation branch; manual archive-first disposition is required."
-            exit 2
+            echo "PR #247 was closed without merge; preserve its unique documentation branch for an explicit archive-first disposition."
+            remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+            expected="$({ expected_sanctioned_branches; printf '%s\n' "$evidence_branch"; } | sort)"
+            if [ "$remaining" != "$expected" ]; then
+              echo "::error::Unexpected inventory while preserving closed, unmerged PR #247."
+              exit 2
+            fi
           fi
 
   retire-environmental-civic-evidence-contract:
