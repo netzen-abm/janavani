@@ -46,15 +46,17 @@ class InMemoryConsentCaseAtomicRepository:
             or not hasattr(consent_repository, "_atomic_lock")
             or not hasattr(consent_repository, "_actions")
             or not hasattr(case_repository, "_cases")
+            or not hasattr(case_repository, "_lock")
         ):
             raise TypeError(
                 "In-memory atomic consent requires the reference in-memory repositories"
             )
         self._consents = consent_repository
         self._cases = case_repository
-        # The shared Consent repository owns idempotency state. Creating more
-        # than one capability/adapter must not create a new action namespace.
-        self._lock = consent_repository._atomic_lock
+        # Every normal Case save and this transaction share the Case lock.
+        # The Consent lock separately protects the cross-instance action map.
+        self._case_lock = case_repository._lock
+        self._consent_lock = consent_repository._atomic_lock
         self._actions = consent_repository._actions
 
     @staticmethod
@@ -97,7 +99,7 @@ class InMemoryConsentCaseAtomicRepository:
             raise PermissionError("Consent and Case must belong to the transaction principal")
         self._verify_event(case, consent, principal_id)
 
-        with self._lock:
+        with self._case_lock, self._consent_lock:
             action_key = (principal_id, action_fingerprint) if action_fingerprint else None
             mapped = self._actions.get(action_key) if action_key else None
             existing = mapped or self._consents.get(consent.consent_id, principal_id=principal_id)
@@ -135,7 +137,6 @@ class InMemoryConsentCaseAtomicRepository:
                 event = next(
                     item for item in case.events if item.event_id == f"consent-{consent.consent_id}"
                 )
-                case.version = current_case.version + 1
                 case.updated_at = event.occurred_at
                 self._cases.save(case, principal_id=principal_id)
             except Exception:
