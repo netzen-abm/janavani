@@ -288,6 +288,6 @@ def test_environmental_evidence_branch_is_a_narrow_documentation_transition() ->
     assert 'EVENT_NAME" = "push"' in section
     assert '.number == 247' in section
     assert 'git diff --no-renames --name-only' in section
-    assert 'expiry="2026-11-24"' in section
+    assert 'expiry="2026-11-30"' in section
     assert 'docs/architecture/ENVIRONMENTAL_CIVIC_EVIDENCE_PRODUCT_MAPPING.md' in section
     assert "Documentation-only transition" in section
