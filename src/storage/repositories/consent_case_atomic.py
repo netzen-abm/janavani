@@ -11,12 +11,8 @@ from copy import deepcopy
 from threading import RLock
 from typing import Protocol
 
-from src.core.consent import Consent
+from src.core.consent import Consent, ConsentIdempotencyConflictError
 from src.core.civic_case import CaseEventType, CivicCase
-
-
-class ConsentIdempotencyConflictError(RuntimeError):
-    """One action key was reused with a different consent payload."""
 
 
 class ConsentCaseAtomicRepository(Protocol):
