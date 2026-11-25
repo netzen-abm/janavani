@@ -6,6 +6,8 @@ import os
 import time
 
 from fastapi.testclient import TestClient
+from src.capabilities.consent import ConsentCapability, PURPOSE_SUBMISSION
+from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 
 from src.web.canonical_app import app
 from src.web.civic_case_dependencies import _COMPOSITION
@@ -102,6 +104,71 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert len(consent_events) == 1
     assert consent_events[0]["actor_id"] == "principal-1"
 
+    tampered_review = client.post(
+        f"/civic/cases/{case_id}/review",
+        headers=_auth_header(),
+        json={"subject": "Changed after approval", "narrative": "This content must not replace the approved Case."},
+    )
+    assert tampered_review.status_code == 409, tampered_review.json()
+    unchanged = client.get(f"/civic/cases/{case_id}", headers=_auth_header()).json()
+    assert unchanged["status"] == "ready"
+    assert unchanged["subject"] == "Delayed public service"
+    assert unchanged["narrative"] == "The requested service has not been delivered."
+
+
+
+def test_submission_purpose_consent_cannot_make_case_ready():
+    headers = _auth_header("principal-purpose-boundary")
+    created = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={
+            "case_type": "complaint",
+            "subject": "Purpose-bound consent",
+            "narrative": "Synthetic purpose-boundary test.",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+    reviewed = client.post(
+        f"/civic/cases/{case_id}/review",
+        headers=headers,
+        json={
+            "subject": "Purpose-bound consent",
+            "narrative": "Synthetic purpose-boundary test.",
+        },
+    )
+    assert reviewed.status_code == 200, reviewed.json()
+
+    scope = "office:office-1"
+    consent_id = ConsentCapability._consent_id(case_id, PURPOSE_SUBMISSION, scope)
+    _COMPOSITION.consent_repository.save(
+        Consent(
+            consent_id=consent_id,
+            subject_id="principal-purpose-boundary",
+            purpose=PURPOSE_SUBMISSION,
+            scope=(scope,),
+            grant_type=ConsentGrantType.EXPLICIT,
+            status=ConsentStatus.GRANTED,
+            created_at="2026-11-25T00:00:00+00:00",
+        ),
+        principal_id="principal-purpose-boundary",
+    )
+    attached = client.post(
+        f"/civic/cases/{case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert attached.status_code == 200, attached.json()
+
+    ready = client.post(
+        f"/civic/cases/{case_id}/ready",
+        headers=headers,
+        json={},
+    )
+    assert ready.status_code == 409, ready.json()
+    case = client.get(f"/civic/cases/{case_id}", headers=headers).json()
+    assert case["status"] == "review"
 
 
 def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() -> None:
