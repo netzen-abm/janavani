@@ -34,11 +34,9 @@ class CivicActionDocuments:
         result = self._deps.civic_action_capability.build_document(
             case_id, identity=identity, document_id=document_id
         )
-        self._deps.document_review_repository.save(result.draft)
-        self._deps.case_capability.add_document(
-            case_id, result.draft.document_id, identity=identity, source_channel="shared"
+        return self._deps.document_review_capability.save_draft(
+            result.draft, identity=identity
         )
-        return result.draft
 
     def review(self, request: DocumentReviewRequest, *, identity: IdentityContext):
         return self._deps.document_review_capability.edit(request, identity=identity)
@@ -127,6 +125,11 @@ class CivicActionDocuments:
         )
         if draft is None or (case_id is not None and draft.case_id != case_id):
             raise LookupError("Document draft not found")
+        case = self._deps.case_capability.get_owned(draft.case_id, identity=identity)
+        if case is None:
+            raise LookupError("Document draft not found")
+        if getattr(case.status, "value", case.status) != CaseStatus.READY.value:
+            raise PermissionError("Final Case readiness is required before document generation")
         artifact = generate_artifact(
             draft, document_format, output_dir, blob_store=self._deps.blob_store
         )
