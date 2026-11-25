@@ -200,3 +200,50 @@ def test_legacy_consent_attachment_requires_persisted_case_owned_grant():
     final_case = client.get(f"/civic/cases/{first_case_id}", headers=headers).json()
     assert sum(event["event_type"] == "consent_recorded" for event in final_case["events"]) == 1
     assert final_case["consent_refs"].count(consent_id) == 1
+
+
+def test_reused_consent_action_with_different_scope_returns_conflict() -> None:
+    headers = _auth_header("principal-consent-action-conflict")
+    created = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={
+            "case_type": "complaint",
+            "subject": "Repeated consent action",
+            "narrative": "Synthetic case for consent idempotency conflict handling.",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+    action_id = "web-consent-conflict-action-1"
+
+    first = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=headers,
+        json={
+            "action_id": action_id,
+            "scope": "citizen_download_and_self_send",
+            "explicit_confirmation": True,
+        },
+    )
+    assert first.status_code == 200, first.json()
+
+    conflict = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=headers,
+        json={
+            "action_id": action_id,
+            "scope": "case_submission",
+            "explicit_confirmation": True,
+        },
+    )
+    assert conflict.status_code == 409, conflict.json()
+
+    stored = client.get(f"/civic/cases/{case_id}", headers=headers)
+    assert stored.status_code == 200, stored.json()
+    consent_events = [
+        event for event in stored.json()["events"]
+        if event["event_type"] == "consent_recorded"
+    ]
+    assert len(consent_events) == 1
+
