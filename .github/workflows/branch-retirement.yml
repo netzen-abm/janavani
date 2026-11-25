@@ -244,16 +244,56 @@ jobs:
             echo "::error::Merged PR event does not contain its recorded head SHA."
             exit 2
           fi
-          head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
-          if [ "$head_sha" != "$expected_pr_head_sha" ]; then
-            echo "::error::Consent branch head no longer matches the merged PR event head."
+          # GitHub may auto-delete a PR head before this workflow starts.
+          # Accept only an exact 404 as "already absent"; authentication, rate
+          # limit, and server errors must remain hard failures.
+          api_root="https://api.github.com/repos/$REPO"
+          branch_response="$(mktemp)"
+          branch_http="$(curl -sS -o "$branch_response" -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_root/git/ref/heads/$branch")"
+          case "$branch_http" in
+            200)
+              head_sha="$(jq -r '.object.sha' "$branch_response")"
+              if [ "$head_sha" != "$expected_pr_head_sha" ]; then
+                echo "::error::Consent branch head no longer matches the merged PR event head."
+                exit 2
+              fi
+              git fetch --no-tags origin "refs/heads/$branch:$git_ref"
+              ;;
+            404)
+              head_sha="$expected_pr_head_sha"
+              echo "PR head branch is already absent; archive will be created from the immutable PR head ref."
+              git fetch --no-tags origin "refs/pull/$pr_number/head:$git_ref"
+              ;;
+            *)
+              cat "$branch_response"
+              echo "::error::Unable to verify consent branch ref (HTTP $branch_http)."
+              exit 2
+              ;;
+          esac
+          rm -f "$branch_response"
+          if [ "$(git rev-parse "$git_ref")" != "$expected_pr_head_sha" ]; then
+            echo "::error::Fetched consent PR head does not match the merged PR event head."
             exit 2
           fi
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          if ! git cat-file -e "$expected_pr_head_sha^{commit}"; then
+            echo "::error::Exact merged PR head commit is unavailable for archive verification."
+            exit 2
+          fi
+          if ! git diff --quiet refs/remotes/origin/main "$expected_pr_head_sha"; then
+            echo "::error::Retirement held: consent-governance tree differs from merged main."
+            exit 2
+          fi
+
           review_rows="$(gh api --paginate "repos/$REPO/pulls/$pr_number/reviews?per_page=100" --jq '.[] | [.user.login, .state, .submitted_at, .commit_id] | @tsv')"
           approved_count="$(
-            printf '%s\n' "$review_rows" |
-              sort -s -t "$(printf '\t')" -k1,1 -k3,3 |
-              awk -F '\t' -v author="$pr_author" -v expected="$expected_pr_head_sha" '
+            printf '%s\\n' "$review_rows" |
+              sort -s -t "$(printf '\\t')" -k1,1 -k3,3 |
+              awk -F '\\t' -v author="$pr_author" -v expected="$expected_pr_head_sha" '
                 NF == 4 {
                   latest_state[$1] = $2
                   latest_commit[$1] = $4
@@ -275,37 +315,61 @@ jobs:
             exit 2
           fi
 
-          git fetch --no-tags origin "refs/heads/$branch:$git_ref" "+refs/heads/main:refs/remotes/origin/main"
-          if [ "$(git rev-parse "$git_ref")" != "$expected_pr_head_sha" ]; then
-            echo "::error::Fetched consent branch head does not match the merged PR event head."
-            exit 2
-          fi
-          if ! git diff --quiet refs/remotes/origin/main "$git_ref"; then
-            echo "::error::Retirement held: consent-governance tree differs from merged main."
-            exit 2
-          fi
-
+          # Create or verify the archive before considering any ref deletion.
           if gh api "repos/$REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
             archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
-            if [ "$archive_sha" != "$head_sha" ]; then
+            if [ "$archive_sha" != "$expected_pr_head_sha" ]; then
               echo "::error::Archive tag exists at a different SHA."
               exit 2
             fi
           else
-            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$head_sha"
+            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$expected_pr_head_sha"
           fi
           archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
-          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
-          if [ "$archive_sha" != "$expected_pr_head_sha" ] ||
-             [ "$current_sha" != "$expected_pr_head_sha" ]; then
-            echo "::error::Consent archive/head verification failed against the merged PR event head."
+          if [ "$archive_sha" != "$expected_pr_head_sha" ]; then
+            echo "::error::Consent archive does not preserve the exact merged PR event head."
             exit 2
           fi
-          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
-          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
-            echo "::error::Consent branch still exists after deletion."
-            exit 2
-          fi
+
+          # Re-read the mutable branch immediately before deletion. If it has
+          # already disappeared, leave it absent; if it moved or was recreated,
+          # stop rather than deleting a different ref.
+          branch_response="$(mktemp)"
+          branch_http="$(curl -sS -o "$branch_response" -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_root/git/ref/heads/$branch")"
+          case "$branch_http" in
+            200)
+              current_sha="$(jq -r '.object.sha' "$branch_response")"
+              if [ "$current_sha" != "$expected_pr_head_sha" ]; then
+                echo "::error::Consent branch moved or was recreated after archive verification."
+                exit 2
+              fi
+              gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+              verify_response="$(mktemp)"
+              verify_http="$(curl -sS -o "$verify_response" -w '%{http_code}' \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "$api_root/git/ref/heads/$branch")"
+              rm -f "$verify_response"
+              if [ "$verify_http" != "404" ]; then
+                echo "::error::Consent branch still exists or could not be verified absent after deletion (HTTP $verify_http)."
+                exit 2
+              fi
+              ;;
+            404)
+              echo "Consent branch was already absent after exact-head archive verification; no deletion was needed."
+              ;;
+            *)
+              cat "$branch_response"
+              echo "::error::Unable to re-verify consent branch ref before deletion (HTTP $branch_http)."
+              exit 2
+              ;;
+          esac
+          rm -f "$branch_response"
 
           # PR #247 is the only other approved temporary ref. Retire it here
           # too when it was merged before PR #243; otherwise preserve it until
