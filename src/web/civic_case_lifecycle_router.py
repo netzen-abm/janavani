@@ -1,6 +1,8 @@
 """Review and approval lifecycle HTTP routes; external document submission is not a Janavani capability."""
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException
+
 from src.capabilities.civic_case_content import CaseContentReadinessConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
