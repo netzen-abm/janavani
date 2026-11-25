@@ -291,9 +291,9 @@ jobs:
 
           review_rows="$(gh api --paginate "repos/$REPO/pulls/$pr_number/reviews?per_page=100" --jq '.[] | [.user.login, .state, .submitted_at, .commit_id] | @tsv')"
           approved_count="$(
-            printf '%s\\n' "$review_rows" |
-              sort -s -t "$(printf '\\t')" -k1,1 -k3,3 |
-              awk -F '\\t' -v author="$pr_author" -v expected="$expected_pr_head_sha" '
+            printf '%s\n' "$review_rows" |
+              sort -s -t "$(printf '\t')" -k1,1 -k3,3 |
+              awk -F '\t' -v author="$pr_author" -v expected="$expected_pr_head_sha" '
                 NF == 4 {
                   latest_state[$1] = $2
                   latest_commit[$1] = $4
