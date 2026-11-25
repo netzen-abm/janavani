@@ -249,6 +249,22 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
     assert "RETIREMENT VERIFIED" in section
 
 
+def test_environmental_evidence_retirement_is_bound_to_closed_pr_head() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split("retire-environmental-civic-evidence-contract:", 1)[1].split(
+        "retire-canonical-capability-envelope:", 1
+    )[0]
+
+    assert 'expected_pr_head_sha="${{ github.event.pull_request.head.sha }}"' in section
+    assert 'if [ "$head_sha" != "$expected_pr_head_sha" ]; then' in section
+    assert 'if [ "$(git rev-parse "$git_ref")" != "$expected_pr_head_sha" ]' in section
+    assert 'if [ "$archive_sha" != "$expected_pr_head_sha" ]' in section
+    assert '[ "$current_sha" != "$expected_pr_head_sha" ]' in section
+    assert 'evidence_api_head" != "$expected_pr_head_sha"' in section
+
+
 def test_manual_retirement_never_bypasses_specialized_transition_gates():
     source = (
         ROOT / ".github" / "workflows" / "branch-retirement.yml"
