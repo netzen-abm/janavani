@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.consent import ConsentCapability
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
@@ -18,16 +19,14 @@ from src.capabilities.escalation import EscalationCapability, EscalationContext,
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
 from src.capabilities.follow_up import FollowUpCapability, FollowUpContext, FollowUpRecommendation
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
-from src.capabilities.submission import SubmissionCapability
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
+from src.capabilities.submission import SubmissionCapability
 from src.core.delivery_channel import ExternalChannel
 from src.core.obligation import ObligationResolution
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.document_contract import DocumentDraft
-from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.identity.context import IdentityContext
 from src.storage.artifact_blob import ArtifactBlobStore
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
