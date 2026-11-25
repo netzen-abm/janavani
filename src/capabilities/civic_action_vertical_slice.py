@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.escalation import EscalationCapability, EscalationContext, EscalationRecommendation
@@ -59,6 +60,7 @@ class CivicActionVerticalSliceDependencies:
     blob_store: ArtifactBlobStore | None = None
     follow_up_capability: FollowUpCapability | None = None
     escalation_capability: EscalationCapability | None = None
+    consent_capability: ConsentCapability | None = None
 
     def __post_init__(self) -> None:
         if self.submission_capability is not None and not _submission_is_activated(self.activation_policy):
@@ -143,6 +145,12 @@ class CivicActionVerticalSlice:
         return self._documents.start_review(case_id, identity=identity)
 
     def approve(self, case_id: str, *, identity: IdentityContext):
+        consent = self._deps.consent_capability
+        if consent is None:
+            raise PermissionError("Document-preparation consent validation is not configured")
+        consent.require_active_document_preparation_consent(
+            case_id, identity=identity
+        )
         return self._documents.approve(case_id, identity=identity)
 
     def generate_artifact(self, document_id: str, *, identity: IdentityContext, case_id=None,
