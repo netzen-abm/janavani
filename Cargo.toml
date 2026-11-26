@@ -23,6 +23,3 @@ nym = []
 reticulum = []
 zkp = []
 blockchain = []
-
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
