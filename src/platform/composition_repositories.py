@@ -36,13 +36,26 @@ def create_case_repository(*, provider_composition: ProviderComposition | None =
 
 def create_consent_repository(*, provider_composition: ProviderComposition | None = None) -> ConsentRepository:
     composition = provider_composition or create_provider_composition()
-    return create_consent_repository_for_provider(\n        provider=composition.provider_for("consent"),\n        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),\n    )
+    return create_consent_repository_for_provider(
+        provider=composition.provider_for("consent"),
+        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),
+    )
 
 def create_submission_repository(*, provider_composition: ProviderComposition | None = None) -> SubmissionRepository:
     composition = provider_composition or create_provider_composition()
-    return create_submission_repository_for_provider(\n        provider=composition.provider_for("submission"),\n        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),\n    )
+    return create_submission_repository_for_provider(
+        provider=composition.provider_for("submission"),
+        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),
+    )
 
-def create_document_artifact_repository_for_platform(*, provider_composition: ProviderComposition | None = None):\n    composition = provider_composition or create_provider_composition()\n    return create_artifact_repository_for_provider(\n        provider=composition.provider_for("document_artifact"),\n        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),\n    )\n\ndef create_document_review_repository_for_platform(*, provider_composition: ProviderComposition | None = None) -> DocumentReviewRepository:
+def create_document_artifact_repository_for_platform(*, provider_composition: ProviderComposition | None = None):
+    composition = provider_composition or create_provider_composition()
+    return create_artifact_repository_for_provider(
+        provider=composition.provider_for("document_artifact"),
+        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),
+    )
+
+def create_document_review_repository_for_platform(*, provider_composition: ProviderComposition | None = None) -> DocumentReviewRepository:
     return create_document_review_repository(provider_composition=provider_composition or create_provider_composition())
 
 def create_accountability_feedback_repository(*, provider_composition: ProviderComposition | None = None, path=None):
@@ -82,7 +95,10 @@ def create_identity_link_repository(*, provider_composition: ProviderComposition
 
 def create_authority_repository(*, provider_composition: ProviderComposition | None = None) -> AuthorityRepository:
     composition = provider_composition or create_provider_composition()
-    return create_authority_repository_for_provider(\n        provider=composition.provider_for("authority"),\n        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),\n    )
+    return create_authority_repository_for_provider(
+        provider=composition.provider_for("authority"),
+        dsn=os.getenv("JANAVANI_POSTGRES_DSN"),
+    )
 
 def create_development_authority_repository() -> AuthorityRepository:
     return InMemoryAuthorityRepository()
