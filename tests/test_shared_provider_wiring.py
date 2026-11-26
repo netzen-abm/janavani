@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.platform import composition_repositories as repositories
+import src.platform.composition_repositories as repositories
 from src.platform.surface_case_composition import _get_or_create
 from src.storage.provider_composition import ProviderComposition
 
