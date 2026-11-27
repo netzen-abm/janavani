@@ -9,6 +9,7 @@ from telegram.ext import ContextTypes
 from conversation.constants import (
     COMPLETED,
     WAITING_FOR_CIVIC_DRAFT_CHOICE,
+    WAITING_FOR_CIVIC_DRAFT_CONDITIONS,
     WAITING_FOR_CIVIC_DRAFT_EXISTING,
     WAITING_FOR_CIVIC_DRAFT_ISSUE,
     WAITING_FOR_CIVIC_DRAFT_JURISDICTION,
@@ -33,6 +34,7 @@ def request_from_transient_draft(data: dict) -> CivicDraftPreviewRequest:
         existing_draft=data.get("existing_draft", ""),
         jurisdiction=data.get("jurisdiction", ""),
         requested_documents=tuple(data.get("requested_documents", [])),
+        requested_conditions=tuple(data.get("requested_conditions", [])),
     )
 
 
@@ -47,6 +49,11 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
     message = update.effective_message
     user = update.effective_user
     if message is None or user is None or not message.text:
+        return
+    if getattr(getattr(message, "chat", None), "type", None) != "private":
+        await message.reply_text(
+            "For privacy, continue civic drafting in a private chat with Janavani."
+        )
         return
     state = get_state(user.id)
     text = message.text.strip()
@@ -67,7 +74,9 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
             await message.reply_text("Describe the issue in 1 to 5,000 characters.")
             return
         current["issue"] = text
-        if current["template_id"] in {"rti.records", "administrative.evidence-demand"}:
+        if current["template_id"] in {
+            "rti.records", "administrative.evidence-demand", "contract.general"
+        }:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_JURISDICTION)
             await message.reply_text("Which public authority or jurisdiction is this document for?")
         else:
@@ -90,11 +99,32 @@ async def handle_civic_draft_text(update: Update, context: ContextTypes.DEFAULT_
                 "List the existing records you are requesting, one per line. "
                 "RTI drafts request records; they do not ask the authority to create a new explanation."
             )
+        elif current["template_id"] == "contract.general":
+            set_state(user.id, WAITING_FOR_CIVIC_DRAFT_CONDITIONS)
+            await message.reply_text(
+                "List proposed contract terms or conditions, one per line "
+                "(1 to 12 items; up to 800 characters each)."
+            )
         else:
             set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
             await message.reply_text(
                 "Paste the notice or your existing reply to include in the structured preview, or send a single dash (-) to use the reusable starter format."
             )
+        return
+
+    if state == WAITING_FOR_CIVIC_DRAFT_CONDITIONS:
+        conditions = [line.strip() for line in text.splitlines() if line.strip()]
+        if not conditions or len(conditions) > 12 or any(len(item) > 800 for item in conditions):
+            await message.reply_text(
+                "Enter 1 to 12 proposed terms or conditions, each no longer than 800 characters."
+            )
+            return
+        current["requested_conditions"] = conditions
+        set_ephemeral_civic_draft(user.id, current)
+        set_state(user.id, WAITING_FOR_CIVIC_DRAFT_EXISTING)
+        await message.reply_text(
+            "Paste an existing contract draft for context, or send a single dash (-) to use the reusable structure."
+        )
         return
 
     if state == WAITING_FOR_CIVIC_DRAFT_RECORDS:

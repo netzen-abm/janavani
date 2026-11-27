@@ -59,3 +59,15 @@ def test_identity_provider_can_be_postgres_while_case_is_memory() -> None:
 
 def test_identity_domain_is_in_persisted_domains() -> None:
     assert "external_identity_links" in PERSISTED_DOMAINS
+
+
+def test_environment_uses_canonical_case_provider_key(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_CASE_REPOSITORY_PROVIDER", "postgres")
+    monkeypatch.delenv("JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER", raising=False)
+    assert ProviderComposition.from_environment().provider_for("civic_case") == "postgres"
+
+
+def test_environment_uses_canonical_artifact_provider_key(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_ARTIFACT_REPOSITORY_PROVIDER", "postgres")
+    monkeypatch.delenv("JANAVANI_DOCUMENT_ARTIFACT_REPOSITORY_PROVIDER", raising=False)
+    assert ProviderComposition.from_environment().provider_for("document_artifact") == "postgres"

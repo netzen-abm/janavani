@@ -6,13 +6,14 @@ from unittest.mock import AsyncMock
 from conversation.constants import (
     COMPLETED,
     WAITING_FOR_CIVIC_DRAFT_CHOICE,
+    WAITING_FOR_CIVIC_DRAFT_CONDITIONS,
     WAITING_FOR_CIVIC_DRAFT_EXISTING,
     WAITING_FOR_CIVIC_DRAFT_ISSUE,
     WAITING_FOR_CIVIC_DRAFT_JURISDICTION,
     WAITING_FOR_CIVIC_DRAFT_RECORDS,
     WAITING_FOR_CIVIC_DRAFT_TYPE,
 )
-from conversation.session import get_ephemeral_civic_draft, user_sessions
+from conversation.session import get_ephemeral_civic_draft, set_ephemeral_civic_draft, user_sessions
 from conversation.state import get_state, set_state, user_states
 from src.commands import ai_draft as ai_command
 from src.conversation.steps import civic_draft as draft_step
@@ -286,3 +287,97 @@ def test_administrative_evidence_demand_telegram_flow_collects_jurisdiction(monk
     message = send("-")
     message.reply_document.assert_awaited_once()
     assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_CHOICE
+
+
+
+def test_civic_draft_text_rejects_group_updates_without_mutating_private_state():
+    user_id = 88008
+    _reset(user_id)
+    set_ephemeral_civic_draft(user_id, {
+        "template_id": "complaint.general",
+        "issue": "Private draft text must stay private.",
+        "subject": "",
+        "existing_draft": "",
+        "jurisdiction": "",
+        "requested_documents": [],
+    })
+    set_state(user_id, WAITING_FOR_CIVIC_DRAFT_ISSUE)
+    update, message = _update(
+        user_id, "Group message must not enter the draft.", chat_type="group"
+    )
+    context = SimpleNamespace(args=[], application=SimpleNamespace(bot_data={}))
+
+    asyncio.run(draft_step.handle_civic_draft_text(update, context))
+
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_ISSUE
+    assert get_ephemeral_civic_draft(user_id)["issue"] == "Private draft text must stay private."
+    assert "private chat" in message.reply_text.await_args.args[0]
+    message.reply_document.assert_not_awaited()
+
+
+def test_contract_template_flow_collects_jurisdiction_and_terms_before_preview(monkeypatch):
+    user_id = 88009
+    _reset(user_id)
+    update, _ = _update(user_id)
+    context = SimpleNamespace(args=[], application=SimpleNamespace(bot_data={}))
+    asyncio.run(ai_command.ai_draft_command(update, context))
+
+    callback_message = SimpleNamespace(
+        chat=SimpleNamespace(type="private"),
+        reply_text=AsyncMock(),
+        reply_document=AsyncMock(),
+    )
+    query = SimpleNamespace(
+        data="civicdraft:type:contract.general",
+        from_user=SimpleNamespace(id=user_id),
+        message=callback_message,
+        answer=AsyncMock(),
+    )
+    asyncio.run(ai_command.handle_civic_draft_callback(
+        SimpleNamespace(callback_query=query), context
+    ))
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_ISSUE
+
+    def send(text):
+        update, message = _update(user_id, text)
+        asyncio.run(draft_step.handle_civic_draft_text(update, context))
+        return message
+
+    send("Prepare a preliminary services agreement for review.")
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_JURISDICTION
+    send("Kerala, India; governing law to be confirmed by the parties")
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_CONDITIONS
+    send(
+        "Define the services and deliverables\n"
+        "Set payment milestones\n"
+        "Provide termination terms"
+    )
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_EXISTING
+
+    class FakeWorkflow:
+        def preview(self, request, **kwargs):
+            assert request.template_id == "contract.general"
+            assert request.jurisdiction == "Kerala, India; governing law to be confirmed by the parties"
+            assert request.requested_conditions == (
+                "Define the services and deliverables",
+                "Set payment milestones",
+                "Provide termination terms",
+            )
+            assert kwargs == {}
+            return {
+                "template_id": request.template_id,
+                "template_version": 1,
+                "draft_body": "Preliminary contract structure",
+                "ai_used": False,
+                "ai_status": "not_requested",
+            }
+
+    monkeypatch.setattr(draft_step, "CivicDraftPreviewWorkflow", FakeWorkflow)
+    message = send("-")
+    assert get_state(user_id) == WAITING_FOR_CIVIC_DRAFT_CHOICE
+    message.reply_document.assert_awaited_once()
+    assert get_ephemeral_civic_draft(user_id)["requested_conditions"] == [
+        "Define the services and deliverables",
+        "Set payment milestones",
+        "Provide termination terms",
+    ]
