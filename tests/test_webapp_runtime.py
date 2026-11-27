@@ -35,10 +35,17 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     class Client:
         identity_assertion = "test-signed-assertion"
 
+        status = "draft"
+        prepare_calls = 0
+
         def get_case(self, case_id):
-            return {"case_id": case_id, "status": "draft"}
+            refs = ["doc-test"] if self.status == "ready" else []
+            return {"case_id": case_id, "status": self.status, "document_refs": refs}
 
         def prepare_document_draft(self, case_id):
+            self.prepare_calls += 1
+            if self.status == "ready":
+                raise AssertionError("Ready case must reuse its attached document")
             return {
                 "case_id": case_id,
                 "document_id": "doc-test",
@@ -65,6 +72,7 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
             self.ready_calls += 1
             assert kwargs["subject"] == "Streetlight outage"
             assert kwargs["narrative"] == "The streetlight has been out for three nights."
+            self.status = "ready"
             return {"status": "ready"}
 
         def generate_artifact(self, case_id, **kwargs):
@@ -126,10 +134,17 @@ def test_case_workspace_routes_execute_review_consent_and_ephemeral_download(mon
     assert ready.status_code == 200
     assert "Case case-test: ready" in ready.text
     assert "Download reviewed document" in ready.text
+    assert 'name="document_id"' in ready.text
+    assert 'value="doc-test"' in ready.text
     assert fake_client.ready_calls == 1
-
+    prepare_calls = fake_client.prepare_calls
+    ready_workspace = client.get("/cases/case-test/prepare")
+    assert ready_workspace.status_code == 200
+    assert "Case ready for download" in ready_workspace.text
+    assert fake_client.prepare_calls == prepare_calls
     artifact = client.post(
-        "/cases/case-test/artifact", data={"document_format": "pdf"}
+        "/cases/case-test/artifact",
+        data={"document_format": "pdf", "document_id": "doc-test"},
     )
     assert artifact.status_code == 200
     assert artifact.content == b"%PDF-test-payload"
