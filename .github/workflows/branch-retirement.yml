@@ -361,6 +361,42 @@ jobs:
             exit 2
           fi
 
+          # PR #250's code is superseded by PR #226. The dedicated main-push
+          # job must first prove that PR #226 is merged, archive the exact #250
+          # head and delete its redundant ref. Do not run the consent/evidence
+          # count transition while that third temporary ref remains.
+          pr226="$(gh api "repos/$REPO/pulls/226")"
+          if [ -z "$(jq -r '.merged_at // empty' <<<"$pr226")" ]; then
+            echo "::error::PR #226 must be merged before PR #243 branch retirement."
+            exit 2
+          fi
+          provider_branch="fix/persistence-provider-wiring"
+          provider_head="3363ca203e295a1c28bd15b58d1893cd92c5b1b0"
+          provider_tag="archive/branches/$provider_branch"
+          provider_retired=false
+          for attempt in $(seq 1 60); do
+            live_provider_head="$(gh api "repos/$REPO/git/ref/heads/$provider_branch" --jq '.object.sha' 2>/dev/null || true)"
+            archived_provider_head="$(gh api "repos/$REPO/git/ref/tags/$provider_tag" --jq '.object.sha' 2>/dev/null || true)"
+            if [ -z "$live_provider_head" ]; then
+              if [ "$archived_provider_head" != "$provider_head" ]; then
+                echo "::error::PR #250 ref is absent without an exact-head archive."
+                exit 2
+              fi
+              provider_retired=true
+              break
+            fi
+            if [ "$live_provider_head" != "$provider_head" ]; then
+              echo "::error::PR #250 ref moved from its reviewed head; preserving it."
+              exit 2
+            fi
+            echo "Waiting for the PR #250 exact-head archive/deletion job (attempt $attempt/60)."
+            sleep 10
+          done
+          if [ "$provider_retired" != true ]; then
+            echo "::error::PR #250 ref was not retired after PR #226 convergence; preserve PR #243 ref."
+            exit 2
+          fi
+
           pr_number="${{ github.event.pull_request.number }}"
           pr_author="${{ github.event.pull_request.user.login }}"
           expected_pr_head_sha="${{ github.event.pull_request.head.sha }}"
