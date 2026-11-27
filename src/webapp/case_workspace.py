@@ -31,7 +31,14 @@ def register_case_workspace_routes(rt) -> None:
         if case.get("status") == "ready":
             refs = case.get("document_refs") or []
             if not refs:
-                return Titled("Document unavailable", Div(H2("Document unavailable"), P("No approved document reference exists; no new draft was created."), A("Return to dashboard", href="/")))
+                return Titled(
+                    "Document unavailable",
+                    Div(
+                        H2("Document unavailable"),
+                        P("No approved document reference exists; no new draft was created."),
+                        A("Return to dashboard", href="/"),
+                    ),
+                )
             document_id = refs[-1]
             return Titled("Case ready for download", Div(
                 H2("Final review confirmed"), P(f"Case {case_id}: ready"),
@@ -123,7 +130,14 @@ def register_case_workspace_routes(rt) -> None:
         if not client.identity_assertion:
             return _sign_in_required()
         if not document_id.strip():
-            return Titled("Document unavailable", Div(H2("Document unavailable"), P("No reviewed document was identified. No new draft was created."), A("Return to case workspace", href=f"/cases/{case_id}/prepare")))
+            return Titled(
+                "Document unavailable",
+                Div(
+                    H2("Document unavailable"),
+                    P("No reviewed document was identified. No new draft was created."),
+                    A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
+                ),
+            )
         payload = client.generate_artifact(case_id, document_id=document_id, document_format=document_format)
         media_type = "application/pdf" if document_format == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         return Response(
