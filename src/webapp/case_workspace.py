@@ -28,6 +28,20 @@ def register_case_workspace_routes(rt) -> None:
         if not client.identity_assertion:
             return _sign_in_required()
         case = client.get_case(case_id)
+        if case.get("status") == "ready":
+            refs = case.get("document_refs") or []
+            if not refs:
+                return Titled("Document unavailable", Div(H2("Document unavailable"), P("No approved document reference exists; no new draft was created."), A("Return to dashboard", href="/")))
+            document_id = refs[-1]
+            return Titled("Case ready for download", Div(
+                H2("Final review confirmed"), P(f"Case {case_id}: ready"),
+                P("The approved document is read-only. Download it and send it yourself; Janavani does not transmit submissions."),
+                Form(action=f"/cases/{case_id}/artifact", method="post")(
+                    Input(type="hidden", name="document_id", value=document_id),
+                    Select(name="document_format")(Option("PDF", value="pdf", selected=True), Option("Word document", value="docx")),
+                    Button("Download reviewed document"),
+                ), A("Return to dashboard", href="/"),
+            ))
         draft = client.prepare_document_draft(case_id)
         return Titled(f"Janavani Case {case_id}", Div(
             H2("Janavani Citizen Case Workspace"),
@@ -104,12 +118,13 @@ def register_case_workspace_routes(rt) -> None:
         ))
 
     @rt("/cases/{case_id}/artifact")
-    def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf"):
+    def post_case_artifact(case_id: str, request: Request, document_format: str = "pdf", document_id: str = ""):
         client = client_for_request(request)
         if not client.identity_assertion:
             return _sign_in_required()
-        draft = client.prepare_document_draft(case_id)
-        payload = client.generate_artifact(case_id, document_id=draft["document_id"], document_format=document_format)
+        if not document_id.strip():
+            return Titled("Document unavailable", Div(H2("Document unavailable"), P("No reviewed document was identified. No new draft was created."), A("Return to case workspace", href=f"/cases/{case_id}/prepare")))
+        payload = client.generate_artifact(case_id, document_id=document_id, document_format=document_format)
         media_type = "application/pdf" if document_format == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         return Response(
             content=payload,
@@ -146,6 +161,7 @@ def register_case_workspace_routes(rt) -> None:
             P(f"Case {case_id}: ready"),
             P("The document is ready for download. You must send it yourself; Janavani does not transmit submissions."),
             Form(action=f"/cases/{case_id}/artifact", method="post")(
+                Input(type="hidden", name="document_id", value=draft["document_id"]),
                 Select(name="document_format")(
                     Option("PDF", value="pdf", selected=True),
                     Option("Word document", value="docx"),
