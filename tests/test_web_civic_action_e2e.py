@@ -160,6 +160,9 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     retry = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={})
     assert retry.status_code == 200, retry.json()
     assert retry.json()["status"] == "review"
+    assert retry.json()["event"] == "review_started"
+    stored_after_retry = client.get(f"/civic/cases/{case_id}", headers=headers).json()
+    assert sum(event["event_type"] == "review_started" for event in stored_after_retry["events"]) == 1
     tampered_retry = client.post(
         f"/civic/cases/{case_id}/review", headers=headers,
         json={"subject": "Changed subject after review"},
