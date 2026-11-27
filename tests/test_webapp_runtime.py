@@ -243,3 +243,17 @@ def test_local_vault_scope_proxy_is_private_and_uncached(monkeypatch):
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store, private"
     assert response.headers["pragma"] == "no-cache"
+
+
+
+def test_webapp_version_reports_its_render_commit(monkeypatch):
+    from src.webapp.main import app
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "candidate-test-sha")
+    response = TestClient(app).get("/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "surface": "webapp",
+        "commit": "candidate-test-sha",
+    }

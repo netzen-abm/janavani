@@ -222,3 +222,14 @@ def test_render_declares_dynamic_pathway_runtime_and_canonical_portal():
     assert "healthCheckPath: /liveness" in manifest
     assert "JANAVANI_WORDPRESS_PORTAL_URL" in manifest
     assert "JANAVANI_CANONICAL_WEBAPP_URL" in manifest
+
+
+def test_dynamic_version_reports_its_render_commit(monkeypatch):
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "candidate-test-sha")
+    response = TestClient(app).get("/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "surface": "dynamic-web",
+        "commit": "candidate-test-sha",
+    }

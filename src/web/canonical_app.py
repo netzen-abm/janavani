@@ -4,6 +4,8 @@ Surface routers are adapters. Shared civic-case lifecycle semantics live in
 ``src.core.civic_case`` and are not owned by Web.
 """
 
+import os
+
 from fastapi import FastAPI
 
 from src.config.runtime import validate_runtime_configuration
@@ -50,7 +52,11 @@ def create_canonical_app() -> FastAPI:
 
     @app.get("/version", tags=["Platform"])
     async def version() -> dict[str, str]:
-        return {"service": "janavani-platform-api", "version": "canonical-m3"}
+        return {
+            "service": "janavani-platform-api",
+            "version": "canonical-m3",
+            "commit": os.getenv("RENDER_GIT_COMMIT", "unknown"),
+        }
 
     return app
 

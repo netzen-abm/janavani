@@ -32,6 +32,7 @@ jobs:
           JANAVANI_WEBAPP_URL: https://janavani-webapp-preview.onrender.com
           JANAVANI_DYNAMIC_WEB_URL: https://janavani-dynamic-preview.onrender.com
           JANAVANI_WORDPRESS_PORTAL_URL: https://janavani7.wordpress.com
+          EXPECTED_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           python - <<'PY'
           import json
@@ -139,11 +140,36 @@ jobs:
                   content_type="application/x-www-form-urlencoded",
               )
 
-          # Wait for the currently deployed public service entrypoints; these GETs
-          # use no user data and do not invoke the drafting API.
+          def verify_candidate_revision(base, label):
+              expected = os.environ["EXPECTED_CANDIDATE_SHA"]
+              last_seen = "no response"
+              for attempt in range(1, 19):
+                  try:
+                      status, body, _ = call(base, "/version", timeout=12)
+                      if status == 200:
+                          deployed = json.loads(body).get("commit")
+                          if deployed == expected:
+                              print(f"PASS {label} serves candidate {expected} (attempt {attempt})")
+                              return
+                          last_seen = f"deployed commit {deployed!r}"
+                      else:
+                          last_seen = f"HTTP {status}"
+                  except Exception as error:
+                      last_seen = str(error)
+                  if attempt < 18:
+                      time.sleep(10)
+              raise RuntimeError(
+                  f"{label} did not converge to candidate {expected}; last result: {last_seen}"
+              )
+
+          # Require every independent Render surface to serve the exact candidate
+          # under test; a healthy but stale deployment must not satisfy acceptance.
           wait_for_service(API, "/liveness", "canonical API")
           wait_for_service(WEBAPP, "/", "authenticated WebApp")
           wait_for_service(DYNAMIC, "/", "public Dynamic Web")
+          verify_candidate_revision(API, "canonical API")
+          verify_candidate_revision(WEBAPP, "authenticated WebApp")
+          verify_candidate_revision(DYNAMIC, "public Dynamic Web")
 
           api_health, _ = expect(API, "/liveness")
           health_json = json.loads(api_health)

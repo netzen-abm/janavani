@@ -1,7 +1,8 @@
+import os
 from pathlib import Path
 
 from fasthtml.common import Link, Script, Style, fast_app
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.ui.brand_assets import register_brand_assets
@@ -28,6 +29,15 @@ app, rt = fast_app(
         Script(src="/assets/janavani-local-vault"),
     )
 )
+
+@rt("/version")
+def get_version():
+    """Expose the Render commit serving the authenticated WebApp."""
+    return JSONResponse({
+        "surface": "webapp",
+        "commit": os.getenv("RENDER_GIT_COMMIT", "unknown"),
+    })
+
 
 @rt("/assets/janavani-local-draft-form")
 def serve_local_draft_form_controller():

@@ -44,6 +44,15 @@ def get_liveness():
     return JSONResponse({"status": "alive", "surface": "dynamic-web"})
 
 
+@rt("/version")
+def get_version():
+    """Expose the Render commit serving this independent public surface."""
+    return JSONResponse({
+        "surface": "dynamic-web",
+        "commit": os.getenv("RENDER_GIT_COMMIT", "unknown"),
+    })
+
+
 register_public_pages(rt)
 register_pathway_routes(app)
 register_brand_assets(rt)
