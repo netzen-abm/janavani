@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
 from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
+from src.core.case_types import CaseStatus
 from src.core.consent import Consent, ConsentGrantType
 from src.core.execution import CapabilityExecutionContext
 from src.capabilities.civic_case_contract import CivicCaseResult
@@ -13,6 +14,10 @@ class CivicCaseLifecycleMixin:
     CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
     def start_review(self, case_id: str, *, identity: IdentityContext,
                      execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
+        case = self._owned(case_id, identity)
+        if case.status is CaseStatus.REVIEW:
+            self._require(identity, "case:review", "case:start_review", resource_id=case.case_id)
+            return CivicCaseResult(case, AuthorizationDecision.ALLOW)
         return self.transition(case_id, action="case:start_review", identity=identity, execution_context=execution_context)
 
     def approve(self, case_id: str, *, identity: IdentityContext,
