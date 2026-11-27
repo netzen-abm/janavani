@@ -126,7 +126,7 @@ def test_rejected_analytics_branch_is_path_limited_and_archived_before_retiremen
     assert "permissions:" in retirement
     assert "  contents: write" in retirement
     assert "  pull-requests: read" in retirement
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in retirement
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$head_sha" origin ":refs/heads/$branch"' in retirement
 
 
 
@@ -198,7 +198,7 @@ def test_consent_governance_branch_is_archived_before_post_merge_deletion() -> N
     assert "Consent branch was already absent after exact-head archive verification" in section
     assert "Consent branch was recreated after the initial absence check" in section
     assert "Consent branch moved after archive verification; preserving it." in section
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$expected_pr_head_sha" origin ":refs/heads/$branch"' in section
     assert 'if [ "$remaining" -ne 8 ]' not in section
     assert 'docs/environmental-civic-evidence-contract' in section
     assert 'if [ "$evidence_state" = "open" ]' in section
@@ -235,8 +235,8 @@ def test_consent_retirement_leaves_pr247_ref_to_its_own_workflow() -> None:
     assert "expected_nine=" in consent
     assert "expected_eight=" in consent
     assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$evidence_branch"' not in consent
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in consent
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in evidence
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$expected_pr_head_sha" origin ":refs/heads/$branch"' in consent
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$expected_pr_head_sha" origin ":refs/heads/$branch"' in evidence
     assert 'consent_ready=true' in evidence
     assert 'if [ "$remaining" != "$expected" ]' in evidence
 
@@ -259,7 +259,7 @@ def test_environmental_evidence_retirement_waits_for_consent_governance_and_veri
     assert 'consent_archive" != "$consent_head"' in section
     assert 'Retirement held: PR #243 archive is missing or does not match its merged head.' in section
     assert "archive/branches/" in section
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$expected_pr_head_sha" origin ":refs/heads/$branch"' in section
     assert 'if [ "$remaining" != "$expected" ]' in section
     assert "RETIREMENT VERIFIED" in section
 
@@ -343,7 +343,7 @@ def test_superseded_provider_ref_is_retired_only_after_pr226_convergence() -> No
     assert "test_shared_provider_wiring.py" in section
     assert "dsn=os.getenv(\"JANAVANI_POSTGRES_DSN\")" in section
     assert "archive/branches/$branch" in section
-    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert 'git push --porcelain --force-with-lease="refs/heads/$branch:$expected_head" origin ":refs/heads/$branch"' in section
     assert "ARCHIVE VERIFIED" in section
     assert "DELETED AFTER VERIFIED ARCHIVE" in section
 
