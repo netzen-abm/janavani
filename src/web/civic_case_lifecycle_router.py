@@ -18,14 +18,15 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
         if existing is None:
             raise LookupError("Case not found")
         status = getattr(existing.status, "value", existing.status)
-        if status != "draft" and (
-            request.subject.strip() != existing.subject
-            or request.narrative.strip() != existing.narrative
-        ):
-            raise HTTPException(
-                status_code=409,
-                detail="Reviewed Case content is immutable; create a new review cycle before changing it",
-            )
+        if status != "draft":
+            changed_subject = request.subject is not None and request.subject.strip() != existing.subject
+            changed_narrative = request.narrative is not None and request.narrative.strip() != existing.narrative
+            if changed_subject or changed_narrative:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Reviewed Case content is immutable; create a new review cycle before changing it",
+                )
+            return event_result(existing, existing.events[-1].event_type.value)
         CAPABILITY.hydrate_transient_content(
             case_id,
             identity=context,
