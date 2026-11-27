@@ -16,6 +16,9 @@ class CivicCaseLifecycleMixin:
                      execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         case = self._owned(case_id, identity)
         if case.status is CaseStatus.REVIEW:
+            self._validate_execution_context(
+                execution_context, identity, action="case:start_review", resource_id=case.case_id
+            )
             self._require(identity, "case:review", "case:start_review", resource_id=case.case_id)
             return CivicCaseResult(case, AuthorizationDecision.ALLOW)
         return self.transition(case_id, action="case:start_review", identity=identity, execution_context=execution_context)
