@@ -257,16 +257,35 @@ jobs:
             exit 2
           fi
 
-          # An absent ref is accepted only when its exact archived head is already proven.
-          if ! head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
-            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
-            if [ "$archive_sha" != "$expected_head" ]; then
-              echo "::error::PR #250 branch is absent without an exact-head archive."
+          # Distinguish a real 404 from authentication, rate-limit or server failures.
+          api_root="https://api.github.com/repos/$REPO"
+          branch_response="$(mktemp)"
+          branch_http="$(curl -sS -o "$branch_response" -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_root/git/ref/heads/$branch")"
+          case "$branch_http" in
+            200)
+              head_sha="$(jq -r '.object.sha' "$branch_response")"
+              ;;
+            404)
+              archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+              rm -f "$branch_response"
+              if [ "$archive_sha" != "$expected_head" ]; then
+                echo "::error::PR #250 branch is absent without an exact-head archive."
+                exit 2
+              fi
+              echo "RETIREMENT ALREADY COMPLETE: exact archive exists at $archive_sha and branch ref is absent."
+              exit 0
+              ;;
+            *)
+              cat "$branch_response"
+              echo "::error::Unable to verify PR #250 branch ref (HTTP $branch_http)."
               exit 2
-            fi
-            echo "RETIREMENT ALREADY COMPLETE: exact archive exists at $archive_sha and branch ref is absent."
-            exit 0
-          fi
+              ;;
+          esac
+          rm -f "$branch_response"
           if [ "$head_sha" != "$expected_head" ]; then
             echo "::error::PR #250 branch moved from the reviewed head; preserving it."
             exit 2
@@ -288,17 +307,51 @@ jobs:
             gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$expected_head"
           fi
           archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
-          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
-          if [ "$archive_sha" != "$expected_head" ] || [ "$current_sha" != "$expected_head" ]; then
-            echo "::error::Archive or live ref changed during verification; preserving branch."
+          if [ "$archive_sha" != "$expected_head" ]; then
+            echo "::error::Archive tag verification failed; preserving branch."
             exit 2
           fi
 
-          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
-          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
-            echo "::error::PR #250 branch still exists after deletion."
-            exit 2
-          fi
+          # Re-read the mutable ref immediately before deletion.
+          branch_response="$(mktemp)"
+          branch_http="$(curl -sS -o "$branch_response" -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_root/git/ref/heads/$branch")"
+          case "$branch_http" in
+            200)
+              current_sha="$(jq -r '.object.sha' "$branch_response")"
+              if [ "$current_sha" != "$expected_head" ]; then
+                rm -f "$branch_response"
+                echo "::error::PR #250 branch moved after archive verification; preserving it."
+                exit 2
+              fi
+              rm -f "$branch_response"
+              gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+              verify_response="$(mktemp)"
+              verify_http="$(curl -sS -o "$verify_response" -w '%{http_code}' \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "$api_root/git/ref/heads/$branch")"
+              rm -f "$verify_response"
+              if [ "$verify_http" != "404" ]; then
+                echo "::error::PR #250 branch was not verified absent after deletion (HTTP $verify_http)."
+                exit 2
+              fi
+              ;;
+            404)
+              rm -f "$branch_response"
+              echo "PR #250 branch was auto-deleted after exact archive verification."
+              ;;
+            *)
+              cat "$branch_response"
+              rm -f "$branch_response"
+              echo "::error::Unable to re-verify PR #250 branch before deletion (HTTP $branch_http)."
+              exit 2
+              ;;
+          esac
           archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
           if [ "$archive_sha" != "$expected_head" ]; then
             echo "::error::Post-deletion archive verification failed."
