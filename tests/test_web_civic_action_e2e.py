@@ -157,6 +157,14 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
 
     started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200, started.json()
+    retry = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={})
+    assert retry.status_code == 200, retry.json()
+    assert retry.json()["status"] == "review"
+    tampered_retry = client.post(
+        f"/civic/cases/{case_id}/review", headers=headers,
+        json={"subject": "Changed subject after review"},
+    )
+    assert tampered_retry.status_code == 409
     premature_artifact = client.post(
         f"/civic/cases/{case_id}/document/artifact",
         headers=headers,
