@@ -99,7 +99,7 @@ class CivicCaseContentMixin:
                 case.case_id, principal_id=identity.principal.principal_id
             )
             candidate = CaseContent(
-                subject=existing.subject if existing is not None else case.subject,
+                subject=case.subject,
                 narrative=case.narrative,
                 claims=tuple(dict(claim) for claim in case.claims),
                 jurisdiction=dict(case.jurisdiction),
