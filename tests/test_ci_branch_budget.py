@@ -364,3 +364,25 @@ def test_consent_retirement_waits_for_superseded_provider_archive_and_deletion()
     assert 'if [ "$provider_retired" != true ]' in section
     assert "PR #250 ref was not retired after PR #226 convergence" in section
 
+
+
+
+def test_branch_retirement_uses_exact_head_leases_and_never_unconditional_delete() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    assert "gh api --method DELETE" not in source
+    assert source.count("git push --porcelain --force-with-lease=") == 6
+    assert '--force-with-lease="refs/heads/$branch:$expected_head"' in source
+    assert '--force-with-lease="refs/heads/$branch:$expected_pr_head_sha"' in source
+    assert '--force-with-lease="refs/heads/$branch:$head_sha"' in source
+
+
+def test_branch_retirement_waiters_fail_closed_on_non_404_ref_errors() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    assert 'case "$provider_http" in' in source
+    assert 'case "$consent_ref_http" in' in source
+    assert 'case "$archive_http" in' in source
+    assert 'case "$consent_archive_http" in' in source
