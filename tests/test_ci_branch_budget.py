@@ -322,3 +322,45 @@ def test_environmental_evidence_branch_is_a_narrow_documentation_transition() ->
     assert 'expiry="2026-11-30"' in section
     assert 'docs/architecture/ENVIRONMENTAL_CIVIC_EVIDENCE_PRODUCT_MAPPING.md' in section
     assert "Documentation-only transition" in section
+
+
+def test_superseded_provider_ref_is_retired_only_after_pr226_convergence() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split(
+        "  retire-superseded-persistence-provider-wiring:", 1
+    )[1].split("  retire-consent-capability-governance:", 1)[0]
+
+    assert "github.event_name == 'push'" in section
+    assert "github.ref == 'refs/heads/main'" in section
+    assert "repos/$REPO/pulls/226" in section
+    assert ".merged_at // empty" in section
+    assert "Cannot retire PR #250's ref before PR #226 is merged." in section
+    assert "repos/$REPO/pulls/250" in section
+    assert "fix/persistence-provider-wiring" in section
+    assert "3363ca203e295a1c28bd15b58d1893cd92c5b1b0" in section
+    assert "test_shared_provider_wiring.py" in section
+    assert "dsn=os.getenv(\"JANAVANI_POSTGRES_DSN\")" in section
+    assert "archive/branches/$branch" in section
+    assert 'gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"' in section
+    assert "ARCHIVE VERIFIED" in section
+    assert "DELETED AFTER VERIFIED ARCHIVE" in section
+
+
+def test_consent_retirement_waits_for_superseded_provider_archive_and_deletion() -> None:
+    source = (
+        ROOT / ".github" / "workflows" / "branch-retirement.yml"
+    ).read_text(encoding="utf-8")
+    section = source.split(
+        "  retire-consent-capability-governance:", 1
+    )[1].split("  retire-environmental-civic-evidence-contract:", 1)[0]
+
+    assert "PR #226 must be merged before PR #243 branch retirement." in section
+    assert 'provider_branch="fix/persistence-provider-wiring"' in section
+    assert 'provider_head="3363ca203e295a1c28bd15b58d1893cd92c5b1b0"' in section
+    assert 'provider_tag="archive/branches/$provider_branch"' in section
+    assert "for attempt in $(seq 1 60)" in section
+    assert 'if [ "$provider_retired" != true ]' in section
+    assert "PR #250 ref was not retired after PR #226 convergence" in section
+
