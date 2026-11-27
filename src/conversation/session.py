@@ -105,7 +105,7 @@ async def run_ephemeral_issue_cleanup() -> None:
 
 _CIVIC_DRAFT_FIELDS = {
     "template_id", "issue", "subject", "existing_draft", "jurisdiction",
-    "requested_documents",
+    "requested_documents", "requested_conditions",
 }
 _CIVIC_DRAFT_TEXT_LIMITS = {
     "template_id": 80, "issue": 5_000, "subject": 200,
@@ -132,8 +132,17 @@ def set_ephemeral_civic_draft(user_id: int, value: dict) -> None:
         raise ValueError("Transient requested records must be a list of strings")
     if len(records) > 12 or any(not item.strip() or len(item) > 800 for item in records):
         raise ValueError("Transient requested records exceed limits")
+    conditions = value.get("requested_conditions", [])
+    if not isinstance(conditions, (list, tuple)) or any(not isinstance(item, str) for item in conditions):
+        raise ValueError("Transient requested conditions must be a list of strings")
+    if len(conditions) > 12 or any(not item.strip() or len(item) > 800 for item in conditions):
+        raise ValueError("Transient requested conditions exceed limits")
     session = get_session(user_id)
-    session["_ephemeral_civic_draft"] = deepcopy({**value, "requested_documents": list(records)})
+    session["_ephemeral_civic_draft"] = deepcopy({
+        **value,
+        "requested_documents": list(records),
+        "requested_conditions": list(conditions),
+    })
     session["_ephemeral_civic_draft_expires"] = monotonic() + _EPHEMERAL_TTL_SECONDS
 
 

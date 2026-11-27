@@ -46,3 +46,22 @@ def test_decision_only_capabilities_are_not_persistence_domains() -> None:
     decision_only = {"follow_up", "escalation"}
 
     assert decision_only.isdisjoint(PERSISTED_DOMAINS)
+
+
+
+def test_legacy_case_provider_key_remains_supported(monkeypatch) -> None:
+    monkeypatch.delenv("JANAVANI_CASE_REPOSITORY_PROVIDER", raising=False)
+    monkeypatch.setenv("JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER", "  POSTGRES ")
+
+    composition = ProviderComposition.from_environment()
+
+    assert composition.provider_for("civic_case") == "postgres"
+
+
+def test_current_case_provider_key_takes_precedence(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_CASE_REPOSITORY_PROVIDER", "sqlite")
+    monkeypatch.setenv("JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER", "postgres")
+
+    composition = ProviderComposition.from_environment()
+
+    assert composition.provider_for("civic_case") == "sqlite"

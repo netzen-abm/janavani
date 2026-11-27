@@ -73,3 +73,36 @@ def test_clearing_draft_preserves_unrelated_case_session_fields():
 
     assert sessions.get_session(991106)["case_id"] == "case-still-open"
     assert sessions.get_ephemeral_civic_draft(991106) is None
+
+
+
+def test_transient_draft_accepts_bounded_contract_conditions_and_copies_them():
+    sessions.clear_session(991107)
+    value = _draft()
+    value["requested_conditions"] = [
+        "Define deliverables",
+        "Set payment milestones",
+    ]
+
+    sessions.set_ephemeral_civic_draft(991107, value)
+    value["requested_conditions"].append("Caller mutation")
+
+    assert sessions.get_ephemeral_civic_draft(991107)["requested_conditions"] == [
+        "Define deliverables",
+        "Set payment milestones",
+    ]
+    sessions.clear_session(991107)
+
+
+def test_transient_draft_rejects_invalid_contract_conditions():
+    with pytest.raises(ValueError, match="conditions exceed limits"):
+        sessions.set_ephemeral_civic_draft(991108, {
+            **_draft(),
+            "requested_conditions": [" "],
+        })
+
+    with pytest.raises(ValueError, match="conditions exceed limits"):
+        sessions.set_ephemeral_civic_draft(991109, {
+            **_draft(),
+            "requested_conditions": ["x" * 801],
+        })

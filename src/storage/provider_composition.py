@@ -75,16 +75,22 @@ class ProviderComposition:
     @classmethod
     def from_environment(cls) -> "ProviderComposition":
         """Resolve the shared provider plan without importing any adapter."""
-        # Preserve deployed public environment names for these internal domains.
+        # Prefer current public keys while retaining established internal aliases.
         environment_keys = {
-            "civic_case": "JANAVANI_CASE_REPOSITORY_PROVIDER",
-            "document_artifact": "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER",
+            "civic_case": (
+                "JANAVANI_CASE_REPOSITORY_PROVIDER",
+                "JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER",
+            ),
+            "document_artifact": (
+                "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER",
+                "JANAVANI_DOCUMENT_ARTIFACT_REPOSITORY_PROVIDER",
+            ),
         }
         providers = {
-            domain: os.getenv(
-                environment_keys.get(
-                    domain, f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER"
-                ),
+            domain: next(
+                (os.getenv(key) for key in environment_keys.get(
+                    domain, (f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER",)
+                ) if os.getenv(key) is not None),
                 DEFAULT_PROVIDER,
             )
             for domain in PERSISTED_DOMAINS
