@@ -26,7 +26,7 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
             if changed_subject or changed_narrative:
                 raise HTTPException(status_code=409, detail="Reviewed Case content is immutable; create a new review cycle before changing it")
             result = _CIVIC_ACTION.start_review(case_id, identity=context)
-            return event_result(result.case, result.case.events[-1].event_type.value)
+            return event_result(result.case, "review_started")
         CAPABILITY.hydrate_transient_content(
             case_id,
             identity=context,
