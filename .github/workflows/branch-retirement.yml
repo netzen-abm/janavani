@@ -187,6 +187,130 @@ jobs:
             exit 2
           fi
 
+  retire-superseded-persistence-provider-wiring:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify PR #226 convergence, then archive and retire superseded PR #250 ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="fix/persistence-provider-wiring"
+          expected_head="3363ca203e295a1c28bd15b58d1893cd92c5b1b0"
+          tag="archive/branches/$branch"
+          git_ref="refs/remotes/origin/persistence-provider-retirement"
+
+          # PR #250 is redundant only after its equivalent implementation is on main.
+          pr226="$(gh api "repos/$REPO/pulls/226")"
+          pr226_merged_at="$(jq -r '.merged_at // empty' <<<"$pr226")"
+          if [ -z "$pr226_merged_at" ]; then
+            echo "::error::Cannot retire PR #250's ref before PR #226 is merged."
+            exit 2
+          fi
+
+          pr250="$(gh api "repos/$REPO/pulls/250")"
+          if [ "$(jq -r '.state' <<<"$pr250")" != "closed" ] ||
+             [ -n "$(jq -r '.merged_at // empty' <<<"$pr250")" ] ||
+             [ "$(jq -r '.head.ref' <<<"$pr250")" != "$branch" ] ||
+             [ "$(jq -r '.head.sha' <<<"$pr250")" != "$expected_head" ]; then
+            echo "::error::PR #250 is not the expected closed, unmerged, immutable superseded proposal."
+            exit 2
+          fi
+
+          count_open_prs_for_branch() {
+            local wanted_branch="$1"
+            BRANCH="$wanted_branch" REPO="$REPO" \
+              gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+                --jq '.[] | select(.head.ref == env.BRANCH and .head.repo.full_name == env.REPO) | .number' \
+              | wc -l | tr -d ' '
+          }
+          open_prs="$(count_open_prs_for_branch "$branch")"
+          if [ "$open_prs" != "0" ]; then
+            echo "::error::Retirement held: open PRs still reference $branch."
+            exit 2
+          fi
+
+          # Verify the relevant provider-wiring delta is present on merged main.
+          test -f src/platform/composition_repositories.py
+          test -f src/platform/surface_repository_graph.py
+          test -f tests/test_shared_provider_wiring.py
+          grep -q "def create_document_artifact_repository_for_platform" src/platform/composition_repositories.py
+          grep -q "def create_consent_repository" src/platform/composition_repositories.py
+          grep -q "def create_submission_repository" src/platform/composition_repositories.py
+          grep -q "def create_authority_repository" src/platform/composition_repositories.py
+          grep -q "get_or_create as _get_or_create" src/platform/surface_case_composition.py
+          grep -q "provider_runtime_graph as _provider_runtime_graph" src/platform/surface_case_composition.py
+          grep -q "test_postgres_dsn_is_propagated_to_supported_repository_factories" tests/test_shared_provider_wiring.py
+          grep -q "test_provider_graph_factory_is_lazy_and_runs_once" tests/test_shared_provider_wiring.py
+          dsn_factory_count="$(grep -c 'dsn=os.getenv("JANAVANI_POSTGRES_DSN")' src/platform/composition_repositories.py)"
+          if [ "$dsn_factory_count" -lt 4 ]; then
+            echo "::error::Merged main does not show DSN propagation for all four reviewed providers."
+            exit 2
+          fi
+
+          # An absent ref is accepted only when its exact archived head is already proven.
+          if ! head_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
+            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+            if [ "$archive_sha" != "$expected_head" ]; then
+              echo "::error::PR #250 branch is absent without an exact-head archive."
+              exit 2
+            fi
+            echo "RETIREMENT ALREADY COMPLETE: exact archive exists at $archive_sha and branch ref is absent."
+            exit 0
+          fi
+          if [ "$head_sha" != "$expected_head" ]; then
+            echo "::error::PR #250 branch moved from the reviewed head; preserving it."
+            exit 2
+          fi
+
+          git fetch --no-tags origin "+refs/heads/$branch:$git_ref"
+          if [ "$(git rev-parse "$git_ref")" != "$expected_head" ]; then
+            echo "::error::Fetched PR #250 branch does not match its immutable reviewed head."
+            exit 2
+          fi
+
+          if gh api "repos/$REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+            if [ "$archive_sha" != "$expected_head" ]; then
+              echo "::error::Archive tag already points to a different commit."
+              exit 2
+            fi
+          else
+            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$expected_head"
+          fi
+          archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+          current_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq '.object.sha')"
+          if [ "$archive_sha" != "$expected_head" ] || [ "$current_sha" != "$expected_head" ]; then
+            echo "::error::Archive or live ref changed during verification; preserving branch."
+            exit 2
+          fi
+
+          gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+          if gh api "repos/$REPO/git/ref/heads/$branch" >/dev/null 2>&1; then
+            echo "::error::PR #250 branch still exists after deletion."
+            exit 2
+          fi
+          archive_sha="$(gh api "repos/$REPO/git/ref/tags/$tag" --jq '.object.sha')"
+          if [ "$archive_sha" != "$expected_head" ]; then
+            echo "::error::Post-deletion archive verification failed."
+            exit 2
+          fi
+          echo "ARCHIVE VERIFIED: $tag @ $archive_sha"
+          echo "DELETED AFTER VERIFIED ARCHIVE: $branch"
+
+          remaining="$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | sort)"
+          printf 'Physical branches after superseded-ref retirement:\n%s\n' "$remaining"
+          echo "The PR #243 and #247 retirement jobs own their separate refs; exact-eight compliance is checked after both complete."
+
   retire-consent-capability-governance:
     if: >-
       github.event_name == 'pull_request' &&
