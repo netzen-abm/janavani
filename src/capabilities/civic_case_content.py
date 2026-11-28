@@ -91,9 +91,14 @@ class CivicCaseContentMixin:
         if owned is None:
             raise LookupError("Case not found")
         if case.status is not owned.status:
-            raise CaseContentReadinessConflictError(
-                "Case lifecycle changes must use canonical transition operations"
-            )
+            existing_event_count = len(owned.events)
+            if (
+                len(case.events) <= existing_event_count
+                or case.events[:existing_event_count] != owned.events
+            ):
+                raise CaseContentReadinessConflictError(
+                    "Case lifecycle changes require append-only domain events"
+                )
         if owned.status is not CaseStatus.DRAFT:
             existing = self._content.get(
                 case.case_id, principal_id=identity.principal.principal_id
