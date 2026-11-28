@@ -25,6 +25,39 @@ def test_in_memory_repository_round_trip() -> None:
     assert stored.narrative == ""
 
 
+
+def test_in_memory_repository_increments_versions_and_rejects_stale_writes() -> None:
+    import pytest
+
+    repository = InMemoryCivicCaseRepository()
+    repository.save(make_case())
+    current = repository.get("case-1")
+    stale = repository.get("case-1")
+    assert current is not None and stale is not None
+
+    current.add_evidence(
+        "evidence-current",
+        event_id="event-current",
+        occurred_at="2026-11-25T00:00:00Z",
+    )
+    repository.save(current)
+    assert current.version == 2
+
+    stale.add_evidence(
+        "evidence-stale",
+        event_id="event-stale",
+        occurred_at="2026-11-25T00:00:01Z",
+    )
+    with pytest.raises(RuntimeError, match="Expected Case version"):
+        repository.save(stale)
+
+    persisted = repository.get("case-1")
+    assert persisted is not None
+    assert persisted.version == 2
+    assert persisted.evidence_refs == ["evidence-current"]
+    assert [event.event_id for event in persisted.events] == ["event-current"]
+
+
 def test_in_memory_repository_missing_case() -> None:
     repository = InMemoryCivicCaseRepository()
 

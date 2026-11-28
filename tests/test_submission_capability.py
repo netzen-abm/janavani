@@ -7,6 +7,7 @@ import pytest
 
 from src.access.authorization import AuthorizationDecision
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.submission import (
     ACKNOWLEDGEMENT_EVIDENCE_TYPE,
     CONSENT_PURPOSE,
@@ -35,7 +36,7 @@ def _identity(*capabilities: str) -> IdentityContext:
         principal=Principal(
             principal_id="citizen:submission-test",
             identity_mode=IdentityMode.AUTHENTICATED,
-            capabilities=frozenset(capabilities),
+            capabilities=frozenset((*capabilities, "case:consent")),
         ),
         request_id="submission-request-test",
     )
@@ -53,14 +54,20 @@ def _prepared_case() -> tuple[CivicCaseCapability, InMemoryConsentRepository, Id
     case_repo = InMemoryCivicCaseRepository()
     case_capability = CivicCaseCapability(case_repo)
     consent_repo = InMemoryConsentRepository()
-    consent_repo.save(_consent())
     identity = _identity(CASE_CAPABILITY, "case:write", "case:review", SUBMIT_CAPABILITY, "case:evidence")
     case = case_capability.create(
         CivicCaseCreateRequest(case_type=CaseType.COMPLAINT, subject="Streetlight repair", narrative="Streetlight remains broken."),
         identity=identity,
     ).case
     case_capability.start_review(case.case_id, identity=identity)
-    case_capability.add_consent(case.case_id, "consent-1", identity=identity)
+    ConsentCapability(
+        repository=consent_repo, case_capability=case_capability
+    ).record_submission_consent(
+        case.case_id,
+        scope="email:government",
+        identity=identity,
+        action_id=f"submission-test-setup:{case.case_id}",
+    )
     case_capability.approve(case.case_id, identity=identity)
     prepared = case_capability.get_owned(case.case_id, identity=identity)
     assert prepared is not None

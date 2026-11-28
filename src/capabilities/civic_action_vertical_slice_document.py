@@ -1,15 +1,15 @@
 """Document preparation, review and artifact helpers for the civic-action slice."""
 from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from pathlib import Path
+
 from src.capabilities.document_review import DocumentReviewRequest
-from src.core.execution import CapabilityExecutionContext
+from src.core.case_types import CaseStatus
+from src.documents.artifact_ref import ArtifactState
 from src.documents.artifact_service import DocumentArtifact, generate_artifact
 from src.documents.document_contract import DocumentDraft, DocumentFormat
-from src.documents.artifact_ref import ArtifactState
 from src.identity.context import IdentityContext
-from src.core.case_types import CaseStatus
-from src.storage.artifact_blob import ArtifactBlobStore
 from src.storage.repositories.artifact_provider import create_document_artifact_repository
 
 @dataclass(frozen=True)
@@ -34,11 +34,9 @@ class CivicActionDocuments:
         result = self._deps.civic_action_capability.build_document(
             case_id, identity=identity, document_id=document_id
         )
-        self._deps.document_review_repository.save(result.draft)
-        self._deps.case_capability.add_document(
-            case_id, result.draft.document_id, identity=identity, source_channel="shared"
+        return self._deps.document_review_capability.save_draft(
+            result.draft, identity=identity
         )
-        return result.draft
 
     def review(self, request: DocumentReviewRequest, *, identity: IdentityContext):
         return self._deps.document_review_capability.edit(request, identity=identity)
@@ -58,7 +56,14 @@ class CivicActionDocuments:
     ) -> DocumentPackage:
         """Prepare one or both citizen-delivery document types; never transmit."""
         selected_types = tuple(dict.fromkeys(document_types))
-        if not selected_types or any(item not in {"complaint", "objection", "non_consent", "grievance", "representation", "appeal", "petition", "rti", "follow_up_letter", "escalation_letter"} for item in selected_types):
+        supported_types = {
+            "complaint", "objection", "non_consent", "grievance",
+            "representation", "appeal", "petition", "rti",
+            "follow_up_letter", "escalation_letter",
+        }
+        if not selected_types or any(
+            item not in supported_types for item in selected_types
+        ):
             raise ValueError("Unsupported civic document type")
         case = self._deps.civic_action_capability.build_document(case_id, identity=identity).case
         if case.status is not CaseStatus.READY:
@@ -127,6 +132,11 @@ class CivicActionDocuments:
         )
         if draft is None or (case_id is not None and draft.case_id != case_id):
             raise LookupError("Document draft not found")
+        case = self._deps.case_capability.get_owned(draft.case_id, identity=identity)
+        if case is None:
+            raise LookupError("Document draft not found")
+        if getattr(case.status, "value", case.status) != CaseStatus.READY.value:
+            raise PermissionError("Final Case readiness is required before document generation")
         artifact = generate_artifact(
             draft, document_format, output_dir, blob_store=self._deps.blob_store
         )

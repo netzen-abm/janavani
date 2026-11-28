@@ -16,6 +16,10 @@ from src.storage.repositories.document_review import DocumentReviewRepository
 CAPABILITY_ID = "document:review"
 
 
+class CaseReadinessConflictError(ValueError):
+    """A ready Case requires a new review cycle before its document can change."""
+
+
 @dataclass(frozen=True)
 class DocumentReviewRequest:
     document_id: str
@@ -64,6 +68,10 @@ class DocumentReviewCapability:
         case = self._case_capability.get_owned(draft.case_id, identity=identity)
         if case is None:
             raise LookupError("Case not found")
+        if getattr(case.status, "value", case.status) == "ready":
+            raise CaseReadinessConflictError(
+                "A ready Case cannot accept document changes; reopen it for a new review cycle"
+            )
         if draft.document_id not in case.document_refs:
             self._case_capability.add_document(
                 draft.case_id,
@@ -87,6 +95,13 @@ class DocumentReviewCapability:
         draft = self.get_owned(request.document_id, identity=identity)
         if draft is None:
             raise LookupError("Document draft not found")
+        case = self._case_capability.get_owned(draft.case_id, identity=identity)
+        if case is None:
+            raise LookupError("Document draft not found")
+        if getattr(case.status, "value", case.status) == "ready":
+            raise CaseReadinessConflictError(
+                "A ready Case cannot accept document changes; reopen it for a new review cycle"
+            )
         decision = authorize(AuthorizationRequest(
             context=identity,
             capability=CAPABILITY_ID,

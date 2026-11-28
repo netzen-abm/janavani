@@ -21,6 +21,7 @@ class ConsentRequest(BaseModel):
 
 
 class ExplicitConsentRequest(BaseModel):
+    action_id: str = Field(min_length=1, max_length=200)
     scope: str = Field(default="citizen_download_and_self_send", min_length=1, max_length=120)
     explicit_confirmation: bool = False
 

@@ -2,7 +2,10 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
-from src.capabilities.document_review import DocumentReviewRequest
+from src.capabilities.document_review import (
+    CaseReadinessConflictError,
+    DocumentReviewRequest,
+)
 from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
@@ -28,6 +31,8 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
             DocumentReviewRequest(document_id=request.document_id, subject=request.subject, body=request.body, reason=request.reason),
             identity=context,
         )
+    except CaseReadinessConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Document draft not found") from exc
     except PermissionError as exc:
@@ -40,6 +45,14 @@ async def review_document(request: DocumentReviewRequestModel, context: Identity
 async def generate_document_artifact(case_id: str, request: ArtifactRequest, context: IdentityContext = Depends(require_authenticated_identity)):
     """Render the finished document ephemerally for immediate citizen download."""
     try:
+        case = CAPABILITY.get_owned(case_id, identity=context)
+        if case is None:
+            raise LookupError("Case not found")
+        if case.status.value != "ready":
+            raise HTTPException(
+                status_code=409,
+                detail="Explicit consent and final Case readiness are required before document download",
+            )
         draft = DOCUMENT_REVIEW.get_owned(request.document_id, identity=context)
         if draft is None or draft.case_id != case_id:
             raise LookupError("Document draft not found")

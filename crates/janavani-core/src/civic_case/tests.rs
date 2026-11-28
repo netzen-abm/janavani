@@ -165,5 +165,6 @@ mod tests {
         assert_eq!(serde_json::to_string(&CaseType::TransferConcern).unwrap(), "\"transfer_concern\"");
         assert_eq!(serde_json::to_string(&CaseStatus::FollowUp).unwrap(), "\"follow_up\"");
         assert_eq!(serde_json::to_string(&CaseEventType::ReviewStarted).unwrap(), "\"review_started\"");
+        assert_eq!(serde_json::to_string(&CaseEventType::ConsentRecorded).unwrap(), "\"consent_recorded\"");
     }
 }

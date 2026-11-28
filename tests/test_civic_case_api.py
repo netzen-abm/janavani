@@ -6,6 +6,8 @@ import os
 import time
 
 from fastapi.testclient import TestClient
+from src.capabilities.consent import ConsentCapability, PURPOSE_SUBMISSION
+from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 
 from src.web.canonical_app import app
 from src.web.civic_case_dependencies import _COMPOSITION
@@ -61,8 +63,20 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert client.get(f"/civic/cases/{case_id}", headers=_auth_header("principal-2")).status_code == 404
     review = client.post(f"/civic/cases/{case_id}/review", headers=_auth_header(), json={"subject": "Delayed public service", "narrative": "The requested service has not been delivered."})
     assert review.status_code == 200, review.json()
-    consent = client.post(f"/civic/cases/{case_id}/consent", headers=_auth_header(), json={"consent_id": "consent-1"})
-    assert consent.status_code == 200
+    consent = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=_auth_header(),
+        json={"action_id": "web-consent-prepare-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert consent.status_code == 200, consent.json()
+    assert consent.json()["consent_recorded"] is True
+    replay = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=_auth_header(),
+        json={"action_id": "web-consent-prepare-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert replay.status_code == 200, replay.json()
+    assert replay.json()["consent_id"] == consent.json()["consent_id"]
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
     submitting = client.post(f"/civic/cases/{case_id}/submitting", headers=_auth_header(), json={})
@@ -82,8 +96,79 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
     assert body["related_official_id"] == "official-1"
     assert body["related_representative_id"] == "rep-1"
     assert body["claims"][0]["claim_id"] == "claim-1"
-    assert len(body["events"]) == 3
+    assert len(body["events"]) == 4
+    consent_events = [
+        event for event in body["events"]
+        if event["event_type"] == "consent_recorded"
+    ]
+    assert len(consent_events) == 1
+    assert consent_events[0]["actor_id"] == "principal-1"
 
+    tampered_review = client.post(
+        f"/civic/cases/{case_id}/review",
+        headers=_auth_header(),
+        json={"subject": "Changed after approval", "narrative": "This content must not replace the approved Case."},
+    )
+    assert tampered_review.status_code == 409, tampered_review.json()
+    unchanged = client.get(f"/civic/cases/{case_id}", headers=_auth_header()).json()
+    assert unchanged["status"] == "ready"
+    assert unchanged["subject"] == "Delayed public service"
+    assert unchanged["narrative"] == "The requested service has not been delivered."
+
+
+
+def test_submission_purpose_consent_cannot_make_case_ready():
+    headers = _auth_header("principal-purpose-boundary")
+    created = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={
+            "case_type": "complaint",
+            "subject": "Purpose-bound consent",
+            "narrative": "Synthetic purpose-boundary test.",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+    reviewed = client.post(
+        f"/civic/cases/{case_id}/review",
+        headers=headers,
+        json={
+            "subject": "Purpose-bound consent",
+            "narrative": "Synthetic purpose-boundary test.",
+        },
+    )
+    assert reviewed.status_code == 200, reviewed.json()
+
+    scope = "office:office-1"
+    consent_id = ConsentCapability._consent_id(case_id, PURPOSE_SUBMISSION, scope)
+    _COMPOSITION.consent_repository.save(
+        Consent(
+            consent_id=consent_id,
+            subject_id="principal-purpose-boundary",
+            purpose=PURPOSE_SUBMISSION,
+            scope=(scope,),
+            grant_type=ConsentGrantType.EXPLICIT,
+            status=ConsentStatus.GRANTED,
+            created_at="2026-11-25T00:00:00+00:00",
+        ),
+        principal_id="principal-purpose-boundary",
+    )
+    attached = client.post(
+        f"/civic/cases/{case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert attached.status_code == 200, attached.json()
+
+    ready = client.post(
+        f"/civic/cases/{case_id}/ready",
+        headers=headers,
+        json={},
+    )
+    assert ready.status_code == 409, ready.json()
+    case = client.get(f"/civic/cases/{case_id}", headers=headers).json()
+    assert case["status"] == "review"
 
 
 def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() -> None:
@@ -112,16 +197,120 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     denied = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
         headers=headers,
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": False},
+        json={"action_id": "web-consent-denied-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": False},
     )
     assert denied.status_code == 400
 
     consent = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
         headers=headers,
-        json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+        json={"action_id": "web-consent-prep-2", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
-    assert consent.json()["status"] == "ready"
+    assert consent.json()["status"] == "review"
     assert consent.json()["delivery"] == "citizen_download_and_self_send"
+
+
+def test_legacy_consent_attachment_requires_persisted_case_owned_grant():
+    headers = _auth_header("principal-consent-boundary")
+    first = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={"case_type": "complaint", "subject": "First case", "narrative": "Synthetic test case one."},
+    )
+    second = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={"case_type": "complaint", "subject": "Second case", "narrative": "Synthetic test case two."},
+    )
+    assert first.status_code == second.status_code == 200
+    first_case_id = first.json()["case_id"]
+    second_case_id = second.json()["case_id"]
+
+    unpersisted = client.post(
+        f"/civic/cases/{first_case_id}/consent",
+        headers=headers,
+        json={"consent_id": "forged-unpersisted-consent"},
+    )
+    assert unpersisted.status_code == 404
+
+    grant = client.post(
+        f"/civic/cases/{first_case_id}/explicit-consent",
+        headers=headers,
+        json={"action_id": "web-consent-owner-grant-1", "scope": "citizen_download_and_self_send", "explicit_confirmation": True},
+    )
+    assert grant.status_code == 200, grant.json()
+    consent_id = grant.json()["consent_id"]
+
+    wrong_case = client.post(
+        f"/civic/cases/{second_case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert wrong_case.status_code == 404
+
+    first_case = client.get(f"/civic/cases/{first_case_id}", headers=headers).json()
+    second_case = client.get(f"/civic/cases/{second_case_id}", headers=headers).json()
+    assert first_case["events"][-1]["event_type"] == "consent_recorded"
+    assert sum(event["event_type"] == "consent_recorded" for event in first_case["events"]) == 1
+    assert consent_id in first_case["consent_refs"]
+    assert all(event["event_type"] != "consent_recorded" for event in second_case["events"])
+    assert consent_id not in second_case["consent_refs"]
+
+    repeated = client.post(
+        f"/civic/cases/{first_case_id}/consent",
+        headers=headers,
+        json={"consent_id": consent_id},
+    )
+    assert repeated.status_code == 200, repeated.json()
+    final_case = client.get(f"/civic/cases/{first_case_id}", headers=headers).json()
+    assert sum(event["event_type"] == "consent_recorded" for event in final_case["events"]) == 1
+    assert final_case["consent_refs"].count(consent_id) == 1
+
+
+def test_reused_consent_action_with_different_scope_returns_conflict() -> None:
+    headers = _auth_header("principal-consent-action-conflict")
+    created = client.post(
+        "/civic/cases",
+        headers=headers,
+        json={
+            "case_type": "complaint",
+            "subject": "Repeated consent action",
+            "narrative": "Synthetic case for consent idempotency conflict handling.",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+    action_id = "web-consent-conflict-action-1"
+
+    first = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=headers,
+        json={
+            "action_id": action_id,
+            "scope": "citizen_download_and_self_send",
+            "explicit_confirmation": True,
+        },
+    )
+    assert first.status_code == 200, first.json()
+
+    conflict = client.post(
+        f"/civic/cases/{case_id}/explicit-consent",
+        headers=headers,
+        json={
+            "action_id": action_id,
+            "scope": "case_submission",
+            "explicit_confirmation": True,
+        },
+    )
+    assert conflict.status_code == 409, conflict.json()
+
+    stored = client.get(f"/civic/cases/{case_id}", headers=headers)
+    assert stored.status_code == 200, stored.json()
+    consent_events = [
+        event for event in stored.json()["events"]
+        if event["event_type"] == "consent_recorded"
+    ]
+    assert len(consent_events) == 1
+

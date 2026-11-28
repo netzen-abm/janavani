@@ -3,10 +3,12 @@ from __future__ import annotations
 import pytest
 
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
+from src.capabilities.consent import ConsentCapability
 from src.core.civic_case import CaseEventType, CaseStatus, CaseType
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
 from src.storage.repositories.civic_case import InMemoryCivicCaseRepository
+from src.storage.repositories.consent import InMemoryConsentRepository
 
 
 def _identity() -> IdentityContext:
@@ -14,7 +16,7 @@ def _identity() -> IdentityContext:
         principal=Principal(
             principal_id="citizen:verification-test",
             identity_mode=IdentityMode.AUTHENTICATED,
-            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:submit"}),
+            capabilities=frozenset({"JNV-CIVIC-COMPLAINT", "case:write", "case:review", "case:consent", "case:submit"}),
         ),
         request_id="verification-request-test",
     )
@@ -32,7 +34,14 @@ def _resolved_case() -> tuple[CivicCaseCapability, IdentityContext, str]:
         identity=identity,
     ).case
     capability.start_review(case.case_id, identity=identity)
-    capability.add_consent(case.case_id, "consent-1", identity=identity)
+    ConsentCapability(
+        repository=InMemoryConsentRepository(), case_capability=capability
+    ).record_submission_consent(
+        case.case_id,
+        scope="resolution-verification",
+        identity=identity,
+        action_id=f"resolution-verification-setup:{case.case_id}",
+    )
     capability.approve(case.case_id, identity=identity)
     capability.transition(case.case_id, action="case:begin_submission", identity=identity)
     capability.transition(case.case_id, action="case:submit", identity=identity, explicit_user_approval=True)

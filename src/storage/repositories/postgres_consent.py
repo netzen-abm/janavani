@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from typing import Any, Callable
 
 from src.core.consent import Consent, ConsentGrantType, ConsentStatus
@@ -108,9 +109,24 @@ class PostgresConsentRepository:
         scope = row[3]
         if isinstance(scope, str):
             scope = json.loads(scope)
+
+        def timestamp(value: Any) -> str | None:
+            if value is None:
+                return None
+            if isinstance(value, datetime):
+                return value.isoformat()
+            if isinstance(value, str):
+                return value
+            raise TypeError("Consent timestamp must be a datetime, string, or None")
+
+        created_at = timestamp(row[6])
+        if created_at is None:
+            raise ValueError("Consent created_at is required")
+
         return Consent(
             consent_id=row[0], subject_id=row[1], purpose=row[2],
             scope=tuple(scope), grant_type=ConsentGrantType(row[4]),
-            status=ConsentStatus(row[5]), created_at=row[6],
-            expires_at=row[7], revoked_at=row[8], proof_ref=row[9],
+            status=ConsentStatus(row[5]), created_at=created_at,
+            expires_at=timestamp(row[7]), revoked_at=timestamp(row[8]),
+            proof_ref=row[9],
         )

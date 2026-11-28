@@ -4,8 +4,22 @@ from __future__ import annotations
 import os
 
 
+RUNTIME_MODES = frozenset({"development", "test", "production"})
+
+
 class RuntimeConfigurationError(RuntimeError):
     """Raised when runtime configuration violates a deployment contract."""
+
+
+def current_runtime_mode(*, environ: dict[str, str] | None = None) -> str:
+    """Return the configured process mode without accepting caller overrides."""
+    values = os.environ if environ is None else environ
+    mode = values.get("JANAVANI_RUNTIME_MODE", "development").strip().lower()
+    if mode not in RUNTIME_MODES:
+        raise RuntimeConfigurationError(
+            f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
+        )
+    return mode
 
 
 def validate_runtime_configuration(
@@ -17,7 +31,7 @@ def validate_runtime_configuration(
     values = os.environ if environ is None else environ
     mode = (environment or values.get("JANAVANI_RUNTIME_MODE", "development"))
     mode = mode.strip().lower()
-    if mode not in {"development", "test", "production"}:
+    if mode not in RUNTIME_MODES:
         raise RuntimeConfigurationError(
             f"Unsupported JANAVANI_RUNTIME_MODE: {mode}"
         )

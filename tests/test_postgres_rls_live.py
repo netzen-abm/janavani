@@ -31,6 +31,14 @@ def test_live_postgres_rls_cross_surface_resource_isolation():
         with connection.transaction():
             with connection.cursor() as cursor:
                 cursor.execute(BASE_SCHEMA)
+                consent_action_migration = (
+                    ROOT / "db/migrations/20261122120000_consent_action_fingerprint.sql"
+                ).read_text(encoding="utf-8")
+                # This fixture already owns the surrounding transaction; the
+                # migration's BEGIN/COMMIT wrapper is tested separately.
+                cursor.execute(
+                    consent_action_migration.replace("BEGIN;", "").replace("COMMIT;", "")
+                )
                 cursor.execute(IDENTITY_SCHEMA)
                 cursor.execute(RLS_POLICY)
 

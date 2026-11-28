@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.submission import SubmissionCapability, SubmissionOutcomeUnknown, SubmissionRequest
-from src.core.consent import Consent, ConsentGrantType, ConsentStatus
 from src.core.civic_case import CaseStatus, CaseType
 from src.delivery.contract import DeliveryArtifact, DeliveryOutcome, DeliveryReceipt, DeliveryTransportError
 from src.identity.context import IdentityContext
@@ -23,7 +23,7 @@ def _identity() -> IdentityContext:
         principal=Principal(
             principal_id="citizen:delivery-outcome-test",
             identity_mode=IdentityMode.AUTHENTICATED,
-            capabilities=frozenset({CASE_CAPABILITY, "case:write", "case:review", SUBMIT_CAPABILITY, "case:evidence"}),
+            capabilities=frozenset({CASE_CAPABILITY, "case:write", "case:review", "case:consent", SUBMIT_CAPABILITY, "case:evidence"}),
         ),
         request_id="delivery-outcome-request",
     )
@@ -33,17 +33,19 @@ def _prepared() -> tuple[CivicCaseCapability, InMemoryConsentRepository, InMemor
     cases = CivicCaseCapability(InMemoryCivicCaseRepository())
     consents = InMemoryConsentRepository()
     identity = _identity()
-    consents.save(Consent(
-        consent_id="consent-delivery-outcome", subject_id=identity.principal.principal_id,
-        purpose="case_submission", scope=("email:government",), grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED, created_at="2026-09-13T00:00:00Z",
-    ))
     case = cases.create(
         CivicCaseCreateRequest(case_type=CaseType.COMPLAINT, subject="Road repair", narrative="Road remains damaged."),
         identity=identity,
     ).case
     cases.start_review(case.case_id, identity=identity)
-    cases.add_consent(case.case_id, "consent-delivery-outcome", identity=identity)
+    ConsentCapability(
+        repository=consents, case_capability=cases
+    ).record_submission_consent(
+        case.case_id,
+        scope="email:government",
+        identity=identity,
+        action_id=f"delivery-outcome-setup:{case.case_id}",
+    )
     cases.approve(case.case_id, identity=identity)
     current = cases.get_owned(case.case_id, identity=identity)
     assert current is not None

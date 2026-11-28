@@ -2,6 +2,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from src.capabilities.civic_case import CivicCaseCreateRequest
+from src.core.consent import ConsentIdempotencyConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
 from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION, CONSENT, _COMPOSITION
@@ -45,13 +46,19 @@ async def get_case(case_id: str, context: IdentityContext = Depends(require_auth
 
 @router.post("/{case_id}/consent")
 async def add_consent(case_id: str, request: ConsentRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
+    """Attach a previously persisted, active grant owned by this citizen and Case."""
     try:
-        result = _CIVIC_ACTION.add_consent(case_id, request.consent_id, identity=context)
+        result = CONSENT.attach_existing_consent(
+            case_id, request.consent_id, identity=context
+        )
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail="Case not found") from exc
+        raise HTTPException(status_code=404, detail="Consent grant not found for this Case") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return {"case_id": result.case.case_id, "consent_refs": list(result.case.consent_refs)}
+    return {
+        "case_id": result.case.case.case_id,
+        "consent_refs": list(result.case.case.consent_refs),
+    }
 
 @router.post("/{case_id}/explicit-consent")
 async def record_explicit_consent(
@@ -63,11 +70,13 @@ async def record_explicit_consent(
     if not request.explicit_confirmation:
         raise HTTPException(status_code=400, detail="Explicit citizen confirmation is required")
     try:
-        result = CONSENT.record_submission_consent(
-            case_id, scope=request.scope, identity=context
+        result = CONSENT.record_document_preparation_consent(
+            case_id, scope=request.scope, identity=context, action_id=request.action_id
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
+    except ConsentIdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:

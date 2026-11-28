@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 from src.access.authorization import AuthorizationDecision, AuthorizationRequest, authorize
-from src.core.civic_case import CaseEventType, CivicCase
+from src.core.civic_case import CaseEvent, CaseEventType, CivicCase
+from src.core.case_types import CaseStatus
+from src.core.consent import Consent, ConsentGrantType
 from src.core.execution import CapabilityExecutionContext
 from src.capabilities.civic_case_contract import CivicCaseResult
 from src.identity.context import IdentityContext
@@ -12,25 +14,66 @@ class CivicCaseLifecycleMixin:
     CAPABILITY_ID = "JNV-CIVIC-COMPLAINT"
     def start_review(self, case_id: str, *, identity: IdentityContext,
                      execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
+        case = self._owned(case_id, identity)
+        if case.status is CaseStatus.REVIEW:
+            self._validate_execution_context(
+                execution_context, identity, action="case:start_review", resource_id=case.case_id
+            )
+            self._require(identity, "case:review", "case:start_review", resource_id=case.case_id)
+            return CivicCaseResult(case, AuthorizationDecision.ALLOW)
         return self.transition(case_id, action="case:start_review", identity=identity, execution_context=execution_context)
 
     def approve(self, case_id: str, *, identity: IdentityContext,
                 execution_context: CapabilityExecutionContext | None = None) -> CivicCaseResult:
         return self.transition(case_id, action="case:mark_ready", identity=identity, execution_context=execution_context)
 
-    def add_consent(
+    def _apply_verified_consent(
+        self, case: CivicCase, consent: Consent, *, identity: IdentityContext
+    ) -> CivicCase:
+        """Apply the validated consent reference/event to an owned Case projection."""
+        principal_id = identity.principal.principal_id
+        if (
+            consent.subject_id != principal_id
+            or case.created_by != principal_id
+            or consent.grant_type is not ConsentGrantType.EXPLICIT
+            or not consent.is_authorized
+        ):
+            raise PermissionError("Only an active, principal-owned explicit grant can be recorded")
+        event_id = f"consent-{consent.consent_id}"
+        existing = next((event for event in case.events if event.event_id == event_id), None)
+        if existing is not None:
+            if (
+                existing.event_type is not CaseEventType.CONSENT_RECORDED
+                or existing.actor_id != principal_id
+                or existing.notes != consent.purpose
+                or existing.source_ref != consent.proof_ref
+                or consent.consent_id not in case.consent_refs
+            ):
+                raise RuntimeError("Existing consent event does not match its consent reference")
+            return case
+        if consent.consent_id not in case.consent_refs:
+            case.consent_refs.append(consent.consent_id)
+        case.updated_at = consent.created_at
+        case.events.append(CaseEvent(
+            event_id=event_id, case_id=case.case_id,
+            event_type=CaseEventType.CONSENT_RECORDED,
+            occurred_at=consent.created_at, actor_id=principal_id,
+            source_ref=consent.proof_ref, notes=consent.purpose,
+        ))
+        return case
+
+    def _record_verified_consent(
         self,
         case_id: str,
-        consent_id: str,
+        consent: Consent,
         *,
         identity: IdentityContext,
-        execution_context: CapabilityExecutionContext | None = None,
     ) -> CivicCaseResult:
-        self._validate_execution_context(execution_context, identity, action="case:consent", resource_id=case_id)
+        """Persist an active consent grant through the canonical Case lifecycle."""
         case = self._owned(case_id, identity)
+        self._require(identity, "case:consent", "case:consent")
         self._require(identity, "case:write", "case:consent")
-        if consent_id not in case.consent_refs:
-            case.consent_refs.append(consent_id)
+        case = self._apply_verified_consent(case, consent, identity=identity)
         self._repository.save(case, principal_id=identity.principal.principal_id)
         return CivicCaseResult(case, AuthorizationDecision.ALLOW)
 
@@ -129,6 +172,5 @@ class CivicCaseLifecycleMixin:
 
     @staticmethod
     def _event(case_id: str, event_type: CaseEventType, identity: IdentityContext, occurred_at: str, source_channel: str | None):
-        from src.core.civic_case import CaseEvent
         return CaseEvent(event_id=f"event-{uuid4().hex}", case_id=case_id, event_type=event_type,
                          occurred_at=occurred_at, actor_id=identity.principal.principal_id, source_channel=source_channel)

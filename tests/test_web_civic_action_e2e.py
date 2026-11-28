@@ -9,7 +9,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.core.authority import AuthorityContact, AuthorityRecord
-from src.core.consent import Consent, ConsentGrantType, ConsentStatus
+from src.identity.context import IdentityContext
+from src.identity.principal import IdentityMode, Principal
 from src.core.evidence import EvidenceObject, EvidenceSource
 from src.platform.composition import create_civic_action_vertical_slice
 from src.storage.repositories.authority import InMemoryAuthorityRepository
@@ -35,7 +36,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "jti": f"web-e2e-{principal_id}-{now}",
         "capabilities": [
             "JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review",
-            "case:evidence", "evidence:register", "evidence:read",
+            "case:evidence", "case:consent", "evidence:register", "evidence:read",
             "document:review",
         ],
     }
@@ -78,11 +79,12 @@ def web_state(monkeypatch):
     monkeypatch.setattr(civic_case_router, "_COMPOSITION", composition)
     monkeypatch.setattr(civic_case_router, "_CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_router, "_CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_router, "CONSENT", composition.consent_capability)
     monkeypatch.setattr(civic_case_dependencies, "_COMPOSITION", composition)
     monkeypatch.setattr(civic_case_dependencies, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_dependencies, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_lifecycle_router, "CAPABILITY", composition.case_capability)
-    monkeypatch.setattr(civic_case_lifecycle_router, "CIVIC_ACTION", composition.civic_action)
+    monkeypatch.setattr(civic_case_lifecycle_router, "_CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "CAPABILITY", composition.case_capability)
     monkeypatch.setattr(civic_case_document_router, "CIVIC_ACTION", composition.civic_action)
     monkeypatch.setattr(civic_case_document_router, "DOCUMENT_REVIEW", composition.document_review_capability)
@@ -121,18 +123,22 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     assert attached.status_code == 200
     assert attached.json()["event"] == "evidence_added"
 
-    consents.save(Consent(
-        consent_id="consent-e2e",
-        subject_id="principal-1",
-        purpose="case_submission",
-        scope=("office:office-e2e",),
-        grant_type=ConsentGrantType.EXPLICIT,
-        status=ConsentStatus.GRANTED,
-        created_at="2026-09-09T10:01:00Z",
+    consent_identity = IdentityContext(principal=Principal(
+        principal_id="principal-1",
+        identity_mode=IdentityMode.AUTHENTICATED,
+        interface="webapp",
+        capabilities=frozenset({"case:consent", "case:write", "case:review"}),
     ))
+    consent_grant = civic_case_dependencies._COMPOSITION.consent_capability.record_document_preparation_consent(
+        case_id,
+        scope="citizen_download_and_self_send",
+        identity=consent_identity,
+        action_id="web-e2e-document-preparation-1",
+        proof_ref="proof:web-e2e",
+    )
     consent = client.post(
         f"/civic/cases/{case_id}/consent", headers=headers,
-        json={"consent_id": "consent-e2e"},
+        json={"consent_id": consent_grant.consent.consent_id},
     )
     assert consent.status_code == 200
 
@@ -151,6 +157,23 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
 
     started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200, started.json()
+    retry = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={})
+    assert retry.status_code == 200, retry.json()
+    assert retry.json()["status"] == "review"
+    assert retry.json()["event"] == "review_started"
+    stored_after_retry = client.get(f"/civic/cases/{case_id}", headers=headers).json()
+    assert sum(event["event_type"] == "review_started" for event in stored_after_retry["events"]) == 1
+    tampered_retry = client.post(
+        f"/civic/cases/{case_id}/review", headers=headers,
+        json={"subject": "Changed subject after review"},
+    )
+    assert tampered_retry.status_code == 409
+    premature_artifact = client.post(
+        f"/civic/cases/{case_id}/document/artifact",
+        headers=headers,
+        json={"document_id": document_id, "document_format": "pdf"},
+    )
+    assert premature_artifact.status_code == 409
     ready = client.post(f"/civic/cases/{case_id}/ready", headers=headers, json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
 

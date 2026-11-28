@@ -8,11 +8,13 @@ from telegram import InputFile, Update
 from telegram.ext import ContextTypes
 
 from conversation.constants import COMPLETED
-from conversation.session import clear_ephemeral_issue, get_ephemeral_issue, get_session
+from conversation.session import clear_ephemeral_issue, get_session
 from conversation.state import set_state
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.documents.document_contract import DocumentFormat
 from src.documents.artifact_service import render_artifact_payload
 from src.identity.context import IdentityContext
@@ -38,6 +40,9 @@ class TelegramGenerationDependencies:
     artifact_repository: DocumentArtifactRepository | None
     blob_store: ArtifactBlobStore | None
     identity_link_repository: ExternalIdentityLinkRepository | None = None
+    letter_drafting_capability: LetterDraftingCapability | None = None
+    document_review_capability: DocumentReviewCapability | None = None
+    civic_action_vertical_slice: object | None = None
 
 
 def create_telegram_generation_dependencies(
@@ -49,6 +54,9 @@ def create_telegram_generation_dependencies(
     artifact_repository: DocumentArtifactRepository | None = None,
     blob_store: ArtifactBlobStore | None = None,
     identity_link_repository: ExternalIdentityLinkRepository | None = None,
+    letter_drafting_capability: LetterDraftingCapability | None = None,
+    document_review_capability: DocumentReviewCapability | None = None,
+    civic_action_vertical_slice: object | None = None,
 ) -> TelegramGenerationDependencies:
     """Compose Telegram dependencies from the canonical shared capabilities."""
     return TelegramGenerationDependencies(
@@ -59,6 +67,9 @@ def create_telegram_generation_dependencies(
         artifact_repository=artifact_repository,
         blob_store=blob_store,
         identity_link_repository=identity_link_repository or _MissingIdentityLinkRepository(),
+        letter_drafting_capability=letter_drafting_capability,
+        document_review_capability=document_review_capability,
+        civic_action_vertical_slice=civic_action_vertical_slice,
     )
 
 
@@ -91,21 +102,22 @@ def build_canonical_complaint_artifact(
     case_id = str(session.get("case_id") or session.get("complaint_id") or "")
     if not case_id:
         raise ValueError("No canonical case is associated with this Telegram session")
-    issue = get_ephemeral_issue(user_id)
-    if not issue:
-        raise ValueError("The transient issue expired; restart the civic issue flow")
     identity = _identity(user_id, links=dependencies.identity_link_repository)
-    dependencies.case_capability.hydrate_transient_content(
-        case_id,
-        identity=identity,
-        subject=str(session.get("category") or "Citizen civic issue"),
-        narrative=issue,
+    case = dependencies.case_capability.get_owned(case_id, identity=identity)
+    if case is None:
+        raise LookupError("Case not found")
+    if getattr(case.status, "value", case.status) != "ready":
+        raise PermissionError("Final Case readiness is required before Telegram document generation")
+    if dependencies.document_review_capability is None:
+        raise RuntimeError("Canonical document-review capability is unavailable")
+    document_id = str(session.get("document_id") or "")
+    if not document_id:
+        raise LookupError("The reviewed document is unavailable")
+    draft = dependencies.document_review_capability.get_owned(
+        document_id, identity=identity
     )
-    draft = dependencies.civic_action_capability.build_document(
-        case_id,
-        identity=identity,
-        document_id=str(session.get("document_id") or f"doc-{case_id.removeprefix('case-')}"),
-    ).draft
+    if draft is None or draft.case_id != case_id:
+        raise LookupError("The reviewed document is unavailable")
     return render_artifact_payload(
         draft,
         _document_format(str(session.get("format", "pdf"))),

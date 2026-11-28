@@ -9,21 +9,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.authority import AuthorityCapability
-from src.identity.linking import ExternalIdentityLinkRepository
 from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.consent import ConsentCapability
-from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.submission_contract import SubmissionTransport
-from src.platform.composition_capabilities import create_civic_action_vertical_slice
-from src.storage.artifact_blob_factory import create_artifact_blob_store
-from src.storage.repositories.case_content import InMemoryCaseContentRepository
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.identity.linking import ExternalIdentityLinkRepository
 from src.platform.composition import (
     create_authority_repository,
     create_case_repository,
+    create_consent_case_atomic_repository,
     create_consent_repository,
     create_evidence_repository,
     create_identity_link_repository,
@@ -33,10 +30,14 @@ from src.platform.composition_capabilities import (
     create_authority_capability,
     create_case_capability,
     create_civic_action_capability,
-    create_letter_drafting_capability,
+    create_civic_action_vertical_slice,
     create_consent_capability,
     create_document_review_repository_for_platform,
+    create_letter_drafting_capability,
 )
+from src.storage.artifact_blob_factory import create_artifact_blob_store
+from src.storage.repositories.artifact_provider import create_document_artifact_repository
+from src.storage.repositories.case_content import InMemoryCaseContentRepository
 
 _PROVIDER_RUNTIME_GRAPHS: dict[int, tuple[object, dict[str, object]]] = {}
 
@@ -92,12 +93,7 @@ def create_surface_case_composition(
     blob_store=None,
     case_content_repository=None,
 ) -> SurfaceCaseComposition:
-    """Compose one provider graph for an access surface.
-
-    A single ProviderComposition is resolved first and all omitted repositories
-    are derived from that same provider graph. Explicit repository injection is
-    retained for deterministic tests and deployments with pre-built providers.
-    """
+    """Compose one provider graph; injected providers remain shared across surfaces."""
     provider_composition = provider_composition or create_provider_composition()
     runtime_graph = _provider_runtime_graph(provider_composition)
     case_repository = case_repository or runtime_graph.setdefault(
@@ -123,20 +119,23 @@ def create_surface_case_composition(
         create_identity_link_repository(provider_composition=provider_composition),
     )
 
-    # Citizen-authored content is surface-local by design; durable Case state is shared,
-    # but sensitive narrative/claims never become shared provider state.
+    # Citizen-authored content stays surface-local until a durable provider
+    # with its own retention and RLS contract is explicitly selected.
     if case_content_repository is None:
-        # Content remains an explicit privacy/persistence boundary. Do not silently
-        # promote citizen-authored narrative into the shared provider graph until a
-        # durable content provider with its own retention/RLS contract is deliberately
-        # selected by the runtime.
         case_content_repository = InMemoryCaseContentRepository()
     case_capability = create_case_capability(case_repository, content_repository=case_content_repository)
     authority_capability = create_authority_capability(authority_repository)
     evidence_capability = EvidenceCapability(evidence_repository, case_capability)
+    atomic_consent = runtime_graph.get("consent_case_atomic")
+    if atomic_consent is None:
+        atomic_consent = create_consent_case_atomic_repository(
+            provider_composition=provider_composition,
+            consent_repository=consent_repository, case_repository=case_repository,
+        )
+        runtime_graph["consent_case_atomic"] = atomic_consent
     consent_capability = create_consent_capability(
-        consent_repository=consent_repository,
-        case_capability=case_capability,
+        consent_repository=consent_repository, case_capability=case_capability,
+        atomic_repository=atomic_consent,
     )
     review_repository = document_review_repository or runtime_graph.setdefault(
         "document_review", create_document_review_repository_for_platform(provider_composition=provider_composition)
@@ -154,6 +153,7 @@ def create_surface_case_composition(
         authority_repository=authority_repository,
         consent_repository=consent_repository,
         case_capability=case_capability,
+        consent_capability=consent_capability,
         evidence_repository=evidence_repository,
         document_review_repository=review_repository,
         provider_composition=provider_composition,

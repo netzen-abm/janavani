@@ -1,29 +1,34 @@
 from __future__ import annotations
 
-from src.capabilities.civic_action_vertical_slice import CivicActionVerticalSlice, CivicActionVerticalSliceDependencies
 from src.capabilities.civic_action_capability import CivicActionCapability
-from src.capabilities.submission import SubmissionCapability
-from src.capabilities.evidence import EvidenceCapability
-from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.civic_action_vertical_slice import (
+    CivicActionVerticalSlice,
+    CivicActionVerticalSliceDependencies,
+)
 from src.capabilities.civic_case import CivicCaseCapability
-from src.capabilities.authority import AuthorityCapability
-from src.capabilities.responsibility import ResponsibilityCapability
-from src.capabilities.obligation import ObligationCapability
+from src.capabilities.consent import ConsentCapability
+from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.escalation import EscalationCapability
+from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.external_channel import ExternalChannelCapability
 from src.capabilities.follow_up import FollowUpCapability
-from src.capabilities.escalation import EscalationCapability
-from src.storage.provider_composition import ProviderComposition
-from src.storage.repositories.consent import ConsentRepository
-from src.storage.repositories.obligation import AuthorityBackedObligationResolver
-from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
-from src.storage.repositories.civic_case import CivicCaseRepository
-from src.storage.repositories.document_review import DocumentReviewRepository
-from src.storage.repositories.submission_case_transaction import SubmissionCaseTransactionRepository
-from src.core.responsibility import ResponsibilityResolver
+from src.capabilities.submission import SubmissionCapability
 from src.core.authority import AuthorityRepository
 from src.core.evidence import EvidenceRepository
 from src.core.obligation import ObligationResolver
-from .composition_repositories import create_document_review_repository_for_platform, create_provider_composition
+from src.core.responsibility import ResponsibilityResolver
+from src.storage.provider_composition import ProviderComposition
+from src.storage.repositories.civic_case import CivicCaseRepository
+from src.storage.repositories.consent import ConsentRepository
+from src.storage.repositories.document_review import DocumentReviewRepository
+from src.storage.repositories.obligation import AuthorityBackedObligationResolver
+from src.storage.repositories.responsibility import AuthorityBackedResponsibilityResolver
+from .capability_activation_policy import CapabilityActivationPolicy
+from .composition_repositories import (
+    create_document_review_repository_for_platform,
+    create_provider_composition,
+)
+
 
 def create_civic_action_vertical_slice(
     *,
@@ -31,6 +36,7 @@ def create_civic_action_vertical_slice(
     authority_repository: AuthorityRepository,
     consent_repository: ConsentRepository,
     case_capability: CivicCaseCapability | None = None,
+    consent_capability: ConsentCapability | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
     artifact_repository=None,
@@ -43,18 +49,27 @@ def create_civic_action_vertical_slice(
     escalation_capability: EscalationCapability | None = None,
     submission_capability: SubmissionCapability | None = None,
     submission_transport=None,
+    activation_policy: CapabilityActivationPolicy | None = None,
     provider_composition: ProviderComposition | None = None,
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
-        create_case_capability, create_authority_capability,
-        create_responsibility_capability, create_obligation_capability,
-        create_external_channel_capability, create_follow_up_capability,
+        create_authority_capability,
+        create_case_capability,
+        create_consent_capability,
         create_escalation_capability,
+        create_external_channel_capability,
+        create_follow_up_capability,
+        create_obligation_capability,
+        create_responsibility_capability,
     )
     composition = provider_composition or create_provider_composition()
     case_capability = case_capability or create_case_capability(
         case_repository,
         content_repository=getattr(case_repository, "content_repository", None),
+    )
+    consent_capability = consent_capability or create_consent_capability(
+        consent_repository=consent_repository,
+        case_capability=case_capability,
     )
     authority_capability = create_authority_capability(authority_repository)
     if evidence_repository is None:
@@ -72,6 +87,9 @@ def create_civic_action_vertical_slice(
     )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
+    if submission_capability is not None or submission_transport is not None:
+        if activation_policy is None or not activation_policy.permits("case:submit"):
+            raise PermissionError("Submission capability is not enabled by platform activation policy")
     if submission_capability is None and submission_transport is not None:
         submission_capability = SubmissionCapability(
             case_capability=case_capability,
@@ -83,12 +101,14 @@ def create_civic_action_vertical_slice(
     return CivicActionVerticalSlice(
         CivicActionVerticalSliceDependencies(
             case_capability=case_capability,
+            consent_capability=consent_capability,
             civic_action_capability=civic_action_capability,
             evidence_capability=evidence_capability,
             document_review_capability=document_review_capability,
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
             submission_capability=submission_capability,
+            activation_policy=activation_policy,
             external_channel_capability=external_channel_capability
             or create_external_channel_capability(provider_composition=composition),
             case_repository=case_repository,
@@ -99,4 +119,3 @@ def create_civic_action_vertical_slice(
             escalation_capability=escalation_capability or create_escalation_capability(),
         )
     )
-

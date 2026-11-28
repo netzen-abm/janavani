@@ -10,26 +10,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
+from src.capabilities.consent import ConsentCapability
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.escalation import EscalationCapability, EscalationContext, EscalationRecommendation
 from src.capabilities.external_channel import ExternalChannelCapability, ExternalChannelQuery
 from src.capabilities.follow_up import FollowUpCapability, FollowUpContext, FollowUpRecommendation
 from src.capabilities.obligation import ObligationCapability, ObligationResolutionRequest
-from src.capabilities.submission import SubmissionCapability
 from src.capabilities.responsibility import ResponsibilityCapability, ResponsibilityResolutionRequest
+from src.capabilities.submission import SubmissionCapability
 from src.core.delivery_channel import ExternalChannel
 from src.core.obligation import ObligationResolution
 from src.core.responsibility import ResponsibilityResolution
 from src.documents.document_contract import DocumentDraft
-from src.capabilities.civic_action_vertical_slice_document import CivicActionDocuments
 from src.identity.context import IdentityContext
 from src.storage.artifact_blob import ArtifactBlobStore
-from src.storage.repositories.artifact_provider import create_document_artifact_repository
 from src.storage.repositories.civic_case import CivicCaseRepository
 from src.storage.repositories.document_artifact import DocumentArtifactRepository
 from src.storage.repositories.document_review import DocumentReviewRepository
+
+
+def _submission_is_activated(policy: object | None) -> bool:
+    """Fail closed when activation is absent or invalid."""
+    try:
+        return bool(policy is not None and policy.permits("case:submit"))
+    except Exception:
+        return False
 
 
 @dataclass(frozen=True)
@@ -46,10 +54,16 @@ class CivicActionVerticalSliceDependencies:
     case_repository: CivicCaseRepository
     document_review_repository: DocumentReviewRepository
     submission_capability: SubmissionCapability | None = None
+    activation_policy: object | None = None
     artifact_repository: DocumentArtifactRepository | None = None
     blob_store: ArtifactBlobStore | None = None
     follow_up_capability: FollowUpCapability | None = None
     escalation_capability: EscalationCapability | None = None
+    consent_capability: ConsentCapability | None = None
+
+    def __post_init__(self) -> None:
+        if self.submission_capability is not None and not _submission_is_activated(self.activation_policy):
+            raise PermissionError("Direct CivicActionVerticalSlice construction requires an active case:submit platform policy")
 
 
 @dataclass(frozen=True)
@@ -68,50 +82,37 @@ class CivicActionVerticalSlice:
         self._deps = dependencies
         self._documents = CivicActionDocuments(dependencies)
 
-    def resolve_responsibility(
-        self,
-        request: ResponsibilityResolutionRequest,
-    ) -> ResponsibilityResolution:
+    def resolve_responsibility(self, request: ResponsibilityResolutionRequest) -> ResponsibilityResolution:
         """Resolve traceable responsibility candidates without asserting liability."""
         return self._deps.responsibility_capability.resolve(request)
 
-    def resolve_obligation(
-        self,
-        request: ObligationResolutionRequest,
-    ) -> ObligationResolution:
-        """Resolve source-backed obligations for an already identified authority."""
+    def resolve_obligation(self, request: ObligationResolutionRequest) -> ObligationResolution:
+        """Resolve source-backed obligations for an identified authority."""
         return self._deps.obligation_capability.resolve(request)
 
-    def discover_external_channels(
-        self,
-        query: ExternalChannelQuery | None = None,
-    ) -> tuple[ExternalChannel, ...]:
-        """Expose only source-backed, currently verified external destinations."""
+    def discover_external_channels(self, query: ExternalChannelQuery | None = None) -> tuple[ExternalChannel, ...]:
+        """Expose only source-backed, verified external destinations."""
         return self._deps.external_channel_capability.discover(query)
 
     def get_verified_external_channel(self, channel_id: str) -> ExternalChannel:
         """Select one verified external destination through the shared channel boundary."""
         return self._deps.external_channel_capability.get_verified(channel_id)
 
-    def recommend_follow_up(
-        self,
-        context: FollowUpContext,
-    ) -> FollowUpRecommendation:
-        """Recommend a user-controlled next step from canonical Case state and history."""
+    def recommend_follow_up(self, context: FollowUpContext) -> FollowUpRecommendation:
+        """Recommend a user-controlled follow-up from canonical Case state."""
         capability = self._deps.follow_up_capability or FollowUpCapability()
         return capability.recommend(context)
 
-    def recommend_escalation(
-        self,
-        context: EscalationContext,
-    ) -> EscalationRecommendation:
-        """Recommend a user-controlled escalation step from canonical Case state and history."""
+    def recommend_escalation(self, context: EscalationContext) -> EscalationRecommendation:
+        """Recommend a user-controlled escalation from canonical Case state."""
         capability = self._deps.escalation_capability or EscalationCapability()
         return capability.recommend(context)
 
     def submit(self, request, *, channel_id: str, identity: IdentityContext, explicit_user_approval: bool, execution_context=None):
         if self._deps.submission_capability is None:
             raise RuntimeError("Submission capability is not configured")
+        if not _submission_is_activated(self._deps.activation_policy):
+            raise PermissionError("Submission capability is not enabled for this runtime and surface")
         from dataclasses import replace
         if request.external_channel_id is not None and request.external_channel_id != channel_id:
             raise ValueError("Submission channel does not match the selected verified channel")
@@ -132,10 +133,6 @@ class CivicActionVerticalSlice:
             source_channel=source_channel or "shared",
         )
 
-    def add_consent(self, case_id: str, consent_id: str, *, identity: IdentityContext) -> CivicCaseResult:
-        """Attach a previously recorded consent through the canonical Case boundary."""
-        return self._deps.case_capability.add_consent(case_id, consent_id, identity=identity)
-
     def prepare_document(self, case_id: str, *, identity: IdentityContext, document_id=None):
         draft = self._documents.prepare(case_id, identity=identity, document_id=document_id)
         return PreparedDocument(case_id=case_id, document_id=draft.document_id, draft=draft)
@@ -147,6 +144,12 @@ class CivicActionVerticalSlice:
         return self._documents.start_review(case_id, identity=identity)
 
     def approve(self, case_id: str, *, identity: IdentityContext):
+        consent = self._deps.consent_capability
+        if consent is None:
+            raise PermissionError("Document-preparation consent validation is not configured")
+        consent.require_active_document_preparation_consent(
+            case_id, identity=identity
+        )
         return self._documents.approve(case_id, identity=identity)
 
     def generate_artifact(self, document_id: str, *, identity: IdentityContext, case_id=None,

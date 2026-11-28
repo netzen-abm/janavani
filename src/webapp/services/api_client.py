@@ -66,11 +66,14 @@ class JanavaniWebAPIClient:
         return response.json()
 
     def record_explicit_consent(
-        self, case_id: str, *, scope: str = "citizen_download_and_self_send"
+        self, case_id: str, *, action_id: str,
+        scope: str = "citizen_download_and_self_send",
     ) -> dict[str, Any]:
+        if not action_id.strip() or len(action_id) > 200:
+            raise ValueError("A stable consent action_id is required")
         response = httpx.post(
             f"{self.base_url}/civic/cases/{case_id}/explicit-consent",
-            json={"scope": scope, "explicit_confirmation": True},
+            json={"action_id": action_id, "scope": scope, "explicit_confirmation": True},
             headers=self._headers(),
             timeout=20.0,
         )

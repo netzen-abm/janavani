@@ -1,10 +1,14 @@
+import pytest
+
 from src.access.authorization import AuthorizationDecision
+from src.capabilities.civic_case_content import CaseContentReadinessConflictError
 from src.capabilities.civic_case import (
     CAPABILITY_ID,
     CivicCaseCapability,
     CivicCaseCreateRequest,
 )
 from src.core.civic_case import CaseEventType, CaseType
+from src.core.case_types import CaseStatus
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
@@ -115,3 +119,46 @@ def test_execution_envelope_rejects_wrong_capability() -> None:
         pass
     else:
         raise AssertionError("Expected execution capability mismatch to be rejected")
+
+
+
+def test_save_owned_rejects_reviewed_subject_and_narrative_before_persisting_case() -> None:
+    repository = InMemoryCivicCaseRepository()
+    capability = CivicCaseCapability(repository)
+    identity = _identity(CAPABILITY_ID, "case:review")
+    created = capability.create(
+        CivicCaseCreateRequest(CaseType.COMPLAINT, "Original subject", "Original narrative."),
+        identity=identity,
+    )
+    capability.start_review(created.case.case_id, identity=identity)
+    reviewed = capability.get_owned(created.case.case_id, identity=identity)
+    assert reviewed is not None
+    before = repository.get(created.case.case_id)
+    reviewed.subject = "Tampered subject"
+    reviewed.narrative = "Tampered narrative"
+    with pytest.raises(CaseContentReadinessConflictError):
+        capability.save_owned(reviewed, identity=identity)
+    after = repository.get(created.case.case_id)
+    assert after.subject == before.subject and after.narrative == before.narrative
+    assert after.status is before.status
+
+
+
+def test_save_owned_rejects_status_change_without_new_domain_event() -> None:
+    repository = InMemoryCivicCaseRepository()
+    capability = CivicCaseCapability(repository)
+    identity = _identity(CAPABILITY_ID, "case:review")
+    created = capability.create(
+        CivicCaseCreateRequest(CaseType.COMPLAINT, "Status invariant", "Original narrative."),
+        identity=identity,
+    )
+    capability.start_review(created.case.case_id, identity=identity)
+    reviewed = capability.get_owned(created.case.case_id, identity=identity)
+    assert reviewed is not None
+    before = repository.get(created.case.case_id)
+    reviewed.status = CaseStatus.READY
+    with pytest.raises(CaseContentReadinessConflictError):
+        capability.save_owned(reviewed, identity=identity)
+    after = repository.get(created.case.case_id)
+    assert after.status is before.status
+    assert after.events == before.events

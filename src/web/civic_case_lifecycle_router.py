@@ -1,9 +1,12 @@
 """Review and approval lifecycle HTTP routes; external document submission is not a Janavani capability."""
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException
+
+from src.capabilities.civic_case_content import CaseContentReadinessConflictError
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
-from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION
+from src.web.civic_case_dependencies import CAPABILITY, CIVIC_ACTION as _CIVIC_ACTION
 from src.web.civic_case_models import EventRequest, event_result
 
 router = APIRouter(tags=["Civic Cases"])
@@ -11,8 +14,28 @@ router = APIRouter(tags=["Civic Cases"])
 @router.post("/{case_id}/review")
 async def start_review(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
-        CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
-        result = CIVIC_ACTION.start_review(case_id, identity=context)
+        existing = CAPABILITY.get_owned(case_id, identity=context)
+        if existing is None:
+            raise LookupError("Case not found")
+        status = getattr(existing.status, "value", existing.status)
+        if status != "draft":
+            if status != "review":
+                raise HTTPException(status_code=409, detail="Case is no longer in the review state")
+            changed_subject = request.subject is not None and request.subject.strip() != existing.subject
+            changed_narrative = request.narrative is not None and request.narrative.strip() != existing.narrative
+            if changed_subject or changed_narrative:
+                raise HTTPException(status_code=409, detail="Reviewed Case content is immutable; create a new review cycle before changing it")
+            result = _CIVIC_ACTION.start_review(case_id, identity=context)
+            return event_result(result.case, "review_started")
+        CAPABILITY.hydrate_transient_content(
+            case_id,
+            identity=context,
+            subject=request.subject,
+            narrative=request.narrative,
+        )
+        result = _CIVIC_ACTION.start_review(case_id, identity=context)
+    except CaseContentReadinessConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Case not found") from exc
     except PermissionError as exc:
@@ -25,7 +48,9 @@ async def start_review(case_id: str, request: EventRequest, context: IdentityCon
 async def mark_ready(case_id: str, request: EventRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:
     try:
         CAPABILITY.hydrate_transient_content(case_id, identity=context, subject=request.subject, narrative=request.narrative)
-        result = CIVIC_ACTION.approve(case_id, identity=context)
+        result = _CIVIC_ACTION.approve(case_id, identity=context)
+    except CaseContentReadinessConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
