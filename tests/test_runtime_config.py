@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from src.config.runtime import (
@@ -62,3 +64,43 @@ def _valid_production_environment() -> dict[str, str]:
         "JANAVANI_IDENTITY_LINKS_DSN": "postgresql://identity-role.example",
         "JANAVANI_ARTIFACT_S3_BUCKET": "janavani-artifacts",
     }
+
+
+
+def test_render_canonical_api_declares_production_persistence_and_identity_gates():
+    manifest = Path(__file__).resolve().parents[1] / "render.yaml"
+    source = manifest.read_text(encoding="utf-8")
+    api_service = source.split("name: janavani-web-api", 1)[1].split(
+        "\n  - type: web", 1
+    )[0]
+
+    required_values = {
+        "JANAVANI_RUNTIME_MODE": "production",
+        "JANAVANI_CASE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EVIDENCE_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_AUTHORITY_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_CONSENT_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_EXTERNAL_IDENTITY_LINKS_REPOSITORY_PROVIDER": "postgres",
+        "JANAVANI_ARTIFACT_BLOB_PROVIDER": "s3",
+        "JANAVANI_CITIZEN_DOCUMENT_FORMAT_REPOSITORY_PROVIDER": "postgres",
+    }
+    for key, value in required_values.items():
+        assert f"key: {key}" in api_service
+        assert f"value: {value}" in api_service
+
+    required_secrets = (
+        "JANAVANI_POSTGRES_DSN",
+        "JANAVANI_IDENTITY_LINKS_DSN",
+        "JANAVANI_ARTIFACT_S3_BUCKET",
+        "JANAVANI_CITIZEN_DOCUMENT_FORMAT_DSN",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "JANAVANI_IDENTITY_ASSERTION_SECRET",
+        "JANAVANI_IDENTITY_REPLAY_REDIS_URL",
+    )
+    for key in required_secrets:
+        assert f"key: {key}\n        sync: false" in api_service
+
+    assert "JANAVANI_IDENTITY_ASSERTION_ISSUER" in api_service
+    assert "JANAVANI_IDENTITY_ASSERTION_AUDIENCE" in api_service
