@@ -32,8 +32,6 @@ services:
         sync: false
       - key: JANAVANI_ARTIFACT_S3_BUCKET
         sync: false
-      - key: JANAVANI_ARTIFACT_S3_ENDPOINT_URL
-        sync: false
       - key: JANAVANI_ARTIFACT_S3_PREFIX
         value: artifacts
       - key: JANAVANI_CITIZEN_DOCUMENT_FORMAT_DSN
