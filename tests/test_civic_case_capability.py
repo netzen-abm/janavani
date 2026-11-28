@@ -8,6 +8,7 @@ from src.capabilities.civic_case import (
     CivicCaseCreateRequest,
 )
 from src.core.civic_case import CaseEventType, CaseType
+from src.core.case_types import CaseStatus
 from src.core.execution import CapabilityExecutionContext
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
@@ -140,3 +141,24 @@ def test_save_owned_rejects_reviewed_subject_and_narrative_before_persisting_cas
     after = repository.get(created.case.case_id)
     assert after.subject == before.subject and after.narrative == before.narrative
     assert after.status is before.status
+
+
+
+def test_save_owned_rejects_status_change_without_new_domain_event() -> None:
+    repository = InMemoryCivicCaseRepository()
+    capability = CivicCaseCapability(repository)
+    identity = _identity(CAPABILITY_ID, "case:review")
+    created = capability.create(
+        CivicCaseCreateRequest(CaseType.COMPLAINT, "Status invariant", "Original narrative."),
+        identity=identity,
+    )
+    capability.start_review(created.case.case_id, identity=identity)
+    reviewed = capability.get_owned(created.case.case_id, identity=identity)
+    assert reviewed is not None
+    before = repository.get(created.case.case_id)
+    reviewed.status = CaseStatus.READY
+    with pytest.raises(CaseContentReadinessConflictError):
+        capability.save_owned(reviewed, identity=identity)
+    after = repository.get(created.case.case_id)
+    assert after.status is before.status
+    assert after.events == before.events
