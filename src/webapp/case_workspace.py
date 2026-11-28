@@ -19,6 +19,17 @@ def _sign_in_required():
     ))
 
 
+def _ready_document_download(case_id: str, document_id: str, *, return_path: str = "/"):
+    return Titled("Case ready for download", Div(
+        H2("Final review confirmed"), P(f"Case {case_id}: ready"), P("The reviewed document is read-only. Download it and send it yourself; Janavani does not transmit submissions."),
+        Form(action=f"/cases/{case_id}/artifact", method="post")(
+            Input(type="hidden", name="document_id", value=document_id),
+            Select(name="document_format")(Option("PDF", value="pdf", selected=True), Option("Word document", value="docx")), Button("Download reviewed document"),
+        ),
+        A("Return to dashboard" if return_path == "/" else "Open case workspace", href=return_path),
+    ))
+
+
 def register_case_workspace_routes(rt) -> None:
     """Register UI routes that forward each request's verified identity assertion."""
 
@@ -40,15 +51,7 @@ def register_case_workspace_routes(rt) -> None:
                     ),
                 )
             document_id = refs[-1]
-            return Titled("Case ready for download", Div(
-                H2("Final review confirmed"), P(f"Case {case_id}: ready"),
-                P("The approved document is read-only. Download it and send it yourself; Janavani does not transmit submissions."),
-                Form(action=f"/cases/{case_id}/artifact", method="post")(
-                    Input(type="hidden", name="document_id", value=document_id),
-                    Select(name="document_format")(Option("PDF", value="pdf", selected=True), Option("Word document", value="docx")),
-                    Button("Download reviewed document"),
-                ), A("Return to dashboard", href="/"),
-            ))
+            return _ready_document_download(case_id, document_id)
         draft = client.prepare_document_draft(case_id)
         return Titled(f"Janavani Case {case_id}", Div(
             H2("Janavani Citizen Case Workspace"),
@@ -170,17 +173,6 @@ def register_case_workspace_routes(rt) -> None:
                 P("No download is offered until the canonical case service confirms readiness."),
                 A("Return to case workspace", href=f"/cases/{case_id}/prepare"),
             ))
-        return Titled("Case ready for download", Div(
-            H2("Final review confirmed"),
-            P(f"Case {case_id}: ready"),
-            P("The document is ready for download. You must send it yourself; Janavani does not transmit submissions."),
-            Form(action=f"/cases/{case_id}/artifact", method="post")(
-                Input(type="hidden", name="document_id", value=draft["document_id"]),
-                Select(name="document_format")(
-                    Option("PDF", value="pdf", selected=True),
-                    Option("Word document", value="docx"),
-                ),
-                Button("Download reviewed document"),
-            ),
-            A("Open case workspace", href=f"/cases/{case_id}/prepare"),
-        ))
+        return _ready_document_download(
+            case_id, draft["document_id"], return_path=f"/cases/{case_id}/prepare"
+        )
