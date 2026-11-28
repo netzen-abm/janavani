@@ -5,6 +5,7 @@ from conversation.session import clear_ephemeral_issue, clear_session, get_sessi
 from conversation.state import get_state
 from conversation.constants import COMPLETED
 from conversation.steps import generate
+from src.capabilities.letter_drafting import LetterDraftRequest
 
 
 class CaseContentSpy:
@@ -15,25 +16,28 @@ class CaseContentSpy:
     def hydrate_transient_content(self, case_id, *, identity, subject, narrative):
         self.hydrated = (case_id, identity, subject, narrative)
 
+    def get_owned(self, case_id, *, identity):
+        return SimpleNamespace(subject="Streetlight outage", evidence_refs=(), jurisdiction={})
+
     def clear_transient_content(self, case_id, *, identity):
         self.cleared = (case_id, identity)
 
 
-class CivicActionSpy:
+class LetterDraftingSpy:
     def __init__(self):
         self.called = None
 
-    def build_document(self, case_id, *, identity, document_id):
-        self.called = (case_id, identity, document_id)
-        return SimpleNamespace(draft="draft")
+    def create_draft(self, case_id, request, *, identity, document_id):
+        self.called = (case_id, request, identity, document_id)
+        return SimpleNamespace(document="draft")
 
 
-def _dependencies(case_capability, civic_action_capability, links=None):
+def _dependencies(case_capability, letter_drafting_capability, links=None):
     return generate.TelegramGenerationDependencies(
         case_repository=None,
         case_capability=case_capability,
-        civic_action_capability=civic_action_capability,
         consent_capability=None,
+        letter_drafting_capability=letter_drafting_capability,
         artifact_repository=None,
         blob_store=None,
         identity_link_repository=links,
@@ -51,7 +55,7 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
         "document_id": "doc-test",
     }
     case_content = CaseContentSpy()
-    civic_action = CivicActionSpy()
+    letter_drafting = LetterDraftingSpy()
     identity = object()
     monkeypatch.setattr(generate, "_identity", lambda user_id, *, links: identity)
     expected = object()
@@ -59,7 +63,7 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
 
     result = generate.build_canonical_complaint_artifact(
         session,
-        dependencies=_dependencies(case_content, civic_action, links=object()),
+        dependencies=_dependencies(case_content, letter_drafting, links=object()),
         user_id=user_id,
     )
 
@@ -68,7 +72,12 @@ def test_artifact_builder_rehydrates_transient_issue_without_durable_case_conten
         "case-test", identity, "Streetlight outage",
         "The streetlight has been out for three nights.",
     )
-    assert civic_action.called == ("case-test", identity, "doc-test")
+    assert letter_drafting.called is not None
+    case_id, request, actor, document_id = letter_drafting.called
+    assert (case_id, actor, document_id) == ("case-test", identity, "doc-test")
+    assert isinstance(request, LetterDraftRequest)
+    assert request.template_id == "complaint.general"
+    assert request.issue == "The streetlight has been out for three nights."
     clear_ephemeral_issue(user_id)
     clear_session(user_id)
 
@@ -80,7 +89,9 @@ def test_generate_handler_sends_document_then_clears_transient_content(monkeypat
     session = get_session(user_id)
     session["case_id"] = "case-test"
     case_content = CaseContentSpy()
-    dependencies = _dependencies(case_content, CivicActionSpy(), links=object())
+    dependencies = _dependencies(
+        case_content, LetterDraftingSpy(), links=object()
+    )
     identity = SimpleNamespace(principal=SimpleNamespace(principal_id="citizen-test"))
     payload = SimpleNamespace(content=b"PDF bytes", filename="doc-test.pdf")
     monkeypatch.setattr(
@@ -133,6 +144,10 @@ def test_telegram_application_composition_registers_handlers_without_polling(mon
     assert application.bot_data["civic_case_capability"] is application.bot_data[
         "surface_case_composition"
     ].case_capability
+    assert (
+        application.bot_data["telegram_generation_dependencies"].letter_drafting_capability
+        is application.bot_data["surface_case_composition"].letter_drafting_capability
+    )
     assert application.bot_data["telegram_generation_dependencies"].identity_link_repository is (
         application.bot_data["identity_link_repository"]
     )

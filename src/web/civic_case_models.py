@@ -1,9 +1,20 @@
 """HTTP request/response models for the canonical civic-case adapter."""
 from __future__ import annotations
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from src.core.civic_case import CaseType, CivicCase
 from src.documents.document_contract import DocumentFormat
+
+class CaseShellCreateRequest(BaseModel):
+    """Create a Case lifecycle shell without transmitting citizen-authored content."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    case_type: CaseType
+    expected_vault_scope: str = Field(
+        min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$"
+    )
+
 
 class CaseCreateRequest(BaseModel):
     case_type: CaseType
@@ -28,6 +39,31 @@ class EvidenceRequest(BaseModel):
     evidence_id: str = Field(min_length=1)
     source_channel: str | None = None
 
+class LetterDraftRequestModel(BaseModel):
+    """Structured citizen input for the single shared civic drafting capability."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    template_id: str = Field(min_length=1, max_length=120)
+    template_version: int | None = Field(default=None, ge=1)
+    subject: str = Field(min_length=1, max_length=500)
+    issue: str = Field(min_length=1, max_length=20000)
+    proposal_or_notice: str = Field(default="", max_length=12000)
+    part_i_interrogatories: tuple[str, ...] = ()
+    legal_framework: tuple[str, ...] = ()
+    requested_conditions: tuple[str, ...] = ()
+    requested_documents: tuple[str, ...] = ()
+    remedies_reserved: tuple[str, ...] = ()
+    references: tuple[str, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
+    provenance_refs: tuple[str, ...] = ()
+    response_period: str | None = Field(default=None, max_length=120)
+    deadline_date: str | None = Field(default=None, max_length=40)
+    jurisdiction: str | None = Field(default=None, max_length=500)
+    language: str = Field(default="en", min_length=2, max_length=12)
+    document_type: str = Field(default="Civic document", max_length=120)
+
+
 class DocumentReviewRequestModel(BaseModel):
     document_id: str = Field(min_length=1)
     subject: str | None = None
@@ -37,10 +73,6 @@ class DocumentReviewRequestModel(BaseModel):
 class ArtifactRequest(BaseModel):
     document_id: str = Field(min_length=1)
     document_format: DocumentFormat = DocumentFormat.PDF
-
-class DocumentPackageRequest(BaseModel):
-    document_types: tuple[str, ...] = ("petition",)
-    formats: tuple[DocumentFormat, ...] = (DocumentFormat.PDF, DocumentFormat.DOCX)
 
 class EventRequest(BaseModel):
     source_channel: str | None = None
@@ -59,6 +91,8 @@ def serialize_draft(draft, *, case_id: str, submission: str) -> dict[str, object
         "subject": draft.subject, "body": draft.body,
         "to": {"name": draft.to.name, "address": draft.to.address, "email": draft.to.email, "role": draft.to.role},
         "cc": [{"name": p.name, "address": p.address, "email": p.email, "role": p.role} for p in draft.cc],
+        "template_id": draft.template_id,
+        "template_version": draft.template_version,
         "submission": submission,
     }
 

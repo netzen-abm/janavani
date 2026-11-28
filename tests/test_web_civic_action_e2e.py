@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import time
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,7 +33,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "iss": "janavani-identity", "aud": "janavani-api", "sub": principal_id,
         "provider": "test-identity", "subject": principal_id, "principal_id": principal_id,
         "authentication_method": "passkey", "iat": now, "exp": now + 60,
-        "jti": f"web-e2e-{principal_id}-{now}",
+        "jti": f"web-e2e-{principal_id}-{uuid4().hex}",
         "capabilities": [
             "JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review",
             "case:evidence", "evidence:register", "evidence:read",
@@ -92,10 +93,8 @@ def web_state(monkeypatch):
 
 def test_web_completes_case_evidence_consent_document_review_and_artifact(web_state):
     cases, evidence, consents, reviews, artifacts = web_state
-    headers = _auth_header()
-
     created = client.post(
-        "/civic/cases", headers=headers,
+        "/civic/cases", headers=_auth_header(),
         json={
             "case_type": "complaint",
             "subject": "Unsafe road condition",
@@ -115,7 +114,7 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         provenance=(EvidenceSource(source_id="capture-e2e", source_type="citizen"),),
     ))
     attached = client.post(
-        f"/civic/cases/{case_id}/evidence", headers=headers,
+        f"/civic/cases/{case_id}/evidence", headers=_auth_header(),
         json={"evidence_id": "evidence-e2e", "source_channel": "webapp"},
     )
     assert attached.status_code == 200
@@ -131,31 +130,34 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
         created_at="2026-09-09T10:01:00Z",
     ))
     consent = client.post(
-        f"/civic/cases/{case_id}/consent", headers=headers,
+        f"/civic/cases/{case_id}/consent", headers=_auth_header(),
         json={"consent_id": "consent-e2e"},
     )
     assert consent.status_code == 200
 
-    draft = client.get(f"/civic/cases/{case_id}/document/draft", headers=headers)
+    draft = client.get(f"/civic/cases/{case_id}/document/draft", headers=_auth_header())
     assert draft.status_code == 200
     document_id = draft.json()["document_id"]
     assert draft.json()["to"]["name"] == "District Officer"
+    assert draft.json()["template_id"] == "complaint.general"
+    assert draft.json()["template_version"] == 1
+    assert "not legal advice" in draft.json()["body"].lower()
 
     reviewed = client.post(
-        f"/civic/cases/{case_id}/document/review", headers=headers,
+        f"/civic/cases/{case_id}/document/review", headers=_auth_header(),
         json={"document_id": document_id, "body": "Corrected citizen narrative.", "reason": "Citizen correction"},
     )
     assert reviewed.status_code == 200
     assert reviewed.json()["body"] == "Corrected citizen narrative."
     assert reviews.get(document_id).body == "Corrected citizen narrative."
 
-    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
+    started = client.post(f"/civic/cases/{case_id}/review", headers=_auth_header(), json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200, started.json()
-    ready = client.post(f"/civic/cases/{case_id}/ready", headers=headers, json={})
+    ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 200 and ready.json()["status"] == "ready"
 
     artifact = client.post(
-        f"/civic/cases/{case_id}/document/artifact", headers=headers,
+        f"/civic/cases/{case_id}/document/artifact", headers=_auth_header(),
         json={"document_id": document_id, "document_format": "pdf"},
     )
     assert artifact.status_code == 200
@@ -168,22 +170,116 @@ def test_web_completes_case_evidence_consent_document_review_and_artifact(web_st
     # The primary WebApp path must not create a durable artifact reference.
     assert artifacts.list_for_case(case_id) == []
 
-    final_case = client.get(f"/civic/cases/{case_id}", headers=headers)
+    final_case = client.get(f"/civic/cases/{case_id}", headers=_auth_header())
     assert final_case.status_code == 200
     body = final_case.json()
     assert body["status"] == "ready"
     assert "evidence-e2e" in body["evidence_refs"]
     assert document_id in body["document_refs"]
 
-    direct_submit = client.post(f"/civic/cases/{case_id}/submit", headers=headers, json={})
+    direct_submit = client.post(f"/civic/cases/{case_id}/submit", headers=_auth_header(), json={})
     assert direct_submit.status_code == 409
+
+
+def test_web_rti_drafting_requires_records_and_uses_shared_template(web_state):
+    created = client.post(
+        "/civic/cases",
+        headers=_auth_header(),
+        json={
+            "case_type": "rti",
+            "subject": "Road maintenance records",
+            "narrative": "I seek existing records about the road maintenance work.",
+            "jurisdiction": {"district": "Bengaluru Urban", "state": "Karnataka"},
+            "related_office_id": "office-e2e",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    incomplete = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "rti.records",
+            "subject": "Road maintenance records",
+            "issue": "I seek existing records about the road maintenance work.",
+            "jurisdiction": "Bengaluru Urban, Karnataka",
+        },
+    )
+    assert incomplete.status_code == 422
+    assert "requested_documents" in incomplete.json()["detail"]
+
+    prepared = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "rti.records",
+            "subject": "Road maintenance records",
+            "issue": "I seek existing records about the road maintenance work.",
+            "requested_documents": (
+                "Copies of the work order and completion certificate",
+                "Measurement book entries for the relevant road work",
+            ),
+            "jurisdiction": "Bengaluru Urban, Karnataka",
+        },
+    )
+    assert prepared.status_code == 200, prepared.json()
+    assert prepared.json()["template_id"] == "rti.records"
+    assert prepared.json()["template_version"] == 1
+    assert "Existing records requested" in prepared.json()["body"]
+    assert "completion certificate" in prepared.json()["body"]
+
+
+def test_web_contract_draft_uses_same_civic_drafting_capability(web_state):
+    created = client.post(
+        "/civic/cases",
+        headers=_auth_header(),
+        json={
+            "case_type": "other",
+            "subject": "Service agreement",
+            "narrative": "The parties want a written agreement for the proposed service.",
+            "jurisdiction": {"city": "Bengaluru", "state": "Karnataka"},
+            "related_office_id": "office-e2e",
+        },
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    prepared = client.post(
+        f"/civic/cases/{case_id}/document/draft",
+        headers=_auth_header(),
+        json={
+            "template_id": "contract.general",
+            "subject": "Service agreement",
+            "issue": "The parties want a written agreement for the proposed service.",
+            "requested_conditions": (
+                "Define the services and deliverables",
+                "Set out payment timing and acceptance criteria",
+            ),
+            "jurisdiction": "Bengaluru, Karnataka",
+        },
+    )
+    assert prepared.status_code == 200, prepared.json()
+    assert prepared.json()["template_id"] == "contract.general"
+    assert prepared.json()["template_version"] == 1
+    assert "legal review required" in prepared.json()["document_type"].lower()
+    assert "qualified legal review before signing" in prepared.json()["body"].lower()
+    assert prepared.json()["submission"] == "not_submitted"
+
+
+def test_retired_document_package_endpoint_returns_410_without_body():
+    response = client.post(
+        "/civic/cases/case-retired/document/package",
+        headers=_auth_header(),
+    )
+    assert response.status_code == 410
+    assert "retired" in response.json()["detail"].lower()
 
 
 def test_web_ready_fails_closed_without_submission_consent(web_state):
     cases, _, _, _, _ = web_state
-    headers = _auth_header()
     created = client.post(
-        "/civic/cases", headers=headers,
+        "/civic/cases", headers=_auth_header(),
         json={
             "case_type": "complaint",
             "subject": "Consent boundary",
@@ -194,9 +290,9 @@ def test_web_ready_fails_closed_without_submission_consent(web_state):
     assert created.status_code == 200
     case_id = created.json()["case_id"]
 
-    started = client.post(f"/civic/cases/{case_id}/review", headers=headers, json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
+    started = client.post(f"/civic/cases/{case_id}/review", headers=_auth_header(), json={"subject": "Unsafe road condition", "narrative": "The road requires urgent repair."})
     assert started.status_code == 200
-    ready = client.post(f"/civic/cases/{case_id}/ready", headers=headers, json={})
+    ready = client.post(f"/civic/cases/{case_id}/ready", headers=_auth_header(), json={})
     assert ready.status_code == 409
     assert "approval" in ready.json()["detail"].lower() or "consent" in ready.json()["detail"].lower()
     assert cases.get(case_id).status.value == "review"

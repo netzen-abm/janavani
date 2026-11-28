@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import time
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -28,7 +29,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "iss": "janavani-identity", "aud": "janavani-api", "sub": principal_id,
         "provider": "test-identity", "subject": principal_id, "principal_id": principal_id,
         "authentication_method": "passkey", "iat": now, "exp": now + 60,
-        "jti": f"test-{principal_id}-{now}",
+        "jti": f"test-{principal_id}-{uuid4().hex}",
         "capabilities": ["JNV-CIVIC-COMPLAINT", "case:read", "case:write", "case:review", "case:evidence", "case:consent", "case:submit"],
     }
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -87,10 +88,9 @@ def test_case_api_enforces_authenticated_ownership_and_preserves_delivery_truth(
 
 
 def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() -> None:
-    headers = _auth_header("principal-explicit-consent")
     created = client.post(
         "/civic/cases",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={
             "case_type": "complaint",
             "subject": "Streetlight outage",
@@ -101,7 +101,7 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
     case_id = created.json()["case_id"]
     reviewed = client.post(
         f"/civic/cases/{case_id}/review",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={
             "subject": "Streetlight outage",
             "narrative": "The streetlight has been out for three nights.",
@@ -111,17 +111,102 @@ def test_explicit_consent_requires_confirmation_and_uses_canonical_capability() 
 
     denied = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={"scope": "citizen_download_and_self_send", "explicit_confirmation": False},
     )
     assert denied.status_code == 400
 
     consent = client.post(
         f"/civic/cases/{case_id}/explicit-consent",
-        headers=headers,
+        headers=_auth_header("principal-explicit-consent"),
         json={"scope": "citizen_download_and_self_send", "explicit_confirmation": True},
     )
     assert consent.status_code == 200, consent.json()
     assert consent.json()["consent_recorded"] is True
     assert consent.json()["status"] == "ready"
     assert consent.json()["delivery"] == "citizen_download_and_self_send"
+
+
+
+def test_case_shell_requires_matching_account_scope_and_never_accepts_citizen_content(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "test-local-vault-secret")
+    owner_scope = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-shell"),
+    ).json()["scope"]
+    other_scope = client.get(
+        "/civic/cases/local-vault/scope", headers=_auth_header("principal-other")
+    ).json()["scope"]
+
+    rejected_content = client.post(
+        "/civic/cases/shell",
+        headers=_auth_header("principal-shell"),
+        json={
+            "case_type": "complaint",
+            "expected_vault_scope": owner_scope,
+            "narrative": "This must never be accepted by the metadata-shell endpoint.",
+        },
+    )
+    assert rejected_content.status_code == 422
+
+    rejected_scope = client.post(
+        "/civic/cases/shell",
+        headers=_auth_header("principal-shell"),
+        json={"case_type": "complaint", "expected_vault_scope": other_scope},
+    )
+    assert rejected_scope.status_code == 409
+
+    created = client.post(
+        "/civic/cases/shell",
+        headers=_auth_header("principal-shell"),
+        json={"case_type": "complaint", "expected_vault_scope": owner_scope},
+    )
+    assert created.status_code == 200, created.json()
+    case_id = created.json()["case_id"]
+
+    owner_view = client.get(
+        f"/civic/cases/{case_id}",
+        headers=_auth_header("principal-shell"),
+    )
+    assert owner_view.status_code == 200
+    assert owner_view.json()["narrative"] == ""
+    assert owner_view.json()["subject"] == "complaint"
+
+    other_view = client.get(
+        f"/civic/cases/{case_id}",
+        headers=_auth_header("principal-other"),
+    )
+    assert other_view.status_code == 404
+
+
+def test_local_vault_scope_is_authenticated_stable_and_account_scoped(monkeypatch) -> None:
+    monkeypatch.setenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "test-local-vault-secret")
+    first = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    repeated = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    other = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-b"),
+    )
+    assert first.status_code == 200
+    assert repeated.status_code == 200
+    assert first.headers["cache-control"] == "no-store, private"
+    assert first.headers["pragma"] == "no-cache"
+    assert first.json()["scope"] == repeated.json()["scope"]
+    assert first.json()["scope"] != other.json()["scope"]
+    assert len(first.json()["scope"]) == 64
+    assert client.get("/civic/cases/local-vault/scope").status_code == 401
+
+
+def test_local_vault_scope_fails_closed_without_dedicated_secret(monkeypatch) -> None:
+    monkeypatch.delenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", raising=False)
+    response = client.get(
+        "/civic/cases/local-vault/scope",
+        headers=_auth_header("principal-vault-a"),
+    )
+    assert response.status_code == 503

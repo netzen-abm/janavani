@@ -21,7 +21,7 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if text in {"no", "n", "2"}:
-        await update.message.reply_text("❌ Consent not given. Your case remains unsubmitted.")
+        await update.message.reply_text("❌ No document was generated. Your Case remains unsubmitted.")
         return
 
     session = get_session(user_id)
@@ -61,9 +61,9 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
             subject=str(session.get("category") or "Citizen civic issue"),
             narrative=issue,
         )
-        dependencies.consent_capability.record_submission_consent(
+        dependencies.consent_capability.record_document_preparation_consent(
             case_id,
-            scope=f"office:{office_id}",
+            scope="citizen_review_and_download",
             identity=identity,
         )
     except (LookupError, PermissionError, ValueError) as exc:
@@ -84,6 +84,6 @@ async def handle_consent(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     set_state(user_id, WAITING_FOR_GENERATE)
     await update.message.reply_text(
-        "✅ Explicit consent recorded. Preparing a document for your review; nothing will be sent."
+        "✅ Document-preparation consent recorded. Your draft is for review and download only; nothing will be sent."
     )
     await handle_generate(update, context)

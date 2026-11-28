@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.capabilities.civic_action_capability import CivicActionCapability
+from src.capabilities.letter_drafting import LetterDraftRequest, LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseResult
 from src.capabilities.document_review import DocumentReviewCapability, DocumentReviewRequest
 from src.capabilities.evidence import EvidenceCapability
@@ -40,6 +41,7 @@ class CivicActionVerticalSliceDependencies:
     civic_action_capability: CivicActionCapability
     evidence_capability: EvidenceCapability
     document_review_capability: DocumentReviewCapability
+    letter_drafting_capability: LetterDraftingCapability
     responsibility_capability: ResponsibilityCapability
     obligation_capability: ObligationCapability
     external_channel_capability: ExternalChannelCapability
@@ -136,8 +138,20 @@ class CivicActionVerticalSlice:
         """Attach a previously recorded consent through the canonical Case boundary."""
         return self._deps.case_capability.add_consent(case_id, consent_id, identity=identity)
 
-    def prepare_document(self, case_id: str, *, identity: IdentityContext, document_id=None):
-        draft = self._documents.prepare(case_id, identity=identity, document_id=document_id)
+    def prepare_document(
+        self,
+        case_id: str,
+        *,
+        identity: IdentityContext,
+        document_id=None,
+        draft_request: LetterDraftRequest | None = None,
+    ):
+        draft = self._documents.prepare(
+            case_id,
+            identity=identity,
+            document_id=document_id,
+            draft_request=draft_request,
+        )
         return PreparedDocument(case_id=case_id, document_id=draft.document_id, draft=draft)
 
     def review_document(self, request: DocumentReviewRequest, *, identity: IdentityContext):
@@ -160,13 +174,3 @@ class CivicActionVerticalSlice:
         """Open a citizen-owned generated artifact for download only."""
         return self._documents.open_artifact(artifact_id, case_id=case_id, identity=identity)
 
-    def prepare_delivery_package(
-        self, case_id: str, *, identity: IdentityContext, document_types=("petition",),
-        formats=("pdf", "docx"),
-    ):
-        """Prepare downloadable citizen-owned documents; never transmit them."""
-        from src.documents.document_contract import DocumentFormat
-        selected = tuple(DocumentFormat(value) for value in formats)
-        return self._documents.generate_package(
-            case_id, identity=identity, document_types=tuple(document_types), formats=selected
-        )

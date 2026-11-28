@@ -60,13 +60,14 @@ def test_civic_case_repository_uses_injected_unit_of_work():
 
 def test_telegram_generation_dependencies_are_composed_once():
     deps = TelegramGenerationDependencies(
-        case_repository=object(), case_capability=object(), civic_action_capability=object(),
-        consent_capability=object(), artifact_repository=object(), blob_store=object(),
+        case_repository=object(), case_capability=object(),
+        consent_capability=object(), letter_drafting_capability=object(),
+        artifact_repository=object(), blob_store=object(),
     )
     assert deps.case_repository is not None
     assert deps.case_capability is not None
-    assert deps.civic_action_capability is not None
     assert deps.consent_capability is not None
+    assert deps.letter_drafting_capability is not None
     assert deps.artifact_repository is not None
     assert deps.blob_store is not None
 

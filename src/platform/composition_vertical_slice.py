@@ -5,6 +5,7 @@ from src.capabilities.civic_action_capability import CivicActionCapability
 from src.capabilities.submission import SubmissionCapability
 from src.capabilities.evidence import EvidenceCapability
 from src.capabilities.document_review import DocumentReviewCapability
+from src.capabilities.letter_drafting import LetterDraftingCapability
 from src.capabilities.civic_case import CivicCaseCapability
 from src.capabilities.authority import AuthorityCapability
 from src.capabilities.responsibility import ResponsibilityCapability
@@ -33,6 +34,7 @@ def create_civic_action_vertical_slice(
     case_capability: CivicCaseCapability | None = None,
     evidence_repository: EvidenceRepository | None = None,
     document_review_repository: DocumentReviewRepository | None = None,
+    letter_drafting_capability: LetterDraftingCapability | None = None,
     artifact_repository=None,
     blob_store=None,
     responsibility_resolver: ResponsibilityResolver | None = None,
@@ -47,6 +49,7 @@ def create_civic_action_vertical_slice(
 ) -> CivicActionVerticalSlice:
     from .composition_capabilities import (
         create_case_capability, create_authority_capability,
+        create_letter_drafting_capability,
         create_responsibility_capability, create_obligation_capability,
         create_external_channel_capability, create_follow_up_capability,
         create_escalation_capability,
@@ -70,6 +73,10 @@ def create_civic_action_vertical_slice(
     document_review_capability = DocumentReviewCapability(
         review_repository, case_capability=case_capability
     )
+    letter_drafting_capability = letter_drafting_capability or create_letter_drafting_capability(
+        civic_action_capability,
+        document_review_capability,
+    )
     resolver = responsibility_resolver or AuthorityBackedResponsibilityResolver(authority_repository)
     obligation = obligation_resolver or AuthorityBackedObligationResolver(obligation_records or {})
     if submission_capability is None and submission_transport is not None:
@@ -86,6 +93,7 @@ def create_civic_action_vertical_slice(
             civic_action_capability=civic_action_capability,
             evidence_capability=evidence_capability,
             document_review_capability=document_review_capability,
+            letter_drafting_capability=letter_drafting_capability,
             responsibility_capability=create_responsibility_capability(resolver),
             obligation_capability=create_obligation_capability(obligation),
             submission_capability=submission_capability,

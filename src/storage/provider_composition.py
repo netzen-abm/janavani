@@ -25,6 +25,7 @@ PERSISTED_DOMAINS = (
     "accountability_feedback",
     "external_channel",
     "external_identity_links",
+    "citizen_document_format",
 )
 
 DEFAULT_PROVIDER = "memory"
@@ -74,9 +75,23 @@ class ProviderComposition:
     @classmethod
     def from_environment(cls) -> "ProviderComposition":
         """Resolve the shared provider plan without importing any adapter."""
+        # Prefer current public keys while retaining established internal aliases.
+        environment_keys = {
+            "civic_case": (
+                "JANAVANI_CASE_REPOSITORY_PROVIDER",
+                "JANAVANI_CIVIC_CASE_REPOSITORY_PROVIDER",
+            ),
+            "document_artifact": (
+                "JANAVANI_ARTIFACT_REPOSITORY_PROVIDER",
+                "JANAVANI_DOCUMENT_ARTIFACT_REPOSITORY_PROVIDER",
+            ),
+        }
         providers = {
-            domain: os.getenv(
-                f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER", DEFAULT_PROVIDER
+            domain: next(
+                (os.getenv(key) for key in environment_keys.get(
+                    domain, (f"JANAVANI_{domain.upper()}_REPOSITORY_PROVIDER",)
+                ) if os.getenv(key) is not None),
+                DEFAULT_PROVIDER,
             )
             for domain in PERSISTED_DOMAINS
         }

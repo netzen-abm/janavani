@@ -19,6 +19,7 @@ def _vertical_slice_with_obligation_resolver(resolver: AuthorityBackedObligation
         civic_action_capability=None,  # type: ignore[arg-type]
         evidence_capability=None,  # type: ignore[arg-type]
         document_review_capability=None,  # type: ignore[arg-type]
+        letter_drafting_capability=None,  # type: ignore[arg-type]  # unused by obligation-resolution tests
         submission_capability=None,  # type: ignore[arg-type]
         responsibility_capability=None,  # type: ignore[arg-type]
         obligation_capability=ObligationCapability(resolver),

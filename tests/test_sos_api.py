@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import time
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -29,7 +30,7 @@ def _auth_header(principal_id: str = "principal-1") -> dict[str, str]:
         "authentication_method": "passkey",
         "iat": now,
         "exp": now + 60,
-        "jti": f"test-{principal_id}-{now}",
+        "jti": f"test-{principal_id}-{uuid4().hex}",
         "capabilities": ["sos:trigger"],
     }
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()

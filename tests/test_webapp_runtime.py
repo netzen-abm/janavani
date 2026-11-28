@@ -7,10 +7,31 @@ def test_webapp_registers_case_workspace_routes():
     paths = {getattr(route, "path", "") for route in app.routes}
     assert "/" in paths
     assert "/submit-issue" in paths
+    assert "/local-vault/scope" in paths
     assert "/cases/{case_id}/prepare" in paths
     assert "/cases/{case_id}/review" in paths
     assert "/cases/{case_id}/consent" in paths
     assert "/cases/{case_id}/artifact" in paths
+
+
+def test_case_creation_requires_explicit_consent_before_calling_api(monkeypatch):
+    import src.webapp.main as webapp
+
+    api_calls = []
+    monkeypatch.setattr(
+        webapp,
+        "client_for_request",
+        lambda request: api_calls.append(request),
+    )
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={"citizen_input": "A private citizen issue narrative."},
+    )
+
+    assert response.status_code == 200
+    assert "Local draft required" in response.text
+    assert "No Case was created" in response.text
+    assert api_calls == []
 
 
 def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
@@ -19,7 +40,11 @@ def test_webapp_case_creation_fails_closed_without_user_identity(monkeypatch):
     monkeypatch.delenv("JANAVANI_WEB_IDENTITY_ASSERTION", raising=False)
     response = TestClient(app).post(
         "/submit-issue",
-        data={"citizen_input": "The public streetlight has been out for three nights."},
+        data={
+            "local_draft_id": "local-12345678-abcd",
+            "local_vault_scope": "a" * 64,
+            "citizen_input": "The public streetlight has been out for three nights.",
+        },
     )
     assert response.status_code == 200
     assert "Sign-in required" in response.text
@@ -97,3 +122,138 @@ def test_case_workspace_requires_request_identity_before_protected_calls():
     assert "Sign-in required" in response.text
     assert "secure Janavani session" in response.text
 
+def test_webapp_owns_the_canonical_drafting_and_saved_format_ui():
+    from src.webapp.main import app
+
+    paths = {getattr(route, "path", "") for route in app.routes}
+
+    assert "/ai-drafting" in paths
+    assert "/ai-drafting/preview" in paths
+    assert "/citizen-formats" in paths
+    assert "/citizen-formats/confirm" in paths
+    assert not any(path.startswith("/bill-review/") for path in paths)
+    assert "/dispatch-objection" not in paths
+
+
+def test_webapp_serves_the_first_party_local_vault_adapter():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/assets/janavani-local-vault")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/javascript")
+    assert "indexedDB.open" in response.text
+    assert "JanavaniLocalVault" in response.text
+    assert "local-vault/scope" in response.text
+
+    controller = TestClient(app).get("/assets/janavani-local-draft-form")
+    assert controller.status_code == 200
+    assert controller.headers["content-type"].startswith("application/javascript")
+    assert "checkAccountScope" in controller.text
+
+
+def test_submit_issue_creates_metadata_shell_without_forwarding_narrative(monkeypatch):
+    import src.webapp.main as webapp
+
+    calls = []
+
+    class Client:
+        def create_case_shell(self, *, case_type, expected_vault_scope):
+            calls.append({
+                "case_type": case_type,
+                "expected_vault_scope": expected_vault_scope,
+            })
+            return {"case_id": "case-shell-test", "status": "draft"}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={
+            "local_draft_id": "local-12345678-abcd",
+            "local_vault_scope": "a" * 64,
+            "case_type": "complaint",
+            "citizen_input": "This private narrative must not be sent to the server.",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "case_id": "case-shell-test",
+        "status": "draft",
+        "content_transmitted": False,
+    }
+    assert calls == [{
+        "case_type": "complaint",
+        "expected_vault_scope": "a" * 64,
+    }]
+
+
+def test_submit_issue_rejects_missing_local_draft_reference_before_api_call(monkeypatch):
+    import src.webapp.main as webapp
+
+    calls = []
+    monkeypatch.setattr(
+        webapp,
+        "client_for_request",
+        lambda request: calls.append(request),
+    )
+    response = TestClient(webapp.app).post(
+        "/submit-issue",
+        data={"case_type": "complaint", "citizen_input": "Private narrative"},
+    )
+    assert response.status_code == 200
+    assert "Local draft required" in response.text
+    assert calls == []
+
+
+def test_local_vault_scope_route_proxies_authenticated_scope(monkeypatch):
+    import src.webapp.main as webapp
+
+    class Client:
+        def get_local_vault_scope(self):
+            return {"scope": "a" * 64}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).get("/local-vault/scope")
+    assert response.status_code == 200
+    assert response.json() == {"scope": "a" * 64}
+
+
+
+def test_home_page_renders_local_draft_workspace_and_storage_disclosure():
+    from src.webapp.main import app
+
+    response = TestClient(app).get("/")
+    assert response.status_code == 200
+    assert "local-case-draft-form" in response.text
+    assert "/assets/janavani-local-draft-form" in response.text
+    assert 'New local draft' in response.text
+    assert 'new-local-draft' in response.text
+    assert "not encrypted by Janavani" in response.text
+
+
+def test_local_vault_scope_proxy_is_private_and_uncached(monkeypatch):
+    import src.webapp.main as webapp
+
+    class Client:
+        def get_local_vault_scope(self):
+            return {"scope": "b" * 64}
+
+    monkeypatch.setattr(webapp, "client_for_request", lambda request: Client())
+    response = TestClient(webapp.app).get("/local-vault/scope")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["pragma"] == "no-cache"
+
+
+
+def test_webapp_version_reports_its_render_commit(monkeypatch):
+    from src.webapp.main import app
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "candidate-test-sha")
+    response = TestClient(app).get("/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "surface": "webapp",
+        "commit": "candidate-test-sha",
+    }

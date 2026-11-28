@@ -10,7 +10,8 @@ def test_canonical_app_imports() -> None:
     assert app.title == "Janavani Platform API"
 
 
-def test_canonical_platform_endpoints() -> None:
+def test_canonical_platform_endpoints(monkeypatch) -> None:
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "candidate-test-sha")
     client = TestClient(app)
 
     root = client.get("/")
@@ -35,6 +36,7 @@ def test_canonical_platform_endpoints() -> None:
     assert response.json() == {
         "service": "janavani-platform-api",
         "version": "canonical-m3",
+        "commit": "candidate-test-sha",
     }
 
 

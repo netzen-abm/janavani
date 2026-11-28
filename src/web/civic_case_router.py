@@ -1,6 +1,9 @@
 """HTTP adapter for the shared civic case and civic action capabilities."""
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException
+import hashlib
+import hmac
+import os
+from fastapi import APIRouter, Depends, HTTPException, Response
 from src.capabilities.civic_case import CivicCaseCreateRequest
 from src.identity.context import IdentityContext
 from src.identity.http_assertion import require_authenticated_identity
@@ -12,11 +15,67 @@ _EVIDENCE_REPOSITORY = getattr(_CAPABILITY, "evidence_repository", None)
 from src.web.composition import create_web_civic_action_composition
 from src.web.civic_case_document_router import router as document_router
 from src.web.civic_case_lifecycle_router import router as lifecycle_router
-from src.web.civic_case_models import CaseCreateRequest, ConsentRequest, ExplicitConsentRequest, EvidenceRequest, event_result, serialize_case
+from src.web.civic_case_models import CaseCreateRequest, CaseShellCreateRequest, ConsentRequest, ExplicitConsentRequest, EvidenceRequest, event_result, serialize_case
 
 router = APIRouter(prefix="/civic/cases", tags=["Civic Cases"])
 router.include_router(document_router)
 router.include_router(lifecycle_router)
+
+def _local_vault_scope(principal_id: str) -> str:
+    """Derive the account namespace; this is not an encryption or auth key."""
+    secret = os.getenv("JANAVANI_LOCAL_VAULT_SCOPE_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Local vault scope service is not configured",
+        )
+    return hmac.new(
+        secret.encode("utf-8"), principal_id.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+@router.get("/local-vault/scope")
+async def get_local_vault_scope(
+    response: Response,
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, str]:
+    """Return a pseudonymous, stable browser-vault namespace for this principal."""
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Vary"] = "Authorization"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return {"scope": _local_vault_scope(context.principal.principal_id)}
+
+
+@router.post("/shell")
+async def create_case_shell(
+    request: CaseShellCreateRequest,
+    context: IdentityContext = Depends(require_authenticated_identity),
+) -> dict[str, object]:
+    """Create an owner-scoped metadata shell bound to this authenticated browser scope."""
+    expected_scope = _local_vault_scope(context.principal.principal_id)
+    if not hmac.compare_digest(request.expected_vault_scope, expected_scope):
+        raise HTTPException(
+            status_code=409,
+            detail="The signed-in account changed. Refresh the local workspace and retry.",
+        )
+    try:
+        result = _CAPABILITY.create_shell(
+            CivicCaseCreateRequest(
+                case_type=request.case_type,
+                subject=request.case_type.value,
+                narrative="",
+            ),
+            identity=context,
+            source_channel="webapp",
+        )
+        return {"case_id": result.case.case_id, "status": result.case.status.value}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
 
 @router.post("")
 async def create_case(request: CaseCreateRequest, context: IdentityContext = Depends(require_authenticated_identity)) -> dict[str, object]:

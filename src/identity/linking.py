@@ -100,3 +100,15 @@ class IdentityLinkResolver:
             raise LookupError("external identity is not explicitly linked and verified")
         return identity
 
+def context_for_verified_external_link(
+    repository: ExternalIdentityLinkRepository,
+    *,
+    provider: str,
+    subject: str,
+):
+    """Resolve an existing verified link into context through shared identity boundaries."""
+    from .adapter import DefaultIdentityAdapter
+
+    external = IdentityLinkResolver(repository).resolve(provider, subject)
+    return DefaultIdentityAdapter().resolve(external)
+

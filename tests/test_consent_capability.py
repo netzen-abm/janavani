@@ -1,5 +1,9 @@
 from src.capabilities.civic_case import CivicCaseCapability, CivicCaseCreateRequest
-from src.capabilities.consent import ConsentCapability, PURPOSE_SUBMISSION
+from src.capabilities.consent import (
+    ConsentCapability,
+    PURPOSE_DOCUMENT_PREPARATION,
+    PURPOSE_SUBMISSION,
+)
 from src.core.civic_case import CaseType, CivicCase
 from src.identity.context import IdentityContext
 from src.identity.principal import IdentityMode, Principal
@@ -36,6 +40,41 @@ def test_record_submission_consent_persists_and_advances_owned_case():
     assert result.consent.is_authorized
     assert result.consent.consent_id in result.case.case.consent_refs
     assert result.case.case.status.value == "ready"
+
+
+def test_document_preparation_consent_does_not_authorize_submission_or_ready_case():
+    cases = InMemoryCivicCaseRepository()
+    case_capability = CivicCaseCapability(cases)
+    case = case_capability.create(
+        CivicCaseCreateRequest(
+            case_type=CaseType.COMPLAINT,
+            subject="Broken streetlight",
+            narrative="The streetlight has not worked for three nights.",
+        ),
+        identity=_identity(
+            "telegram:12345", "JNV-CIVIC-COMPLAINT", "case:consent", "case:write"
+        ),
+    ).case
+    capability = ConsentCapability(
+        repository=InMemoryConsentRepository(),
+        case_capability=case_capability,
+    )
+
+    result = capability.record_document_preparation_consent(
+        case.case_id,
+        scope="citizen_review_and_download",
+        identity=_identity("telegram:12345", "case:consent", "case:write"),
+    )
+
+    assert result.consent.purpose == PURPOSE_DOCUMENT_PREPARATION
+    assert result.consent.authorizes(
+        PURPOSE_DOCUMENT_PREPARATION, "citizen_review_and_download"
+    )
+    assert not result.consent.authorizes(
+        PURPOSE_SUBMISSION, "citizen_review_and_download"
+    )
+    assert result.consent.consent_id in result.case.case.consent_refs
+    assert result.case.case.status.value == "draft"
 
 
 def test_record_submission_consent_denies_cross_principal_case():
